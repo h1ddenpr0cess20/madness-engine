@@ -214,6 +214,7 @@ export class WebGLBackend {
     gl.colorMask(colorWrite, colorWrite, colorWrite, colorWrite);
     if (cull === 'none') {
       gl.disable(gl.CULL_FACE);
+      gl.frontFace(gl.CCW);
     } else {
       gl.enable(gl.CULL_FACE);
       gl.cullFace(gl.BACK);

@@ -58,6 +58,10 @@ others added and doesn't use: Metrlol's still boxes and cylinders, a physics
 Roller's sculpt warp, Catroller's clip blending. None of them does anything
 until it is asked for.
 
+It also has a fix the games' copies don't: under WebGL, a double-sided lit
+material drawn after a back-sided one (the sky dome, which is drawn first)
+took the dome's winding, so it was lit as if seen from behind.
+
 ## The game's characters, props, heroes, textures and music
 
 Each file of the game that the library has becomes a line or two that takes
