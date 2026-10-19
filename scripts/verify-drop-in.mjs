@@ -14,7 +14,9 @@
  *   2. The library: every file it took from the game (`extract/origins.json`)
  *      is the game's own code, its imports going to the same things, and the
  *      game has nothing it should have taken and hasn't. Its bands play every
- *      theme with the same Web Audio calls as the game's music.
+ *      theme with the same Web Audio calls as the game's music. Each set's
+ *      mood, and each grade, is what the game's own code and stylesheet make
+ *      of the set now.
  *   3. The game's whole test suite, on a copy with the engine files
  *      swapped in (`drop-in/overlay.mjs`), against the same suite on an
  *      untouched copy. Those suites include autopilots that play every level.
@@ -31,7 +33,7 @@ import { fileURLToPath } from 'node:url';
 
 import { GAMES } from './drop-in/games.mjs';
 import { compareMusic } from './drop-in/audio-diff.mjs';
-import { compareKit, compareLibrary, ORIGINS } from './drop-in/library-diff.mjs';
+import { compareKit, compareLibrary, compareMoods, ORIGINS } from './drop-in/library-diff.mjs';
 import { compareInput } from './drop-in/input-diff.mjs';
 import { copyGame, dropIn } from './drop-in/overlay.mjs';
 import { dropInPackage } from './drop-in/package-mode.mjs';
@@ -103,6 +105,8 @@ for (const [name, g] of Object.entries(GAMES)) {
 
     const library = compareLibrary(name, dir);
     report(library.ok, library.ok ? `library: all ${library.files} files it has of the game are the game's own, import paths aside` : `library differs: ${library.detail}`);
+    const moods = await compareMoods(name, dir);
+    if (moods) report(moods.ok, moods.ok ? `moods: all ${moods.sets} sets' moods${moods.grades ? ` and ${moods.grades} grades` : ''} are the game's own looks and film` : `moods differ: ${moods.detail}`);
     for (const [gamePath, libPath] of Object.entries(ORIGINS[name] ?? {})) {
       if (!libPath.startsWith('music/band')) continue;
       const sound = await compareMusic(join(dir, gamePath), join(ENGINE, libPath));

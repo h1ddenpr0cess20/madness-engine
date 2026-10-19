@@ -9,7 +9,7 @@ import { bake } from '../src/models/model.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, '../src');
-const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music'];
+const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music', 'moods'];
 const walk = (d) => readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : [join(d, f)]));
 const files = KINDS.flatMap((k) => walk(join(src, k))).map((f) => relative(src, f));
 /** `characters/punk.rocknroller-iii.js` is a version of `characters/punk.js`. */

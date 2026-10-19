@@ -275,3 +275,53 @@ Made on the spot with Web Audio. `band` is a whole band with its songs (`THEMES`
 | `music/band` | `band` (metroll, metrlol)<br>`band.rocknroller-ii` (rocknroller-ii)<br>`band.rocknroller-iii` (rocknroller-iii)<br>`band.rocknroller` (rocknroller) | The compilation's music. |
 | `music/score` | `score` (catroller)<br>`score.dungeon-roller` (dungeon-roller) | The music: a sneaky little jazz trio played live with Web Audio, no samples — a plucked upright bass walking on every beat, brushes on the snare and a ride ticking over the top, vibraphone chords, … |
 
+## moods
+
+The look of every set: its light, its sky and what its chrome reflects (each with its painter), the film it is shot on (the grade on the picture, the grain and the vignette over it, and the interface on the same stock where the game does that), its weather, and its band, theme and tempo; and the set's own `look` and `palette`. `stage.setMood(mood)` dresses a stage in one; `MOODS` (`moods/index`) has them all.
+
+| Path | Versions (games) | What it is |
+|---|---|---|
+| `moods/grades` | `grades` (rocknroller-ii, rocknroller-iii, metroll) | Every grade by name (`GRADES`), on the film its game gives it: `noir`, `sepia`, `technicolor`, `horror`, `scifi`, `fog`, `dusk`, `alpine`, `warm`, `neon.rocknroller-iii`, `tropical`, `steel`, `neon`, `denim`, `mist`, `basement`, `swamp`, `frost`, `bayou`, `industrial`, `dust`, `scene`, `storm`. |
+| `moods/action` | `action` (rocknroller-ii) | The Action Picture: no grade; `action` at 150 on `music/band.rocknroller-ii` |
+| `moods/alps` | `alps` (rocknroller-iii) | The Alps (Switzerland): the alpine grade, snow; `alps` at 144 on `music/band.rocknroller-iii` |
+| `moods/arena` | `arena` (rocknroller) | The Arena: no film; `arena` at 120 on `music/band.rocknroller` |
+| `moods/backlot` | `backlot` (rocknroller-ii) | The Backlot (Studio Tour): no grade; `hollywood` at 146 on `music/band.rocknroller-ii` |
+| `moods/bay` | `bay` (metroll) | The Bay Area (Thrash, 1986): the denim grade; `bay` at 168 on `music/band` |
+| `moods/berlin` | `berlin` (metroll) | Berlin (Industrial, 1995): the industrial grade; `powerplant` at 136 on `music/band` |
+| `moods/birmingham` | `birmingham` (metroll) | Birmingham (Heavy metal, 1970): the steel grade, rain; `brum` at 84 on `music/band` |
+| `moods/casting` | `casting` (rocknroller-ii) | The Casting Call (Screen Test): no grade; `casting` at 118 on `music/band.rocknroller-ii` |
+| `moods/club` | `club` (rocknroller) | The Club: no film; `club` at 126 on `music/band.rocknroller` |
+| `moods/dive` | `dive` (rocknroller) | Sticky's: no film; `dive` at 96 on `music/band.rocknroller` |
+| `moods/dock` | `dock` (rocknroller) | The Loading Dock: no film; `dock` at 132 on `music/band.rocknroller` |
+| `moods/egypt` | `egypt` (rocknroller-iii) | Egypt: the warm grade, a sandstorm; `egypt` at 108 on `music/band.rocknroller-iii` |
+| `moods/festival` | `festival` (rocknroller) | The Festival: no film; `festival` at 112 on `music/band.rocknroller` |
+| `moods/garage` | `garage` (rocknroller) | The Garage: no film; `garage` at 124 on `music/band.rocknroller` |
+| `moods/horror` | `horror` (rocknroller-ii) | The Horror Picture: the horror grade; `horror` at 92 on `music/band.rocknroller-ii` |
+| `moods/london` | `london` (rocknroller-iii) | London (England): the fog grade, rain; `london` at 128 on `music/band.rocknroller-iii` |
+| `moods/musical` | `musical` (rocknroller-ii) | The Musical: the technicolor grade; `musical` at 140 on `music/band.rocknroller-ii` |
+| `moods/newyork` | `newyork` (rocknroller-iii) | New York (USA): no grade; `finale` at 136 on `music/band.rocknroller-iii` |
+| `moods/noir` | `noir` (rocknroller-ii) | The Noir (Film Noir): the noir grade, rain; `noir` at 84 on `music/band.rocknroller-ii` |
+| `moods/nola` | `nola` (metroll) | New Orleans (Doom Metal, 1991): the bayou grade; `bayou` at 64 on `music/band` |
+| `moods/norway` | `norway` (metroll) | Norway (Black Metal, 1993): the frost grade, snow; `fjord` at 198 on `music/band` |
+| `moods/nyc` | `nyc` (metroll) | New York (Hardcore, 1989): the basement grade; `nyc` at 190 on `music/band` |
+| `moods/opera` | `opera` (rocknroller) | The Opera House: no film; `theatre` at 88 on `music/band.rocknroller` |
+| `moods/paris` | `paris` (rocknroller-iii) | Paris (France): the dusk grade; `paris` at 132 on `music/band.rocknroller-iii` |
+| `moods/pirate` | `pirate` (rocknroller-ii) | The Swashbuckler: no grade; `pirate` at 112 on `music/band.rocknroller-ii` |
+| `moods/premiere` | `premiere` (rocknroller-ii) | The Premiere: no grade; `finale` at 146 on `music/band.rocknroller-ii` |
+| `moods/rehearsal` | `rehearsal` (rocknroller) | The Rehearsal Rooms: no film; `rehearsal` at 118 on `music/band.rocknroller` |
+| `moods/rio` | `rio` (rocknroller-iii) | Rio de Janeiro (Brazil): the tropical grade; `rio` at 104 on `music/band.rocknroller-iii` |
+| `moods/scifi` | `scifi` (rocknroller-ii) | The Space Picture (Science Fiction): the scifi grade; `scifi` at 126 on `music/band.rocknroller-ii` |
+| `moods/spain` | `spain` (rocknroller-iii) | Spain: the warm grade; `spain` at 112 on `music/band.rocknroller-iii` |
+| `moods/stadium` | `stadium` (rocknroller) | The Stadium: no film; `stadium` at 128 on `music/band.rocknroller` |
+| `moods/strip` | `strip` (metroll) | The Sunset Strip (Hair metal, 1986): the neon grade; `strip` at 126 on `music/band` |
+| `moods/studio` | `studio` (rocknroller) | The Studio: no film; `studio` at 100 on `music/band.rocknroller` |
+| `moods/sydney` | `sydney` (rocknroller-iii) | Sydney (Australia): the tropical grade; `sydney` at 160 on `music/band.rocknroller-iii` |
+| `moods/tampa` | `tampa` (metroll) | Tampa (Death Metal, 1991): the swamp grade; `swamp` at 180 on `music/band` |
+| `moods/tokyo` | `tokyo` (rocknroller-iii) | Tokyo (Japan): the neon grade, falling petals; `tokyo` at 124 on `music/band.rocknroller-iii` |
+| `moods/venice` | `venice` (rocknroller-iii) | Venice (Italy): the dusk grade; `venice` at 152 on `music/band.rocknroller-iii` |
+| `moods/wacken` | `wacken` (metroll) | Wacken (Everything, 2008): the storm grade, rain; `festival` at 132 on `music/band` |
+| `moods/warped` | `warped` (metroll) | Warped Tour (Screamo, 2005): the scene grade; `fairground` at 168 on `music/band` |
+| `moods/western` | `western` (rocknroller-ii) | The Western: the sepia grade; `western` at 132 on `music/band.rocknroller-ii` |
+| `moods/whitby` | `whitby` (metroll) | Whitby (Goth, 1988): the mist grade; `abbey` at 110 on `music/band` |
+| `moods/woodstock` | `woodstock` (metroll) | Woodstock '99 (Nu Metal, 1999): the dust grade, a sandstorm; `airfield` at 96 on `music/band` |
+

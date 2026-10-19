@@ -27,6 +27,7 @@ import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dedupe } from './dedupe.mjs';
+import { gradesOf, gradesText, indexText, moodLine, moodsOf, moodText, versions } from './moods.mjs';
 import { engineOf, ORDER, SOURCES, SPLIT } from './sources.mjs';
 import { split } from './split.mjs';
 
@@ -216,6 +217,7 @@ const ABOUT = {
   heroes: 'The balls the games are played as, each with what it is made of.',
   scenery: 'The world round the ball: the town\'s street furniture and vehicles (`bakeData` in models/legacy-bake), and the dungeon\'s walls, torches and exit.',
   textures: 'Painted on canvases at startup. `painters` is the toolkit and the floors and walls; `venue` the rock clubs\' floors, walls, belts, grilles, tape, shutters, panels and glows; `town/` the town\'s; `lava` a material; `rooms/` what shiny things reflect (each `paintRoom`) and `skies/` what is round the scene (each `paintSky`).',
+  moods: 'The look of every set: its light, its sky and what its chrome reflects (each with its painter), the film it is shot on (the grade on the picture, the grain and the vignette over it, and the interface on the same stock where the game does that), its weather, and its band, theme and tempo; and the set\'s own `look` and `palette`. `stage.setMood(mood)` dresses a stage in one; `MOODS` (`moods/index`) has them all.',
   music: 'Made on the spot with Web Audio. `band` is a whole band with its songs (`THEMES`), `theory` its scales, forms and effects; `score` a smaller orchestra with its own themes.',
 };
 
@@ -233,7 +235,7 @@ function blurb(f) {
 }
 
 /** `docs/library.md`: everything in the library, by kind, with its versions and the games they came from. */
-function contents(places) {
+function contents(places, moods) {
   const lines = [
     '# What is in the library',
     '',
@@ -255,13 +257,40 @@ function contents(places) {
     }
     lines.push('');
   }
+  lines.push('## moods', '', ABOUT.moods, '', '| Path | Versions (games) | What it is |', '|---|---|---|');
+  const graded = [...new Set(moods.grades.map((g) => g.game))].join(', ');
+  const grades = [...new Set(moods.grades.map((g) => `\`${g.key}\``))].join(', ');
+  lines.push(`| \`moods/grades\` | \`grades\` (${graded}) | Every grade by name (\`GRADES\`), on the film its game gives it: ${grades}. |`);
+  const byName = new Map();
+  for (const m of moods.moods) byName.set(m.name, [...(byName.get(m.name) ?? []), m]);
+  for (const [name, ms] of [...byName].sort(([a], [b]) => a.localeCompare(b))) {
+    const which = ms.map((m) => `\`${m.key}\` (${m.games.join(', ')})`).join('<br>');
+    lines.push(`| \`moods/${name}\` | ${which} | ${moodLine(ms.find((m) => m.key === name)).replace(/\|/g, '\\|')} |`);
+  }
+  lines.push('');
   return `${lines.join('\n')}\n`;
 }
 
+/**
+ * Every set's mood and every grade, from the games that have them, each at
+ * its place in `moods/` (`moods.mjs`).
+ */
+export async function planMoods(dirs, origins) {
+  const found = [];
+  for (const [game, dir] of Object.entries(dirs)) found.push(...await moodsOf(game, dir, origins));
+  const moods = versions(found.map((m) => ({ ...m, text: moodText(m, `moods/${m.name}.js`) })))
+    .map((m) => ({ ...m, path: `moods/${m.key}.js` }));
+  for (const m of moods) m.text = moodText(m, m.path);
+  const grades = versions(Object.entries(dirs).flatMap(([game, dir]) => Object.entries(gradesOf(game, dir))
+    .map(([name, film]) => ({ game, name, film, text: JSON.stringify(film) }))));
+  return { moods, grades, files: { ...Object.fromEntries(moods.map((m) => [m.path, m.text])), 'moods/index.js': indexText(moods), 'moods/grades.js': gradesText(grades) } };
+}
+
 /** Writes the library into `src/`. */
-export function build(dirs) {
+export async function build(dirs) {
   const { files, places, origins } = plan(dirs);
-  for (const kind of KINDS) rmSync(join(SRC, kind), { recursive: true, force: true });
+  for (const kind of [...KINDS, 'moods']) rmSync(join(SRC, kind), { recursive: true, force: true });
+  const moods = await planMoods(dirs, origins);
 
   const out = new Map();
   for (const versions of places.values()) for (const v of versions.values()) out.set(v.path, libraryText(v.files[0]));
@@ -285,18 +314,21 @@ export function build(dirs) {
     'Every sculpted prop in the library, by name: the default version of each.',
   ]));
 
+  for (const [path, text] of Object.entries(moods.files)) out.set(path, text);
+
   for (const [path, text] of out) {
     mkdirSync(dirname(join(SRC, path)), { recursive: true });
     writeFileSync(join(SRC, path), text);
   }
   writeFileSync(ORIGINS, `${JSON.stringify(origins, null, 2)}\n`);
-  writeFileSync(join(SRC, '..', 'docs', 'library.md'), contents(places));
+  writeFileSync(join(SRC, '..', 'docs', 'library.md'), contents(places, moods));
 
   for (const kind of KINDS) {
     const mine = [...places.entries()].filter(([p]) => p.startsWith(`${kind}/`));
     const versions = mine.reduce((n, [, v]) => n + v.size, 0);
     console.log(`${kind}: ${mine.length} things, ${versions - mine.length} more versions`);
   }
+  console.log(`moods: ${new Set(moods.moods.map((m) => m.name)).size} sets, ${new Set(moods.grades.map((g) => g.key)).size} grades`);
   console.log(`${files.length} files from ${Object.keys(dirs).length} games`);
   return { places, origins };
 }
@@ -310,5 +342,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     if (!existsSync(dir)) throw new Error(`${game} is not in ${gamesDir}: the library is built from all the games at once`);
     dirs[game] = dir;
   }
-  build(dirs);
+  await build(dirs);
 }

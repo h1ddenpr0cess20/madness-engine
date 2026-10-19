@@ -11,6 +11,7 @@
     "./gfx": "./src/gfx/index.js",
     "./characters": "./src/characters/index.js",
     "./props": "./src/props/index.js",
+    "./moods": "./src/moods/index.js",
     "./*.js": "./src/*.js",
     "./*": "./src/*.js"
   },

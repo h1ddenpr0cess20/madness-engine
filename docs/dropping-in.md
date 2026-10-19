@@ -80,3 +80,9 @@ the games' `stage.js`. A game keeps its own `stage.js`, audio, effects and
 storage. Those are the game itself, and the engine's `stage`, `audio`,
 `effects` and `storage` are for new games, or for a game that wants to be
 rewritten on them.
+
+The moods in `moods/` are the same: each is what a game's own `setVenue`
+and stylesheet make of one of its sets (the light, the sky, the reflections,
+the grade, the grain and the vignette), so the game keeps its `look`s, its
+`stage.js` and its `styles.css`. `npm run verify` checks each mood against
+what the game makes of its set now.

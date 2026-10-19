@@ -4,6 +4,9 @@
  * gold to pick up, confetti, sound, and the band playing.
  *
  *     npm install && npm run dev
+ *
+ * `?mood=noir` (or `london`, `western`, `tokyo`, any of `moods/`) shoots it in
+ * the mood of one of the games' sets: its light, sky and film, and its weather.
  */
 import * as GFX from 'madness-engine/gfx';
 import { createAudio } from 'madness-engine/audio';
@@ -21,6 +24,7 @@ import { createBand, THEMES } from 'madness-engine/music/band';
 import { FLOORS, tiled } from 'madness-engine/textures/painters';
 import { paintRoom } from 'madness-engine/textures/rooms/studio';
 import { paintSky } from 'madness-engine/textures/skies/haze';
+import { MOODS } from 'madness-engine/moods';
 
 /** The board, in tiles: a floor, and a platform a tile up with a ramp to it. */
 const SIZE = 12;
@@ -69,8 +73,10 @@ function uvOf(tri) {
 }
 
 const host = document.getElementById('game');
-const stage = await createStage(host, { sky: paintSky(), room: paintRoom(), label: 'starter' });
+const stage = await createStage(host, { sky: paintSky(), room: paintRoom(), ui: [document.getElementById('hud')], label: 'starter' });
 const { scene } = stage;
+const mood = MOODS[new URLSearchParams(location.search).get('mood')];
+if (mood) stage.setMood(mood);
 
 // The board: in the physics, and drawn in planks.
 const world = new World({ cols: SIZE, rows: SIZE });
@@ -116,6 +122,7 @@ let score = 0;
 document.getElementById('total').textContent = coins.length;
 
 const effects = createEffects(GFX, scene, { ground: board });
+effects.setWeather(mood?.weather ?? null);
 const paper = new GFX.PlaneGeometry(0.16, 0.1);
 const papers = CONFETTI.map((c) => new GFX.MeshBasicMaterial({ color: new GFX.Color(c), side: GFX.DoubleSide }));
 
@@ -191,6 +198,7 @@ stage.run((dt) => {
     }
   }
   effects.update(dt);
+  effects.weather(dt, ball.x, ball.y, ball.z);
 
   // The camera after the ball.
   const k = 1 - Math.exp(-5 * dt);
