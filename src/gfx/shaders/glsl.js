@@ -1,5 +1,6 @@
 /**
- * GLSL ES 3.00 for the WebGL 2 backend. The shaders are the files in `glsl/`;
+ * GLSL ES 3.00 for the WebGL 2 backend. The shaders are the modules in `glsl/` (each `.glsl.js` is the text of
+ * a shader and nothing else, so that no bundler has to know how to read one);
  * this puts them together.
  *
  * Every program is assembled from a key the renderer derives per draw (see
@@ -15,32 +16,32 @@
 
 import { include } from './preprocess.js';
 
-import PRELUDE from './glsl/prelude.glsl?raw';
-import common from './glsl/chunks/common.glsl?raw';
-import cube_uv from './glsl/chunks/cube_uv.glsl?raw';
-import iridescence from './glsl/chunks/iridescence.glsl?raw';
-import output from './glsl/chunks/output.glsl?raw';
-import physical_lighting from './glsl/chunks/physical_lighting.glsl?raw';
-import shadow_pars_fragment from './glsl/chunks/shadow_pars_fragment.glsl?raw';
-import shadow_pars_vertex from './glsl/chunks/shadow_pars_vertex.glsl?raw';
-import shadow_vertex from './glsl/chunks/shadow_vertex.glsl?raw';
-import transmission from './glsl/chunks/transmission.glsl?raw';
+import PRELUDE from './glsl/prelude.glsl.js';
+import common from './glsl/chunks/common.glsl.js';
+import cube_uv from './glsl/chunks/cube_uv.glsl.js';
+import iridescence from './glsl/chunks/iridescence.glsl.js';
+import output from './glsl/chunks/output.glsl.js';
+import physical_lighting from './glsl/chunks/physical_lighting.glsl.js';
+import shadow_pars_fragment from './glsl/chunks/shadow_pars_fragment.glsl.js';
+import shadow_pars_vertex from './glsl/chunks/shadow_pars_vertex.glsl.js';
+import shadow_vertex from './glsl/chunks/shadow_vertex.glsl.js';
+import transmission from './glsl/chunks/transmission.glsl.js';
 
-import basicFragment from './glsl/basic.frag.glsl?raw';
-import basicVertex from './glsl/basic.vert.glsl?raw';
-import customFragment from './glsl/custom.frag.glsl?raw';
-import customVertex from './glsl/custom.vert.glsl?raw';
-import depthFragment from './glsl/depth.frag.glsl?raw';
-import depthVertex from './glsl/depth.vert.glsl?raw';
-import pmremEquirectFragment from './glsl/pmrem_equirect.frag.glsl?raw';
-import pmremGGXFragment from './glsl/pmrem_ggx.frag.glsl?raw';
-import pmremVertex from './glsl/pmrem.vert.glsl?raw';
-import shadowFragment from './glsl/shadow.frag.glsl?raw';
-import shadowVertex from './glsl/shadow.vert.glsl?raw';
-import spriteFragment from './glsl/sprite.frag.glsl?raw';
-import spriteVertex from './glsl/sprite.vert.glsl?raw';
-import standardFragment from './glsl/standard.frag.glsl?raw';
-import standardVertex from './glsl/standard.vert.glsl?raw';
+import basicFragment from './glsl/basic.frag.glsl.js';
+import basicVertex from './glsl/basic.vert.glsl.js';
+import customFragment from './glsl/custom.frag.glsl.js';
+import customVertex from './glsl/custom.vert.glsl.js';
+import depthFragment from './glsl/depth.frag.glsl.js';
+import depthVertex from './glsl/depth.vert.glsl.js';
+import pmremEquirectFragment from './glsl/pmrem_equirect.frag.glsl.js';
+import pmremGGXFragment from './glsl/pmrem_ggx.frag.glsl.js';
+import pmremVertex from './glsl/pmrem.vert.glsl.js';
+import shadowFragment from './glsl/shadow.frag.glsl.js';
+import shadowVertex from './glsl/shadow.vert.glsl.js';
+import spriteFragment from './glsl/sprite.frag.glsl.js';
+import spriteVertex from './glsl/sprite.vert.glsl.js';
+import standardFragment from './glsl/standard.frag.glsl.js';
+import standardVertex from './glsl/standard.vert.glsl.js';
 
 const CHUNKS = {
   common, cube_uv, iridescence, output, physical_lighting,

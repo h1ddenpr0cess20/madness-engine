@@ -9,11 +9,13 @@
   },
   "exports": {
     "./gfx": "./src/gfx/index.js",
+    "./gfx/*.js": "./src/gfx/*.js",
     "./gfx/*": "./src/gfx/*.js",
     "./physics": "./src/physics.js",
     "./input": "./src/input.js",
     "./view": "./src/view.js",
     "./storage": "./src/storage.js",
+    "./models/*.js": "./src/models/*.js",
     "./models/*": "./src/models/*.js"
   },
   "files": [

@@ -11,7 +11,7 @@ own: the games' bundlers (Vite) take it from here.
 
 | Import | What it is |
 |---|---|
-| `madness-engine/gfx` | The renderer, three.js-shaped but not three.js (see `src/gfx/LICENSE`): WebGPU where the browser has it and WebGL 2 where it doesn't (`?renderer=webgl` pins it), physically based shading, transmission, shadows. `madness-engine/gfx/stage.js`, `controls.js` and the rest are its parts. |
+| `madness-engine/gfx` | The renderer, three.js-shaped but not three.js (see `src/gfx/LICENSE`): WebGPU where the browser has it and WebGL 2 where it doesn't (`?renderer=webgl` pins it), physically based shading, transmission, shadows. `madness-engine/gfx/stage`, `controls` and the rest are its parts. The shaders are JS modules holding their text, so no bundler needs to know how to read a `.glsl` file. |
 | `madness-engine/physics` | Sphere physics over a triangle soup, moving boxes, still boxes and cylinders. `World`, `createBall`, `stepBall`, `collideBalls`. Units are tiles. |
 | `madness-engine/input` | Keys, mouse, touch and gamepad reduced to one stick, a view to turn and zoom, and one-shot presses. |
 | `madness-engine/view` | Where the camera sits round the ball, and which way on the ground is up the screen. `defineView` for a game with its own idea of home. |
@@ -61,10 +61,19 @@ does three things for every game, against the game's own copy of each file:
    against the same suite on an untouched copy. Those suites include autopilots
    that play every level of every game, so a change in how the ball rolls
    would show.
-3. The renderer is the one file set that can't be run headless by its tests:
-   the engine's is Catroller's, which is the others' plus three additions
-   that do nothing unless asked for (a repeating texture wrap, a lens shift of
-   0, and an `onFrame` hook). `test/gfx.test.js` holds those defaults.
+3. **The renderer.** The engine's is Catroller's, which is the others' plus
+   three additions that do nothing unless asked for (a repeating texture
+   wrap, a lens shift of 0, and an `onFrame` hook). Every shader is checked
+   against the game's own, comments aside. Then, in a real browser (WebGL 2,
+   a virtual clock so frames are repeatable), Dungeon Roller, Rock 'n' Roller
+   and Petroll's jobs PR were played for several seconds with and without the
+   engine: every frame of the running game is identical to the pixel.
+   (Title screens animate on the real clock and differ from themselves
+   between two runs of the same build, so they prove nothing either way.)
+4. **As a package**, with `--package`: the engine is `npm pack`ed and
+   installed into a copy of each game, the game's own copies of the engine
+   files are replaced by imports of `madness-engine/...`, and its tests run
+   and `vite build` bundles it.
 
 ## What is here, and what isn't yet
 
@@ -82,5 +91,5 @@ move as modules once the kit they sit on is the engine's.
 ```sh
 npm test       # the engine's own tests
 npm run lint
-npm run verify -- --games ..   # every game beside this folder; --only a,b to pick; --skip-tests for the quick part
+npm run verify -- --games ..   # every game beside this folder; --only a,b to pick; --skip-tests for the quick part; --package for the package install and build
 ```

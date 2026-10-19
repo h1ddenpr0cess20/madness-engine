@@ -19,30 +19,30 @@
 
 import { preprocess } from './preprocess.js';
 
-import bindings from './wgsl/chunks/bindings.wgsl?raw';
-import bump from './wgsl/chunks/bump.wgsl?raw';
-import common from './wgsl/chunks/common.wgsl?raw';
-import cube_uv from './wgsl/chunks/cube_uv.wgsl?raw';
-import draw from './wgsl/chunks/draw.wgsl?raw';
-import frame from './wgsl/chunks/frame.wgsl?raw';
-import iridescence from './wgsl/chunks/iridescence.wgsl?raw';
-import output from './wgsl/chunks/output.wgsl?raw';
-import physical_lighting from './wgsl/chunks/physical_lighting.wgsl?raw';
-import pmrem_vertex from './wgsl/chunks/pmrem_vertex.wgsl?raw';
-import shadow_vertex from './wgsl/chunks/shadow_vertex.wgsl?raw';
-import shadowmap from './wgsl/chunks/shadowmap.wgsl?raw';
-import transmission from './wgsl/chunks/transmission.wgsl?raw';
+import bindings from './wgsl/chunks/bindings.wgsl.js';
+import bump from './wgsl/chunks/bump.wgsl.js';
+import common from './wgsl/chunks/common.wgsl.js';
+import cube_uv from './wgsl/chunks/cube_uv.wgsl.js';
+import draw from './wgsl/chunks/draw.wgsl.js';
+import frame from './wgsl/chunks/frame.wgsl.js';
+import iridescence from './wgsl/chunks/iridescence.wgsl.js';
+import output from './wgsl/chunks/output.wgsl.js';
+import physical_lighting from './wgsl/chunks/physical_lighting.wgsl.js';
+import pmrem_vertex from './wgsl/chunks/pmrem_vertex.wgsl.js';
+import shadow_vertex from './wgsl/chunks/shadow_vertex.wgsl.js';
+import shadowmap from './wgsl/chunks/shadowmap.wgsl.js';
+import transmission from './wgsl/chunks/transmission.wgsl.js';
 
-import basicModule from './wgsl/basic.wgsl?raw';
-import customModule from './wgsl/custom.wgsl?raw';
-import depthModule from './wgsl/depth.wgsl?raw';
-import mipmapModule from './wgsl/mipmap.wgsl?raw';
-import pmremEquirectModule from './wgsl/pmrem_equirect.wgsl?raw';
-import pmremGGXModule from './wgsl/pmrem_ggx.wgsl?raw';
-import presentModule from './wgsl/present.wgsl?raw';
-import shadowModule from './wgsl/shadow.wgsl?raw';
-import spriteModule from './wgsl/sprite.wgsl?raw';
-import standardModule from './wgsl/standard.wgsl?raw';
+import basicModule from './wgsl/basic.wgsl.js';
+import customModule from './wgsl/custom.wgsl.js';
+import depthModule from './wgsl/depth.wgsl.js';
+import mipmapModule from './wgsl/mipmap.wgsl.js';
+import pmremEquirectModule from './wgsl/pmrem_equirect.wgsl.js';
+import pmremGGXModule from './wgsl/pmrem_ggx.wgsl.js';
+import presentModule from './wgsl/present.wgsl.js';
+import shadowModule from './wgsl/shadow.wgsl.js';
+import spriteModule from './wgsl/sprite.wgsl.js';
+import standardModule from './wgsl/standard.wgsl.js';
 
 export const MAX_DIR_LIGHTS = 8;
 export const MAX_POINT_LIGHTS = 8;

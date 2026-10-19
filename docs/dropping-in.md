@@ -20,7 +20,7 @@ game's tests (`scripts/drop-in/overlay.mjs` is the recipe in code).
 
 - `src/vendor/gfx/` → `madness-engine/gfx`. Delete the folder; import
   `madness-engine/gfx` where `./vendor/gfx/index.js` was, and
-  `madness-engine/gfx/stage.js` (and so on) for the rest.
+  `madness-engine/gfx/stage` (and so on: `renderer`, `webgl`, `webgpu`) for the rest.
 - `src/physics.js` → `export * from 'madness-engine/physics'`, and in the map
   or course builder `new World({ cols, rows, slideUnder: true })` for the town
   games.

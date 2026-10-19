@@ -26,7 +26,9 @@ import { fileURLToPath } from 'node:url';
 import { GAMES } from './drop-in/games.mjs';
 import { compareInput } from './drop-in/input-diff.mjs';
 import { copyGame, dropIn } from './drop-in/overlay.mjs';
+import { dropInPackage } from './drop-in/package-mode.mjs';
 import { comparePhysics } from './drop-in/physics-diff.mjs';
+import { compareShaders } from './drop-in/shaders-diff.mjs';
 import { compareView } from './drop-in/view-diff.mjs';
 
 const ENGINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
@@ -37,6 +39,27 @@ const gamesDir = resolve(flag('games') ?? '..');
 const only = flag('only')?.split(',');
 const work = flag('work') ?? mkdtempSync(join(tmpdir(), 'drop-in-'));
 const skipTests = args.includes('--skip-tests');
+// --package: also run the game's tests with the engine installed as a package (`npm pack`, then `npm install`) and the game built by Vite.
+const asPackage = args.includes('--package') || args.includes('--package-only');
+const packageOnly = args.includes('--package-only');
+
+/** Runs `command` in `dir`; resolves with how it ended and what it said. */
+const run = (dir, command, commandArgs) => new Promise((done) => {
+  const child = spawn(command, commandArgs, { cwd: dir });
+  let out = '';
+  child.stdout.on('data', (d) => { out += d; });
+  child.stderr.on('data', (d) => { out += d; });
+  child.on('close', (code) => done({ code, out }));
+});
+
+let packed = null;
+const pack = async () => {
+  if (packed) return packed;
+  const root = join(ENGINE, '..');
+  const { code, out } = await run(root, 'npm', ['pack', '--pack-destination', work, '--silent']);
+  if (code) throw new Error(`npm pack failed: ${out}`);
+  return (packed = join(work, out.trim().split('\n').at(-1)));
+};
 
 const tests = (dir) => new Promise((done) => {
   const child = spawn(process.execPath, ['--test', 'test/**/*.test.js'], { cwd: dir });
@@ -58,27 +81,47 @@ for (const [name, g] of Object.entries(GAMES)) {
   if (!existsSync(dir)) { console.log(`${name}: not found in ${gamesDir}, skipped`); continue; }
   console.log(name);
 
-  const physics = await comparePhysics(join(dir, 'src/physics.js'), join(ENGINE, 'physics.js'), { slide: g.physics === 'slide' });
-  report(physics.ok && physics.reaches, physics.ok
-    ? `physics: ${physics.steps} steps over 6 worlds identical${physics.reaches ? '' : ' — but the scenario never reaches the option, so it proves nothing'}`
-    : `physics differs at ${physics.detail}`);
+  if (!packageOnly) {
+    const physics = await comparePhysics(join(dir, 'src/physics.js'), join(ENGINE, 'physics.js'), { slide: g.physics === 'slide' });
+    report(physics.ok && physics.reaches, physics.ok
+      ? `physics: ${physics.steps} steps over 6 worlds identical${physics.reaches ? '' : ' — but the scenario never reaches the option, so it proves nothing'}`
+      : `physics differs at ${physics.detail}`);
 
-  const input = await compareInput(join(dir, 'src/input.js'), join(ENGINE, 'input.js'), { boost: g.boost, api: g.api, controls: g.controls });
-  report(input.ok, input.ok ? `input: ${input.frames} frames of scripted keys, mouse, touch, pad identical` : `input differs at ${input.detail}`);
+    const input = await compareInput(join(dir, 'src/input.js'), join(ENGINE, 'input.js'), { boost: g.boost, api: g.api, controls: g.controls });
+    report(input.ok, input.ok ? `input: ${input.frames} frames of scripted keys, mouse, touch, pad identical` : `input differs at ${input.detail}`);
 
-  const view = await compareView(join(dir, 'src/view.js'), join(ENGINE, 'view.js'), { home: g.home });
-  report(view.ok, view.ok ? `view: ${view.ops} operations identical` : `view differs at ${view.detail}`);
+    const shaders = await compareShaders(join(dir, g.gfx, 'shaders'), join(ENGINE, 'gfx', 'shaders'));
+    report(shaders.ok, shaders.ok ? `shaders: all ${shaders.files} files are the game's own, comments aside` : `shaders differ: ${shaders.detail}`);
+
+    const view = await compareView(join(dir, 'src/view.js'), join(ENGINE, 'view.js'), { home: g.home });
+    report(view.ok, view.ok ? `view: ${view.ops} operations identical` : `view differs at ${view.detail}`);
+  }
 
   if (skipTests) continue;
   const before = join(work, name, 'before'), after = join(work, name, 'after');
   copyGame(dir, before);
   copyGame(dir, after);
   dropIn(name, after);
-  const [a, b] = await Promise.all([tests(before), tests(after)]);
+  const [a, b] = await Promise.all([tests(before), packageOnly ? null : tests(after)]);
   report(a.fail === 0, `own tests, untouched: ${a.pass}/${a.tests} pass`);
-  const same = b.fail === 0 && b.pass === a.pass && b.tests === a.tests;
-  report(same, `own tests, engine dropped in: ${b.pass}/${b.tests} pass`);
-  if (!same) console.log(b.out.split('\n').filter((l) => /not ok|error|Error/.test(l)).slice(0, 20).join('\n'));
+  if (b) {
+    const same = b.fail === 0 && b.pass === a.pass && b.tests === a.tests;
+    report(same, `own tests, engine dropped in: ${b.pass}/${b.tests} pass`);
+    if (!same) console.log(b.out.split('\n').filter((l) => /not ok|error|Error/.test(l)).slice(0, 20).join('\n'));
+  }
+
+  if (!asPackage) continue;
+  const pkg = join(work, name, 'package');
+  copyGame(dir, pkg);
+  dropInPackage(name, pkg);
+  const install = await run(pkg, 'npm', ['install', '--no-audit', '--no-fund', await pack()]);
+  report(install.code === 0, install.code === 0 ? 'installed with the engine as a package' : `npm install failed:\n${install.out.slice(-600)}`);
+  if (install.code) continue;
+  const [c, built] = await Promise.all([tests(pkg), run(pkg, 'npx', ['vite', 'build'])]);
+  const packaged = c.fail === 0 && c.pass === a.pass && c.tests === a.tests;
+  report(packaged, `own tests, engine as a package: ${c.pass}/${c.tests} pass`);
+  if (!packaged) console.log(c.out.split('\n').filter((l) => /not ok|error|Error/.test(l)).slice(0, 20).join('\n'));
+  report(built.code === 0, built.code === 0 ? 'vite build: bundles, shaders and all' : `vite build failed:\n${built.out.slice(-800)}`);
 }
 
 console.log(bad ? `\n${bad} check(s) failed` : '\nAll checks passed');

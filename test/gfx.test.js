@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import * as GFX from '../src/gfx/index.js';
 
@@ -29,10 +29,15 @@ test('the camera is centred unless its lens is shifted', () => {
 });
 
 for (const file of ['glsl.js', 'wgsl.js']) {
-  test(`every shader file ${file} imports is there`, () => {
+  test(`every shader ${file} puts together is there, and is text`, async () => {
     const source = readFileSync(join(shaders, file), 'utf8');
-    const paths = [...source.matchAll(/from '(\.\/[^']+)\?raw'/g)].map((m) => m[1]);
+    const paths = [...source.matchAll(/from '(\.\/[^']+\.(?:glsl|wgsl)\.js)'/g)].map((m) => m[1]);
     assert.ok(paths.length > 10, `${paths.length} shader imports`);
-    for (const p of paths) assert.ok(existsSync(join(shaders, p)), `${p} is missing`);
+    assert.ok(!source.includes('?raw'), 'no bundler-specific imports');
+    for (const p of paths) {
+      const { default: text } = await import(pathToFileURL(join(shaders, p)));
+      assert.equal(typeof text, 'string');
+      assert.ok(text.length > 20, p);
+    }
   });
 }
