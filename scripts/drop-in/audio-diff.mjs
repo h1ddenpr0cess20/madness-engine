@@ -37,31 +37,7 @@ const firstDifference = (a, b) => {
   return i < 0 ? null : `call ${i}:\n  original ${a[i]}\n  engine   ${b[i]}`;
 };
 
-/**
- * Whether the engine's audio makes the same sounds as the game's own: both are
- * woken, played every sound they have with the same arguments, the music
- * started and stopped, and muted, and every node and parameter they asked
- * Web Audio for is compared.
- */
-export async function compareAudio(originalPath, enginePath) {
-  const run = (path) => record(async () => {
-    const { createAudio } = await import(pathToFileURL(path));
-    const audio = createAudio();
-    audio.wake();
-    const names = Object.entries(Object.getOwnPropertyDescriptors(audio)).filter(([, d]) => typeof d.value === 'function').map(([n]) => n);
-    for (const name of names) if (name !== 'wake' && name !== 'stopMusic') audio[name](1, 0.5);
-    for (const name of names) if (name !== 'wake') audio[name](0.2, 2);
-    audio.toggleMute();
-    audio.stopMusic?.();
-    audio.toggleMute();
-    return names.length;
-  });
-  const a = await run(originalPath), b = await run(enginePath);
-  const why = firstDifference(a, b);
-  return why ? { ok: false, detail: why } : { ok: true, calls: a.length };
-}
-
-/** The same for the band: every theme started, played for a while on the fake clock, and stopped. */
+/** Whether a band makes the same sounds as the game's music: every theme started, played for a while on the fake clock, and stopped. */
 export async function compareMusic(originalPath, enginePath) {
   const run = (path) => record(async (FakeContext) => {
     const { createBand, THEMES } = await import(pathToFileURL(path));

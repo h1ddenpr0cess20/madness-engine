@@ -1,13 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createView, groundAxes, HOME, LIMITS } from '../src/view.js';
-
-/** A stick push, as a push along the ground, for a camera turned to `yaw`. */
-const toGround = ({ x, y }, yaw) => {
-  const { right, up } = groundAxes(yaw);
-  return [right[0] * x + up[0] * y, right[1] * x + up[1] * y];
-};
+import { createView, groundAxes, HOME, LIMITS, toGround } from '../src/view.js';
 
 const near = (a, b, e = 1e-9) => a.every((v, i) => Math.abs(v - b[i]) < e);
 
@@ -85,4 +79,12 @@ test('a game with its own idea of home resets and aims by it, and the others are
   assert.equal(v.aim.zoom, 0.95);
   assert.equal(v.aim.pitch, 0.92);
   assert.ok(Math.abs(Math.sin(v.aim.yaw - near.HOME.yaw)) < 1e-9);
+});
+
+test('a push up the screen is a push away from the camera along the ground', () => {
+  for (const yaw of [0, 0.7, HOME.yaw, 2.5, -1]) {
+    const { up, right } = groundAxes(yaw);
+    assert.ok(near(toGround({ x: 0, y: 1 }, yaw), up));
+    assert.ok(near(toGround({ x: 1, y: 0 }, yaw), right));
+  }
 });

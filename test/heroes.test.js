@@ -3,29 +3,30 @@ import { test } from 'node:test';
 
 import * as GFX from '../src/gfx/index.js';
 
-/** What each game's main character is called, in its set, and what it gives. */
+/** The main characters, by name, and what each gives. */
 const HEROES = {
-  madness: { file: 'marble', exports: ['createMarble', 'RADIUS'] },
-  'dungeon-roller': { file: 'die', exports: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'] },
-  catroller: { file: 'yarn/ball', exports: ['createBall', 'TILE_METRES'] },
-  petroll: { file: 'hamster', exports: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'] },
-  metrlol: { file: 'ball', exports: ['createPlayer', 'RADIUS'] },
-  metroll: { file: 'mace', exports: ['createMace'] },
-  rocknroller: { file: 'rock', exports: ['createRock'] },
-  'rocknroller-ii': { file: 'rock', exports: ['createRock'] },
-  'rocknroller-iii': { file: 'rock', exports: ['createRock'] },
+  marble: ['createMarble', 'RADIUS'],
+  die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
+  'yarn/ball': ['createBall', 'TILE_METRES'],
+  hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
+  ball: ['createPlayer', 'RADIUS'],
+  mace: ['createMace'],
+  morningstar: [],
+  rock: ['createRock'],
+  boulder: [],
 };
 
-for (const [set, { file, exports }] of Object.entries(HEROES)) {
-  test(`${set}: its main character loads and gives ${exports.join(', ')}`, async () => {
-    const mod = await import(`../src/heroes/${set}/${file}.js`);
+for (const [file, exports] of Object.entries(HEROES)) {
+  test(`heroes/${file}: loads${exports.length ? ` and gives ${exports.join(', ')}` : ''}`, async () => {
+    const mod = await import(`../src/heroes/${file}.js`);
+    assert.ok(Object.keys(mod).length > 0);
     for (const name of exports) assert.ok(name in mod, `${name} is missing`);
   });
 }
 
 test('the d20 has twenty numbered faces, and the die tips over onto one when it stops', async () => {
-  const { createDie } = await import('../src/heroes/dungeon-roller/nat/geometry.js');
-  const { createDieState, stepDie, topFace } = await import('../src/heroes/dungeon-roller/die.js');
+  const { createDie } = await import('../src/heroes/nat/geometry.js');
+  const { createDieState, stepDie, topFace } = await import('../src/heroes/die.js');
   const model = createDie(GFX);
   assert.equal(model.faces.length, 20);
   assert.deepEqual(model.faces.map((f) => f.number).sort((a, b) => a - b), Array.from({ length: 20 }, (_, i) => i + 1));

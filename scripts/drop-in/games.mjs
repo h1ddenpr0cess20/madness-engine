@@ -7,11 +7,14 @@
  *            shoved aside (`new World({ ..., slideUnder: true })`).
  *   boost    The held boost button, if the game has one: `createInput(view,
  *            { anchor, boost })`. `api` is what the game calls it.
- *   home     Where its camera starts, where that isn't the arcade's corner.
- *   hero     Which set of main characters (`src/heroes/<set>`) it is.
- *   set      Which set of characters it is (`src/characters/<set>`), if the engine has its.
+ *   home     Where its camera starts, where that isn't the arcade's corner,
+ *            and `view`, which of `views/` that is.
  *   models   Which model kit it carries: 'kit' (src/models), 'legacy'
  *            (src/sculpt, the older bake) or none.
+ *
+ * What of each game is in the library (characters, props, heroes, scenery,
+ * textures, music) is `extract/sources.mjs`'s, and where each file went is
+ * `extract/origins.json`.
  */
 const REV = { pad: [0, 2, 7, 6] };
 const BOOST = { pad: [0, 2, 7], element: 'accel-touch' };
@@ -40,18 +43,18 @@ const METRLOL_CAST = { detail: 0.5, names: true, failure: 'metrlol: a person wou
 /** Petroll's: the names are always asked for, and a worker that errs is stopped. */
 const PETROLL_CAST = { detail: 0.5, names: false, failure: 'petroll: somebody would not bake', terminateOnError: true };
 
-export const GAMES = {
-  madness: { hero: 'madness', gfx: 'src/vendor/gfx', physics: 'base', boost: null, home: {}, models: null },
-  'dungeon-roller': { hero: 'dungeon-roller', set: 'dungeon-roller', gfx: 'src/vendor/gfx', physics: 'base', boost: null, home: {}, models: 'kit' },
-  catroller: { hero: 'catroller', set: 'catroller', gfx: 'src/vendor/gfx', physics: 'base', boost: null, home: { zoom: 1.12 }, models: 'kit' },
-  metroll: { hero: 'metroll', set: 'metroll', gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', home: {}, models: 'kit' },
-  rocknroller: { hero: 'rocknroller', set: 'rocknroller', gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', home: {}, models: 'kit' },
-  'rocknroller-ii': { hero: 'rocknroller-ii', set: 'rocknroller-ii', gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', home: {}, models: 'kit' },
-  'rocknroller-iii': { hero: 'rocknroller-iii', set: 'rocknroller-iii', gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', home: {}, models: 'kit' },
-  metrlol: { gfx: 'src/vendor/gfx', physics: 'slide', boost: BOOST, api: 'boost', home: TOWN_HOME, models: 'legacy', worldFile: 'src/map.js', cast: METRLOL_CAST },
-  petroll: { gfx: 'src/vendor/gfx', physics: 'slide', boost: null, home: TOWN_HOME, models: 'legacy', worldFile: 'src/map.js' },
+const ARCADE = { view: 'arcade', home: {} };
+const CLOSE = { view: 'close', home: { zoom: 1.12 } };
+const TOWN = { view: 'town', home: TOWN_HOME };
 
-  // The open pull requests, as they stand: metrlol's bigger map and petroll's jobs.
-  'metrlol-pr': { hero: 'metrlol', set: 'metrlol', dir: 'pr/metrlol', label: 'metrlol', gfx: 'src/vendor/gfx', physics: 'slide', boost: BOOST, api: 'boost', home: TOWN_HOME, models: 'legacy', worldFile: 'src/map.js', cast: METRLOL_CAST },
-  'petroll-pr': { hero: 'petroll', set: 'petroll', dir: 'pr/petroll', label: 'petroll', gfx: 'src/vendor/gfx', physics: 'slide', boost: null, home: TOWN_HOME, models: 'legacy', worldFile: 'src/map.js', controls: JOBS_CONTROLS, cast: PETROLL_CAST },
+export const GAMES = {
+  madness: { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...ARCADE, models: null },
+  'dungeon-roller': { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...ARCADE, models: 'kit' },
+  catroller: { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...CLOSE, models: 'kit' },
+  metroll: { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
+  rocknroller: { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
+  'rocknroller-ii': { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
+  'rocknroller-iii': { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
+  metrlol: { gfx: 'src/vendor/gfx', physics: 'slide', boost: BOOST, api: 'boost', ...TOWN, models: 'legacy', worldFile: 'src/map.js', cast: METRLOL_CAST },
+  petroll: { gfx: 'src/vendor/gfx', physics: 'slide', boost: null, ...TOWN, models: 'legacy', worldFile: 'src/map.js', controls: JOBS_CONTROLS, cast: PETROLL_CAST },
 };

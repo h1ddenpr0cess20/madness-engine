@@ -86,3 +86,12 @@ export function defineView({ home = {}, limits = {} } = {}) {
 }
 
 export const { createView, groundAxes } = defineView();
+
+/**
+ * A push on the screen (`x` right, `y` up, from the controls) as a push along
+ * the ground, [x, z], for a camera turned to `yaw`: what `stepBall` takes.
+ */
+export function toGround({ x, y }, yaw) {
+  const { right, up } = groundAxes(yaw);
+  return [x * right[0] + y * up[0], x * right[1] + y * up[1]];
+}

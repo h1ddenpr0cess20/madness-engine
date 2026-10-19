@@ -2,8 +2,8 @@ import { readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { GAME_INFO, HEROES, SETS, TOWN, versionsOf } from '../extract/sets.mjs';
 import { controlsSource, GAMES } from './games.mjs';
+import { ORIGINS } from './library-diff.mjs';
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src');
 
@@ -50,14 +50,7 @@ export function dropInPackage(name, dir) {
   if (options.length) main = main.replace('createInput(view, {', `createInput(view, { ${options.join(', ')},`);
   writeFileSync(join(dir, 'src/main.js'), main);
 
-  const id = g.hero ?? name;
-  put(dir, 'src/view.js', `export * from 'madness-engine/views/${GAME_INFO[id].view}';\n`);
-  for (const v of versionsOf(id, g.dir ?? name)) {
-    const text = readFileSync(join(SRC, v.module, `${v.set}.js`), 'utf8');
-    const spec = `madness-engine/${v.module}/${v.set}`;
-    put(dir, v.file, `export * from '${spec}';\n${/^export default\b/m.test(text) ? `export { default } from '${spec}';\n` : ''}`);
-  }
-  if (TOWN[id] && TOWN[id].dir === (g.dir ?? name)) setStubs(dir, 'town', TOWN, id);
+  put(dir, 'src/view.js', `export * from 'madness-engine/views/${g.view}';\n`);
 
   if (g.models === 'kit') {
     for (const f of ['sdf', 'rig', 'skins', 'model']) put(dir, `src/models/${f}.js`, `export * from 'madness-engine/models/${f}';\n`);
@@ -104,25 +97,22 @@ export const { isBaked, readyAll, ready, preload } = createCastLibrary({
 `);
     }
   }
-  if (g.set && (g.dir ?? name) === SETS[g.set].dir) setStubs(dir, 'characters', SETS, g.set);
-  if (g.hero && (g.dir ?? name) === HEROES[g.hero].dir) setStubs(dir, 'heroes', HEROES, g.hero);
-  if (g.hero === 'petroll' || g.hero === 'metrlol') put(dir, 'src/kit.js', "export * from 'madness-engine/kit';\n");
+  libraryStubs(name, dir);
+  if (g.view === 'town') put(dir, 'src/kit.js', "export * from 'madness-engine/kit';\n");
 }
 
 /**
- * The game's files of a set, every one of them, become one-line files that take
- * what the engine's set has — so what the game imports from its own folders
- * still resolves, to the engine.
+ * Every file of the game the library has, whole, becomes a line or two that
+ * takes the library's — so what the game imports from its own folders still
+ * resolves, to the package. (A painter the library lifted out of a bigger
+ * file stays where it is, in that file.)
  */
-export function setStubs(dir, kind, sets, set) {
-  for (const g of sets[set].groups) {
-    const folder = join(SRC, kind, set, g.to);
-    const names = g.only ?? readdirSync(folder).filter((n) => n.endsWith('.js') && statSync(join(folder, n)).isFile());
-    for (const name of names) {
-      const text = readFileSync(join(folder, name), 'utf8');
-      const hasDefault = /^export default\b/m.test(text) || /^export \{ default \} from/m.test(text);
-      const spec = `madness-engine/${kind}/${set}/${g.to === '.' ? '' : `${g.to}/`}${name.replace(/\.js$/, '')}`;
-      put(dir, `${g.from}/${name}`, `export * from '${spec}';\n${hasDefault ? `export { default } from '${spec}';\n` : ''}`);
-    }
+export function libraryStubs(name, dir) {
+  for (const [gamePath, libPath] of Object.entries(ORIGINS[name])) {
+    if (gamePath.includes('#')) continue;
+    const text = readFileSync(join(SRC, libPath), 'utf8');
+    const hasDefault = /^export default\b/m.test(text) || /^export \{[^}]*\bdefault\b/m.test(text);
+    const spec = `madness-engine/${libPath.replace(/\.js$/, '')}`;
+    put(dir, gamePath, `export * from '${spec}';\n${hasDefault ? `export { default } from '${spec}';\n` : ''}`);
   }
 }

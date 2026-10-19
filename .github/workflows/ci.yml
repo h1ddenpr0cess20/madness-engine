@@ -43,3 +43,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+  # The starter game: a new game built on nothing but the engine still installs and bundles.
+  example:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/starter
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build
