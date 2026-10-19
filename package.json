@@ -9,14 +9,8 @@
   },
   "exports": {
     "./gfx": "./src/gfx/index.js",
-    "./gfx/*.js": "./src/gfx/*.js",
-    "./gfx/*": "./src/gfx/*.js",
-    "./physics": "./src/physics.js",
-    "./input": "./src/input.js",
-    "./view": "./src/view.js",
-    "./storage": "./src/storage.js",
-    "./models/*.js": "./src/models/*.js",
-    "./models/*": "./src/models/*.js"
+    "./*.js": "./src/*.js",
+    "./*": "./src/*.js"
   },
   "files": [
     "src"
@@ -24,7 +18,8 @@
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
     "lint": "eslint .",
-    "verify": "node scripts/verify-drop-in.mjs"
+    "verify": "node scripts/verify-drop-in.mjs",
+    "extract": "node scripts/extract/all.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

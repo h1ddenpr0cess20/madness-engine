@@ -58,3 +58,30 @@ others added and doesn't use: Metrlol's still boxes and cylinders, a physics
 `drag` option, Catroller's texture wrap, lens shift and `onFrame`, Rock 'n'
 Roller's sculpt warp, Catroller's clip blending. None of them does anything
 until it is asked for.
+
+## Everything else the engine takes from a game
+
+Each is one file of the game, replaced by a line (or a few) that takes the
+engine's version of it. `npm run verify -- --package` does exactly this to a
+copy of each game, runs its tests and builds it.
+
+| The game's file | Becomes | What the engine's is checked against |
+|---|---|---|
+| `src/models/cast/*`, `src/models/props/*`, `src/cast/*` and `src/models/*` (town) | `export * from 'madness-engine/characters/<game>/…'` for each file | the same code as the game's, file by file |
+| `src/die.js`, `src/nat/*`, `src/marble.js`, `src/yarn/*`, `src/hamster.js`, `src/ball.js`, `src/mace.js`, `src/morningstar.js`, `src/rock.js`, `src/boulder.js`, `src/models/{boulder,egg,slime,looks}.js` | `export * from 'madness-engine/heroes/<game>/…'` | the same code as the game's |
+| `src/textures.js` | `export * from 'madness-engine/textures/<game>'` | its statements, the core's it takes and its exports, one for one |
+| `src/paint.js`, `src/surfaces.js`, `src/textures.js` (town) | `export * from 'madness-engine/town/<game>/…'` | the same code as the game's |
+| `src/music.js`, `src/score.js` | `export * from 'madness-engine/music/<game>'`, `…/score/<game>` | statements and exports, and every Web Audio call of every theme on a fake clock with fixed dice |
+| `src/audio.js` | `export * from 'madness-engine/audio/<game>'` | statements and exports, and every Web Audio call of every sound |
+| `src/effects.js`, `src/stage.js`, `src/storage.js` | `…/effects/<game>`, `…/stage/<game>`, `…/storage/<game>` | statements and exports |
+| `src/horizons.js` (Metroll), `src/scenery.js` and `src/lava.js` (Dungeon Roller) | `…/horizons/metroll`, `…/scenery/dungeon-roller`, `…/lava/dungeon-roller` | statements and exports |
+| `src/view.js` | `export * from 'madness-engine/views/<arcade, catroller, town>'` | 3,000 camera operations |
+| `src/kit.js` (Metrlol, Petroll) | `export * from 'madness-engine/kit'` | the same file, bar the import of `linearRGB` |
+
+Metrlol keeps its own `src/effects.js`, because it takes `model` from the
+game's model library. The other eight games' effects are the engine's.
+
+Metrlol and Petroll are the open pull requests as they stand: their sets
+are built from those, so they take the engine's once the pull requests are
+merged. (Their `main` has fewer characters and an older storage.)
+

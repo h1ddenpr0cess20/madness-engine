@@ -18,12 +18,16 @@
  * Exits non-zero if anything differs.
  */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { HEROES, SETS, TOWN, VARIANTS, versionsOf } from './extract/sets.mjs';
 import { GAMES } from './drop-in/games.mjs';
+import { compareKit, compareSets } from './drop-in/characters-diff.mjs';
+import { compareVersion } from './drop-in/variants-diff.mjs';
+import { compareAudio, compareMusic } from './drop-in/audio-diff.mjs';
 import { compareInput } from './drop-in/input-diff.mjs';
 import { copyGame, dropIn } from './drop-in/overlay.mjs';
 import { dropInPackage } from './drop-in/package-mode.mjs';
@@ -92,6 +96,37 @@ for (const [name, g] of Object.entries(GAMES)) {
 
     const shaders = await compareShaders(join(dir, g.gfx, 'shaders'), join(ENGINE, 'gfx', 'shaders'));
     report(shaders.ok, shaders.ok ? `shaders: all ${shaders.files} files are the game's own, comments aside` : `shaders differ: ${shaders.detail}`);
+
+    for (const [kind, sets, key, label] of [['characters', SETS, g.set, 'characters'], ['heroes', HEROES, g.hero, 'main characters']]) {
+      if (!key || (g.dir ?? name) !== sets[key].dir) continue;
+      const result = compareSets(gamesDir, kind, sets, key);
+      report(result.ok, result.ok ? `${label}: all ${result.files} files are the game's own, import paths aside` : `${label} differ: ${result.detail}`);
+    }
+    {
+      const id = g.hero ?? name;
+      for (const v of versionsOf(id, g.dir ?? name)) {
+        const text = readFileSync(join(gamesDir, g.dir ?? name, v.file), 'utf8');
+        let result;
+        if (v.exact) result = compareVersion(text, v.module, v.set);
+        else {
+          const sameAs = readFileSync(join(gamesDir, VARIANTS[v.module][v.set][1]), 'utf8');
+          result = text === sameAs ? { ok: true, statements: 0, exports: 0 } : { ok: false, detail: `it is not ${v.set}'s` };
+        }
+        report(result.ok, result.ok ? `${v.module}: ${v.exact ? `${result.statements} statements, ${result.exports} exports, all the game's own` : `the same file as ${v.set}'s`}` : `${v.module} differs: ${result.detail}`);
+        if (v.module === 'audio' || v.module === 'music') {
+          const sound = await (v.module === 'audio' ? compareAudio : compareMusic)(join(gamesDir, g.dir ?? name, v.file), join(ENGINE, v.module, `${v.set}.js`));
+          report(sound.ok, sound.ok ? `${v.module} played: ${sound.calls} Web Audio calls, identical` : `${v.module} sounds differ at ${sound.detail}`);
+        }
+      }
+      if (TOWN[id] && TOWN[id].dir === (g.dir ?? name)) {
+        const town = compareSets(gamesDir, 'town', TOWN, id);
+        report(town.ok, town.ok ? `town textures: all ${town.files} files are the game's own, import paths aside` : `town textures differ: ${town.detail}`);
+      }
+    }
+    if (g.hero === 'petroll' || g.hero === 'metrlol') {
+      const kit = compareKit(gamesDir, g.dir ?? name);
+      report(kit.ok, kit.ok ? `town kit: kit.js and linearRGB are the game's own` : `town kit differs: ${kit.detail}`);
+    }
 
     const view = await compareView(join(dir, 'src/view.js'), join(ENGINE, 'view.js'), { home: g.home });
     report(view.ok, view.ok ? `view: ${view.ops} operations identical` : `view differs at ${view.detail}`);
