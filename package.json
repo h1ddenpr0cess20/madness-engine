@@ -1,7 +1,7 @@
 {
   "name": "madness-engine",
   "version": "0.1.0",
-  "description": "The engine under the rolling games: a WebGPU/WebGL2 renderer, hand-written ball physics, camera and controls, and the sculpted-model toolkit",
+  "description": "An engine for rolling games: a WebGPU/WebGL2 renderer, ball physics, controls, camera, stage, sound, effects and the sculpting kit, with a library of every character, prop, hero, texture and song the games have made",
   "type": "module",
   "private": true,
   "engines": {
@@ -9,6 +9,8 @@
   },
   "exports": {
     "./gfx": "./src/gfx/index.js",
+    "./characters": "./src/characters/index.js",
+    "./props": "./src/props/index.js",
     "./*.js": "./src/*.js",
     "./*": "./src/*.js"
   },
@@ -19,7 +21,7 @@
     "test": "node --test \"test/**/*.test.js\"",
     "lint": "eslint .",
     "verify": "node scripts/verify-drop-in.mjs",
-    "extract": "node scripts/extract/all.mjs"
+    "extract": "node scripts/extract/library.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

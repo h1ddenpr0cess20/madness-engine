@@ -30,3 +30,13 @@ export function saveSlot(key, store = globalThis.localStorage) {
     },
   };
 }
+
+/** The settings every game has, and how they start: the music and effects levels, whether the screen may flash, and the on-screen hints for touch. */
+export const SETTINGS = Object.freeze({ music: 0.8, sfx: 0.9, flashing: true, touchHints: true });
+
+/** Of what was saved as settings, `s`, only what `defaults` has, of the same type: anything else is dropped. */
+export function pickSettings(s, defaults = SETTINGS) {
+  const out = {};
+  for (const k of Object.keys(defaults)) if (s && typeof s[k] === typeof defaults[k]) out[k] = s[k];
+  return out;
+}
