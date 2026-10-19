@@ -1,11 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, posix } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 import * as espree from 'espree';
 
 import { lift } from '../extract/library.mjs';
-import { engineOf, SOURCES, SPLIT } from '../extract/sources.mjs';
+import { gradesOf, moodsOf, moodText } from '../extract/moods.mjs';
+import { engineOf, MOODS, SOURCES, SPLIT } from '../extract/sources.mjs';
 import { split } from '../extract/split.mjs';
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src');
@@ -130,6 +132,31 @@ export function compareLibrary(game, dir) {
     if (missing.length) return { ok: false, detail: `the game has ${missing.join(', ')}, which the library hasn't taken yet (npm run extract)` };
   }
   return { ok: true, files };
+}
+
+/**
+ * Whether the library has the mood of every set of the game in `dir`, and
+ * every grade it has, each as the game's own code makes it now: the same
+ * light, sky, reflections, film, weather and music (`extract/moods.mjs`).
+ * Null if the game's sets have no moods.
+ */
+export async function compareMoods(game, dir) {
+  if (!MOODS[game]) return null;
+  const moods = await moodsOf(game, dir, ORIGINS);
+  const ours = readdirSync(join(SRC, 'moods'));
+  for (const m of moods) {
+    const versions = ours.filter((n) => n === `${m.name}.js` || (n.startsWith(`${m.name}.`) && n.endsWith('.js')));
+    if (!versions.some((n) => readFileSync(join(SRC, 'moods', n), 'utf8') === moodText(m, `moods/${n}`))) {
+      return { ok: false, detail: `the library hasn't the mood of the set ${m.name} (${m.gamePath}) as the game has it (npm run extract)` };
+    }
+  }
+  const { GRADES } = await import(pathToFileURL(join(SRC, 'moods/grades.js')).href);
+  const grades = Object.entries(gradesOf(game, dir));
+  for (const [name, film] of grades) {
+    const versions = Object.keys(GRADES).filter((k) => k === name || k.startsWith(`${name}.`));
+    if (!versions.some((k) => isDeepStrictEqual(GRADES[k], film))) return { ok: false, detail: `the library hasn't the ${name} grade as the game has it (npm run extract)` };
+  }
+  return { ok: true, sets: moods.length, grades: grades.length };
 }
 
 /** The town's prop kit, and the colour function it needs: the game's own, to the letter, bar where the colour function is found. */

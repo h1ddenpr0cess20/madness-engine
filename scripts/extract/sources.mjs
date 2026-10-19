@@ -96,6 +96,20 @@ export const SOURCES = {
 };
 
 /**
+ * The games whose sets each have a mood (`moods.mjs`): the module that lists
+ * the sets (`VENUES`, each a function that builds one), the stage that
+ * dresses itself for a set (`setVenue`), and the page and stylesheet that
+ * shoot the picture on film.
+ */
+const STAGED = { venues: 'src/venues/index.js', stage: 'src/stage.js', page: 'index.html', styles: 'src/styles.css' };
+export const MOODS = {
+  rocknroller: STAGED,
+  'rocknroller-ii': STAGED,
+  'rocknroller-iii': STAGED,
+  metroll: STAGED,
+};
+
+/**
  * The library files whose versions are long modules with much in common: what
  * the versions share is kept once, in `core`, and each version holds the rest
  * (see `dedupe.mjs`).

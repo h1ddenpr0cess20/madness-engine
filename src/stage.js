@@ -1,3 +1,4 @@
+import { createFilm } from './film.js';
 import * as GFX from './gfx/index.js';
 import { Renderer } from './gfx/renderer.js';
 import { WebGLBackend } from './gfx/webgl.js';
@@ -13,6 +14,7 @@ import { createView } from './views/arcade.js';
  *       sky: paintSky(),     // textures/skies/*: what is round the scene
  *       room: paintRoom(),   // textures/rooms/*: what shiny things reflect
  *     });
+ *     stage.setMood(noir);  // moods/*: a set's light, sky, reflections and film at once
  *     // every frame:
  *     stage.target.set(ball.x, ball.y, ball.z);
  *     stage.view.step(dt);
@@ -80,9 +82,10 @@ const canvasTexture = (canvas) => {
  *   - `lights`: any of LIGHTS' parts to change; `fill: null` for no fill
  *   - `shadows`: whether the key casts them (true); `shadowSize`, the map's size (2048)
  *   - `pixelRatio`: the most device pixels a CSS pixel gets (2)
+ *   - `ui`: elements shot on the same film as the picture where a film says so (film.js)
  *   - `label`: the game's name, for the console
  * @returns the stage: { GFX, renderer, scene, camera, view, target, key, hemi, fill,
- *   shake, look(), render(), setSky(canvas), setRoom(canvas) }
+ *   film, lantern, shake, look(), render(), setSky(canvas), setRoom(canvas), setMood(mood) }
  */
 export async function createStage(host, {
   lens = LENS,
@@ -94,6 +97,7 @@ export async function createStage(host, {
   shadows = true,
   shadowSize = 2048,
   pixelRatio = 2,
+  ui = [],
   preference = preferredRenderer(),
   label = 'madness-engine',
 } = {}) {
@@ -102,6 +106,7 @@ export async function createStage(host, {
   renderer.shadowMap.enabled = shadows;
   renderer.shadowMap.type = GFX.PCFShadowMap;
   host.appendChild(renderer.domElement);
+  const film = createFilm(host, { canvas: () => renderer.domElement, ui });
 
   const scene = new GFX.Scene();
   const camera = new GFX.PerspectiveCamera(lens.fov, 1, 0.3, 400);
@@ -113,6 +118,7 @@ export async function createStage(host, {
       try {
         renderer.setBackend(new WebGLBackend(canvas), canvas);
         old.replaceWith(canvas);
+        film.set(film.current);
         console.warn(`${label}: the GPU went away; carrying on with WebGL 2.`);
       } catch (err) {
         console.error(`${label}: the GPU went away and WebGL 2 is not available.`, err);
@@ -161,9 +167,12 @@ export async function createStage(host, {
   scene.add(dome);
 
   const pmrem = new GFX.PMREMGenerator(renderer);
+  let lanternHeight = 0;
 
   const stage = {
-    GFX, renderer, scene, camera, view, key, hemi, fill,
+    GFX, renderer, scene, camera, view, key, hemi, fill, film,
+    /** The light a mood hangs over the target, or null. */
+    lantern: null,
     /** What the camera looks at; set it every frame (the ball, usually). */
     target: new GFX.Vector3(),
     /** How hard the camera is being shaken, in tiles. The game sets it and lets it die away. */
@@ -185,6 +194,43 @@ export async function createStage(host, {
       texture.colorSpace = GFX.SRGBColorSpace;
       texture.needsUpdate = true;
       scene.environment = pmrem.fromEquirectangular(texture).texture;
+    },
+
+    /**
+     * Dresses the stage in a mood (moods/*): its light, its sky, what its
+     * chrome reflects and the film it is shot on, whichever of them the
+     * mood has. Its light is the whole light of its set: the wash, the key,
+     * and a lantern hung over `target` (the rock games hang one over Rock),
+     * and no fill, which those games don't have. Its weather and its music
+     * are the game's to start (`effects.setWeather(mood.weather)`, and
+     * `mood.music.theme` at `mood.music.tempo` on the band in
+     * `mood.music.band`).
+     */
+    setMood(mood) {
+      if (mood.light) {
+        const { hemisphere, key: k, lantern: l } = mood.light;
+        hemi.color.set(hemisphere.sky);
+        hemi.groundColor.set(hemisphere.ground);
+        hemi.intensity = hemisphere.intensity;
+        key.color.set(k.color);
+        key.intensity = k.intensity;
+        if (fill) fill.visible = false;
+        if (l && !stage.lantern) {
+          stage.lantern = new GFX.PointLight(new GFX.Color(l.color));
+          scene.add(stage.lantern);
+        }
+        if (stage.lantern) {
+          stage.lantern.visible = Boolean(l);
+          if (l) {
+            stage.lantern.color.set(l.color);
+            Object.assign(stage.lantern, { intensity: l.intensity, distance: l.distance, decay: l.decay });
+            lanternHeight = l.height;
+          }
+        }
+      }
+      if (mood.paintSky) stage.setSky(mood.paintSky());
+      if (mood.paintRoom) stage.setRoom(mood.paintRoom());
+      if ('film' in mood) film.set(mood.film);
     },
   };
   stage.setSky(sky);
@@ -218,6 +264,7 @@ export async function createStage(host, {
       fill.target.position.copy(stage.target);
       fill.target.updateMatrixWorld();
     }
+    if (stage.lantern) stage.lantern.position.set(stage.target.x, stage.target.y + lanternHeight, stage.target.z);
   };
 
   const fit = () => renderer.setSize(host.clientWidth || 1, host.clientHeight || 1);

@@ -58,6 +58,10 @@ others added and doesn't use: Metrlol's still boxes and cylinders, a physics
 Roller's sculpt warp, Catroller's clip blending. None of them does anything
 until it is asked for.
 
+It also has a fix the games' copies don't: under WebGL, a double-sided lit
+material drawn after a back-sided one (the sky dome, which is drawn first)
+took the dome's winding, so it was lit as if seen from behind.
+
 ## The game's characters, props, heroes, textures and music
 
 Each file of the game that the library has becomes a line or two that takes
@@ -80,3 +84,9 @@ the games' `stage.js`. A game keeps its own `stage.js`, audio, effects and
 storage. Those are the game itself, and the engine's `stage`, `audio`,
 `effects` and `storage` are for new games, or for a game that wants to be
 rewritten on them.
+
+The moods in `moods/` are the same: each is what a game's own `setVenue`
+and stylesheet make of one of its sets (the light, the sky, the reflections,
+the grade, the grain and the vignette), so the game keeps its `look`s, its
+`stage.js` and its `styles.css`. `npm run verify` checks each mood against
+what the game makes of its set now.
