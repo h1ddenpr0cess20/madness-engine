@@ -115,10 +115,16 @@ export class WebGLBackend {
     u.set('modelMatrix', call.object.modelMatrix, 'm4');
     u.set('modelViewMatrix', call.object.modelViewMatrix, 'm4');
     u.set('normalMatrix', call.object.normalMatrix, 'm3');
-    u.set('projectionMatrix', frame.camera.projectionMatrix, 'm4');
-    u.set('viewMatrix', frame.camera.viewMatrix, 'm4');
-    u.set('cameraPosition', frame.camera.position, 'v3');
-    u.set('isOrthographic', frame.camera.isOrthographic ? 1 : 0, 'i');
+    // What every draw in a pass shares (the camera, the lights, the shadow)
+    // goes up once per program per pass: a program keeps its uniforms.
+    const fresh = program.frame !== frame;
+    program.frame = frame;
+    if (fresh) {
+      u.set('projectionMatrix', frame.camera.projectionMatrix, 'm4');
+      u.set('viewMatrix', frame.camera.viewMatrix, 'm4');
+      u.set('cameraPosition', frame.camera.position, 'v3');
+      u.set('isOrthographic', frame.camera.isOrthographic ? 1 : 0, 'i');
+    }
 
     // Uploads bind whatever unit is active, so every texture is made resident
     // before any unit is assigned.
@@ -143,21 +149,23 @@ export class WebGLBackend {
       }
     } else {
       for (const [name, value] of Object.entries(call.params)) u.set(name, value, uniformType(value));
-      this._lights(u, frame);
+      if (fresh) this._lights(u, frame);
       if (map) bindTexture('map', map);
       if (bumpMap) bindTexture('bumpMap', bumpMap);
       if (frame.env && call.key.envMap) bindTexture('envMap', frame.env.gpu.texture);
       bindTexture('dfgLUT', this.dfg);
       if (frame.shadow && u.has('directionalShadowMap')) {
         bindTexture('directionalShadowMap', frame.shadow.texture.texture);
-        u.set('directionalShadowMatrix[0]', frame.shadow.matrix, 'm4');
-        u.set('directionalShadowNormalBias[0]', frame.shadow.normalBias, 'f');
-        u.set('directionalShadowParams', [frame.shadow.intensity, frame.shadow.bias, frame.shadow.radius, 0], 'v4');
-        u.set('directionalShadowMapSize', frame.shadow.mapSize, 'v2');
+        if (fresh) {
+          u.set('directionalShadowMatrix[0]', frame.shadow.matrix, 'm4');
+          u.set('directionalShadowNormalBias[0]', frame.shadow.normalBias, 'f');
+          u.set('directionalShadowParams', [frame.shadow.intensity, frame.shadow.bias, frame.shadow.radius, 0], 'v4');
+          u.set('directionalShadowMapSize', frame.shadow.mapSize, 'v2');
+        }
       }
       if (frame.transmission && u.has('transmissionSamplerMap')) {
         bindTexture('transmissionSamplerMap', this.transmission.texture);
-        u.set('transmissionSamplerSize', frame.transmission.size, 'v2');
+        if (fresh) u.set('transmissionSamplerSize', frame.transmission.size, 'v2');
       }
     }
 
