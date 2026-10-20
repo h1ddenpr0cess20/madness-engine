@@ -14,7 +14,7 @@ const CARDIGAN = cloth('#3a3438', '#24202a');
 
 export default person({
   name: 'nonna',
-  budget: 16000,
+  budget: 24000,
   scale: 1.24,
   b: 1.1,
   shape: { legs: 0.84, girth: 1.22, head: 1.06, hips: 1.2 },

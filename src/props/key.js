@@ -12,6 +12,7 @@ export default {
   name: 'key',
   scale: 1.45,
   cell: 0.0052,
+  budget: 13500,
   bones: [['root', null, [0, 0, 0]]],
   materials: {
     gilt: { roughness: 0.26, metalness: 1, emissive: '#3a2400', emissiveIntensity: 0.9 },

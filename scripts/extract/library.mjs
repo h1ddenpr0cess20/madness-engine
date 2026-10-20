@@ -16,7 +16,8 @@
  *   - each other version is at `<kind>/<name>.<game>.js`, after the oldest
  *     game that has it.
  *
- * Nothing is rewritten but the import paths. `origins.json` beside this file
+ * Nothing is rewritten but the import paths, and what `edits.mjs` says the
+ * engine changes. `origins.json` beside this file
  * records where each game's file went, for `verify-drop-in` and for moving a
  * game onto the library. `characters/index.js` and `props/index.js` list every
  * default sculpted model by name.
@@ -27,6 +28,7 @@ import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dedupe } from './dedupe.mjs';
+import { edited } from './edits.mjs';
 import { gradesOf, gradesText, indexText, moodLine, moodsOf, moodText, versions } from './moods.mjs';
 import { engineOf, ORDER, SOURCES, SPLIT } from './sources.mjs';
 import { split } from './split.mjs';
@@ -101,11 +103,12 @@ function gather(game, dir) {
     const root = join(dir, g.from);
     const names = g.only ?? readdirSync(root).filter((n) => n.endsWith('.js') && statSync(join(root, n)).isFile() && !g.skip?.includes(n));
     for (const name of names) {
+      const place = posix.join(g.kind, g.to ?? '', g.as ?? name);
       files.push({
         game,
         gamePath: posix.join(g.from, name),
-        place: posix.join(g.kind, g.to ?? '', g.as ?? name),
-        text: readFileSync(join(root, name), 'utf8'),
+        place,
+        text: edited(place, readFileSync(join(root, name), 'utf8')),
       });
     }
   }

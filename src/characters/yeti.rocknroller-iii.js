@@ -69,5 +69,5 @@ export default person({
     });
   },
   cells: { kit: 0.005 },
-  budget: 14000,
+  budget: 21000,
 });

@@ -10,6 +10,7 @@ export default {
   name: 'demo',
   scale: 1.3,
   cell: 0.0042,
+  budget: 13500,
   cells: { fine: 0.0028, glass: 0.0042 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

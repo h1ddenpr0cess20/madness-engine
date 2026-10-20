@@ -19,6 +19,7 @@ export default {
   name: 'bucket',
   scale: 1.3,
   cell: 0.0075,
+  budget: 13500,
   cells: { corn: 0.0058 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

@@ -13,6 +13,7 @@ export default {
   name: 'reel',
   scale: 1.2,
   cell: 0.005,
+  budget: 13500,
   cells: { fine: 0.003 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

@@ -18,6 +18,7 @@ export default {
   name: 'revive',
   scale: 1.15,
   cell: 0.0088,
+  budget: 13500,
   cells: { gilt: 0.006, wings: 0.0055 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

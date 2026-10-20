@@ -37,6 +37,7 @@ export default {
   name: 'skeleton',
   scale: 1.07,
   cell: 0.0062,
+  budget: 13500,
   cells: { eyes: 0.003, teeth: 0.0024, blade: 0.0028, shield: 0.0045, helm: 0.004 },
   bones: [...bones(), ['jaw', 'head', [0, 0.632, 0.02]]],
   materials: {

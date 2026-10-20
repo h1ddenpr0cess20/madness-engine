@@ -32,6 +32,7 @@ export default {
   // Sculpted rat-sized, stood up a little over half that.
   scale: 0.6,
   cell: 0.0075,
+  budget: 13500,
   // The small, sharp things get a finer grid of their own.
   cells: { eyes: 0.0024, irises: 0.0014, pupils: 0.001, teeth: 0.002, ears: 0.0013 },
   bones: [

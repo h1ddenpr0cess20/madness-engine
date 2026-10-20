@@ -38,6 +38,7 @@ function wing(m) {
 export default {
   name: 'bat',
   cell: 0.0055,
+  budget: 13500,
   cells: { eyes: 0.0018, fangs: 0.0016, wings: 0.0038, ears: 0.0028 },
   bones: [
     ['root', null, [0, 0, 0]],

@@ -12,6 +12,7 @@ export default {
   name: 'lighter',
   scale: 1.5,
   cell: 0.0034,
+  budget: 13500,
   cells: { flame: 0.0028 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

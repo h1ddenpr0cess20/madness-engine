@@ -27,6 +27,7 @@ export default quadruped({
   tail: { len: 0.4, rise: -0.1, r: 0.05, tip: 0.008, curl: 0.04 },
   feet: 'claw',
   sculptHead: false,
+  cells: { teeth: 0.0014 },
   paint: { body: HIDE, feet: HIDE },
   mats: { body: 'scale', legs: 'scale', tail: 'scale', feet: 'scale' },
   style: { gait: 'sprawl', rate: 7, wag: 0.5, after(k, { clip, t }) {
@@ -60,8 +61,8 @@ export default quadruped({
       for (let i = 0; i < 6; i++) {
         const t = 0.15 + i * 0.15, z = P.H[2] + (P.S1[2] - P.H[2]) * t, w = 0.042 - t * 0.018;
         for (const m of [1, -1]) {
-          s.cone([m * w, P.H[1] - 0.026, z], 0.004, 0.012, { ...TOOTH, bone: 'head', rot: [Math.PI, 0, 0] });
-          s.cone([m * (w - 0.004), P.H[1] - 0.022, z + 0.01], 0.0035, 0.01, { ...TOOTH, bone: 'jaw' });
+          s.part('teeth', () => s.cone([m * w, P.H[1] - 0.026, z], 0.004, 0.012, { ...TOOTH, bone: 'head', rot: [Math.PI, 0, 0] }));
+          s.part('teeth', () => s.cone([m * (w - 0.004), P.H[1] - 0.022, z + 0.01], 0.0035, 0.01, { ...TOOTH, bone: 'jaw' }));
         }
       }
     });

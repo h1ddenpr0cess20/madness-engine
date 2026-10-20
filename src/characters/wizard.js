@@ -15,7 +15,7 @@ const ROBE = cloth('#3a2a8a', '#241a5a');
 
 export default person({
   name: 'wizard',
-  budget: 20000,
+  budget: 30000,
   scale: 1.5,
   b: 1.04,
   shape: { legs: 0.96, girth: 1.0 },

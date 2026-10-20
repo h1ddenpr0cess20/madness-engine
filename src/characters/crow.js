@@ -21,8 +21,8 @@ export default {
   name: 'crow',
   scale: 1.5,
   cell: 0.0055,
-  cells: { kit: 0.004, fine: 0.0025, eyes: 0.0025 },
-  budget: 12000,
+  cells: { kit: 0.003, fine: 0.0025, eyes: 0.0025 },
+  budget: 18000,
   bones: [
     ['root', null, [0, 0, 0]],
     ['body', 'root', [0, 0, 0]],
@@ -51,7 +51,7 @@ export default {
         // A wing: black, with the dark bars and the flight feathers at the end.
         s.flake([m * 0.045, 0.025, 0.02], [m * 0.14, 0.035, -0.02], [0, 1, 0], 0.035, 0.03, 0.25, { ...F, bone: `wing${S}`, k: 0.01 });
         for (const z of [-0.005, -0.025]) s.flake([m * 0.06, 0.04, z], [m * 0.12, 0.045, z - 0.01], [0, 1, 0], 0.008, 0.008, 0.25, { color: DARK, mat: 'feather', bone: `wing${S}`, k: 0.002 });
-        for (let i = 0; i < 4; i++) s.flake([m * (0.12 + i * 0.01), 0.035, -0.01 - i * 0.008], [m * (0.24 - i * 0.025), 0.04, -0.03 - i * 0.03], [0, 1, 0], 0.016, 0.01, 0.25, { color: DARK, mat: 'feather', bone: `wing${S}`, k: 0.004 });
+        for (let i = 0; i < 4; i += 0.5) s.flake([m * (0.12 + i * 0.01), 0.035 + i * 0.003, -0.01 - i * 0.008], [m * (0.24 - i * 0.025), 0.04 + i * 0.003, -0.03 - i * 0.03], [0, 1, 0], 0.014, 0.0075, 0.3, { color: DARK, mat: 'feather', bone: `wing${S}`, k: 0.0006 });
       }
       // The tail fanned out.
       for (const x of [-0.02, 0, 0.02]) {

@@ -74,8 +74,9 @@ which games it came from.**
 
 Where games made different versions of the same thing (Rock 'n' Roller III's
 bouncer is not Metroll's), every version is kept, unchanged apart from its
-import paths. The default, at `<kind>/<name>`, is the version the most games
-have; on a tie it is the newest game's. Each other version sits beside it as
+import paths and the engine's own improvements (below). The default, at
+`<kind>/<name>`, is the version the most games have; on a tie it is the
+newest game's. Each other version sits beside it as
 `<kind>/<name>.<game>`, named after the oldest game that has it:
 `characters/bouncer`, `characters/bouncer.metroll` and
 `characters/bouncer.rocknroller-iii`. Within each version, what it imports is
@@ -92,6 +93,7 @@ proves that the engine can stand in for each game's own copies:
    button) and the same state after every step, on both. The renderer's
    shaders are compared with the game's own, comments aside.
 2. **The library.** Every file it took from the game is the game's own code,
+   once the engine's own changes to it are made (`scripts/extract/edits.mjs`),
    and each import goes to the same thing. The game must also have nothing the
    library should have taken but hasn't. The bands play every theme with the
    same Web Audio calls as the game's own music. Every set's mood, and every
@@ -105,6 +107,38 @@ proves that the engine can stand in for each game's own copies:
    `vite build` bundles it.
 
 `docs/dropping-in.md` covers moving a game onto the engine.
+
+## Where the cast is finer than in the games
+
+The engine's mesher (`models/sdf.js` `build`) refines where the grid is too
+coarse for the detail: an edge is split where the surface bends sharply
+across it, where a line of paint crosses it, or where its middle is off the
+surface, and the new vertex is put on the surface. That costs up to 30%
+more vertices (a definition's `refine`, 0 for none), and the bakes take
+about 40% longer. Far off (`detail` under 1), a small part such as a pupil
+keeps enough of a grid to stay round.
+
+The sculpts were tuned to the old mesher's errors in one place: the eyes of
+the people (`humanoid`) and of the animals (`quadruped`) sat with their
+fronts just under the skin of the face, and showed only because the coarse
+mesh cut corners. Each eye is now set by where the face actually is.
+
+The animals have more besides. The `quadruped`s' eyes have pupils,
+catch-lights and lids; their noses (with nostrils) and ears (cupped and
+coloured inside when they stand up) are meshes of their own on grids as
+fine as the head is small; they have mouths, and their paws have toes. The
+birds' wings end in overlapping, tapered flight feathers, not four round
+fingers. The crocodile's and the gator's teeth, and the kangaroo's ears and
+nose, have grids of their own. Catroller's cats have ears that are thin
+shells up on the crown, growing out of the head, and tails that curve
+along their length (a shape can share itself between bones) and round off
+at the tip.
+
+These, and the vertex budgets (half as many again, to make room for the
+finer meshes), are changes to files the library takes from the games.
+`scripts/extract/edits.mjs` says what they are. `npm run extract` makes
+them as it takes the files, and `npm run verify` makes them before it
+compares the files and in the copy of each game whose tests it runs.
 
 ## Keeping the library up to date
 

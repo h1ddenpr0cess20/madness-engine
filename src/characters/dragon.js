@@ -59,7 +59,7 @@ export default {
   name: 'dragon',
   cell: 0.0175,
   // One of it, and it's the boss: it can have more to it than the rest.
-  budget: 20000,
+  budget: 30000,
   cells: { eyes: 0.004, irises: 0.003, pupils: 0.0025, teeth: 0.0045, horns: 0.008, claws: 0.007, spikes: 0.009, wings: 0.0095 },
   ambient: 0.35,
   bones: [

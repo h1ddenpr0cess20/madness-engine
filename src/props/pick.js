@@ -11,7 +11,7 @@ export default {
   name: 'pick',
   scale: 1.5,
   cell: 0.0042,
-  budget: 9000,
+  budget: 13500,
   bones: [['root', null, [0, 0, 0]]],
   materials: { celluloid: { roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, emissive: '#201020', emissiveIntensity: 0.3 } },
   sculpt(s) {

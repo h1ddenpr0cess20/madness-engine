@@ -18,8 +18,8 @@ export default {
   name: 'kangaroo',
   scale: 1.5,
   cell: 0.0075,
-  cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025 },
-  budget: 12000,
+  cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025, ears: 0.0024, nose: 0.0016 },
+  budget: 18000,
   bones: [
     ['root', null, [0, 0, 0]],
     ['hips', 'root', [0, 0.24, -0.02]],
@@ -57,8 +57,13 @@ export default {
     s.limb([0, 0.46, 0.04], [0, 0.56, 0.06], 0.035, 0.03, { ...F, bone: 'neck', k: 0.03 });
     s.ellipsoid([0, 0.585, 0.065], [0.036, 0.038, 0.042], { ...F, bone: 'head', k: 0.02 });
     s.limb([0, 0.578, 0.09], [0, 0.565, 0.145], 0.026, 0.018, { ...F, bone: 'head', k: 0.015 });
-    s.sphere([0, 0.572, 0.158], 0.012, { color: '#1a1210', mat: 'nose', bone: 'head', k: 0.005 });
-    for (const m of [1, -1]) s.flake([m * 0.018, 0.61, 0.05], [m * 0.036, 0.675, 0.035], [0, 0, 1], 0.017, 0.008, 0.35, { ...F, bone: 'head', k: 0.008 });
+    s.part('nose', () => {
+      s.sphere([0, 0.572, 0.158], 0.012, { color: '#1a1210', mat: 'nose', bone: 'head', k: 0 });
+      for (const m of [1, -1]) s.ellipsoid([m * 0.005, 0.57, 0.168], [0.0026, 0.002, 0.004], { op: 'sub', k: 0.0016 });
+    });
+    s.part('ears', () => {
+      for (const m of [1, -1]) s.flake([m * 0.018, 0.61, 0.05], [m * 0.036, 0.675, 0.035], [0, 0, 1], 0.017, 0.008, 0.35, { ...F, bone: 'head', k: 0.008 });
+    });
     // The tail, thick at the root and resting on the ground: the third leg.
     s.limb([0, 0.2, -0.07], [0, 0.085, -0.27], 0.05, 0.032, { ...F, bone: 'tail', k: 0.03 });
     s.limb([0, 0.085, -0.27], [0, 0.025, -0.42], 0.032, 0.012, { ...F, bone: 'tail2', k: 0.02 });
@@ -89,6 +94,8 @@ export default {
     s.part('eyes', () => {
       for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });
     });
+    // A catch-light in each.
+    for (const m of [1, -1]) s.paint((p) => Math.hypot(p[0] - m * 0.029, p[1] - 0.602, p[2] - 0.1) - 0.0018, '#ffffff', 0.0006);
   },
   animate(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 }) {
     const T = time + seed;

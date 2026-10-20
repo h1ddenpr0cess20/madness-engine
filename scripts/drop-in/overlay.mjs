@@ -2,9 +2,11 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { edited } from '../extract/edits.mjs';
 import { controlsSource, GAMES } from './games.mjs';
 
 const ENGINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src');
+const ORIGINS = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'extract', 'origins.json'), 'utf8'));
 
 /** Copies a game, leaving out what isn't source. */
 export function copyGame(from, to) {
@@ -51,7 +53,8 @@ export const { isBaked, readyAll, ready, preload } = createCastLibrary({
 
 /**
  * Drops the engine into a copy of `name`: its renderer, physics, input, view
- * and model kit replaced by the engine's, with the options the game passes.
+ * and model kit replaced by the engine's, with the options the game passes,
+ * and the engine's changes made to its characters and props.
  */
 export function dropIn(name, dir) {
   const g = GAMES[name];
@@ -108,6 +111,14 @@ serveBakes({ ...CAST, ...PROPS });
     copyEngine(dir, 'models/skins.js', 'src/sculpt/skins.js');
     copyEngine(dir, 'models/legacy-bake.js', 'src/sculpt/bake.js');
     if (g.cast) castKit(dir, g);
+  }
+
+  // The game's characters and props as the engine has changed them (extract/edits.mjs): its eyes, and the budgets its tests hold the finer meshes to.
+  for (const [gamePath, libPath] of Object.entries(ORIGINS[name] ?? {})) {
+    if (gamePath.includes('#')) continue;
+    const text = readFileSync(join(dir, gamePath), 'utf8');
+    const ours = edited(libPath, text);
+    if (ours !== text) writeFileSync(join(dir, gamePath), ours);
   }
   return existsSync(dir);
 }

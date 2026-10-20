@@ -17,7 +17,7 @@ const LACE = (p, n) => {
 
 export default person({
   name: 'goth',
-  budget: 19000,
+  budget: 28500,
   scale: 1.5,
   b: 0.98,
   shape: { legs: 1.1, girth: 0.88, head: 1.0 },

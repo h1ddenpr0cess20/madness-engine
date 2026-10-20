@@ -36,6 +36,7 @@ export default {
   name: 'orc',
   scale: 1.18,
   cell: 0.0072,
+  budget: 13500,
   cells: { eyes: 0.0025, irises: 0.0016, tusks: 0.0028, armor: 0.0045, club: 0.0045, hair: 0.0045 },
   bones: bones(B),
   materials: {

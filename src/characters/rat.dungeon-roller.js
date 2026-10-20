@@ -31,6 +31,7 @@ export default {
   // Giant: sculpted rat-sized, stood up a third again.
   scale: 1.35,
   cell: 0.0075,
+  budget: 13500,
   // The small, sharp things get a finer grid of their own.
   cells: { eyes: 0.0024, irises: 0.0014, pupils: 0.001, teeth: 0.0025, ears: 0.003 },
   bones: [

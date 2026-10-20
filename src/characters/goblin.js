@@ -32,6 +32,7 @@ export default {
   name: 'goblin',
   scale: 1,
   cell: 0.0074,
+  budget: 13500,
   cells: { eyes: 0.0022, irises: 0.0013, pupils: 0.001, teeth: 0.0018, ears: 0.0032, claws: 0.0022, hands: 0.0042, gear: 0.0035, blade: 0.0022, cloth: 0.0045 },
   bones: [
     ['root', null, [0, 0, 0]],

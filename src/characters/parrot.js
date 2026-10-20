@@ -17,8 +17,8 @@ export default {
   name: 'parrot',
   scale: 1.5,
   cell: 0.0055,
-  cells: { kit: 0.004, fine: 0.0025 },
-  budget: 12000,
+  cells: { kit: 0.003, fine: 0.0025 },
+  budget: 18000,
   bones: [
     ['root', null, [0, 0, 0]],
     ['body', 'root', [0, 0, 0]],
@@ -49,8 +49,8 @@ export default {
         // A wing: red at the shoulder, then yellow, then the long blue flight feathers.
         s.flake([m * 0.045, 0.03, 0.02], [m * 0.13, 0.04, -0.01], [0, 1, 0], 0.03, 0.03, 0.25, { ...F, bone: `wing${S}`, k: 0.01 });
         s.flake([m * 0.1, 0.04, 0.0], [m * 0.18, 0.045, -0.03], [0, 1, 0], 0.03, 0.028, 0.22, { color: YELLOW, mat: 'feather', bone: `wing${S}`, k: 0.008 });
-        for (let i = 0; i < 4; i++) {
-          s.flake([m * (0.15 + i * 0.01), 0.045, -0.02 - i * 0.005], [m * (0.28 - i * 0.03), 0.05, -0.04 - i * 0.03], [0, 1, 0], 0.016, 0.01, 0.25, { color: BLUE, mat: 'feather', bone: `wing${S}`, k: 0.004 });
+        for (let i = 0; i < 4; i += 0.5) {
+          s.flake([m * (0.15 + i * 0.01), 0.045 + i * 0.003, -0.02 - i * 0.005], [m * (0.28 - i * 0.03), 0.05 + i * 0.003, -0.04 - i * 0.03], [0, 1, 0], 0.014, 0.0075, 0.3, { color: BLUE, mat: 'feather', bone: `wing${S}`, k: 0.0006 });
         }
       }
       // The tail: long, red and blue.

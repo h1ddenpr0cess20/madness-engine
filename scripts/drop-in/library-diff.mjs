@@ -5,6 +5,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import * as espree from 'espree';
 
+import { edited } from '../extract/edits.mjs';
 import { lift } from '../extract/library.mjs';
 import { gradesOf, moodsOf, moodText } from '../extract/moods.mjs';
 import { engineOf, MOODS, SOURCES, SPLIT } from '../extract/sources.mjs';
@@ -95,7 +96,8 @@ function coreOf(path) {
 
 /**
  * Whether everything the library took from the game in `dir` is, in the
- * library, the game's own: each file the same code, its imports aside, and
+ * library, the game's own: each file the same code (once the engine's
+ * changes to it are made, `extract/edits.mjs`), its imports aside, and
  * each import going to the same thing — the library's file for the game's
  * file it imported, or the engine's.
  */
@@ -108,6 +110,7 @@ export function compareLibrary(game, dir) {
     if (!existsSync(join(dir, file))) return { ok: false, detail: `${file} is not in the game any more (npm run extract)` };
     let theirs = readFileSync(join(dir, file), 'utf8');
     if (fn) theirs = lift(theirs, fn, SOURCES[game].find((g) => g.fn === fn && g.from === file).name);
+    else theirs = edited(libPath, theirs);
     const ours = readFileSync(join(SRC, libPath), 'utf8');
 
     const core = coreOf(libPath);

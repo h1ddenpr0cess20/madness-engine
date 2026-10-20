@@ -34,6 +34,7 @@ export default {
   name: 'chest',
   scale: 1.15,
   cell: 0.0125,
+  budget: 13500,
   cells: { iron: 0.006, gold: 0.0065 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {
