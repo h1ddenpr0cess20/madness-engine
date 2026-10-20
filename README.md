@@ -108,6 +108,14 @@ proves that the engine can stand in for each game's own copies:
 
 `docs/dropping-in.md` covers moving a game onto the engine.
 
+Catroller has moved: it imports `madness-engine/...` for all of it and keeps
+no copies, and its cats, mouse, yarn ball, music and house are the
+library's. For a game on the engine (`ON_ENGINE` in
+`scripts/extract/sources.mjs`), what the library has of it is the source:
+`npm run extract` keeps those files as they are, and `npm run verify`
+checks that the game keeps no copies and runs its tests on this engine
+(and, with `--package`, on the packed engine, and builds it).
+
 ## Where the cast is finer than in the games
 
 The engine's mesher (`models/sdf.js` `build`) refines where the grid is too

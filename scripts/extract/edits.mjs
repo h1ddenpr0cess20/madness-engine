@@ -12,7 +12,10 @@
  * itself, their edit finds them already there and leaves the file be; the
  * budgets' edit can't tell, and is to go once the games take the budgets.
  * When a game rewrites what an edit changes, the edit can't be made and
- * says so, and it is for a person to look again.
+ * says so, and it is for a person to look again. A game on the engine
+ * (`ON_ENGINE` in sources.mjs) takes the library's files as they are, so
+ * there is nothing to change in it; its things that other games have copies
+ * of are changed in those copies to match.
  */
 import { ORDER } from './sources.mjs';
 
@@ -321,7 +324,7 @@ export const EDITS = [
   },
   {
     at: /^characters\/cat\.js$/,
-    why: 'Catroller\'s cats. The ears were solid round cones with a dimple in, at the very edges of the skull, so the head was flat between them and they hung off its sides, their flat bases standing proud of it in a ragged line; and their pink went round the back. Now each is a thin triangle of a shell up on the crown and a little apart, leaning out, its hollow open to the front and pink inside only, part of the head and growing out of it. The tail was a jointed rod, bulging at every joint and bending only there, with a blunt end: now it is in short pieces each bending with the bones either side of it (models/sdf.js: a shape can share itself between bones), joined without swelling, a fifth fuller, and rounding off to its tip. The tom\'s nick, carved from the body and so from nothing, is out of his ear.',
+    why: 'Catroller\'s cats (Petroll has them too). The ears were solid round cones with a dimple in, at the very edges of the skull, so the head was flat between them and they hung off its sides, their flat bases standing proud of it in a ragged line; and their pink went round the back. Now each is a thin triangle of a shell up on the crown and a little apart, leaning out, its hollow open to the front and pink inside only, part of the head and growing out of it. The tail was a jointed rod, bulging at every joint and bending only there, with a blunt end: now it is in short pieces each bending with the bones either side of it (models/sdf.js: a shape can share itself between bones), joined without swelling, a fifth fuller, and rounding off to its tip. The tom\'s nick, carved from the body and so from nothing, is out of his ear.',
     edit(text, where) {
       text = swap(text, CAT_EARS_WAS, CAT_EARS, where);
       text = swap(text, CAT_TAIL_WAS, CAT_TAIL, where);

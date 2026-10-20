@@ -48,8 +48,15 @@ test('audio: silent until woken, then every kind of sound plays, through the rig
     rev.set({ freq: 110 });
     rev.stop();
     assert.ok(log.length > before + 20);
+    // A vibrato is a second oscillator wobbling the note's pitch.
+    const plain = log.length;
+    audio.tone({ freq: 220 });
+    const wobbled = log.length;
+    audio.tone({ freq: 220, vibrato: 6 });
+    assert.ok(log.length - wobbled > wobbled - plain, 'a vibrato adds to the note');
     // Rubbish in is quiet, not an exception: Web Audio throws on anything not finite.
     assert.doesNotThrow(() => audio.tone({ freq: NaN, gain: Infinity, length: -1 }));
+    assert.doesNotThrow(() => audio.tone({ freq: 220, vibrato: NaN }));
   });
 });
 

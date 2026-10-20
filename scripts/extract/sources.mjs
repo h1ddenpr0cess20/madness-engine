@@ -15,6 +15,14 @@
 /** The games, oldest first. Where versions tie, the newest game's is the default. */
 export const ORDER = ['madness', 'dungeon-roller', 'catroller', 'rocknroller', 'rocknroller-ii', 'rocknroller-iii', 'metroll', 'metrlol', 'petroll'];
 
+/**
+ * The games that run on the engine: they import the library rather than
+ * keep their own copies, so what the library has of them is the source, and
+ * extracting takes it from the library as it is (where `origins.json` says
+ * their files went) rather than from the game.
+ */
+export const ON_ENGINE = new Set(['catroller']);
+
 /** The town games keep their own people-kit (the engine's models now) and its glue beside their people. */
 const TOWN_KIT = ['model.js', 'rig.js', 'library.js', 'bake.worker.js', 'viewer.js', 'sdf.js', 'skins.js'];
 /** A game's list of who is in it (`CAST`, `PROPS`, `MODELS`), and its glue to the workers that bake them, are the game's. */

@@ -11,11 +11,37 @@ game's tests (`scripts/drop-in/overlay.mjs` is the recipe in code).
 |---|---|---|---|---|
 | madness | – | – | `views/arcade` | – |
 | dungeon-roller | – | – | `views/arcade` | kit |
-| catroller | – | – | `views/close` | kit |
+| catroller | on the engine (below) | | | |
 | metroll | – | `boost: { pad: [0, 2, 7, 6] }` (`rev()`) | `views/arcade` | kit |
 | rocknroller, -ii, -iii | – | `boost: { pad: [0, 2, 7, 6] }` (`rev()`) | `views/arcade` | kit |
 | metrlol | `slideUnder: true` | `boost: { pad: [0, 2, 7], element: 'accel-touch' }` (`boost()`) | `views/town` | sculpt + cast |
 | petroll | `slideUnder: true` | `presses`, `padPresses` (below) | `views/town` | sculpt + cast |
+
+## A game rewritten on the engine: Catroller
+
+Catroller is the first game to go all the way. It depends on
+`github:h1ddenpr0cess20/madness-engine#<commit>` and has no copies at all:
+it imports `madness-engine/gfx`, `physics`, `input`, `views/close`,
+`models/model` and `models/bake`; its cats, mouse, yarn ball and music from
+the library (`characters/cat`, `characters/mouse`, `heroes/yarn/…`,
+`music/score`); and its stage, sound, effects and storage are the engine's
+with the game's own on top:
+
+- `stage.js` is `createStage(host, { lens, view, sky, room, lights })` with
+  `textures/rooms/house` and `textures/skies/night`, the house's light,
+  and real lights at the lamps nearest the ball added to `stage.look`.
+  `main.js` runs the game with `stage.run`.
+- `audio.js` is `createAudio({ storageKey, volume, onWake })` with the roll
+  as a `loop`, and the cats' voices, purrs and the rest made on its
+  `tone` (now with a `vibrato`) and `burst`.
+- `effects.js` is the engine's `burst` with the game's sparkles, wool,
+  drops, dust and buttons; `storage.js` is a `saveSlot`.
+- `models/library.js` is `createBakeLibrary`, `bake.worker.js`
+  `serveBakes`, and `models/cast.js` the roster.
+
+It is `onEngine` in `scripts/drop-in/games.mjs` and in `ON_ENGINE` in
+`scripts/extract/sources.mjs`: the library's files of it are the source,
+and the verify runs its tests on the engine rather than comparing copies.
 
 ## Swapping the files
 
