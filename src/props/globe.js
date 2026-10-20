@@ -9,6 +9,7 @@ export default {
   name: 'globe',
   scale: 1.25,
   cell: 0.0045,
+  budget: 13500,
   cells: { glass: 0.009, fine: 0.0032 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

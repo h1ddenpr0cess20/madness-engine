@@ -653,13 +653,26 @@ export class Sculpt {
   }
 }
 
+/** p moved onto the surface along the field's gradient, by no more than `reach`. */
+function onto(sculpt, p, reach, e) {
+  for (let it = 0; it < 2; it++) {
+    const d = sculpt.field(p);
+    const g = sculpt.gradient(p, e);
+    const step = clamp(d, -reach, reach);
+    p = [p[0] - g[0] * step, p[1] - g[1] * step, p[2] - g[2] * step];
+  }
+  return p;
+}
+
 /**
  * The sculpt as a mesh, `cell` tiles to a grid step: positions, normals,
  * colours (with the occlusion in them), triangle indices, and for each
  * vertex up to four bones and their weights. `bones` names the bones in
- * order. `shade(color, p, n, ao)` can finish a vertex's colour.
+ * order. `shade(color, p, n, ao)` can finish a vertex's colour. `refine` is
+ * how many more vertices (as a fraction of what the grid makes) it may add
+ * where the grid is too coarse for the detail.
  */
-export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, shade = null } = {}) {
+export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, shade = null, refine = 0.3 } = {}) {
   const [lo, hi] = sculpt.bounds(cell * 3);
   const C = 4;
   sculpt.prepare(lo, hi, Math.max(cell * C * 2, 0.035));
@@ -739,12 +752,19 @@ export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, 
     }
   }
 
+  // Each vertex onto the surface proper, and its normal.
+  const e = cell * 0.5;
+  const P = verts.map((p) => onto(sculpt, p, cell, e));
+  const N = P.map((p) => sculpt.gradient(p, e));
+  const S = [];
+  const surfaceAt = (i) => (S[i] ??= sculpt.surface(P[i], N[i], bones, cell));
+
   // ...and a quad across every grid edge that crosses it, joining the four cells round that edge.
   const tris = [];
   const quad = (a, b, c, d, flip) => {
     if (a < 0 || b < 0 || c < 0 || d < 0) return;
     // Split along the shorter diagonal.
-    const ac = len(sub(verts[a], verts[c])), bd = len(sub(verts[b], verts[d]));
+    const ac = len(sub(P[a], P[c])), bd = len(sub(P[b], P[d]));
     const t = ac < bd ? [[a, b, c], [a, c, d]] : [[a, b, d], [b, c, d]];
     for (const [x, y, z] of t) tris.push(...(flip ? [x, z, y] : [x, y, z]));
   };
@@ -776,23 +796,101 @@ export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, 
     }
   }
 
-  // Each vertex onto the surface proper, then its normal, colour, light and bones.
-  const count = verts.length;
+  // Then finer where the grid was too coarse for what is there: an edge is
+  // split where it cuts across a crease or a bend tighter than the grid, or
+  // across a line of paint, and the new vertex put on the surface. The
+  // fine detail costs vertices only where there is some, and no more than
+  // `refine` (a fraction of what the grid made) in all.
+  if (refine > 0) {
+    const room = Math.round(verts.length * refine);
+    let added = 0;
+    const edges = new Map();
+    const key = (a, b) => (a < b ? a * 4194304 + b : b * 4194304 + a);
+    const link = (a, b, t) => {
+      const list = edges.get(key(a, b));
+      if (list) list.push(t); else edges.set(key(a, b), [t]);
+    };
+    const unlink = (a, b, t) => {
+      const k = key(a, b), list = edges.get(k);
+      const at = list.indexOf(t);
+      if (at >= 0) list.splice(at, 1);
+      if (!list.length) edges.delete(k);
+    };
+    for (let t = 0; t < tris.length / 3; t++) for (let c = 0; c < 3; c++) link(tris[t * 3 + c], tris[t * 3 + (c + 1) % 3], t);
+    const split = (a, b) => {
+      const L = len(sub(P[a], P[b]));
+      const q = [(P[a][0] + P[b][0]) / 2, (P[a][1] + P[b][1]) / 2, (P[a][2] + P[b][2]) / 2];
+      const p = onto(sculpt, q, L * 0.5, e), n = sculpt.gradient(p, e);
+      // Each triangle on the edge, as (u, w, c) with u–w the edge.
+      const around = edges.get(key(a, b)).map((t) => {
+        const o = t * 3;
+        let i = 0;
+        while (!((tris[o + i] === a || tris[o + i] === b) && (tris[o + (i + 1) % 3] === a || tris[o + (i + 1) % 3] === b))) i++;
+        return [t, tris[o + i], tris[o + (i + 1) % 3], tris[o + (i + 2) % 3]];
+      });
+      // Not if the surface there is too knotted for the new triangles to face the way it does.
+      const faces = (x, y, z) => {
+        const f = [
+          (P[y][1] - P[x][1]) * (P[z][2] - P[x][2]) - (P[y][2] - P[x][2]) * (P[z][1] - P[x][1]),
+          (P[y][2] - P[x][2]) * (P[z][0] - P[x][0]) - (P[y][0] - P[x][0]) * (P[z][2] - P[x][2]),
+          (P[y][0] - P[x][0]) * (P[z][1] - P[x][1]) - (P[y][1] - P[x][1]) * (P[z][0] - P[x][0]),
+        ];
+        return dot(f, [N[x][0] + N[y][0] + N[z][0], N[x][1] + N[y][1] + N[z][1], N[x][2] + N[y][2] + N[z][2]]) > 0;
+      };
+      const m = P.length;
+      P.push(p);
+      N.push(n);
+      if (!around.every(([, u, w, c]) => faces(u, m, c) && faces(m, w, c))) {
+        P.pop();
+        N.pop();
+        return false;
+      }
+      for (const [t, u, w, c] of around) {
+        const o = t * 3;
+        // (u, w, c) becomes (u, m, c) and (m, w, c).
+        const t2 = tris.length / 3;
+        unlink(u, w, t);
+        unlink(w, c, t);
+        tris[o] = u; tris[o + 1] = m; tris[o + 2] = c;
+        tris.push(m, w, c);
+        link(u, m, t); link(m, c, t);
+        link(m, w, t2); link(w, c, t2); link(c, m, t2);
+      }
+      return true;
+    };
+    const shortest = cell * 0.3;
+    for (let round = 0; round < 2 && added < room; round++) {
+      const wanted = [];
+      for (const [k, list] of edges) {
+        if (list.length !== 2) continue;
+        const a = Math.floor(k / 4194304), b = k - a * 4194304;
+        const L = len(sub(P[a], P[b]));
+        if (L < shortest) continue;
+        // How far it bends across the edge (1 at about 30°), how far the colour changes, and how far off the surface its middle is.
+        let need = (1 - dot(N[a], N[b])) / 0.13;
+        const ca = surfaceAt(a).color, cb = surfaceAt(b).color;
+        need = Math.max(need, Math.max(Math.abs(ca[0] - cb[0]), Math.abs(ca[1] - cb[1]), Math.abs(ca[2] - cb[2])) / 0.1);
+        if (need < 1) need = Math.abs(sculpt.field([(P[a][0] + P[b][0]) / 2, (P[a][1] + P[b][1]) / 2, (P[a][2] + P[b][2]) / 2])) / (cell * 0.06);
+        if (need >= 1) wanted.push([Math.min(need, 4) * L, a, b]);
+      }
+      wanted.sort((x, y) => y[0] - x[0]);
+      for (const [, a, b] of wanted) {
+        if (added >= room) break;
+        if (edges.get(key(a, b))?.length !== 2) continue;
+        if (split(a, b)) added++;
+      }
+    }
+  }
+
+  // Each vertex's colour, light and bones.
+  const count = P.length;
   const position = new Float32Array(count * 3), normal = new Float32Array(count * 3), color = new Float32Array(count * 3);
   const skinIndex = new Uint8Array(count * 4), skinWeight = new Float32Array(count * 4);
   const mats = new Array(count);
-  const e = cell * 0.5;
   const scale = Math.max(hi[1] - lo[1], 0.3);
   for (let v = 0; v < count; v++) {
-    let p = verts[v];
-    for (let it = 0; it < 2; it++) {
-      const d = sculpt.field(p);
-      const g = sculpt.gradient(p, e);
-      const step = clamp(d, -cell, cell);
-      p = [p[0] - g[0] * step, p[1] - g[1] * step, p[2] - g[2] * step];
-    }
-    const n = sculpt.gradient(p, e);
-    const s = sculpt.surface(p, n, bones, cell);
+    const p = P[v], n = N[v];
+    const s = surfaceAt(v);
     const ao = sculpt.occlusion(p, n, scale * 0.35);
     let c = s.color.map((x) => x * mix(ambient, 1, ao));
     if (shade) c = shade(c, p, n, ao);

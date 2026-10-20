@@ -16,6 +16,7 @@ export default {
   name: 'case',
   scale: 1.3,
   cell: 0.0075,
+  budget: 13500,
   cells: { trim: 0.0048, label: 0.003 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

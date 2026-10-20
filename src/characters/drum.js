@@ -13,7 +13,7 @@ export default {
   scale: 1.5,
   cell: 0.0075,
   cells: { fine: 0.0034 },
-  budget: 12000,
+  budget: 18000,
   bones: [
     ['root', null, [0, 0, 0]],
     ['stickL', 'root', [0.1, 0.24, 0]],

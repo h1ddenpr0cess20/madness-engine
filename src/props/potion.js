@@ -17,6 +17,7 @@ export default {
   name: 'potion',
   scale: 1.15,
   cell: 0.0075,
+  budget: 13500,
   cells: { cork: 0.006 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

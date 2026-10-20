@@ -16,6 +16,7 @@ import { Skeleton, skin } from './rig.js';
  *              give the colour
  *   cell       the grid step it is meshed at, in tiles
  *   cells      { part: step } for parts that need a finer grid (eyes, teeth)
+ *   refine     how many more vertices the mesher may spend on fine detail, as a fraction of the grid's (0.3; 0 for none)
  *   scale      how big it is stood up in the world (1 as sculpted)
  *   budget     how many vertices its board mesh may have (the tests hold it to this; 9000 if not given)
  *   sculpt(s)  adds its shapes to the Sculpt s (sdf.js)
@@ -23,6 +24,13 @@ import { Skeleton, skin } from './rig.js';
  */
 
 const cache = new Map();
+
+/** How big the biggest shape in a sculpt is, across. */
+function largest(sculpt) {
+  let size = 0;
+  for (const { op, box } of sculpt.shapes) if (op === 'add') size = Math.max(size, box[1][0] - box[0][0], box[1][1] - box[0][1], box[1][2] - box[0][2]);
+  return size;
+}
 
 /**
  * The definition as a mesh: one set of vertices, triangles grouped by
@@ -41,9 +49,10 @@ export function bake(def, { detail = 1 } = {}) {
   const chunks = [];
   let base = 0;
   for (const [name, part] of sculpt.split()) {
-    // Far off (detail under 1) the fine parts needn't be much finer than the rest: they're a few pixels.
-    const fine = def.cells?.[name] ? Math.max(def.cells[name] / detail, detail < 1 ? cell * 0.35 : 0) : cell;
-    const m = build(part, { cell: fine, bones, ambient: def.ambient ?? 0.3, shade: def.shade });
+    // Far off (detail under 1) the fine parts needn't be much finer than the rest: they're a few pixels. But the
+    // smallest (a pupil, an iris) still need a few grid steps across, or they are lost.
+    const fine = def.cells?.[name] ? Math.max(def.cells[name] / detail, detail < 1 ? Math.min(cell * 0.35, largest(part) / 8) : 0) : cell;
+    const m = build(part, { cell: fine, bones, ambient: def.ambient ?? 0.3, shade: def.shade, refine: def.refine });
     chunks.push(m);
     // Each triangle takes the material most of its corners have.
     for (let t = 0; t < m.index.length; t += 3) {

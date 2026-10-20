@@ -16,6 +16,7 @@ export default {
   name: 'suitcase',
   scale: 1.3,
   cell: 0.008,
+  budget: 13500,
   cells: { fine: 0.0045 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

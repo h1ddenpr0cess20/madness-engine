@@ -19,7 +19,7 @@ export default {
   scale: 1.5,
   cell: 0.0075,
   cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025 },
-  budget: 12000,
+  budget: 18000,
   bones: [
     ['root', null, [0, 0, 0]],
     ['hips', 'root', [0, 0.24, -0.02]],

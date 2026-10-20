@@ -28,6 +28,7 @@ const facing = (n) => [Math.asin(n[2]), 0, Math.atan2(-n[0], n[1])];
 export default {
   name: 'gold',
   cell: 0.0068,
+  budget: 13500,
   cells: { gems: 0.0045 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

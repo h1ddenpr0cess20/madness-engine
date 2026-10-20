@@ -127,3 +127,17 @@ test('everything is imported by name through the package, as a game imports it',
   assert.ok(CHARACTERS.punk && PROPS.pick);
   assert.ok((await import('madness-engine/characters/bouncer.rocknroller-iii')).default);
 });
+
+test('the eyes of a person and of an animal show through the face, not just through the mesh\'s errors', async () => {
+  const { build, Sculpt } = await import('../src/models/sdf.js');
+  for (const name of ['punk', 'cowboy', 'camel']) {
+    const def = (await import(`../src/characters/${name}.js`)).default;
+    const s = new Sculpt();
+    def.sculpt(s);
+    const parts = s.split();
+    const eyes = build(parts.get('eyes'), { cell: 0.005, refine: 0 });
+    let out = 0;
+    for (let v = 0; v < eyes.count; v++) if (parts.get('body').field([eyes.position[v * 3], eyes.position[v * 3 + 1], eyes.position[v * 3 + 2]]) > 0.0005) out++;
+    assert.ok(out / eyes.count > 0.1, `${name}: ${Math.round((out / eyes.count) * 100)}% of the eyes are out of the skin`);
+  }
+});

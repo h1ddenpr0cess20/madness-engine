@@ -24,6 +24,7 @@ const BANDS = [['skirt1', 0.0], ['skirt2', -0.14], ['skirt3', -0.28]];
 export default {
   name: 'wraith',
   cell: 0.0078,
+  budget: 13500,
   cells: { eyes: 0.0024, claws: 0.0028, hood: 0.0052, void: 0.006 },
   bones: [
     ['root', null, [0, 0, 0]],

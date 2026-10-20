@@ -13,7 +13,7 @@ export default {
   name: 'popcorn',
   scale: 1.5,
   cell: 0.0042,
-  budget: 9000,
+  budget: 13500,
   bones: [['root', null, [0, 0, 0]]],
   materials: { corn: { roughness: 0.75, sheen: 0.4, sheenColor: '#fff0c0', emissive: '#3a2a08', emissiveIntensity: 0.25 } },
   sculpt(s) {

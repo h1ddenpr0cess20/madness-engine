@@ -11,7 +11,7 @@ export default {
   scale: 1.6,
   cell: 0.0075,
   cells: { fine: 0.0028 },
-  budget: 12000,
+  budget: 18000,
   bones: [['root', null, [0, 0, 0]], ['ball', 'root', [0, R, 0]]],
   materials: { gloss: { roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.02, metalness: 0.1 }, label: { roughness: 0.1, clearcoat: 1 } },
   sculpt(s) {

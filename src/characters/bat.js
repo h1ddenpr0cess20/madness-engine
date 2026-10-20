@@ -16,7 +16,7 @@ export default {
   scale: 1.5,
   cell: 0.0055,
   cells: { kit: 0.004, fine: 0.0025 },
-  budget: 12000,
+  budget: 18000,
   bones: [
     ['root', null, [0, 0, 0]],
     ['body', 'root', [0, 0, 0]],

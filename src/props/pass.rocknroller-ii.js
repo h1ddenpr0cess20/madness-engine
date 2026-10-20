@@ -9,6 +9,7 @@ export default {
   name: 'pass',
   scale: 1.4,
   cell: 0.0036,
+  budget: 13500,
   cells: { fine: 0.0028 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

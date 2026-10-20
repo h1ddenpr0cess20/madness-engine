@@ -11,6 +11,7 @@ export default {
   name: 'clapper',
   scale: 1.5,
   cell: 0.0034,
+  budget: 13500,
   cells: { fine: 0.0026 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {

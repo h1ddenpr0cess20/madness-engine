@@ -13,6 +13,7 @@ export default {
   name: 'tape',
   scale: 1.2,
   cell: 0.0042,
+  budget: 13500,
   bones: [['root', null, [0, 0, 0]]],
   materials: {
     tape: { roughness: 0.42, metalness: 0.75 },

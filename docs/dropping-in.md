@@ -1,7 +1,9 @@
 # Dropping the engine into a game
 
 Each game has its own copies of the files below. Swap them for the engine's,
-pass the options in the table, and nothing about how it looks or plays changes.
+pass the options in the table, and nothing about how it plays changes. How it
+looks changes only where the engine is more than the game (below): its cast
+is finer.
 `npm run verify` does exactly this swap on a copy of every game and runs the
 game's tests (`scripts/drop-in/overlay.mjs` is the recipe in code).
 
@@ -61,6 +63,15 @@ until it is asked for.
 It also has a fix the games' copies don't: under WebGL, a double-sided lit
 material drawn after a back-sided one (the sky dome, which is drawn first)
 took the dome's winding, so it was lit as if seen from behind.
+
+And its cast is finer. The mesher spends up to 30% more vertices where the
+grid was too coarse for the detail (sharp bends, lines of paint, small
+parts), and the people's and animals' eyes are set by where the face is,
+not just under its skin. The library's characters and props carry budgets
+half as large again for the finer meshes. A game that takes the engine's
+`models/` should take the library's characters and props with them, or
+raise its own budgets the same way (`scripts/extract/edits.mjs` has the
+changes). `npm run verify` tests each game with them made.
 
 ## The game's characters, props, heroes, textures and music
 

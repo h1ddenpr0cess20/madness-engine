@@ -20,7 +20,7 @@ export default {
   scale: 1.55,
   cell: 0.0085,
   cells: { kit: 0.0045, fine: 0.003 },
-  budget: 12000,
+  budget: 18000,
   bones: bones(B),
   materials: {
     tin: { roughness: 0.32, metalness: 0.9 },

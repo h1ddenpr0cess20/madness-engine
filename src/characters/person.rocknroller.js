@@ -50,7 +50,7 @@ export { mix, joints, skinTone };
  */
 export function person({
   name, scale = 1.1, b = 1, skin = '#e9b48f', look, mats = {}, face = {}, hair: hairOpts = null,
-  extras = null, style = {}, cells = {}, budget = 12000, cell = 0.0085, k = 0.03, shape = {}, belly = 0,
+  extras = null, style = {}, cells = {}, budget = 18000, cell = 0.0085, k = 0.03, shape = {}, belly = 0,
 }) {
   const tone = typeof skin === 'string' ? skinTone(skin) : skin;
   const full = { skin: tone, hand: tone, ...look };

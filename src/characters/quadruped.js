@@ -29,6 +29,18 @@ import { coat } from '../models/skins.js';
 const LEGS = [['FL', 1, 1], ['FR', -1, 1], ['BL', 1, -1], ['BR', -1, -1]];
 const add = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
 
+/**
+ * Where an eye of radius `r` goes, out from the head's middle `h` toward
+ * `e`: half of it out of the head where the head actually is (its
+ * smooth unions swell it), so that it shows. If no head is found, `e`.
+ */
+function seat(s, h, e, r) {
+  const d = [e[0] - h[0], e[1] - h[1], e[2] - h[2]], l = Math.hypot(...d);
+  const n = d.map((v) => v / l);
+  const hit = s.cast(add(h, n, l * 2), n.map((v) => -v), l * 2);
+  return hit ? add(hit.p, n, -r * 0.5) : e;
+}
+
 export const ANIMAL = {
   fur: { roughness: 0.9, sheen: 0.5, sheenColor: '#d8c0a0' },
   hide: { roughness: 0.72, sheen: 0.2, sheenColor: '#c0a080' },
@@ -67,7 +79,7 @@ export function frame({ hip, len, girth, stance, neck, head, tail }) {
 }
 
 export function quadruped({
-  name, scale = 1.5, cell = 0.0065, cells = {}, budget = 12000, k = 0.03,
+  name, scale = 1.5, cell = 0.0065, cells = {}, budget = 18000, k = 0.03,
   hip = 0.26, len = 0.15, girth = [0.08, 0.08], stance = 0.055, leg = [0.038, 0.026, 0.022],
   neck = {}, head = {}, tail = {}, ears = { kind: 'prick', size: 1 }, feet = 'paw',
   paint = {}, mats = {}, materials = {}, extras = null, sculptHead = true, style = {},
@@ -126,7 +138,7 @@ export function quadruped({
         s.sphere(add(P.S1, [0, Hd.sr * 0.25, Hd.sr * 0.5]), Hd.sr * 0.42, { color: C.nose, mat: 'nose', bone: 'head', k: 0.006 });
         earsOn(s, P, Hd, ears, { color: C.ears, mat: M.ears });
         s.part('eyes', () => {
-          for (const m of [1, -1]) s.sphere(add(P.H, [m * Hd.r * 0.55, Hd.r * 0.2, Hd.r * 0.62]), Hd.r * 0.2, { color: C.eye, mat: 'eye', bone: 'head', k: 0 });
+          for (const m of [1, -1]) s.sphere(seat(s, P.H, add(P.H, [m * Hd.r * 0.55, Hd.r * 0.2, Hd.r * 0.62]), Hd.r * 0.2), Hd.r * 0.2, { color: C.eye, mat: 'eye', bone: 'head', k: 0 });
         });
       }
       // The tail, in two.

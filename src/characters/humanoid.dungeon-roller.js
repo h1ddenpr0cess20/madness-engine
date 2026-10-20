@@ -96,6 +96,25 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03 }) {
 }
 
 /**
+ * Where an eye of depth 0.014 goes, looking along `n` from about `c`: as
+ * deep in the head as puts its front just proud of the face (where the
+ * face is, after the build's warp), so that how much of it shows is the
+ * sculpt's doing and not the mesh's. If no face is found, `c`.
+ */
+function seat(s, c, n, proud = 0.004) {
+  const w = s.warp;
+  const toWorld = (p) => (w ? w.to(p) : p);
+  const from = toWorld(c.map((v, i) => v + n[i] * 0.05)), to = toWorld(c);
+  const dir = to.map((v, i) => v - from[i]), dl = Math.hypot(...dir);
+  const hit = s.cast(from, dir.map((v) => v / dl), dl * 1.5);
+  if (!hit) return c;
+  const p = w ? w.from(hit.p) : hit.p;
+  const depth = (p[0] - c[0]) * n[0] + (p[1] - c[1]) * n[1] + (p[2] - c[2]) * n[2];
+  if (depth < 0.004 || depth > 0.03) return c;
+  return c.map((v, i) => v + n[i] * (depth - 0.014 + proud));
+}
+
+/**
  * A head: skull and cheeks, a nose, ears, big eyes (white, a coloured iris,
  * a black pupil and a catch-light), brows. `brow` is the brows' colour;
  * `ears` false hides them (under a hood or a helmet); `mood` 1 sets the
@@ -122,10 +141,10 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
   // Eyes, set into the face.
   const eyes = [];
   for (const m of [1, -1]) {
-    const c = [m * 0.041, 0.668, 0.088];
     const d = [m * 0.3, 0.02, 0.95];
     const l = Math.hypot(...d);
     const n = d.map((v) => v / l);
+    const c = seat(s, [m * 0.041, 0.668, 0.088], n);
     const at = (t) => c.map((v, i) => v + n[i] * t);
     const rot = [-Math.asin(n[1]), Math.atan2(n[0], n[2]), 0];
     // A socket just the size of the eye, so it sits snug with no dark rim.

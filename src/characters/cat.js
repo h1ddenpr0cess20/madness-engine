@@ -225,7 +225,7 @@ function catDef(coat) {
     scale: SCALE * (coat === 'tom' ? 1.35 : coat === 'calico' || coat === 'siamese' ? 0.95 : 1),
     cell: 0.0035,
     cells: { head: 0.0017, eyes: 0.0006, ears: 0.0012, nose: 0.001 },
-    budget: 40000,
+    budget: 60000,
     blend: 0.28,
     bones: BONES,
     materials: {
