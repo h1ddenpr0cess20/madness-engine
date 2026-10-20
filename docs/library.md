@@ -231,13 +231,14 @@ The balls the games are played as, each with what it is made of.
 
 ## scenery
 
-The world round the ball: the town's street furniture and vehicles (`bakeData` in models/legacy-bake), and the dungeon's walls, torches and exit.
+The world round the ball: the town's street furniture and vehicles (`bakeData` in models/legacy-bake), the dungeon's walls, torches and exit, and the light show that lights a venue (`lightshow`: createLightshow(GFX, venue)).
 
 | Path | Versions (games) | What it is |
 |---|---|---|
 | `scenery/civic` | `civic` (metrlol) | The machinery of the city, sculpted (same conventions as `street.js`): the charging posts on the Brussels forecourt, the rubber stamps of the stamping hall (their gantry standing still, the stamp i… |
 | `scenery/discourse` | `discourse` (metrlol) | What there is to find in the discourse, sculpted the same way as the rest (see `street.js`): the whetstone stand (Metroll's whetstone on a bench, where the spikes get sharpened back and the ball is… |
 | `scenery/dungeon` | `dungeon` (dungeon-roller) | The dungeon as it is drawn: flagstone floors, brick walls falling away into the dark, the lava (lava.js), torches with live flames, and the stairs down — a ring of runes on the floor under a stone … |
+| `scenery/lightshow` | `lightshow` (metroll)<br>`lightshow.rocknroller-ii` (rocknroller-ii)<br>`lightshow.rocknroller-iii` (rocknroller-iii)<br>`lightshow.rocknroller` (rocknroller) | The light show. |
 | `scenery/odds` | `odds` (petroll) | Odds and ends for the jobs and for knocking flying: lawn flamingos, yard signs, crates, survey flags, and the things a job has the hamster carry (a jar of pickled eggs, dynamite, a film reel). |
 | `scenery/oil` | `oil` (petroll) | The gas station's and the oil field's machinery, sculpted: the pumps and the air pump, the pumpjack (its frame standing still, its walking beam and horsehead nodding), oil drums, a wellhead, a flar… |
 | `scenery/street` | `street` (petroll)<br>`street.metrlol` (metrlol) | The furniture of the streets and yards, sculpted. |

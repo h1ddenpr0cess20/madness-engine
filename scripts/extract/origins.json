@@ -79,6 +79,7 @@
     "src/stage.js#paintBackdrop": "textures/skies/skyline.rocknroller.js",
     "src/rock.js": "heroes/rock.js",
     "src/boulder.js": "heroes/boulder.js",
+    "src/lightshow.js": "scenery/lightshow.rocknroller.js",
     "src/textures.js": "textures/venue.rocknroller.js",
     "src/music.js": "music/band.rocknroller.js"
   },
@@ -130,6 +131,7 @@
     "src/stage.js#paintBackdrop": "textures/skies/skyline.rocknroller-ii.js",
     "src/rock.js": "heroes/rock.js",
     "src/boulder.js": "heroes/boulder.js",
+    "src/lightshow.js": "scenery/lightshow.rocknroller-ii.js",
     "src/textures.js": "textures/venue.rocknroller-ii.js",
     "src/music.js": "music/band.rocknroller-ii.js"
   },
@@ -207,6 +209,7 @@
     "src/stage.js#paintBackdrop": "textures/skies/skyline.js",
     "src/rock.js": "heroes/rock.js",
     "src/boulder.js": "heroes/boulder.js",
+    "src/lightshow.js": "scenery/lightshow.rocknroller-iii.js",
     "src/textures.js": "textures/venue.rocknroller-iii.js",
     "src/music.js": "music/band.rocknroller-iii.js"
   },
@@ -295,6 +298,7 @@
     "src/mace.js": "heroes/mace.js",
     "src/morningstar.js": "heroes/morningstar.js",
     "src/boulder.js": "heroes/boulder.js",
+    "src/lightshow.js": "scenery/lightshow.js",
     "src/textures.js": "textures/venue.js",
     "src/music.js": "music/band.js",
     "src/stage.js#paintRoom": "textures/rooms/venue.metroll.js",
