@@ -129,7 +129,10 @@ coloured inside when they stand up) are meshes of their own on grids as
 fine as the head is small; they have mouths, and their paws have toes. The
 birds' wings end in overlapping, tapered flight feathers, not four round
 fingers. The crocodile's and the gator's teeth, and the kangaroo's ears and
-nose, have grids of their own.
+nose, have grids of their own. Catroller's cats have ears that are thin
+shells up on the crown, growing out of the head, and tails that curve
+along their length (a shape can share itself between bones) and round off
+at the tip.
 
 These, and the vertex budgets (half as many again, to make room for the
 finer meshes), are changes to files the library takes from the games.

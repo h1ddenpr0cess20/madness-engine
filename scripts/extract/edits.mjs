@@ -181,6 +181,60 @@ const KANGAROO_NOSE_EARS = `    s.part('nose', () => {
     });
 `;
 
+const CAT_EARS_WAS = `      // The ears: tall, wide at the base, pointed, cupped forward and pink inside.
+      s.part('ears', () => s.mirror((m) => {
+        const bone = \`ear\${side(m)}\`;
+        const rot = [-0.12, m * 0.28, m * -0.3];
+        const R = rotation(rot);
+        const tip = [m * 0.041, 0.371, 0.188];
+        s.cone(tip, 0.026, 0.05, { ...F, bone, k: 0.005, rot });
+        const f = [R[0][2], R[1][2], R[2][2]];
+        const cup = [tip[0] + f[0] * 0.0115, tip[1] - 0.031 + f[1] * 0.0115, tip[2] + f[2] * 0.0115];
+        s.ellipsoid(cup, [0.0175, 0.03, 0.0075], { op: 'sub', k: 0.004, rot });
+        s.paint((p) => Math.hypot(p[0] - cup[0], (p[1] - cup[1]) * 0.6, p[2] - cup[2]) - 0.0185, pink, 0.004);
+      }));
+`;
+
+const CAT_EARS = `      // The ears: up on the crown and a little apart, leaning out; each a thin triangle of a shell, wide at the
+      // base and pointed, its hollow open to the front and pink inside. Part of the head, so they grow out of it.
+      s.part('head', () => s.mirror((m) => {
+        const bone = \`ear\${side(m)}\`;
+        const base = [m * 0.024, 0.322, 0.186], tip = [m * 0.044, 0.371, 0.178];
+        // Which way the hollow faces: forward, and a little out.
+        const fl = Math.hypot(0.35, 0.08, 1), f = [m * 0.35 / fl, 0.08 / fl, 1 / fl];
+        s.flake(base, tip, f, 0.0235, 0.003, 0.4, { ...F, bone, k: 0.008 });
+        // The hollow: from above the crown, so the skull isn't cut, nearly to the tip.
+        const along = (t, out) => [0, 1, 2].map((i) => base[i] + (tip[i] - base[i]) * t + f[i] * out);
+        s.flake(along(0.3, 0.0062), along(0.93, 0.0022), f, 0.0175, 0.0014, 0.4, { op: 'sub', k: 0.0025 });
+        const hollow = s.shapes.at(-1).d;
+        // Pink inside the hollow only, not round the back or along the rim.
+        s.paint((p) => Math.max(hollow(p) - 0.0012, -((p[0] - base[0]) * f[0] + (p[1] - base[1]) * f[1] + (p[2] - base[2]) * f[2])), pink, 0.0015);
+      }));
+`;
+
+const CAT_TAIL_WAS = `      // The tail: slim, and as long as the body.
+      s.chain(TAIL, TAIL_R, { ...F, bones: ['tail1', 'tail2', 'tail3', 'tail4', 'tail5'], k: 0.012 });`;
+
+const CAT_TAIL = `      // The tail: slim, as long as the body, and rounding off to its tip. In short pieces, each bending with the
+      // bones either side of it as far as it is along, so that the tail curves where a clip bends it rather than
+      // kinking at its joints; and joined without melting, which swelled every joint.
+      const along = (u) => {
+        const i = Math.min(4, Math.floor(u)), t = u - i;
+        return [0, 1, 2].map((a) => TAIL[i][a] + (TAIL[i + 1][a] - TAIL[i][a]) * t);
+      };
+      const thick = (u) => {
+        const i = Math.min(4, Math.floor(u)), t = u - i;
+        // A fifth fuller than the bones of it: it is fur.
+        return (TAIL_R[i] + (TAIL_R[i + 1] - TAIL_R[i]) * t) * 1.2 * (1 - 0.35 * Math.max(0, (u - 4.2) / 0.8) ** 2);
+      };
+      const shares = (u) => ['tail1', 'tail2', 'tail3', 'tail4', 'tail5']
+        .map((b, i) => [b, u < 0.5 ? (i === 0 ? 1 : 0) : u > 4.5 ? (i === 4 ? 1 : 0) : Math.max(0, 1 - Math.abs(u - i - 0.5))])
+        .filter(([, w]) => w > 0);
+      for (let j = 0; j < 24; j++) {
+        const u0 = (j * 5) / 24, u1 = ((j + 1) * 5) / 24;
+        s.limb(along(u0), along(u1), thick(u0), thick(u1), { ...F, bone: shares((u0 + u1) / 2), k: j === 0 ? 0.012 : 0.001 });
+      }`;
+
 export const EDITS = [
   {
     at: /^characters\/humanoid\.js$/,
@@ -262,6 +316,18 @@ export const EDITS = [
       return swap(text,
         "      for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });\n    });\n",
         "      for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });\n    });\n    // A catch-light in each.\n    for (const m of [1, -1]) s.paint((p) => Math.hypot(p[0] - m * 0.029, p[1] - 0.602, p[2] - 0.1) - 0.0018, '#ffffff', 0.0006);\n",
+        where);
+    },
+  },
+  {
+    at: /^characters\/cat\.js$/,
+    why: 'Catroller\'s cats. The ears were solid round cones with a dimple in, at the very edges of the skull, so the head was flat between them and they hung off its sides, their flat bases standing proud of it in a ragged line; and their pink went round the back. Now each is a thin triangle of a shell up on the crown and a little apart, leaning out, its hollow open to the front and pink inside only, part of the head and growing out of it. The tail was a jointed rod, bulging at every joint and bending only there, with a blunt end: now it is in short pieces each bending with the bones either side of it (models/sdf.js: a shape can share itself between bones), joined without swelling, a fifth fuller, and rounding off to its tip. The tom\'s nick, carved from the body and so from nothing, is out of his ear.',
+    edit(text, where) {
+      text = swap(text, CAT_EARS_WAS, CAT_EARS, where);
+      text = swap(text, CAT_TAIL_WAS, CAT_TAIL, where);
+      return swap(text,
+        "        s.sphere([0.06, 0.358, 0.19], 0.009, { op: 'sub', k: 0.002 });",
+        "        s.part('head', () => s.sphere([0.052, 0.355, 0.181], 0.006, { op: 'sub', k: 0.0015 }));",
         where);
     },
   },

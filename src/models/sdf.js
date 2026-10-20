@@ -276,9 +276,10 @@ export class Sculpt {
    * Adds a shape: `d(p)` is its distance from p ([x, y, z]); `box` its bounds
    * [[x0, y0, z0], [x1, y1, z1]]. Options: `op` ('add', 'sub' or 'inter'),
    * `k` (how softly it melts in), `color` ('#rrggbb' or (p) => linear rgb),
-   * `bone`, `mat` (which material: the model's table), `bump` ([amplitude,
-   * frequency]: lumpy surface), `locks` ([size, height, axis, stretch]: fur
-   * or scales, see `shingles`).
+   * `bone` (its name, or [[name, share], ...] for a shape that bends with
+   * more than one, as a tail does along its length), `mat` (which material:
+   * the model's table), `bump` ([amplitude, frequency]: lumpy surface),
+   * `locks` ([size, height, axis, stretch]: fur or scales, see `shingles`).
    */
   shape(d, box, { op = 'add', k = 0.03, color = '#c0c0c0', bone = 'root', mat = 'skin', bump = null, locks = null } = {}) {
     ({ d, box, color } = this.warped(d, box, color));
@@ -622,7 +623,8 @@ export class Sculpt {
       c = [c[0] + col[0] * k, c[1] + col[1] * k, c[2] + col[2] * k];
       w += k;
       const kb = Math.exp(-t / Math.max(0.012, s.k * 0.8));
-      weights.set(s.bone, (weights.get(s.bone) ?? 0) + kb);
+      if (typeof s.bone === 'string') weights.set(s.bone, (weights.get(s.bone) ?? 0) + kb);
+      else for (const [b, share] of s.bone) weights.set(b, (weights.get(b) ?? 0) + kb * share);
     }
     c = c.map((v) => v / w);
     for (const pt of this.paints) {

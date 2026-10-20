@@ -297,17 +297,20 @@ function catDef(coat) {
         }, coat === 'black' ? '#0c0a0c' : '#3a2418', 0.0008);
       });
 
-      // The ears: tall, wide at the base, pointed, cupped forward and pink inside.
-      s.part('ears', () => s.mirror((m) => {
+      // The ears: up on the crown and a little apart, leaning out; each a thin triangle of a shell, wide at the
+      // base and pointed, its hollow open to the front and pink inside. Part of the head, so they grow out of it.
+      s.part('head', () => s.mirror((m) => {
         const bone = `ear${side(m)}`;
-        const rot = [-0.12, m * 0.28, m * -0.3];
-        const R = rotation(rot);
-        const tip = [m * 0.041, 0.371, 0.188];
-        s.cone(tip, 0.026, 0.05, { ...F, bone, k: 0.005, rot });
-        const f = [R[0][2], R[1][2], R[2][2]];
-        const cup = [tip[0] + f[0] * 0.0115, tip[1] - 0.031 + f[1] * 0.0115, tip[2] + f[2] * 0.0115];
-        s.ellipsoid(cup, [0.0175, 0.03, 0.0075], { op: 'sub', k: 0.004, rot });
-        s.paint((p) => Math.hypot(p[0] - cup[0], (p[1] - cup[1]) * 0.6, p[2] - cup[2]) - 0.0185, pink, 0.004);
+        const base = [m * 0.024, 0.322, 0.186], tip = [m * 0.044, 0.371, 0.178];
+        // Which way the hollow faces: forward, and a little out.
+        const fl = Math.hypot(0.35, 0.08, 1), f = [m * 0.35 / fl, 0.08 / fl, 1 / fl];
+        s.flake(base, tip, f, 0.0235, 0.003, 0.4, { ...F, bone, k: 0.008 });
+        // The hollow: from above the crown, so the skull isn't cut, nearly to the tip.
+        const along = (t, out) => [0, 1, 2].map((i) => base[i] + (tip[i] - base[i]) * t + f[i] * out);
+        s.flake(along(0.3, 0.0062), along(0.93, 0.0022), f, 0.0175, 0.0014, 0.4, { op: 'sub', k: 0.0025 });
+        const hollow = s.shapes.at(-1).d;
+        // Pink inside the hollow only, not round the back or along the rim.
+        s.paint((p) => Math.max(hollow(p) - 0.0012, -((p[0] - base[0]) * f[0] + (p[1] - base[1]) * f[1] + (p[2] - base[2]) * f[2])), pink, 0.0015);
       }));
 
       // The forelegs: the upper arm back from the shoulder to the elbow, the forearm down to the wrist, a neat round paw.
@@ -338,12 +341,29 @@ function catDef(coat) {
         for (const t of [-1.5, -0.5, 0.5, 1.5]) s.sphere([m * 0.053 + t * 0.0066, 0.0071, -0.1 - Math.abs(t) * 0.0028], 0.0051, { ...F, bone: `hl4${b}`, k: 0.004 });
       });
 
-      // The tail: slim, and as long as the body.
-      s.chain(TAIL, TAIL_R, { ...F, bones: ['tail1', 'tail2', 'tail3', 'tail4', 'tail5'], k: 0.012 });
+      // The tail: slim, as long as the body, and rounding off to its tip. In short pieces, each bending with the
+      // bones either side of it as far as it is along, so that the tail curves where a clip bends it rather than
+      // kinking at its joints; and joined without melting, which swelled every joint.
+      const along = (u) => {
+        const i = Math.min(4, Math.floor(u)), t = u - i;
+        return [0, 1, 2].map((a) => TAIL[i][a] + (TAIL[i + 1][a] - TAIL[i][a]) * t);
+      };
+      const thick = (u) => {
+        const i = Math.min(4, Math.floor(u)), t = u - i;
+        // A fifth fuller than the bones of it: it is fur.
+        return (TAIL_R[i] + (TAIL_R[i + 1] - TAIL_R[i]) * t) * 1.2 * (1 - 0.35 * Math.max(0, (u - 4.2) / 0.8) ** 2);
+      };
+      const shares = (u) => ['tail1', 'tail2', 'tail3', 'tail4', 'tail5']
+        .map((b, i) => [b, u < 0.5 ? (i === 0 ? 1 : 0) : u > 4.5 ? (i === 4 ? 1 : 0) : Math.max(0, 1 - Math.abs(u - i - 0.5))])
+        .filter(([, w]) => w > 0);
+      for (let j = 0; j < 24; j++) {
+        const u0 = (j * 5) / 24, u1 = ((j + 1) * 5) / 24;
+        s.limb(along(u0), along(u1), thick(u0), thick(u1), { ...F, bone: shares((u0 + u1) / 2), k: j === 0 ? 0.012 : 0.001 });
+      }
 
       if (coat === 'tom') {
         // An old fighter: a nick out of one ear, and a heavier jowl.
-        s.sphere([0.06, 0.358, 0.19], 0.009, { op: 'sub', k: 0.002 });
+        s.part('head', () => s.sphere([0.052, 0.355, 0.181], 0.006, { op: 'sub', k: 0.0015 }));
         s.mirror((m) => s.ellipsoid([m * 0.04, 0.272, 0.2], [0.018, 0.02, 0.022], { ...F, bone: 'head', k: 0.02 }));
       }
     },

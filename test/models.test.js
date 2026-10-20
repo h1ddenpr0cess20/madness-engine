@@ -84,3 +84,13 @@ test('a line of paint narrower than the grid is followed by finer mesh', () => {
   assert.ok(fine.count > plain.count, `${plain.count} -> ${fine.count}`);
   assert.ok(closed(fine));
 });
+
+test('a shape shared between bones weighs its skin to each by its share', () => {
+  const s = new Sculpt().limb([0, 0, 0], [0, 0.2, 0], 0.03, 0.03, { bone: [['a', 0.25], ['b', 0.75]] });
+  const m = build(s, { cell: 0.02, bones: ['root', 'a', 'b'], refine: 0 });
+  for (let v = 0; v < m.count; v++) {
+    const w = { 1: 0, 2: 0 };
+    for (let i = 0; i < 4; i++) if (m.skinWeight[v * 4 + i] > 0) w[m.skinIndex[v * 4 + i]] += m.skinWeight[v * 4 + i];
+    assert.ok(Math.abs(w[1] - 0.25) < 1e-4 && Math.abs(w[2] - 0.75) < 1e-4, `vertex ${v}: ${JSON.stringify(w)}`);
+  }
+});
