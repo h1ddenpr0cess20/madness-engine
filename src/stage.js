@@ -80,12 +80,14 @@ const canvasTexture = (canvas) => {
  *   - `sky`: a painted canvas round everything, or a colour (`backdrop`)
  *   - `room`: a painted canvas the reflections come from, or null for none
  *   - `lights`: any of LIGHTS' parts to change; `fill: null` for no fill
+ *   - `fixtures`: how many real lights a light show (scenery/lightshow) may set at once (0).
+ *     The count is fixed, so no shader ever has to change; hand `stage.fixtureLights` to the show's `update`
  *   - `shadows`: whether the key casts them (true); `shadowSize`, the map's size (2048)
  *   - `pixelRatio`: the most device pixels a CSS pixel gets (2)
  *   - `ui`: elements shot on the same film as the picture where a film says so (film.js)
  *   - `label`: the game's name, for the console
  * @returns the stage: { GFX, renderer, scene, camera, view, target, key, hemi, fill,
- *   film, lantern, shake, look(), render(), setSky(canvas), setRoom(canvas), setMood(mood) }
+ *   film, lantern, fixtureLights, shake, look(), render(), setSky(canvas), setRoom(canvas), setMood(mood) }
  */
 export async function createStage(host, {
   lens = LENS,
@@ -94,6 +96,7 @@ export async function createStage(host, {
   backdrop = '#0b0e1d',
   room = null,
   lights = {},
+  fixtures = 0,
   shadows = true,
   shadowSize = 2048,
   pixelRatio = 2,
@@ -166,11 +169,18 @@ export async function createStage(host, {
   };
   scene.add(dome);
 
+  // The fixtures nearest the ball: a light show sets where they are, what colour and how bright.
+  const fixtureLights = Array.from({ length: fixtures }, () => {
+    const light = new GFX.PointLight(0xffffff, 0, 7, 1.1);
+    scene.add(light);
+    return light;
+  });
+
   const pmrem = new GFX.PMREMGenerator(renderer);
   let lanternHeight = 0;
 
   const stage = {
-    GFX, renderer, scene, camera, view, key, hemi, fill, film,
+    GFX, renderer, scene, camera, view, key, hemi, fill, film, fixtureLights,
     /** The light a mood hangs over the target, or null. */
     lantern: null,
     /** What the camera looks at; set it every frame (the ball, usually). */
