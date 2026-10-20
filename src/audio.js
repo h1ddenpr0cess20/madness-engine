@@ -132,9 +132,10 @@ export function createAudio({ storageKey = null, level = 0.8, volume = {}, glue 
     /**
      * A note: an oscillator (`type`: sine, square, sawtooth, triangle) at
      * `freq`, gliding to `to` if given, up in `attack` seconds and dying away
-     * over `length`, `at` seconds from now.
+     * over `length`, `at` seconds from now. `vibrato` wobbles its pitch by
+     * that many Hz, seven times a second (a twang, a buzz).
      */
-    tone({ at = 0, freq = 440, to = null, length = 0.15, type = 'sine', gain = 0.3, attack = 0.004, out = sfx } = {}) {
+    tone({ at = 0, freq = 440, to = null, length = 0.15, type = 'sine', gain = 0.3, attack = 0.004, vibrato = 0, out = sfx } = {}) {
       if (!ctx) return;
       [at, length, freq, gain] = [Math.max(0, finite(at)), Math.max(0.01, finite(length, 0.15)), audible(freq), audible(gain)];
       if (to !== null) to = audible(to);
@@ -143,6 +144,15 @@ export function createAudio({ storageKey = null, level = 0.8, volume = {}, glue 
       o.type = type;
       o.frequency.setValueAtTime(freq, t);
       if (to) o.frequency.exponentialRampToValueAtTime(to, t + length);
+      if (finite(vibrato) > 0) {
+        const lfo = ctx.createOscillator();
+        lfo.frequency.value = 7;
+        const depth = ctx.createGain();
+        depth.gain.value = vibrato;
+        lfo.connect(depth).connect(o.frequency);
+        lfo.start(t);
+        lfo.stop(t + length + 0.05);
+      }
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(gain, t + attack);
