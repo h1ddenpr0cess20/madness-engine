@@ -123,8 +123,16 @@ the people (`humanoid`) and of the animals (`quadruped`) sat with their
 fronts just under the skin of the face, and showed only because the coarse
 mesh cut corners. Each eye is now set by where the face actually is.
 
-Both the eyes and the vertex budgets (half as many again, to make room for
-the finer meshes) are changes to files the library takes from the games.
+The animals have more besides. The `quadruped`s' eyes have pupils,
+catch-lights and lids; their noses (with nostrils) and ears (cupped and
+coloured inside when they stand up) are meshes of their own on grids as
+fine as the head is small; they have mouths, and their paws have toes. The
+birds' wings end in overlapping, tapered flight feathers, not four round
+fingers. The crocodile's and the gator's teeth, and the kangaroo's ears and
+nose, have grids of their own.
+
+These, and the vertex budgets (half as many again, to make room for the
+finer meshes), are changes to files the library takes from the games.
 `scripts/extract/edits.mjs` says what they are. `npm run extract` makes
 them as it takes the files, and `npm run verify` makes them before it
 compares the files and in the copy of each game whose tests it runs.

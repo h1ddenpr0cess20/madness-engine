@@ -66,8 +66,9 @@ took the dome's winding, so it was lit as if seen from behind.
 
 And its cast is finer. The mesher spends up to 30% more vertices where the
 grid was too coarse for the detail (sharp bends, lines of paint, small
-parts), and the people's and animals' eyes are set by where the face is,
-not just under its skin. The library's characters and props carry budgets
+parts), the people's and animals' eyes are set by where the face is, not
+just under its skin, and the animals' faces, paws and wings have more to
+them. The library's characters and props carry budgets
 half as large again for the finer meshes. A game that takes the engine's
 `models/` should take the library's characters and props with them, or
 raise its own budgets the same way (`scripts/extract/edits.mjs` has the

@@ -58,6 +58,129 @@ function seat(s, h, e, r) {
 }
 `;
 
+const QUADRUPED_INNER = `  // Inside the ears: their own colour, gone pink.
+  if (!C.inner) {
+    const ear = typeof C.ears === 'string' ? rgb(C.ears) : C.ears, pink = rgb('#d89a8c');
+    C.inner = (p, n) => mix(typeof ear === 'function' ? ear(p, n) : ear, pink, 0.5);
+  }
+`;
+
+const QUADRUPED_HEAD_WAS = `        s.sphere(add(P.S1, [0, Hd.sr * 0.25, Hd.sr * 0.5]), Hd.sr * 0.42, { color: C.nose, mat: 'nose', bone: 'head', k: 0.006 });
+        earsOn(s, P, Hd, ears, { color: C.ears, mat: M.ears });
+        s.part('eyes', () => {
+          for (const m of [1, -1]) s.sphere(add(P.H, [m * Hd.r * 0.55, Hd.r * 0.2, Hd.r * 0.62]), Hd.r * 0.2, { color: C.eye, mat: 'eye', bone: 'head', k: 0 });
+        });
+      }
+`;
+
+const QUADRUPED_HEAD = `        noseOn(s, P, Hd, { color: C.nose, mat: 'nose', bone: 'head' });
+        mouthOn(s, P, Hd, C.mouth);
+        earsOn(s, P, Hd, ears, { color: C.ears, mat: M.ears }, C.inner);
+        eyesOn(s, P, Hd, { color: C.eye, lid: { color: C.head, mat: M.head } });
+      }
+`;
+
+const QUADRUPED_EARS_WAS = `/** The ears: tall triangles standing up, flaps hanging down, little ones out to the side, or round. */
+function earsOn(s, P, Hd, { kind = 'prick', size = 1 }, o) {
+  if (!kind) return;
+  const r = Hd.r * size;
+  for (const m of [1, -1]) {
+    const base = add(P.H, [m * Hd.r * 0.55, Hd.r * 0.6, -Hd.r * 0.15]);
+    if (kind === 'prick') s.flake(base, add(base, [m * r * 0.35, r * 1.1, -r * 0.1]), [0, 0, 1], r * 0.42, r * 0.05, 0.3, { ...o, bone: 'head', k: 0.008 });
+    else if (kind === 'flop') s.flake(add(base, [m * r * 0.2, -r * 0.1, 0]), add(base, [m * r * 0.55, -r * 1.0, r * 0.1]), [m, 0, 0], r * 0.36, r * 0.3, 0.35, { ...o, bone: 'head', k: 0.01 });
+`;
+
+const QUADRUPED_EARS = `/**
+ * The ears: tall triangles standing up (cupped, and \`inner\` inside),
+ * flaps hanging down, little ones out to the side, or round; a mesh of
+ * their own, so that their edges and tips are clean.
+ */
+function earsOn(s, P, Hd, { kind = 'prick', size = 1 }, o, inner) {
+  if (!kind) return;
+  s.part('ears', () => earShapes(s, P, Hd, kind, size, o, inner));
+}
+
+function earShapes(s, P, Hd, kind, size, o, inner) {
+  const r = Hd.r * size;
+  for (const m of [1, -1]) {
+    const base = add(P.H, [m * Hd.r * 0.55, Hd.r * 0.6, -Hd.r * 0.15]);
+    if (kind === 'prick') {
+      const tip = add(base, [m * r * 0.35, r * 1.1, -r * 0.1]);
+      s.flake(base, tip, [0, 0, 1], r * 0.42, r * 0.05, 0.3, { ...o, bone: 'head', k: 0.008 });
+      // The hollow inside, toward the front, and the colour in it.
+      const front = [0, r * 0.06, r * 0.075];
+      s.flake(add(base, front), add(tip, [0, -r * 0.16, r * 0.04]), [0, 0, 1], r * 0.3, r * 0.03, 0.22, { op: 'sub', k: r * 0.02 });
+      // Painted only on the front of the ear: the far side of the plane through its base and tip is its back.
+      const hollow = s.shapes.at(-1).d, lean = (tip[2] - base[2]) / (tip[1] - base[1]);
+      s.paint((p) => Math.max(hollow(p) - r * 0.01, base[2] + (p[1] - base[1]) * lean - p[2]), inner, r * 0.02);
+    } else if (kind === 'flop') s.flake(add(base, [m * r * 0.2, -r * 0.1, 0]), add(base, [m * r * 0.55, -r * 1.0, r * 0.1]), [m, 0, 0], r * 0.36, r * 0.3, 0.35, { ...o, bone: 'head', k: 0.01 });
+`;
+
+const QUADRUPED_PAW_WAS = `    s.ellipsoid(add(at, [0, r * 0.75, r * 0.45]), [r * 1.2, r * 0.8, r * 1.45], { ...o, bone, k: 0.008 });
+  }
+}
+`;
+
+const QUADRUPED_PAW = `    s.ellipsoid(add(at, [0, r * 0.75, r * 0.45]), [r * 1.2, r * 0.8, r * 1.45], { ...o, bone, k: 0.008 });
+    // Four toes across the front, a crease between each.
+    for (const t of [-1.5, -0.5, 0.5, 1.5]) s.sphere(add(at, [t * r * 0.52, r * 0.42, r * (1.45 - Math.abs(t) * 0.22)]), r * 0.36, { ...o, bone, k: r * 0.08 });
+  }
+}
+
+/** The nose on the end of the snout, a mesh of its own so it keeps its shape, with its two nostrils. */
+function noseOn(s, P, Hd, o) {
+  const tip = add(P.S1, [0, Hd.sr * 0.25, Hd.sr * 0.5]), r = Hd.sr * 0.42;
+  s.part('nose', () => {
+    s.sphere(tip, r, { ...o, k: 0 });
+    for (const m of [1, -1]) s.ellipsoid(add(add(tip, P.fwd, r * 0.8), [m * r * 0.42, -r * 0.18, 0]), [r * 0.2, r * 0.13, r * 0.3], { op: 'sub', k: r * 0.12 });
+  });
+}
+
+/** The mouth: a dark line round the end of the snout and back along each side to under the eye. */
+function mouthOn(s, P, Hd, color) {
+  if (!Hd.jaw) return;
+  const front = add(P.S1, [0, -Hd.sr * 0.5, Hd.sr * 0.3]), back = add(P.S0, [0, -Hd.sr * 0.3, -Hd.r * 0.05]);
+  const by = back[1] - front[1], bz = back[2] - front[2], bl = by * by + bz * bz;
+  const w = Hd.sr * 0.09;
+  s.paint((p) => {
+    // How far from the line, seen from the side, and not beyond the snout's width.
+    const t = Math.max(0, Math.min(1, ((p[1] - front[1]) * by + (p[2] - front[2]) * bz) / bl));
+    return Math.max(Math.hypot(p[1] - front[1] - by * t, p[2] - front[2] - bz * t) - w, Math.abs(p[0]) - Hd.sr * 1.3);
+  }, color, w * 0.6);
+}
+
+/**
+ * The eyes, set half out of the head where it is: the eyeball the colour of
+ * the eye, a pupil on it, a catch-light, and a lid over the top of each.
+ */
+function eyesOn(s, P, Hd, { color, lid }) {
+  const r = Hd.r * 0.2;
+  for (const m of [1, -1]) {
+    const c = seat(s, P.H, add(P.H, [m * Hd.r * 0.55, Hd.r * 0.2, Hd.r * 0.62]), r);
+    const d = [c[0] - P.H[0], c[1] - P.H[1], c[2] - P.H[2]], l = Math.hypot(...d);
+    // Looking out to the side and forward.
+    const n = [d[0] / l, d[1] / l * 0.3, Math.max(0.35, d[2] / l)], nl = Math.hypot(...n);
+    for (let i = 0; i < 3; i++) n[i] /= nl;
+    const rot = [-Math.asin(n[1]), Math.atan2(n[0], n[2]), 0];
+    s.part('eyes', () => s.sphere(c, r, { color, mat: 'eye', bone: 'head', k: 0 }));
+    s.part('pupils', () => s.ellipsoid(add(c, n, r * 0.84), [r * 0.46, r * 0.5, r * 0.2], { color: '#050405', mat: 'eye', bone: 'head', k: 0, rot }));
+    const hl = add(add(c, n, r * 1.02), [m * -r * 0.18, r * 0.25, 0]);
+    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - r * 0.17, '#ffffff', r * 0.05);
+    // The upper lid: a fold of the head's own skin over the top of the eye.
+    s.ellipsoid(add(add(c, [0, r * 0.62, 0]), n, -r * 0.12), [r * 1.08, r * 0.5, r * 1.02], { ...lid, bone: 'head', k: r * 0.25, rot });
+  }
+}
+`;
+
+const KANGAROO_NOSE_EARS = `    s.part('nose', () => {
+      s.sphere([0, 0.572, 0.158], 0.012, { color: '#1a1210', mat: 'nose', bone: 'head', k: 0 });
+      for (const m of [1, -1]) s.ellipsoid([m * 0.005, 0.57, 0.168], [0.0026, 0.002, 0.004], { op: 'sub', k: 0.0016 });
+    });
+    s.part('ears', () => {
+      for (const m of [1, -1]) s.flake([m * 0.018, 0.61, 0.05], [m * 0.036, 0.675, 0.035], [0, 0, 1], 0.017, 0.008, 0.35, { ...F, bone: 'head', k: 0.008 });
+    });
+`;
+
 export const EDITS = [
   {
     at: /^characters\/humanoid\.js$/,
@@ -72,15 +195,73 @@ export const EDITS = [
   },
   {
     at: /^characters\/quadruped\.js$/,
-    why: 'The same for the animals: their eyes sank into heads swollen by smooth unions. Each is set half out of where the head actually is.',
+    why: 'The animals\' faces: their eyes sank into heads swollen by smooth unions and were plain beads; the nose was too small for the grid and came out ragged, and so did the tips of the ears. Each eye is set half out of where the head actually is, with a pupil, a catch-light and a lid; the nose and the ears are meshes of their own on grids as fine as the head is small, the nose with nostrils and the pricked ears cupped and coloured inside; there is a mouth, and the paws have toes.',
     edit(text, where) {
+      // The kit is where the game keeps it: beside the cast, or in its sculpt folder.
+      text = text.replace(/^import \{ coat \} from '(.*)skins\.js';$/m, "import { rgb } from '$1sdf.js';\nimport { coat, mix } from '$1skins.js';");
       text = swap(text,
         'const add = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];\n',
         `const add = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];\n${QUADRUPED_SEAT}`,
         where);
+      text = swap(text,
+        "nose: '#141010', eye: '#1a1008',\n",
+        "nose: '#141010', eye: '#4a2c14',\n    inner: null, mouth: '#1a1012',\n",
+        where);
+      text = swap(text,
+        "  for (const part of ['head', 'snout', 'legs', 'tail', 'ears']) C[part] ??= C.body;\n",
+        "  for (const part of ['head', 'snout', 'legs', 'tail', 'ears']) C[part] ??= C.body;\n" + QUADRUPED_INNER,
+        where);
+      text = swap(text,
+        '    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, ...cells },\n',
+        '    // The small things on the head get grids of their own, as fine as the head is small.\n    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },\n',
+        where);
+      text = swap(text, QUADRUPED_HEAD_WAS, QUADRUPED_HEAD, where);
+      text = swap(text, QUADRUPED_EARS_WAS, QUADRUPED_EARS, where);
+      return swap(text, QUADRUPED_PAW_WAS, QUADRUPED_PAW, where);
+    },
+  },
+  {
+    at: /^characters\/(crow|pigeon|parrot|macaw)\.js$/,
+    why: 'The birds\' wings ended in four round fingers, like gloves. The flight feathers are twice as many, tapered, and lie over each other like shingles, so that each shows; the wings get a finer grid, so the bars across them are clean.',
+    edit(text, where) {
+      const before = text;
+      text = text.replace(/for \(let i = 0; i < 4; i\+\+\)(\s*\{?\s*s\.flake\(\[m \* \()/, 'for (let i = 0; i < 4; i += 0.5)$1');
+      text = text.replace(/^.*\[0, 1, 0\], 0\.016, 0\.01, 0\.25, \{.*k: 0\.004 \}\);$/m, (line) => line
+        .replace(/(\[m \* \(0\.\d+ [+-] i \* 0\.\d+\), )(0\.\d+)(, )/g, '$1$2 + i * 0.003$3')
+        .replace('[0, 1, 0], 0.016, 0.01, 0.25, {', '[0, 1, 0], 0.014, 0.0075, 0.3, {')
+        .replace('k: 0.004 });', 'k: 0.0006 });'));
+      text = text.replace(/cells: \{ kit: 0\.004,/, 'cells: { kit: 0.003,');
+      if (text === before && !text.includes('i += 0.5')) throw new Error(`${where}: the game's code has changed where the engine changes it (scripts/extract/edits.mjs)`);
+      return text;
+    },
+  },
+  {
+    at: /^characters\/(croc|gator)\.js$/,
+    why: 'The teeth were smaller than the grid they were meshed on, and came out in pieces. They have a grid of their own.',
+    edit(text, where) {
+      text = swap(text,
+        "s.cone([m * w, P.H[1] - 0.026, z], 0.004, 0.012, { ...TOOTH, bone: 'head', rot: [Math.PI, 0, 0] });",
+        "s.part('teeth', () => s.cone([m * w, P.H[1] - 0.026, z], 0.004, 0.012, { ...TOOTH, bone: 'head', rot: [Math.PI, 0, 0] }));",
+        where);
+      text = swap(text,
+        "s.cone([m * (w - 0.004), P.H[1] - 0.022, z + 0.01], 0.0035, 0.01, { ...TOOTH, bone: 'jaw' });",
+        "s.part('teeth', () => s.cone([m * (w - 0.004), P.H[1] - 0.022, z + 0.01], 0.0035, 0.01, { ...TOOTH, bone: 'jaw' }));",
+        where);
+      return swap(text, '  sculptHead: false,\n', '  sculptHead: false,\n  cells: { teeth: 0.0014 },\n', where);
+    },
+  },
+  {
+    at: /^characters\/kangaroo\.js$/,
+    why: 'The kangaroo\'s ears were thinner than its grid and tore at the tips, and its nose was a blob. Both are meshes of their own on finer grids, the nose with nostrils, and the eyes have catch-lights.',
+    edit(text, where) {
+      text = swap(text, 'cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025 },', 'cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025, ears: 0.0024, nose: 0.0016 },', where);
+      text = swap(text,
+        "    s.sphere([0, 0.572, 0.158], 0.012, { color: '#1a1210', mat: 'nose', bone: 'head', k: 0.005 });\n    for (const m of [1, -1]) s.flake([m * 0.018, 0.61, 0.05], [m * 0.036, 0.675, 0.035], [0, 0, 1], 0.017, 0.008, 0.35, { ...F, bone: 'head', k: 0.008 });\n",
+        KANGAROO_NOSE_EARS,
+        where);
       return swap(text,
-        's.sphere(add(P.H, [m * Hd.r * 0.55, Hd.r * 0.2, Hd.r * 0.62]), Hd.r * 0.2, {',
-        's.sphere(seat(s, P.H, add(P.H, [m * Hd.r * 0.55, Hd.r * 0.2, Hd.r * 0.62]), Hd.r * 0.2), Hd.r * 0.2, {',
+        "      for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });\n    });\n",
+        "      for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });\n    });\n    // A catch-light in each.\n    for (const m of [1, -1]) s.paint((p) => Math.hypot(p[0] - m * 0.029, p[1] - 0.602, p[2] - 0.1) - 0.0018, '#ffffff', 0.0006);\n",
         where);
     },
   },
