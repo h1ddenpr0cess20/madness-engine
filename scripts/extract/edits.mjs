@@ -238,6 +238,59 @@ const CAT_TAIL = `      // The tail: slim, as long as the body, and rounding off
         s.limb(along(u0), along(u1), thick(u0), thick(u1), { ...F, bone: shares((u0 + u1) / 2), k: j === 0 ? 0.012 : 0.001 });
       }`;
 
+const CAT_PLANT = `/**
+ * What must stay above the floor, at rest: each foot's sole (the middle of
+ * the pad, the toes and the heel of it, each under the foot's last bone) and
+ * the underside of the tail; and how to lift it, bending which joints by how
+ * much.
+ */
+const SOLES = [
+  ...[1, -1].flatMap((m) => {
+    const s = m > 0 ? 'L' : 'R';
+    const fore = \`fl3\${s}\`, hind = \`hl4\${s}\`;
+    return [
+      { points: [[fore, [m * 0.047, 0.001, 0.113]], [fore, [m * 0.047, 0.003, 0.128]], [fore, [m * 0.047, 0.003, 0.097]]],
+        // Shoulder back, elbow forward, wrist back as much: shorter, the paw as it was.
+        bend: [[\`fl1\${s}\`, 0.5], [\`fl2\${s}\`, -1], [\`fl3\${s}\`, 0.5]] },
+      { points: [[hind, [m * 0.053, 0.001, -0.112]], [hind, [m * 0.053, 0.003, -0.097]], [hind, [m * 0.053, 0.003, -0.127]]],
+        bend: [[\`hl1\${s}\`, -0.35], [\`hl2\${s}\`, 1], [\`hl3\${s}\`, -1.1], [\`hl4\${s}\`, 0.45]] },
+    ];
+  }),
+  // The tail (a fifth fuller than its bones, and more at the tip), lifted at its root.
+  { points: [2, 3, 4, 5].map((i) => [\`tail\${i}\`, [TAIL[i][0], TAIL[i][1] - TAIL_R[i] * 1.3, TAIL[i][2]]]), bend: [['tail1', 1]] },
+];
+
+/**
+ * Everything the pose (or the blend into it) has put through the floor,
+ * lifted onto it: a leg bent at every joint, just enough, the foot as it
+ * was; the tail raised at the root. A low cat's legs fold under it rather
+ * than go through the boards.
+ */
+function plant(k) {
+  k.compute();
+  for (const { points, bend } of SOLES) {
+    // The points sit a little inside the skin: a hair above the floor puts the skin on it.
+    const low = () => Math.min(...points.map(([bone, p]) => k.point(bone, p)[1])) - 0.003;
+    if (low() >= 0) continue;
+    const rest = bend.map(([b]) => k.bone(b).rot[0]);
+    const flex = (d) => {
+      bend.forEach(([b, by], i) => { k.bone(b).rot[0] = rest[i] + by * d; });
+      k.compute();
+    };
+    let lo = 0, hi = 2.2;
+    flex(hi);
+    if (low() < 0) continue;
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2;
+      flex(mid);
+      if (low() < 0) lo = mid; else hi = mid;
+    }
+    flex(hi);
+  }
+}
+
+`;
+
 export const EDITS = [
   {
     at: /^characters\/humanoid\.js$/,
@@ -324,14 +377,16 @@ export const EDITS = [
   },
   {
     at: /^characters\/cat\.js$/,
-    why: 'Catroller\'s cats (Petroll has them too). The ears were solid round cones with a dimple in, at the very edges of the skull, so the head was flat between them and they hung off its sides, their flat bases standing proud of it in a ragged line; and their pink went round the back. Now each is a thin triangle of a shell up on the crown and a little apart, leaning out, its hollow open to the front and pink inside only, part of the head and growing out of it. The tail was a jointed rod, bulging at every joint and bending only there, with a blunt end: now it is in short pieces each bending with the bones either side of it (models/sdf.js: a shape can share itself between bones), joined without swelling, a fifth fuller, and rounding off to its tip. The tom\'s nick, carved from the body and so from nothing, is out of his ear.',
+    why: 'Catroller\'s cats (Petroll has them too). The ears were solid round cones with a dimple in, at the very edges of the skull, so the head was flat between them and they hung off its sides, their flat bases standing proud of it in a ragged line; and their pink went round the back. Now each is a thin triangle of a shell up on the crown and a little apart, leaning out, its hollow open to the front and pink inside only, part of the head and growing out of it. The tail was a jointed rod, bulging at every joint and bending only there, with a blunt end: now it is in short pieces each bending with the bones either side of it (models/sdf.js: a shape can share itself between bones), joined without swelling, a fifth fuller, and rounding off to its tip. The tom\'s nick, carved from the body and so from nothing, is out of his ear. And low down (stalking, playing) the forelegs stayed straight and the paws went through the floor, and the tail through it as it swished: after the pose, and any blend into it, each foot under the floor is lifted onto it by bending its leg just enough, and the tail by raising it at the root (`settle`, models/model.js).',
     edit(text, where) {
       text = swap(text, CAT_EARS_WAS, CAT_EARS, where);
       text = swap(text, CAT_TAIL_WAS, CAT_TAIL, where);
-      return swap(text,
+      text = swap(text,
         "        s.sphere([0.06, 0.358, 0.19], 0.009, { op: 'sub', k: 0.002 });",
         "        s.part('head', () => s.sphere([0.052, 0.355, 0.181], 0.006, { op: 'sub', k: 0.0015 }));",
         where);
+      text = swap(text, '/** Both eyes shut by `shut` (0 open, 1 closed). */', `${CAT_PLANT}/** Both eyes shut by \`shut\` (0 open, 1 closed). */`, where);
+      return swap(text, '    animate: pose,\n', '    animate: pose,\n    settle: plant,\n', where);
     },
   },
   {
