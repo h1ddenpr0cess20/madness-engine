@@ -28,9 +28,9 @@ import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dedupe } from './dedupe.mjs';
-import { edited } from './edits.mjs';
+import { edited, placeOf } from './edits.mjs';
 import { gradesOf, gradesText, indexText, moodLine, moodsOf, moodText, versions } from './moods.mjs';
-import { engineOf, ORDER, SOURCES, SPLIT } from './sources.mjs';
+import { engineOf, ON_ENGINE, ORDER, SOURCES, SPLIT } from './sources.mjs';
 import { split } from './split.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -87,8 +87,22 @@ export function lift(source, fn, rename = fn) {
   return `${head.join('\n')}${head.length ? '\n\n' : ''}${body.join('\n\n')}\n`;
 }
 
+/**
+ * What the library has of a game that is on the engine: each file where
+ * `origins.json` says it went, as it is there, its imports read from where
+ * it is (`at`).
+ */
+function gatherOwn(game) {
+  const origins = JSON.parse(readFileSync(ORIGINS, 'utf8'))[game];
+  if (!origins) throw new Error(`${game} is on the engine, but origins.json has nothing of it`);
+  return Object.entries(origins).map(([gamePath, path]) => ({
+    game, gamePath, at: path, place: placeOf(path), text: readFileSync(join(SRC, path), 'utf8'),
+  }));
+}
+
 /** Every file the library takes from the game in `dir`. */
 function gather(game, dir) {
+  if (ON_ENGINE.has(game)) return gatherOwn(game);
   const files = [];
   for (const g of SOURCES[game]) {
     if (g.fn) {
@@ -121,15 +135,17 @@ function gather(game, dir) {
  */
 export function plan(dirs) {
   const files = Object.entries(dirs).flatMap(([game, dir]) => gather(game, dir));
-  const byGamePath = new Map(files.map((f) => [`${f.game}:${f.gamePath}`, f]));
+  // Where a file is, to read its imports from: in the game, or in the library for a game on the engine.
+  const where = (f) => f.at ?? f.gamePath.replace(/#.*$/, '');
+  const byGamePath = new Map(files.map((f) => [`${f.game}:${where(f)}`, f]));
 
   // What each import is: another file the library takes from the same game, or an engine file.
   for (const f of files) {
     f.imports = [...f.text.matchAll(IMPORT)].map((m) => {
-      const target = posix.normalize(posix.join(posix.dirname(f.gamePath.replace(/#.*$/, '')), m[3]));
+      const target = posix.normalize(posix.join(posix.dirname(where(f)), m[3]));
       const dep = byGamePath.get(`${f.game}:${target}`);
       if (dep) return { dep };
-      const engine = engineOf(target);
+      const engine = f.at ? (existsSync(join(SRC, target)) && !KINDS.includes(target.split('/')[0]) ? target : null) : engineOf(target);
       if (!engine) throw new Error(`${f.game}: ${f.gamePath} imports ${m[3]} (${target}), which is neither in the library nor in the engine`);
       return { engine };
     });

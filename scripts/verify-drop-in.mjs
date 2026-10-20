@@ -6,6 +6,11 @@
  *     npm run verify -- --games ..            # every game that is beside this one
  *     npm run verify -- --games .. --only dungeon-roller,catroller
  *
+ * A game on the engine already (`onEngine` in drop-in/games.mjs) keeps no
+ * copies to compare: it is checked to import the engine and to keep none of
+ * what the library has of it, and its tests are run with this engine as its
+ * `madness-engine` (and, with --package, as the packed engine, and built).
+ *
  * For each game, against the game's own copies of the engine files:
  *
  *   1. Physics, input and view, one by one, bit for bit: the same seeded
@@ -26,7 +31,7 @@
  * Exits non-zero if anything differs.
  */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -85,11 +90,39 @@ const tests = (dir) => new Promise((done) => {
 let bad = 0;
 const report = (ok, text) => { if (!ok) bad++; console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${text}`); };
 
+/** A game on the engine: it takes everything from it, and its tests pass on this one. */
+async function onEngine(name, dir) {
+  const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+  const kept = Object.keys(ORIGINS[name] ?? {}).filter((p) => !p.includes('#') && existsSync(join(dir, p)));
+  const ok = Boolean(pkg.dependencies?.['madness-engine']) && !kept.length && !existsSync(join(dir, 'src/vendor/gfx'));
+  report(ok, ok
+    ? `on the engine: depends on madness-engine, and keeps none of the ${Object.keys(ORIGINS[name] ?? {}).length} things the library has of it`
+    : `not on the engine: ${pkg.dependencies?.['madness-engine'] ? '' : 'no madness-engine dependency; '}keeps ${kept.join(', ') || 'src/vendor/gfx'}`);
+  if (skipTests) return;
+  const linked = join(work, name, 'engine');
+  copyGame(dir, linked);
+  mkdirSync(join(linked, 'node_modules'), { recursive: true });
+  symlinkSync(join(ENGINE, '..'), join(linked, 'node_modules', 'madness-engine'), 'dir');
+  const a = await tests(linked);
+  report(a.fail === 0 && a.tests > 0, `own tests, on this engine: ${a.pass}/${a.tests} pass`);
+  if (a.fail) console.log(a.out.split('\n').filter((l) => /not ok|error|Error/.test(l)).slice(0, 20).join('\n'));
+  if (!asPackage) return;
+  const packaged = join(work, name, 'package');
+  copyGame(dir, packaged);
+  const install = await run(packaged, 'npm', ['install', '--no-audit', '--no-fund', await pack()]);
+  report(install.code === 0, install.code === 0 ? 'installed with the engine as a package' : `npm install failed:\n${install.out.slice(-600)}`);
+  if (install.code) return;
+  const [c, built] = await Promise.all([tests(packaged), run(packaged, 'npx', ['vite', 'build'])]);
+  report(c.fail === 0 && c.pass === a.pass, `own tests, engine as a package: ${c.pass}/${c.tests} pass`);
+  report(built.code === 0, built.code === 0 ? 'vite build: bundles, shaders and all' : `vite build failed:\n${built.out.slice(-800)}`);
+}
+
 for (const [name, g] of Object.entries(GAMES)) {
   if (only && !only.includes(name)) continue;
   const dir = join(gamesDir, name);
   if (!existsSync(dir)) { console.log(`${name}: not found in ${gamesDir}, skipped`); continue; }
   console.log(name);
+  if (g.onEngine) { await onEngine(name, dir); continue; }
 
   if (!packageOnly) {
     const physics = await comparePhysics(join(dir, 'src/physics.js'), join(ENGINE, 'physics.js'), { slide: g.physics === 'slide' });

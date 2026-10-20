@@ -11,6 +11,9 @@
  *            and `view`, which of `views/` that is.
  *   models   Which model kit it carries: 'kit' (src/models), 'legacy'
  *            (src/sculpt, the older bake) or none.
+ *   onEngine A game that runs on the engine already: it imports
+ *            `madness-engine/...` and keeps no copies, so there is nothing
+ *            to compare, and its tests are run against this engine.
  *
  * What of each game is in the library (characters, props, heroes, scenery,
  * textures, music) is `extract/sources.mjs`'s, and where each file went is
@@ -44,13 +47,12 @@ const METRLOL_CAST = { detail: 0.5, names: true, failure: 'metrlol: a person wou
 const PETROLL_CAST = { detail: 0.5, names: false, failure: 'petroll: somebody would not bake', terminateOnError: true };
 
 const ARCADE = { view: 'arcade', home: {} };
-const CLOSE = { view: 'close', home: { zoom: 1.12 } };
 const TOWN = { view: 'town', home: TOWN_HOME };
 
 export const GAMES = {
   madness: { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...ARCADE, models: null },
   'dungeon-roller': { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...ARCADE, models: 'kit' },
-  catroller: { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...CLOSE, models: 'kit' },
+  catroller: { onEngine: true },
   metroll: { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
   rocknroller: { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
   'rocknroller-ii': { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
