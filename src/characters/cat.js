@@ -369,6 +369,7 @@ function catDef(coat) {
     },
 
     animate: pose,
+    settle: plant,
   };
 }
 
@@ -414,6 +415,57 @@ function tail(k, lift, curl, aside = [0, 0, 0, 0, 0], wave = null) {
 function sitTail(k, wave) {
   k.turn('tail0', 0.68, 0, 0);
   tail(k, -0.35, [0, -0.1, -0.2, 0], [0.8, 1.2, 0.9, 0.35, 0.1], wave);
+}
+
+/**
+ * What must stay above the floor, at rest: each foot's sole (the middle of
+ * the pad, the toes and the heel of it, each under the foot's last bone) and
+ * the underside of the tail; and how to lift it, bending which joints by how
+ * much.
+ */
+const SOLES = [
+  ...[1, -1].flatMap((m) => {
+    const s = m > 0 ? 'L' : 'R';
+    const fore = `fl3${s}`, hind = `hl4${s}`;
+    return [
+      { points: [[fore, [m * 0.047, 0.001, 0.113]], [fore, [m * 0.047, 0.003, 0.128]], [fore, [m * 0.047, 0.003, 0.097]]],
+        // Shoulder back, elbow forward, wrist back as much: shorter, the paw as it was.
+        bend: [[`fl1${s}`, 0.5], [`fl2${s}`, -1], [`fl3${s}`, 0.5]] },
+      { points: [[hind, [m * 0.053, 0.001, -0.112]], [hind, [m * 0.053, 0.003, -0.097]], [hind, [m * 0.053, 0.003, -0.127]]],
+        bend: [[`hl1${s}`, -0.35], [`hl2${s}`, 1], [`hl3${s}`, -1.1], [`hl4${s}`, 0.45]] },
+    ];
+  }),
+  // The tail (a fifth fuller than its bones, and more at the tip), lifted at its root.
+  { points: [2, 3, 4, 5].map((i) => [`tail${i}`, [TAIL[i][0], TAIL[i][1] - TAIL_R[i] * 1.3, TAIL[i][2]]]), bend: [['tail1', 1]] },
+];
+
+/**
+ * Everything the pose (or the blend into it) has put through the floor,
+ * lifted onto it: a leg bent at every joint, just enough, the foot as it
+ * was; the tail raised at the root. A low cat's legs fold under it rather
+ * than go through the boards.
+ */
+function plant(k) {
+  k.compute();
+  for (const { points, bend } of SOLES) {
+    // The points sit a little inside the skin: a hair above the floor puts the skin on it.
+    const low = () => Math.min(...points.map(([bone, p]) => k.point(bone, p)[1])) - 0.003;
+    if (low() >= 0) continue;
+    const rest = bend.map(([b]) => k.bone(b).rot[0]);
+    const flex = (d) => {
+      bend.forEach(([b, by], i) => { k.bone(b).rot[0] = rest[i] + by * d; });
+      k.compute();
+    };
+    let lo = 0, hi = 2.2;
+    flex(hi);
+    if (low() < 0) continue;
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2;
+      flex(mid);
+      if (low() < 0) lo = mid; else hi = mid;
+    }
+    flex(hi);
+  }
 }
 
 /** Both eyes shut by `shut` (0 open, 1 closed). */

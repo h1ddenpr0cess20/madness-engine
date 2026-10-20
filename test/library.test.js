@@ -141,3 +141,23 @@ test('the eyes of a person and of an animal show through the face, not just thro
     assert.ok(out / eyes.count > 0.1, `${name}: ${Math.round((out / eyes.count) * 100)}% of the eyes are out of the skin`);
   }
 });
+
+test('a cat\'s feet and tail stay on the floor, not through it, in every clip and as it goes from one to the next', async () => {
+  const GFX = await import('../src/gfx/index.js');
+  const { createModel } = await import('../src/models/model.js');
+  const { CAT_DEFS } = await import('../src/characters/cat.js');
+  const model = createModel(GFX, CAT_DEFS['cat-ginger'], { detail: 0.5 });
+  const clips = ['sit', 'walk', 'stalk', 'crouch', 'run', 'swat', 'play', 'look', 'sleep', 'alert', 'stalk', 'idle'];
+  let time = 0;
+  for (const clip of clips) {
+    let low = 0;
+    for (let t = 0; t < 1.2; t += 0.04) {
+      time += 0.04;
+      model.pose({ clip, t, time, seed: 0, speed: 1, pace: clip === 'run' ? 5 : 1 });
+      const p = model.mesh.geometry.attributes.position.array;
+      for (let i = 1; i < p.length; i += 3) low = Math.min(low, p[i]);
+    }
+    // A sitting cat's haunches rest on the floor; nothing goes further into it than that.
+    assert.ok(low > -0.01, `${clip}: ${(low * 1000).toFixed(1)} thousandths under the floor`);
+  }
+});

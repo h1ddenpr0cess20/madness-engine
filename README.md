@@ -140,7 +140,10 @@ fingers. The crocodile's and the gator's teeth, and the kangaroo's ears and
 nose, have grids of their own. Catroller's cats have ears that are thin
 shells up on the crown, growing out of the head, and tails that curve
 along their length (a shape can share itself between bones) and round off
-at the tip.
+at the tip. Their feet stay on the floor: after each pose, and any blend into it, a
+foot that has gone through the floor is lifted onto it by bending its leg
+just enough, and the tail by raising it at the root (a definition's
+`settle`).
 
 These, and the vertex budgets (half as many again, to make room for the
 finer meshes), are changes to files the library takes from the games.

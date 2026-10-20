@@ -21,6 +21,7 @@ import { Skeleton, skin } from './rig.js';
  *   budget     how many vertices its board mesh may have (the tests hold it to this; 9000 if not given)
  *   sculpt(s)  adds its shapes to the Sculpt s (sdf.js)
  *   animate(skeleton, state)  poses it; state is { clip, t, time, seed, speed }
+ *   settle(skeleton, state)   after the clip and any blend into it, puts it right: its feet on the floor
  */
 
 const cache = new Map();
@@ -175,6 +176,7 @@ export function createModel(GFX, def, { detail = 1 } = {}) {
           });
         }
       }
+      def.settle?.(skeleton, state);
       skeleton.compute();
       skin(data, skeleton.matrices, position.array, normal.array);
       position.needsUpdate = true;
