@@ -42,7 +42,7 @@ fn vs(in: VertexInput) -> Varyings {
 fn fs(in: Varyings) -> @location(0) vec4f {
   var shadow = 1.0;
   #if NUM_DIR_LIGHT_SHADOWS > 0
-  let s = directionalShadow(in.shadowCoord, glFragCoord(in.position));
+  let s = directionalShadow(in.shadowCoord);
   shadow *= select(1.0, s, u_draw.receiveShadow > 0.5);
   #endif
   return linearToOutputTexel(vec4f(u_draw.diffuse, u_draw.opacity * (1.0 - shadow)));

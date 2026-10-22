@@ -1,18 +1,16 @@
-export default `// The PCF lookup into the key light's shadow map.
+export default `// The PCF lookup into the key light's shadow map: five taps on a disc, in a fixed pattern. (Turning the disc a
+// different amount at each pixel, as three.js r186 does, softens the edge with noise that stays put on the screen
+// while the shadow moves under it, so a shadow edge crawls with dots as the camera moves.)
 #if NUM_DIR_LIGHT_SHADOWS > 0
   uniform sampler2DShadow directionalShadowMap;
   uniform vec4 directionalShadowParams; // intensity, bias, radius, 0
   uniform vec2 directionalShadowMapSize;
   in vec4 vDirectionalShadowCoord[ NUM_DIR_LIGHT_SHADOWS ];
 
-  float interleavedGradientNoise( vec2 position ) {
-    return fract( 52.9829189 * fract( dot( position, vec2( 0.06711056, 0.00583715 ) ) ) );
-  }
-
-  vec2 vogelDiskSample( int sampleIndex, int samplesCount, float phi ) {
+  vec2 vogelDiskSample( int sampleIndex, int samplesCount ) {
     const float goldenAngle = 2.399963229728653;
     float r = sqrt( ( float( sampleIndex ) + 0.5 ) / float( samplesCount ) );
-    float theta = float( sampleIndex ) * goldenAngle + phi;
+    float theta = float( sampleIndex ) * goldenAngle;
     return vec2( cos( theta ), sin( theta ) ) * r;
   }
 
@@ -25,13 +23,12 @@ export default `// The PCF lookup into the key light's shadow map.
     if ( frustumTest ) {
       vec2 texelSize = vec2( 1.0 ) / shadowMapSize;
       float radius = shadowRadius * texelSize.x;
-      float phi = interleavedGradientNoise( gl_FragCoord.xy ) * PI2;
       shadow = (
-        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 0, 5, phi ) * radius, shadowCoord.z ) ) +
-        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 1, 5, phi ) * radius, shadowCoord.z ) ) +
-        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 2, 5, phi ) * radius, shadowCoord.z ) ) +
-        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 3, 5, phi ) * radius, shadowCoord.z ) ) +
-        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 4, 5, phi ) * radius, shadowCoord.z ) )
+        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 0, 5 ) * radius, shadowCoord.z ) ) +
+        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 1, 5 ) * radius, shadowCoord.z ) ) +
+        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 2, 5 ) * radius, shadowCoord.z ) ) +
+        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 3, 5 ) * radius, shadowCoord.z ) ) +
+        texture( shadowMap, vec3( shadowCoord.xy + vogelDiskSample( 4, 5 ) * radius, shadowCoord.z ) )
       ) * 0.2;
     }
     return mix( 1.0, shadow, shadowIntensity );

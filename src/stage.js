@@ -64,6 +64,33 @@ export async function createRenderer(preference = preferredRenderer(), { label =
   return new Renderer(new WebGLBackend(canvas), canvas);
 }
 
+/** How far a shadow's lookup is moved off the surface, along its normal: so many texels of the shadow map, and at least so many world units: less than a texel and a surface turned from the light shades itself in speckles. */
+const NORMAL_BIAS = Object.freeze({ texels: 1.2, least: 0.02 });
+
+const UP = new GFX.Vector3(0, 1, 0);
+const _x = new GFX.Vector3(), _y = new GFX.Vector3(), _z = new GFX.Vector3(), _shift = new GFX.Vector3();
+
+/**
+ * Moves the key light, and the point it looks at, along the plane of its own
+ * shadow map to the nearest whole `texel`. The shadow camera follows the
+ * target, and a shadow's edge falls on the map's texels a little differently
+ * for every step it takes, so left to follow smoothly the edges of every
+ * shadow crawl with dots as the camera moves. Held to the grid they stay put.
+ */
+export function snapShadow(key, texel) {
+  const to = key.target.position;
+  _z.subVectors(key.position, to).normalize();
+  _x.crossVectors(UP, _z);
+  // A light straight overhead has no sideways to speak of.
+  if (_x.lengthSq() < 1e-8) return;
+  _x.normalize();
+  _y.crossVectors(_z, _x);
+  const x = to.dot(_x), y = to.dot(_y);
+  _shift.set(0, 0, 0).addScaledVector(_x, Math.round(x / texel) * texel - x).addScaledVector(_y, Math.round(y / texel) * texel - y);
+  key.position.add(_shift);
+  to.add(_shift);
+}
+
 /** A painted canvas, or nothing, as a texture in sRGB. */
 const canvasTexture = (canvas) => {
   if (!canvas) return null;
@@ -140,7 +167,7 @@ export async function createStage(host, {
   key.castShadow = shadows;
   key.shadow.mapSize.set(shadowSize, shadowSize);
   key.shadow.bias = -0.0003;
-  key.shadow.normalBias = 0.02;
+  key.shadow.normalBias = NORMAL_BIAS.least;
   // The shadows cover what's in view: further out, a wider square.
   let span = 0;
   const shadowSpan = (zoom) => {
@@ -268,6 +295,9 @@ export async function createStage(host, {
     camera.updateMatrixWorld();
     key.position.copy(stage.target).addScaledVector(rig.key.from, 45 + span);
     key.target.position.copy(stage.target);
+    const texel = (2 * span) / key.shadow.mapSize.x;
+    key.shadow.normalBias = Math.max(NORMAL_BIAS.least, texel * NORMAL_BIAS.texels);
+    snapShadow(key, texel);
     key.target.updateMatrixWorld();
     if (fill) {
       fill.position.copy(stage.target).add(offset);
