@@ -236,7 +236,7 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #endif
 
   #if NUM_DIR_LIGHT_SHADOWS > 0
-  let shadow = select(1.0, directionalShadow(in.shadowCoord, glFragCoord(in.position)), u_draw.receiveShadow > 0.5);
+  let shadow = select(1.0, directionalShadow(in.shadowCoord), u_draw.receiveShadow > 0.5);
   #endif
   #if NUM_DIR_LIGHTS > 0
   for (var i = 0; i < NUM_DIR_LIGHTS; i++) {

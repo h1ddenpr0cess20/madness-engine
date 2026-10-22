@@ -10,7 +10,9 @@
  * sheen, thin-film iridescence, transmission, the cube-UV environment lookup
  * and the PCF shadow taps — is the physically based model of three.js r186
  * (MIT, © 2010-2025 three.js authors), term for term, so that nothing a scene
- * was tuned against moves. `wgsl/` is the same model for WebGPU; keep the two
+ * was tuned against moves. (The one difference: r186 turns the shadow's taps by
+ * a different amount at each pixel; here they keep to one pattern, so that a
+ * shadow's edge does not crawl with dots as the camera moves.) `wgsl/` is the same model for WebGPU; keep the two
  * in step.
  */
 
