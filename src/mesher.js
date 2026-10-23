@@ -44,6 +44,16 @@ const norm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] 
 
 const hash = (x, y, z) => { const s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453; return s - Math.floor(s); };
 
+/** Smooth 3D value noise, 0..1: broad rolling lumps, not a different number at each point. */
+function vn(x, y, z, s) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  const fx = x - xi, fy = y - yi, fz = z - zi;
+  const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), w = fz * fz * (3 - 2 * fz);
+  const h = (i, j, k) => hash(xi + i + s, yi + j - s * 0.7, zi + k + s * 1.9);
+  const l = (a, b, t) => a + (b - a) * t;
+  return l(l(l(h(0, 0, 0), h(1, 0, 0), u), l(h(0, 1, 0), h(1, 1, 0), u), v), l(l(h(0, 0, 1), h(1, 0, 1), u), l(h(0, 1, 1), h(1, 1, 1), u), v), w);
+}
+
 export class Mesher {
   constructor() {
     this.parts = {};
@@ -323,15 +333,6 @@ export class Mesher {
       const a = hash(seed + k * 1.7, 2.1, k) * Math.PI * 2, e = (hash(seed, k * 3.3, 5.7) - 0.2) * 1.4;
       cuts.push({ n: [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], d: 0.7 + hash(k, seed * 1.3, 8.1) * 0.2 });
     }
-    // Smooth value noise, so the lumps are broad and rolling and not a different number at each vertex.
-    const vn = (x, y, z, s) => {
-      const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
-      const fx = x - xi, fy = y - yi, fz = z - zi;
-      const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), w = fz * fz * (3 - 2 * fz);
-      const h = (i, j, k) => hash(xi + i + s, yi + j - s * 0.7, zi + k + s * 1.9);
-      const l = (a, b, t) => a + (b - a) * t;
-      return l(l(l(h(0, 0, 0), h(1, 0, 0), u), l(h(0, 1, 0), h(1, 1, 0), u), v), l(l(h(0, 0, 1), h(1, 0, 1), u), l(h(0, 1, 1), h(1, 1, 1), u), v), w);
-    };
     const pts = [], cols = [];
     for (const d of g.verts) {
       // Warp the point first, so the crags wander and are not a lattice's grain.
@@ -366,27 +367,100 @@ export class Mesher {
       if (mw > 0) c = [c[0] + (0.26 * k - c[0]) * mw, c[1] + (0.34 * k - c[1]) * mw, c[2] + (0.14 * k - c[2]) * mw];
       cols.push(c);
     }
-    // Smooth normals from the faces that are drawn; the flat base is in the ground and its bases heaped together would only lie over each other.
+    return this.smoothSurface(mat, pts, cols, g.faces, col, o, true);
+  }
+
+  /**
+   * Emits an indexed surface shaded smooth: each vertex takes the average of the
+   * faces round it, and the texture is projected along each face's main axis so
+   * the grain runs on across triangles. `skipDown` leaves out faces that look
+   * straight down (the flat base of something set in the ground).
+   */
+  smoothSurface(mat, pts, cols, faces, col, o, skipDown) {
     const nor = pts.map(() => [0, 0, 0]);
-    const faces = [];
-    for (const f of g.faces) {
+    const drawn = [];
+    for (const f of faces) {
       const [A, B, C] = f.map((i) => pts[i]);
       const n = cross(sub(B, A), sub(C, A));
       const len = Math.hypot(n[0], n[1], n[2]);
-      if (len < 1e-12 || n[1] / len < -0.95) continue;
-      faces.push(f);
+      if (len < 1e-12 || (skipDown && n[1] / len < -0.95)) continue;
+      drawn.push(f);
       for (const i of f) { nor[i][0] += n[0]; nor[i][1] += n[1]; nor[i][2] += n[2]; }
     }
     const s = o.uvScale ?? UV_SCALE[mat] ?? 1;
-    for (const f of faces) {
+    for (const f of drawn) {
       const [a, b, c] = f;
       const fn = cross(sub(pts[b], pts[a]), sub(pts[c], pts[a]));
       const ax = Math.abs(fn[0]), ay = Math.abs(fn[1]), az = Math.abs(fn[2]);
-      // Project the texture along the face's main axis: the same point is the same texel from every triangle that shares it.
       const uvOf = (P) => (ay >= ax && ay >= az ? [P[0] * s, P[2] * s] : ax >= az ? [P[2] * s, P[1] * s] : [P[0] * s, P[1] * s]);
       this.tri(mat, pts[a], pts[b], pts[c], col, { ...o, colors: [cols[a], cols[b], cols[c]], normals: [norm(nor[a]), norm(nor[b]), norm(nor[c])], uv: [uvOf(pts[a]), uvOf(pts[b]), uvOf(pts[c])] });
     }
     return this;
+  }
+
+  /**
+   * A crown of foliage: an ellipsoid made lumpy with clumps of leaves (`lump`,
+   * how deep), shaded smooth, lit from above in its vertex colours: pale on top
+   * and outermost, dark underneath and inside, a clump here and there lighter
+   * or darker. `col` is near-white where a material colours the leaves.
+   * `detail` is the icosphere's own (0 is 20 triangles, 1 is 80, 2 is 320).
+   */
+  crown(mat, cx, cy, cz, rx, ry, rz, col, o = {}) {
+    const g = icosphere(o.detail ?? 1);
+    const seed = o.seed ?? 0, lump = o.lump ?? 0.22;
+    const c0 = rgb(col);
+    const pts = [], cols = [];
+    for (const d of g.verts) {
+      const big = vn(d[0] * 1.8 + 3, d[1] * 1.8 + 3, d[2] * 1.8 + 3, seed);
+      const clump = vn(d[0] * 5.6, d[1] * 5.6, d[2] * 5.6, seed + 5);
+      const r = 1 + lump * ((big - 0.5) * 1.1 + (clump - 0.5) * 1.3);
+      pts.push([cx + d[0] * r * rx, cy + d[1] * r * ry, cz + d[2] * r * rz]);
+      const k = (0.6 + 0.55 * Math.max(-0.5, d[1]) + 0.8 * (clump - 0.5) + 0.25 * (big - 0.5)) * (0.78 + 0.3 * r);
+      cols.push([c0[0] * k, c0[1] * k, c0[2] * k]);
+    }
+    return this.smoothSurface(mat, pts, cols, g.faces, col, o, false);
+  }
+
+  /**
+   * One tier of a conifer: a cone of radius `r` from its tip at `y0 + h` down to
+   * its drooping, ragged skirt at `y0`, with the underside tucked back in
+   * toward the trunk and dark. `sides` is how many boughs round the edge.
+   */
+  bough(mat, cx, y0, cz, r, h, sides, col, o = {}) {
+    const seed = o.seed ?? 0, c0 = rgb(col);
+    const pts = [[cx, y0 + h, cz]], cols = [[c0[0] * 1.05, c0[1] * 1.05, c0[2] * 1.05]];
+    const rings = 3;
+    for (let q = 1; q <= rings; q++) {
+      const f = q / rings;
+      for (let i = 0; i < sides; i++) {
+        const a = (i / sides) * Math.PI * 2 + (o.rot ?? 0);
+        // Boughs alternate long and short and hang below the line of the cone; the skirt is ragged.
+        const bough = f === 1 ? (i % 2 ? 1 : 0.8) * (0.88 + 0.24 * hash(i, seed, 2.5)) : 1;
+        const rr = r * f * bough;
+        const droop = f === 1 ? -h * 0.1 * (i % 2 ? 1 : 0.3) : 0;
+        const wob = 1 + (vn(Math.cos(a) * 2 + f, f * 3, Math.sin(a) * 2, seed) - 0.5) * 0.12;
+        pts.push([cx + Math.cos(a) * rr * wob, y0 + h * (1 - f) + droop, cz + Math.sin(a) * rr * wob]);
+        const k = 0.88 + 0.42 * (1 - f) + 0.3 * (hash(i, q, seed) - 0.5);
+        cols.push([c0[0] * k, c0[1] * k, c0[2] * k]);
+      }
+    }
+    const faces = [];
+    const ring = (q, i) => 1 + (q - 1) * sides + (i % sides);
+    for (let i = 0; i < sides; i++) faces.push([0, ring(1, i + 1), ring(1, i)]);
+    for (let q = 1; q < rings; q++) for (let i = 0; i < sides; i++) faces.push([ring(q, i), ring(q, i + 1), ring(q + 1, i)], [ring(q, i + 1), ring(q + 1, i + 1), ring(q + 1, i)]);
+    // The underside: back in from the skirt to the trunk, dark.
+    const inner = pts.length;
+    for (let i = 0; i < sides; i++) {
+      const a = (i / sides) * Math.PI * 2 + (o.rot ?? 0);
+      pts.push([cx + Math.cos(a) * r * 0.12, y0 + h * 0.12, cz + Math.sin(a) * r * 0.12]);
+      cols.push([c0[0] * 0.45, c0[1] * 0.45, c0[2] * 0.45]);
+    }
+    for (let i = 0; i < sides; i++) {
+      const o0 = ring(rings, i), o1 = ring(rings, i + 1);
+      cols[o0] = cols[o0].slice();
+      faces.push([o0, o1, inner + ((i + 1) % sides)], [o0, inner + ((i + 1) % sides), inner + i]);
+    }
+    return this.smoothSurface(mat, pts, cols, faces, col, o, false);
   }
 
   /** A square beam from point a to point b, `t` thick. */
