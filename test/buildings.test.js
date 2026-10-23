@@ -161,3 +161,17 @@ test('half-timbering keeps its posts and braces off the windows and doors, and b
     assert.ok(!(x > 0.42 && x < 0.58 && y > 0.22 && y < 0.38), `timber at ${x.toFixed(2)},${y.toFixed(2)} lies across the window`);
   }
 });
+
+test('a roof has thickness: an underside, and an edge at the eaves and the gable ends', () => {
+  for (const kind of ['gable', 'hip']) {
+    const m = new Mesher();
+    m[kind]('tile', 0, 0, 2, 1.4, 1, 1.5, '#a04030', { over: 0.15 });
+    const nor = m.parts.tile.nor;
+    let up = 0, down = 0, side = 0;
+    for (let i = 0; i < nor.length; i += 9) {
+      const y = nor[i + 1];
+      if (y > 0.3) up++; else if (y < -0.3) down++; else side++;
+    }
+    assert.ok(up > 0 && down > 0 && side > 0, `${kind}: ${up} up, ${down} down, ${side} edge faces`);
+  }
+});

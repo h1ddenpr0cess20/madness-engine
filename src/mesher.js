@@ -151,9 +151,34 @@ export class Mesher {
   }
 
   /**
+   * A roof slope with some thickness: the top quad a b c d (counter-clockwise
+   * seen from above), its underside `thick` below, and an edge face along each
+   * of the edges named in `edges` (0 is a-b, 1 is b-c, 2 is c-d, 3 is d-a). A
+   * bare sheet is drawn from one side only, so from the other the slope
+   * vanishes, and the overhang at a gable end has nothing to show.
+   */
+  slab(mat, a, b, c, d, col, thick, edges, o = {}) {
+    const top = [a, b, c, d];
+    const down = ([x, y, z]) => [x, y - thick, z];
+    const under = top.map(down);
+    this.quad(mat, top[0], top[1], top[2], top[3], o.topCol ?? col, o);
+    this.quad(mat, under[3], under[2], under[1], under[0], col, { ...o, shade: 0.75 });
+    const mid = [0, 1, 2].map((i) => (a[i] + b[i] + c[i] + d[i]) / 4);
+    for (const e of edges) {
+      const p = top[e], q = top[(e + 1) % 4], p2 = under[e], q2 = under[(e + 1) % 4];
+      const n = cross(sub(q, p), sub(p2, p));
+      const out = sub([(p[0] + q[0]) / 2, 0, (p[2] + q[2]) / 2], [mid[0], 0, mid[2]]);
+      if (dot(n, out) < 0) this.quad(mat, p, p2, q2, q, col, { ...o, shade: 0.85 });
+      else this.quad(mat, q, q2, p2, p, col, { ...o, shade: 0.85 });
+    }
+    return this;
+  }
+
+  /**
    * A gabled roof over (x0, z0) to (x1, z1), its eaves at `yEave` and its ridge
-   * at `yRidge`, running along x (or z, with `axis: 'z'`). It overhangs by `over`.
-   * Gable ends are filled in with `o.gable` (a material) in `o.gableColor`.
+   * at `yRidge`, running along x (or z, with `axis: 'z'`). It overhangs by `over`
+   * and is `thick` through (0.06). Gable ends are filled in with `o.gable` (a
+   * material) in `o.gableColor`.
    */
   gable(mat, x0, z0, x1, z1, yEave, yRidge, col, o = {}) {
     const over = o.over ?? 0.1;
@@ -164,13 +189,15 @@ export class Mesher {
     const yo = yEave - rise * over;
     const P = (a, b, y) => (alongZ ? [b, y, a] : [a, y, b]);
     const A0 = a0 - over, A1 = a1 + over, B0 = b0 - over, B1 = b1 + over;
-    // The two slopes (normals up and out).
+    // The two slopes (normals up and out), each with its underside and the edges at the eaves and the gable ends.
+    const thick = o.thick ?? 0.06;
+    const side = [0, 1, 3];
     if (alongZ) {
-      this.quad(mat, P(A1, B1, yo), P(A0, B1, yo), P(A0, mid, yRidge), P(A1, mid, yRidge), o.topCol ?? col, o);
-      this.quad(mat, P(A0, B0, yo), P(A1, B0, yo), P(A1, mid, yRidge), P(A0, mid, yRidge), o.topCol ?? col, o);
+      this.slab(mat, P(A1, B1, yo), P(A0, B1, yo), P(A0, mid, yRidge), P(A1, mid, yRidge), col, thick, side, o);
+      this.slab(mat, P(A0, B0, yo), P(A1, B0, yo), P(A1, mid, yRidge), P(A0, mid, yRidge), col, thick, side, o);
     } else {
-      this.quad(mat, P(A0, B1, yo), P(A1, B1, yo), P(A1, mid, yRidge), P(A0, mid, yRidge), o.topCol ?? col, o);
-      this.quad(mat, P(A1, B0, yo), P(A0, B0, yo), P(A0, mid, yRidge), P(A1, mid, yRidge), o.topCol ?? col, o);
+      this.slab(mat, P(A0, B1, yo), P(A1, B1, yo), P(A1, mid, yRidge), P(A0, mid, yRidge), col, thick, side, o);
+      this.slab(mat, P(A1, B0, yo), P(A0, B0, yo), P(A0, mid, yRidge), P(A1, mid, yRidge), col, thick, side, o);
     }
     // The gable ends, flush with the walls.
     if (o.gable) {
@@ -209,10 +236,11 @@ export class Mesher {
     const Ra = wide ? [cx - along, yRidge, cz] : [cx, yRidge, cz - along];
     const Rb = wide ? [cx + along, yRidge, cz] : [cx, yRidge, cz + along];
     // Each face is a quad up to the ridge; where the ridge ends in a point the quad is a triangle.
-    this.quad(mat, [X0, yo, Z1], [X1, yo, Z1], Rb, wide ? Ra : Rb, col, o);
-    this.quad(mat, [X1, yo, Z0], [X0, yo, Z0], Ra, wide ? Rb : Ra, col, o);
-    this.quad(mat, [X1, yo, Z1], [X1, yo, Z0], wide ? Rb : Ra, wide ? Rb : Rb, col, o);
-    this.quad(mat, [X0, yo, Z0], [X0, yo, Z1], wide ? Ra : Rb, wide ? Ra : Ra, col, o);
+    const thick = o.thick ?? 0.06;
+    this.slab(mat, [X0, yo, Z1], [X1, yo, Z1], Rb, wide ? Ra : Rb, col, thick, [0], o);
+    this.slab(mat, [X1, yo, Z0], [X0, yo, Z0], Ra, wide ? Rb : Ra, col, thick, [0], o);
+    this.slab(mat, [X1, yo, Z1], [X1, yo, Z0], wide ? Rb : Ra, wide ? Rb : Rb, col, thick, [0], o);
+    this.slab(mat, [X0, yo, Z0], [X0, yo, Z1], wide ? Ra : Rb, wide ? Ra : Ra, col, thick, [0], o);
     return this;
   }
 
