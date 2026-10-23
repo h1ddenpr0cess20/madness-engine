@@ -302,30 +302,63 @@ export class Mesher {
   }
 
   /**
-   * A rock: an icosphere knocked out of shape by broad lumps and smaller chips
-   * (`rough`), flat shaded so each face catches the light on its own, with a
-   * flat base (`base`, how far down it is cut as a share of `ry`) to sit in the
-   * ground. Faces that look up are lighter and those that look down darker, and
-   * each is a little different from the next, as stone is. `o.seed` makes
-   * another rock of the same size.
+   * A rock: an icosphere pushed out of shape by layered noise (`rough`), a few
+   * flat faces knocked off it where it broke (`cuts`), and a flat base (`base`,
+   * how far down it is cut as a share of `ry`) to sit in the ground. It is
+   * shaded smooth, so it reads as weathered stone and not a cut gem, and coloured
+   * in bands of strata that tilt across it, paler on top and darker underneath
+   * and in the dips. Its detail is a step finer than `detail` says, because
+   * smooth shading wants the triangles. `o.seed` makes another rock of the same
+   * size; `o.colorFn(dir, own)` may return a colour for a point of the surface.
    */
   rock(mat, cx, cy, cz, rx, ry, rz, col, o = {}) {
-    const g = icosphere(o.detail ?? 1);
+    const g = icosphere(Math.min(3, (o.detail ?? 1) + 1));
     const seed = o.seed ?? 0, rough = o.rough ?? 0.3, base = o.base ?? 0.45;
-    const pts = g.verts.map((v) => {
-      const lump = hash(v[0] * 2.3 + seed, v[1] * 2.3 - seed * 0.7, v[2] * 2.3 + seed * 1.9) - 0.5;
-      const chip = hash(v[0] * 9.1 + seed * 3.1, v[1] * 9.1, v[2] * 9.1 - seed) - 0.5;
-      const k = 1 + rough * (1.3 * lump + 0.55 * chip);
-      return [cx + v[0] * k * rx, cy + Math.max(v[1] * k, -base) * ry, cz + v[2] * k * rz];
-    });
-    for (const [a, b, c] of g.faces) {
-      const A = pts[a], B = pts[b], C = pts[c];
-      const n = norm(cross(sub(B, A), sub(C, A)));
-      // The flat base is in the ground: nothing to draw, and the bases of rocks heaped together would only lie over each other.
-      if (n[1] < -0.95) continue;
-      const own = hash((A[0] + B[0] + C[0]) * 5 + seed, (A[1] + B[1] + C[1]) * 5, (A[2] + B[2] + C[2]) * 5);
-      const shade = (0.7 + 0.34 * Math.max(0, Math.min(1, n[1] * 0.5 + 0.5))) * (0.9 + 0.2 * own);
-      this.tri(mat, A, B, C, o.colorFn ? o.colorFn(n, own) : col, { ...o, shade, normals: undefined });
+    const base3 = rgb(col);
+    const cuts = [];
+    for (let k = 0; k < (o.cuts ?? 4); k++) {
+      const a = hash(seed + k * 1.7, 2.1, k) * Math.PI * 2, e = (hash(seed, k * 3.3, 5.7) - 0.25) * 1.3;
+      cuts.push({ n: [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], d: 0.74 + hash(k, seed * 1.3, 8.1) * 0.18 });
+    }
+    // Smooth value noise, so the lumps are broad and rolling and not a different number at each vertex.
+    const vn = (x, y, z, s) => {
+      const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+      const fx = x - xi, fy = y - yi, fz = z - zi;
+      const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), w = fz * fz * (3 - 2 * fz);
+      const h = (i, j, k) => hash(xi + i + s, yi + j - s * 0.7, zi + k + s * 1.9);
+      const l = (a, b, t) => a + (b - a) * t;
+      return l(l(l(h(0, 0, 0), h(1, 0, 0), u), l(h(0, 1, 0), h(1, 1, 0), u), v), l(l(h(0, 0, 1), h(1, 0, 1), u), l(h(0, 1, 1), h(1, 1, 1), u), v), w);
+    };
+    const pts = [], cols = [], dirs = [];
+    for (const d of g.verts) {
+      const lump = vn(d[0] * 1.5 + 5, d[1] * 1.5 + 5, d[2] * 1.5 + 5, seed) * 0.6 + vn(d[0] * 3.1, d[1] * 3.1, d[2] * 3.1, seed + 3) * 0.28 + vn(d[0] * 6.4, d[1] * 6.4, d[2] * 6.4, seed + 7) * 0.12;
+      let r = 1 + rough * (lump - 0.5) * 2.2;
+      for (const c of cuts) {
+        const dp = d[0] * c.n[0] + d[1] * c.n[1] + d[2] * c.n[2];
+        if (dp > 0.01 && r * dp > c.d) r = c.d / dp;
+      }
+      const y = Math.max(d[1] * r, -base);
+      pts.push([cx + d[0] * r * rx, cy + y * ry, cz + d[2] * r * rz]);
+      dirs.push(d);
+      const strata = Math.sin((y * 5 + d[0] * 1.4 + seed) * 2.4 + lump * 3) * 0.5 + 0.5;
+      const grain = vn(d[0] * 9 + seed, d[1] * 9, d[2] * 9, seed + 11);
+      const k = (0.74 + 0.2 * strata + 0.24 * (grain - 0.5) + 0.2 * (lump - 0.5) + 0.16 * Math.max(0, d[1])) * (0.8 + 0.3 * Math.min(1, (y + base) / (1 + base)));
+      const c = o.colorFn ? rgb(o.colorFn(d, lump, grain, y) ?? col) : base3;
+      cols.push([c[0] * k, c[1] * k, c[2] * k]);
+    }
+    // Smooth normals from the faces that are drawn; the flat base is in the ground and its bases heaped together would only lie over each other.
+    const nor = pts.map(() => [0, 0, 0]);
+    const faces = [];
+    for (const f of g.faces) {
+      const [A, B, C] = f.map((i) => pts[i]);
+      const n = cross(sub(B, A), sub(C, A));
+      const len = Math.hypot(n[0], n[1], n[2]);
+      if (len < 1e-12 || n[1] / len < -0.95) continue;
+      faces.push(f);
+      for (const i of f) { nor[i][0] += n[0]; nor[i][1] += n[1]; nor[i][2] += n[2]; }
+    }
+    for (const [a, b, c] of faces) {
+      this.tri(mat, pts[a], pts[b], pts[c], col, { ...o, colors: [cols[a], cols[b], cols[c]], normals: [norm(nor[a]), norm(nor[b]), norm(nor[c])] });
     }
     return this;
   }
