@@ -15,8 +15,11 @@ in vec3 normal;
 #endif
 #ifdef USE_COLOR
   in vec3 color;
+#endif
+#if defined( USE_COLOR ) || defined( USE_INSTANCING )
   out vec4 vColor;
 #endif
+#include <instancing>
 #ifdef USE_MAP
   uniform mat3 mapTransform;
   out vec2 vMapUv;
@@ -41,12 +44,20 @@ void main() {
   #ifdef USE_BUMPMAP
     vBumpMapUv = ( bumpMapTransform * vec3( uv, 1 ) ).xy;
   #endif
-  #ifdef USE_COLOR
+  #if defined( USE_COLOR ) || defined( USE_INSTANCING )
     vColor = vec4( 1.0 );
+  #endif
+  #ifdef USE_COLOR
     vColor.rgb *= color;
+  #endif
+  #ifdef USE_INSTANCING
+    vColor.rgb *= instanceLook.yzw;
   #endif
 
   vec3 objectNormal = vec3( normal );
+  #ifdef USE_INSTANCING
+    objectNormal = instanceTurn( objectNormal, instancePlace.w );
+  #endif
   vec3 transformedNormal = objectNormal;
   transformedNormal = normalMatrix * transformedNormal;
   #ifdef FLIP_SIDED
@@ -57,6 +68,9 @@ void main() {
   #endif
 
   vec3 transformed = vec3( position );
+  #ifdef USE_INSTANCING
+    transformed = instanceTurn( transformed, instancePlace.w ) * instanceLook.x + instancePlace.xyz;
+  #endif
   vec4 mvPosition = vec4( transformed, 1.0 );
   mvPosition = modelViewMatrix * mvPosition;
   gl_Position = projectionMatrix * mvPosition;

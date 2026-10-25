@@ -29,6 +29,11 @@ const ARENA_SIZE = 4 << 20;
 const ALIGN = 256;
 
 const LOCATIONS = { position: 0, normal: 1, uv: 2, color: 3 };
+/** An instanced mesh's copies, a vec4 each per copy: where and how turned, and the scale and tint. */
+const INSTANCE_LOCATIONS = { instancePlace: 5, instanceLook: 6 };
+const INSTANCE_BUFFERS = Object.values(INSTANCE_LOCATIONS).map((shaderLocation) => ({
+  arrayStride: 16, stepMode: 'instance', attributes: [{ shaderLocation, offset: 0, format: 'float32x4' }],
+}));
 const U = GPUBufferUsage;
 const T = GPUTextureUsage;
 
@@ -274,41 +279,47 @@ export class WebGPUBackend {
       p.pass.setBindGroup(0, p.frameGroup);
       p.pass.setBindGroup(1, this._drawGroup(call.textures), [offset]);
     }
-    this._geometry(pipeline.attributes, call.geometry);
+    this._geometry(pipeline.attributes, call.geometry, call.instances);
     this._submit(call);
   }
 
   drawDepth(call) {
     const p = this.pass;
-    const pipeline = this._depthPipeline(call.cull);
+    const pipeline = this._depthPipeline(call.cull, Boolean(call.instances));
     p.pass.setPipeline(pipeline);
     const offset = this._alloc(128);
     this.arenaF32.set(call.modelViewMatrix, offset / 4);
     this.arenaF32.set(toWebGPUProjection(call.projectionMatrix, true), offset / 4 + 16);
     p.pass.setBindGroup(0, this.depthGroup, [offset]);
-    this._geometry(['position'], call.geometry);
+    this._geometry(['position'], call.geometry, call.instances);
     this._submit(call);
   }
 
-  _submit({ geometry, start, count }) {
+  _submit({ geometry, start, count, instances }) {
     const pass = this.pass.pass;
     const index = geometry.index;
+    const copies = instances ? instances.count : 1;
     if (index !== null) {
       const entry = this._buffer(index, U.INDEX, true);
       pass.setIndexBuffer(entry.buffer, index.array.BYTES_PER_ELEMENT === 4 ? 'uint32' : 'uint16');
-      pass.drawIndexed(count, 1, start);
+      pass.drawIndexed(count, copies, start);
     } else {
-      pass.draw(count, 1, start);
+      pass.draw(count, copies, start);
     }
   }
 
-  _geometry(attributes, geometry) {
+  _geometry(attributes, geometry, instances = null) {
     const pass = this.pass.pass;
     attributes.forEach((name, slot) => {
       const attribute = geometry.attributes[name];
       if (attribute) pass.setVertexBuffer(slot, this._buffer(attribute, U.VERTEX, false).buffer);
       else pass.setVertexBuffer(slot, this.zero);
     });
+    // The copies follow the vertex buffers, in the slots after them.
+    if (instances) {
+      pass.setVertexBuffer(attributes.length, this._buffer(instances.place, U.VERTEX, false).buffer);
+      pass.setVertexBuffer(attributes.length + 1, this._buffer(instances.look, U.VERTEX, false).buffer);
+    }
   }
 
   _alloc(size) {
@@ -455,14 +466,14 @@ export class WebGPUBackend {
       vertex: {
         module,
         entryPoint: 'vs',
-        buffers: attributes.map((name) => {
+        buffers: [...attributes.map((name) => {
           const attribute = geometry.attributes[name];
           const size = attribute ? attribute.itemSize : (name === 'uv' ? 2 : 3);
           return {
             arrayStride: attribute ? size * 4 : 0,
             attributes: [{ shaderLocation: LOCATIONS[name], offset: 0, format: size === 2 ? 'float32x2' : size === 4 ? 'float32x4' : 'float32x3' }],
           };
-        }),
+        }), ...(key.instanced ? INSTANCE_BUFFERS : [])],
       },
       fragment: {
         module,
@@ -487,16 +498,16 @@ export class WebGPUBackend {
     return pipeline;
   }
 
-  _depthPipeline(cull) {
-    const id = `depth|${cull}`;
+  _depthPipeline(cull, instanced = false) {
+    const id = `depth|${cull}|${instanced}`;
     let pipeline = this.pipelines.get(id);
     if (pipeline) return pipeline;
-    const module = this._module(depthWGSL());
+    const module = this._module(depthWGSL(instanced));
     pipeline = this.device.createRenderPipeline({
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.depthLayout] }),
       vertex: {
         module, entryPoint: 'vs',
-        buffers: [{ arrayStride: 12, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }],
+        buffers: [{ arrayStride: 12, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }, ...(instanced ? INSTANCE_BUFFERS : [])],
       },
       primitive: {
         topology: 'triangle-list',
@@ -552,6 +563,11 @@ export class WebGPUBackend {
       const attribute = geometry.attributes[name];
       if (attribute) this._buffer(attribute, U.VERTEX, true);
     }
+  }
+
+  /** The same for one attribute on its own: an instanced mesh's copies. */
+  syncAttribute(attribute) {
+    this._buffer(attribute, U.VERTEX, true);
   }
 
   _buffer(attribute, usage, sync) {

@@ -635,6 +635,107 @@ export class Mesh extends Object3D {
 }
 Mesh.prototype.isMesh = true;
 
+/**
+ * One geometry drawn many times in a single call: a forest of the same tree,
+ * a pool of smoke puffs. Each copy is placed as the mesher's `Batch.stamp`
+ * places one — moved to (x, y, z), turned `yaw` about y, made `scale` times
+ * the size, its colour multiplied by `tint` — but the vertices stay on the
+ * graphics card once, and only eight numbers a copy go up beside them.
+ *
+ *     const wood = new GFX.InstancedMesh(oak, bark, 500);
+ *     wood.add(x, y, z, yaw, 1.1, [0.95, 1, 0.9]);
+ *     wood.update();   // after adding or moving copies
+ *
+ * The copies are culled together, by a sphere round all of them, and are
+ * drawn in the shadow map like any mesh when `castShadow` is set. The mesh's
+ * own transform applies on top. Raycasts do not see the copies.
+ */
+export class InstancedMesh extends Mesh {
+  constructor(geometry, material, capacity = 16) {
+    super(geometry, material);
+    this.type = 'InstancedMesh';
+    /** How many of the copies are drawn. */
+    this.count = 0;
+    capacity = Math.max(1, capacity);
+    /** Per copy: x, y, z and the turn about y. */
+    this.instancePlace = new BufferAttribute(new Float32Array(capacity * 4), 4);
+    /** Per copy: the scale, and the tint's red, green and blue. */
+    this.instanceLook = new BufferAttribute(new Float32Array(capacity * 4), 4);
+    /** Round every copy, in the mesh's own frame; `update()` works it out. */
+    this.boundingSphere = null;
+  }
+
+  get capacity() { return this.instancePlace.count; }
+
+  /** Room for at least `n` copies (what is there is kept). */
+  reserve(n) {
+    if (n <= this.capacity) return this;
+    let cap = this.capacity;
+    while (cap < n) cap *= 2;
+    for (const attribute of [this.instancePlace, this.instanceLook]) {
+      const array = new Float32Array(cap * 4);
+      array.set(attribute.array);
+      attribute.array = array;
+      attribute.count = cap;
+      attribute.needsUpdate = true;
+    }
+    return this;
+  }
+
+  /** Places copy `i`. */
+  setInstance(i, x, y, z, yaw = 0, scale = 1, tint = null) {
+    const p = this.instancePlace.array, l = this.instanceLook.array, o = i * 4;
+    p[o] = x; p[o + 1] = y; p[o + 2] = z; p[o + 3] = yaw;
+    l[o] = scale;
+    l[o + 1] = tint ? tint[0] : 1; l[o + 2] = tint ? tint[1] : 1; l[o + 3] = tint ? tint[2] : 1;
+    return this;
+  }
+
+  /** Puts another copy after the last, making room as it needs; its number back. */
+  add(x, y, z, yaw = 0, scale = 1, tint = null) {
+    this.reserve(this.count + 1);
+    this.setInstance(this.count, x, y, z, yaw, scale, tint);
+    return this.count++;
+  }
+
+  /** Sends the copies up again and works out the sphere round them. Call it after placing copies. */
+  update() {
+    this.instancePlace.needsUpdate = true;
+    this.instanceLook.needsUpdate = true;
+    this.computeBoundingSphere();
+    return this;
+  }
+
+  computeBoundingSphere() {
+    const geometry = this.geometry;
+    if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
+    if (this.boundingSphere === null) this.boundingSphere = new Sphere();
+    const sphere = this.boundingSphere, gs = geometry.boundingSphere;
+    // The geometry's own sphere, set off from its origin, turns with each copy: as far as its centre is out, plus its radius.
+    const reach = Math.hypot(gs.center.x, gs.center.y, gs.center.z) + gs.radius;
+    const p = this.instancePlace.array, l = this.instanceLook.array;
+    if (this.count === 0) { sphere.center.set(0, 0, 0); sphere.radius = 0; return; }
+    let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+    for (let i = 0; i < this.count; i++) {
+      const o = i * 4;
+      x0 = Math.min(x0, p[o]); x1 = Math.max(x1, p[o]);
+      y0 = Math.min(y0, p[o + 1]); y1 = Math.max(y1, p[o + 1]);
+      z0 = Math.min(z0, p[o + 2]); z1 = Math.max(z1, p[o + 2]);
+    }
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, cz = (z0 + z1) / 2;
+    let r = 0;
+    for (let i = 0; i < this.count; i++) {
+      const o = i * 4;
+      r = Math.max(r, Math.hypot(p[o] - cx, p[o + 1] - cy, p[o + 2] - cz) + reach * Math.abs(l[o]));
+    }
+    sphere.center.set(cx, cy, cz);
+    sphere.radius = r;
+  }
+
+  raycast() {}
+}
+InstancedMesh.prototype.isInstancedMesh = true;
+
 export class Line extends Object3D {
   constructor(geometry = new BufferGeometry(), material = new LineBasicMaterial()) {
     super();

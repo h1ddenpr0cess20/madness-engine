@@ -4,13 +4,14 @@ import * as castle from './castle.js';
 import * as civic from './civic.js';
 import * as farm from './farm.js';
 import * as homes from './homes.js';
+import * as industry from './industry.js';
 import * as works from './works.js';
 
 export { castleScaffold } from './castle.js';
 
 /**
  * The buildings of a medieval town, drawn from boxes, beams and rocks: the
- * homes, the farm and the works, the civic buildings and the castle. Every
+ * homes, the farm and the works, the crofts and workshops, the civic buildings and the castle. Every
  * model is a function that draws into a `Mesher` in its own frame (front toward
  * +z, middle at the origin, standing on y = 0) and answers `{ smoke, anim, ... }`:
  * where its chimneys smoke, and any part that moves by itself.
@@ -23,11 +24,12 @@ export { castleScaffold } from './castle.js';
  * from 0 to 1): a footing, walls that rise, scaffolding and stacked materials.
  */
 
-export const MODELS = { ...homes, ...farm, ...works, ...civic, castle: castle.castle };
+export const MODELS = { ...homes, ...farm, ...works, ...industry, ...civic, castle: castle.castle };
 
 /** The footprint each model is drawn for: [width along the street, depth] in tiles. */
 export const FOOTPRINTS = Object.freeze({
   cottage: [2, 2], house: [2, 2], townhouse: [2, 3], stall: [2, 1], shop: [2, 2], merchant: [2, 2],
+  croft: [2, 2], smallholding: [2, 3], grange: [2, 3], workshop: [2, 2], joinery: [2, 3], guildhall: [2, 3],
   farmstead: [3, 3], fishery: [2, 3], hunter: [2, 2], granary: [3, 3], mill: [3, 3], brewery: [2, 3],
   woodcutter: [2, 2], forester: [2, 2], quarry: [3, 3], ironmine: [3, 3], storehouse: [3, 3], smithy: [2, 3], weaver: [2, 3],
   well: [1, 1], green: [3, 3], tavern: [3, 3], chapel: [3, 4], healer: [2, 2], market: [3, 3],

@@ -52,7 +52,7 @@ in vec3 vViewPosition;
 #ifndef FLAT_SHADED
   in vec3 vNormal;
 #endif
-#ifdef USE_COLOR
+#if defined( USE_COLOR ) || defined( USE_INSTANCING )
   in vec4 vColor;
 #endif
 #ifdef USE_MAP
@@ -147,7 +147,7 @@ void main() {
   #ifdef USE_MAP
     diffuseColor *= texture( map, vMapUv );
   #endif
-  #ifdef USE_COLOR
+  #if defined( USE_COLOR ) || defined( USE_INSTANCING )
     diffuseColor *= vColor;
   #endif
   float roughnessFactor = roughness;

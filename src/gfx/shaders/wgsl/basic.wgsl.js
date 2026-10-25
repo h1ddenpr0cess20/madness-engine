@@ -5,6 +5,9 @@ export default `// MeshBasicMaterial and LineBasicMaterial: the colour, times th
 #include <bindings>
 #include <common>
 #include <output>
+#ifdef USE_INSTANCING
+#include <instancing>
+#endif
 
 struct VertexInput {
   @location(0) position: vec3f,
@@ -14,13 +17,17 @@ struct VertexInput {
   #ifdef USE_COLOR
   @location(3) color: vec3f,
   #endif
+  #ifdef USE_INSTANCING
+  @location(5) instancePlace: vec4f,
+  @location(6) instanceLook: vec4f,
+  #endif
 };
 struct Varyings {
   @builtin(position) position: vec4f,
   #ifdef USE_MAP
   @location(0) mapUv: vec2f,
   #endif
-  #ifdef USE_COLOR
+  #if defined(USE_COLOR) || defined(USE_INSTANCING)
   @location(1) color: vec4f,
   #endif
 };
@@ -31,10 +38,18 @@ fn vs(in: VertexInput) -> Varyings {
   #ifdef USE_MAP
   out.mapUv = (u_draw.mapTransform * vec3f(in.uv, 1.0)).xy;
   #endif
-  #ifdef USE_COLOR
-  out.color = vec4f(vec3f(1.0) * in.color, 1.0);
+  #if defined(USE_COLOR) || defined(USE_INSTANCING)
+  out.color = vec4f(1.0);
   #endif
-  let mvPosition = u_draw.modelViewMatrix * vec4f(in.position, 1.0);
+  #ifdef USE_COLOR
+  out.color = vec4f(out.color.rgb * in.color, 1.0);
+  #endif
+  var transformed = in.position;
+  #ifdef USE_INSTANCING
+  out.color = vec4f(out.color.rgb * in.instanceLook.yzw, 1.0);
+  transformed = instanceTurn(transformed, in.instancePlace.w) * in.instanceLook.x + in.instancePlace.xyz;
+  #endif
+  let mvPosition = u_draw.modelViewMatrix * vec4f(transformed, 1.0);
   out.position = u_frame.projectionMatrix * mvPosition;
   return out;
 }
@@ -45,7 +60,7 @@ fn fs(in: Varyings) -> @location(0) vec4f {
   #ifdef USE_MAP
   diffuseColor *= textureSample(t_map, s_map, in.mapUv);
   #endif
-  #ifdef USE_COLOR
+  #if defined(USE_COLOR) || defined(USE_INSTANCING)
   diffuseColor *= in.color;
   #endif
   var indirectDiffuse = vec3f(1.0);
