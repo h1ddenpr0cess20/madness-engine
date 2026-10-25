@@ -25,6 +25,7 @@ import common from './wgsl/chunks/common.wgsl.js';
 import cube_uv from './wgsl/chunks/cube_uv.wgsl.js';
 import draw from './wgsl/chunks/draw.wgsl.js';
 import frame from './wgsl/chunks/frame.wgsl.js';
+import instancing from './wgsl/chunks/instancing.wgsl.js';
 import iridescence from './wgsl/chunks/iridescence.wgsl.js';
 import output from './wgsl/chunks/output.wgsl.js';
 import physical_lighting from './wgsl/chunks/physical_lighting.wgsl.js';
@@ -49,7 +50,7 @@ export const MAX_POINT_LIGHTS = 8;
 export const MAX_HEMI_LIGHTS = 4;
 
 const CHUNKS = {
-  bindings, bump, common, cube_uv, draw, frame, iridescence, output,
+  bindings, bump, common, cube_uv, draw, frame, instancing, iridescence, output,
   physical_lighting, pmrem_vertex, shadow_vertex, shadowmap, transmission,
 };
 
@@ -80,6 +81,7 @@ function standardDefines(key) {
     USE_IRIDESCENCE: key.iridescence,
     USE_TRANSMISSION: key.transmission,
     HAS_NORMAL: key.hasNormal,
+    USE_INSTANCING: key.instanced,
     NUM_DIR_LIGHTS: key.numDir,
     NUM_POINT_LIGHTS: key.numPoint,
     NUM_HEMI_LIGHTS: key.numHemi,
@@ -92,7 +94,7 @@ function standardDefines(key) {
 export function moduleSource(key, material) {
   switch (key.kind) {
     case 'standard': return assemble(standardModule, standardDefines(key));
-    case 'basic': return assemble(basicModule, { ...fragmentDefines(key), USE_MAP: key.map, USE_COLOR: key.vertexColors });
+    case 'basic': return assemble(basicModule, { ...fragmentDefines(key), USE_MAP: key.map, USE_COLOR: key.vertexColors, USE_INSTANCING: key.instanced });
     case 'sprite': return assemble(spriteModule, { ...fragmentDefines(key), USE_MAP: key.map });
     case 'shadow': return assemble(shadowModule, standardDefines({ ...key, envMap: false }));
     case 'custom': return customSource(material);
@@ -120,6 +122,6 @@ function customSource(material) {
 
 export const pmremEquirectWGSL = () => assemble(pmremEquirectModule);
 export const pmremGGXWGSL = (env) => assemble(pmremGGXModule, cubeUVDefines(env));
-export const depthWGSL = () => assemble(depthModule);
+export const depthWGSL = (instanced = false) => assemble(depthModule, { USE_INSTANCING: instanced });
 export const mipmapWGSL = () => assemble(mipmapModule);
 export const presentWGSL = () => assemble(presentModule);

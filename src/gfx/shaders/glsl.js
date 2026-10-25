@@ -21,6 +21,7 @@ import { include } from './preprocess.js';
 import PRELUDE from './glsl/prelude.glsl.js';
 import common from './glsl/chunks/common.glsl.js';
 import cube_uv from './glsl/chunks/cube_uv.glsl.js';
+import instancing from './glsl/chunks/instancing.glsl.js';
 import iridescence from './glsl/chunks/iridescence.glsl.js';
 import output from './glsl/chunks/output.glsl.js';
 import physical_lighting from './glsl/chunks/physical_lighting.glsl.js';
@@ -46,7 +47,7 @@ import standardFragment from './glsl/standard.frag.glsl.js';
 import standardVertex from './glsl/standard.vert.glsl.js';
 
 const CHUNKS = {
-  common, cube_uv, iridescence, output, physical_lighting,
+  common, cube_uv, instancing, iridescence, output, physical_lighting,
   shadow_pars_fragment, shadow_pars_vertex, shadow_vertex, transmission,
 };
 
@@ -79,6 +80,7 @@ function standardDefines(key) {
     USE_SHADOWMAP: key.numDirShadows > 0,
     OPAQUE: key.opaque,
     HAS_NORMAL: key.hasNormal,
+    USE_INSTANCING: key.instanced,
   }) + `#define NUM_DIR_LIGHTS ${key.numDir}\n#define NUM_POINT_LIGHTS ${key.numPoint}\n`
     + `#define NUM_HEMI_LIGHTS ${key.numHemi}\n#define NUM_DIR_LIGHT_SHADOWS ${key.numDirShadows}\n`
     + (key.envMap ? cubeUVDefines(key.env) : '');
@@ -91,7 +93,7 @@ export function programSources(key, material) {
       return [program(flags, standardVertex), program(flags, standardFragment)];
     }
     case 'basic': {
-      const flags = { USE_MAP: key.map, USE_COLOR: key.vertexColors };
+      const flags = { USE_MAP: key.map, USE_COLOR: key.vertexColors, USE_INSTANCING: key.instanced };
       return [program(defines(flags), basicVertex), program(defines({ ...flags, ...fragmentFlags(key) }), basicFragment)];
     }
     case 'sprite': {
@@ -102,7 +104,7 @@ export function programSources(key, material) {
       const flags = standardDefines({ ...key, envMap: false });
       return [program(flags, shadowVertex), program(flags, shadowFragment)];
     }
-    case 'depth': return [program('', depthVertex), program('', depthFragment)];
+    case 'depth': return [program(defines({ USE_INSTANCING: key.instanced }), depthVertex), program('', depthFragment)];
     // A hand-written ShaderMaterial: its own bodies, with the standard inputs declared.
     case 'custom': return [
       program('', customVertex) + material.glsl.vertex + '\n',

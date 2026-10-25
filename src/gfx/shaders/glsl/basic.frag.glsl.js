@@ -9,7 +9,7 @@ uniform float opacity;
   uniform sampler2D map;
   in vec2 vMapUv;
 #endif
-#ifdef USE_COLOR
+#if defined( USE_COLOR ) || defined( USE_INSTANCING )
   in vec4 vColor;
 #endif
 out highp vec4 pc_fragColor;
@@ -18,7 +18,7 @@ void main() {
   #ifdef USE_MAP
     diffuseColor *= texture( map, vMapUv );
   #endif
-  #ifdef USE_COLOR
+  #if defined( USE_COLOR ) || defined( USE_INSTANCING )
     diffuseColor *= vColor;
   #endif
   vec3 indirectDiffuse = vec3( 1.0 );

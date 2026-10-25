@@ -5,6 +5,9 @@ export default `// MeshStandardMaterial and MeshPhysicalMaterial: three.js r186'
 #include <bindings>
 #include <common>
 #include <output>
+#ifdef USE_INSTANCING
+#include <instancing>
+#endif
 #ifdef USE_ENVMAP
 #include <cube_uv>
 #endif
@@ -25,7 +28,7 @@ struct Varyings {
   #ifdef USE_BUMPMAP
   @location(3) bumpMapUv: vec2f,
   #endif
-  #ifdef USE_COLOR
+  #if defined(USE_COLOR) || defined(USE_INSTANCING)
   @location(4) color: vec4f,
   #endif
   #if NUM_DIR_LIGHT_SHADOWS > 0
@@ -45,6 +48,10 @@ struct VertexInput {
   #ifdef USE_COLOR
   @location(3) color: vec3f,
   #endif
+  #ifdef USE_INSTANCING
+  @location(5) instancePlace: vec4f,
+  @location(6) instanceLook: vec4f,
+  #endif
 };
 
 @vertex
@@ -56,21 +63,31 @@ fn vs(in: VertexInput) -> Varyings {
   #ifdef USE_BUMPMAP
   out.bumpMapUv = (u_draw.bumpMapTransform * vec3f(in.uv, 1.0)).xy;
   #endif
-  #ifdef USE_COLOR
-  out.color = vec4f(vec3f(1.0) * in.color, 1.0);
+  #if defined(USE_COLOR) || defined(USE_INSTANCING)
+  out.color = vec4f(1.0);
   #endif
-  var transformedNormal = u_draw.normalMatrix * in.normal;
+  #ifdef USE_COLOR
+  out.color = vec4f(out.color.rgb * in.color, 1.0);
+  #endif
+  var objectNormal = in.normal;
+  var transformed = in.position;
+  #ifdef USE_INSTANCING
+  out.color = vec4f(out.color.rgb * in.instanceLook.yzw, 1.0);
+  objectNormal = instanceTurn(objectNormal, in.instancePlace.w);
+  transformed = instanceTurn(transformed, in.instancePlace.w) * in.instanceLook.x + in.instancePlace.xyz;
+  #endif
+  var transformedNormal = u_draw.normalMatrix * objectNormal;
   #ifdef FLIP_SIDED
   transformedNormal = -transformedNormal;
   #endif
   #ifndef FLAT_SHADED
   out.normal = normalize(transformedNormal);
   #endif
-  let mvPosition = u_draw.modelViewMatrix * vec4f(in.position, 1.0);
+  let mvPosition = u_draw.modelViewMatrix * vec4f(transformed, 1.0);
   out.position = u_frame.projectionMatrix * mvPosition;
   out.viewPosition = -mvPosition.xyz;
   #if defined(USE_ENVMAP) || NUM_DIR_LIGHT_SHADOWS > 0 || defined(USE_TRANSMISSION)
-  let worldPosition = u_draw.modelMatrix * vec4f(in.position, 1.0);
+  let worldPosition = u_draw.modelMatrix * vec4f(transformed, 1.0);
   #endif
   #if NUM_DIR_LIGHT_SHADOWS > 0
   #ifdef HAS_NORMAL
@@ -128,7 +145,7 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #ifdef USE_MAP
   diffuseColor *= textureSample(t_map, s_map, in.mapUv);
   #endif
-  #ifdef USE_COLOR
+  #if defined(USE_COLOR) || defined(USE_INSTANCING)
   diffuseColor *= in.color;
   #endif
   let roughnessFactor = u_draw.roughness;

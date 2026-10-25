@@ -598,6 +598,43 @@ export class Acc {
   }
 }
 
+/**
+ * One part of a template (`Mesher.finish()[material]`) as an indexed
+ * BufferGeometry, every corner the triangles share kept once: what an
+ * InstancedMesh draws a model with. A smooth crown shares most of its
+ * corners, so it is a fraction of the vertices the triangle list was.
+ */
+export function partGeometry(GFX, part) {
+  const seen = new Map();
+  const pos = [], nor = [], uv = [], col = [];
+  const index = new Uint32Array(part.count);
+  const q = (v) => Math.round(v * 1e5);
+  for (let i = 0; i < part.count; i++) {
+    const p = i * 3, t = i * 2;
+    const key = `${q(part.pos[p])},${q(part.pos[p + 1])},${q(part.pos[p + 2])},${q(part.nor[p])},${q(part.nor[p + 1])},${q(part.nor[p + 2])},`
+      + `${q(part.uv[t])},${q(part.uv[t + 1])},${q(part.col[p])},${q(part.col[p + 1])},${q(part.col[p + 2])}`;
+    let k = seen.get(key);
+    if (k === undefined) {
+      k = pos.length / 3;
+      seen.set(key, k);
+      pos.push(part.pos[p], part.pos[p + 1], part.pos[p + 2]);
+      nor.push(part.nor[p], part.nor[p + 1], part.nor[p + 2]);
+      uv.push(part.uv[t], part.uv[t + 1]);
+      col.push(part.col[p], part.col[p + 1], part.col[p + 2]);
+    }
+    index[i] = k;
+  }
+  const g = new GFX.BufferGeometry();
+  g.setAttribute('position', new GFX.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('normal', new GFX.BufferAttribute(new Float32Array(nor), 3));
+  g.setAttribute('uv', new GFX.BufferAttribute(new Float32Array(uv), 2));
+  g.setAttribute('color', new GFX.BufferAttribute(new Float32Array(col), 3));
+  const n = pos.length / 3;
+  g.setIndex(new GFX.BufferAttribute(n < 65536 ? Uint16Array.from(index) : index, 1));
+  g.computeBoundingSphere();
+  return g;
+}
+
 /** A set of accumulators, one per material. */
 export class Batch {
   constructor() { this.accs = new Map(); }

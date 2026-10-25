@@ -113,9 +113,14 @@ export function createEffects(GFX, scene, { gravity = 18, ground = null } = {}) 
     group.add(mesh);
     return { mesh, material, positions, attribute, list: Array.from({ length: most }, () => ({ x: 0, y: 0, z: 0, p: Math.random() * 7 })), n: 0 };
   })();
+  // Splashes: rings opening on the ground where drops land, every one drawn in a single call.
+  const SPLASHES = 40;
   const splashes = [];
-  const splashGeometry = new GFX.TorusGeometry(1, 0.04, 4, 16);
+  const splashGeometry = new GFX.TorusGeometry(1, 0.04, 4, 16).rotateX(-Math.PI / 2);
   const splashMaterial = new GFX.MeshBasicMaterial({ name: 'splash', color: new GFX.Color('#d0dce8'), transparent: true, opacity: 0.5, depthWrite: false });
+  const splashMesh = new GFX.InstancedMesh(splashGeometry, splashMaterial, SPLASHES);
+  splashMesh.frustumCulled = false;
+  group.add(splashMesh);
 
   /** A fresh drop somewhere round (x, z), `up` of the way up its fall. */
   const reseed = (d, x, y, z, up = Math.random()) => {
@@ -173,13 +178,8 @@ export function createEffects(GFX, scene, { gravity = 18, ground = null } = {}) 
       d.z += vz * dt;
       const floor = height(d.x, d.z);
       if (d.y < (floor ?? y - 8)) {
-        if (splash && floor !== null && splashes.length < 40 && Math.abs(d.x - x) < 7 && Math.abs(d.z - z) < 7 && Math.random() < 0.25) {
-          const mesh = new GFX.Mesh(splashGeometry, splashMaterial);
-          mesh.rotation.x = -Math.PI / 2;
-          mesh.position.set(d.x, floor + 0.02, d.z);
-          mesh.scale.setScalar(0.02);
-          group.add(mesh);
-          splashes.push({ mesh, age: 0 });
+        if (splash && floor !== null && splashes.length < SPLASHES && Math.abs(d.x - x) < 7 && Math.abs(d.z - z) < 7 && Math.random() < 0.25) {
+          splashes.push({ x: d.x, y: floor + 0.02, z: d.z, age: 0 });
         }
         reseed(d, x, y - 2, z, 1);
       }
@@ -251,19 +251,23 @@ export function createEffects(GFX, scene, { gravity = 18, ground = null } = {}) 
       if (kind?.flakes) drift(dt, x, y, z);
       if (kind?.streaks) fall(dt, x, y, z);
       for (let i = splashes.length - 1; i >= 0; i--) {
-        const sp = splashes[i];
-        sp.age += dt;
-        if (sp.age > 0.35) { group.remove(sp.mesh); splashes.splice(i, 1); continue; }
-        sp.mesh.scale.setScalar(0.04 + sp.age * 0.6);
+        splashes[i].age += dt;
+        if (splashes[i].age > 0.35) splashes.splice(i, 1);
       }
+      splashes.forEach((sp, i) => splashMesh.setInstance(i, sp.x, sp.y, sp.z, 0, 0.04 + sp.age * 0.6));
+      splashMesh.count = splashes.length;
+      splashMesh.instancePlace.needsUpdate = true;
+      splashMesh.instanceLook.needsUpdate = true;
     },
 
     /** Everything flying, gone (a new level). The weather stays. */
     clear() {
-      for (const list of [bits, rings, splashes]) {
+      for (const list of [bits, rings]) {
         for (const b of list) group.remove(b.mesh);
         list.length = 0;
       }
+      splashes.length = 0;
+      splashMesh.count = 0;
     },
 
     /** How many bits are flying. */

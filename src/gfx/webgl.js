@@ -11,7 +11,9 @@ import { keyString } from './renderer.js';
 import { pmremEquirect, pmremGGX, programSources } from './shaders/glsl.js';
 import { pmremLayout, pmremPlanes, pmremSchedule } from './pmrem.js';
 
-const ATTRIBUTES = ['position', 'normal', 'uv', 'color', 'outputDirection'];
+const ATTRIBUTES = ['position', 'normal', 'uv', 'color', 'outputDirection', 'instancePlace', 'instanceLook'];
+/** The attributes that step once a copy rather than once a vertex: an instanced mesh's. */
+const PER_INSTANCE = new Set(['instancePlace', 'instanceLook']);
 
 export class WebGLBackend {
   constructor(canvas) {
@@ -38,6 +40,7 @@ export class WebGLBackend {
     this.textures = new WeakMap();
     this.vao = gl.createVertexArray();
     gl.bindVertexArray(this.vao);
+    ATTRIBUTES.forEach((name, location) => { if (PER_INSTANCE.has(name)) gl.vertexAttribDivisor(location, 1); });
     this.width = canvas.width;
     this.height = canvas.height;
     this.transmission = null;
@@ -169,22 +172,22 @@ export class WebGLBackend {
       }
     }
 
-    this._attributes(program, call.geometry);
-    this._submit(call.geometry, call.topology, call.start, call.count);
+    this._attributes(program, call.geometry, call.instances);
+    this._submit(call.geometry, call.topology, call.start, call.count, call.instances);
   }
 
   drawDepth(call) {
     const gl = this.gl;
-    const program = this._program({ kind: 'depth' });
+    const program = this._program({ kind: 'depth', instanced: Boolean(call.instances) });
     gl.useProgram(program.handle);
     this._state({ blending: 'none', depthTest: true, depthWrite: true, colorWrite: false, cull: call.cull });
     program.uniforms.set('modelViewMatrix', call.modelViewMatrix, 'm4');
     program.uniforms.set('projectionMatrix', call.projectionMatrix, 'm4');
-    this._attributes(program, call.geometry);
-    this._submit(call.geometry, call.topology, call.start, call.count);
+    this._attributes(program, call.geometry, call.instances);
+    this._submit(call.geometry, call.topology, call.start, call.count, call.instances);
   }
 
-  _submit(geometry, topology, start, count) {
+  _submit(geometry, topology, start, count, instances = null) {
     const gl = this.gl;
     const mode = topology === 'lines' ? gl.LINES : topology === 'line-strip' ? gl.LINE_STRIP : gl.TRIANGLES;
     const index = geometry.index;
@@ -192,7 +195,11 @@ export class WebGLBackend {
       const buffer = this._buffer(index, gl.ELEMENT_ARRAY_BUFFER);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
       const bytes = index.array.BYTES_PER_ELEMENT;
-      gl.drawElements(mode, count, bytes === 4 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, start * bytes);
+      const type = bytes === 4 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
+      if (instances) gl.drawElementsInstanced(mode, count, type, start * bytes, instances.count);
+      else gl.drawElements(mode, count, type, start * bytes);
+    } else if (instances) {
+      gl.drawArraysInstanced(mode, start, count, instances.count);
     } else {
       gl.drawArrays(mode, start, count);
     }
@@ -241,10 +248,12 @@ export class WebGLBackend {
     });
   }
 
-  _attributes(program, geometry) {
+  _attributes(program, geometry, instances = null) {
     const gl = this.gl;
     for (let location = 0; location < ATTRIBUTES.length; location++) {
-      const attribute = program.attributes[location] ? geometry.attributes[ATTRIBUTES[location]] : undefined;
+      const name = ATTRIBUTES[location];
+      const attribute = !program.attributes[location] ? undefined
+        : name === 'instancePlace' ? instances?.place : name === 'instanceLook' ? instances?.look : geometry.attributes[name];
       if (attribute === undefined) {
         gl.disableVertexAttribArray(location);
         continue;
@@ -292,6 +301,11 @@ export class WebGLBackend {
       const attribute = geometry.attributes[name];
       if (attribute) this._buffer(attribute, gl.ARRAY_BUFFER, true);
     }
+  }
+
+  /** The same for one attribute on its own: an instanced mesh's copies. */
+  syncAttribute(attribute) {
+    this._buffer(attribute, this.gl.ARRAY_BUFFER, true);
   }
 
   _buffer(attribute, target, sync = false) {
@@ -467,7 +481,7 @@ export class WebGLBackend {
       gl.bufferData(gl.ARRAY_BUFFER, plane.outputDirection, gl.STATIC_DRAW);
       gl.enableVertexAttribArray(4);
       gl.vertexAttribPointer(4, 3, gl.FLOAT, false, 0, 0);
-      for (const location of [1, 2, 3]) gl.disableVertexAttribArray(location);
+      for (const location of [1, 2, 3, 5, 6]) gl.disableVertexAttribArray(location);
       gl.drawArrays(gl.TRIANGLES, 0, 36);
       gl.disableVertexAttribArray(4);
       gl.deleteBuffer(position);

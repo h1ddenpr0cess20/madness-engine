@@ -205,14 +205,16 @@ export class Renderer {
           if (this.sortObjects) _vector4.setFromMatrixPosition(object.matrixWorld).applyMatrix4(_projScreenMatrix);
           if (object.material.visible) this._push(lists, object, object.geometry, object.material, groupOrder, _vector4.z, null);
         }
-      } else if (object.isMesh || object.isLine) {
+      } else if ((object.isMesh || object.isLine) && !(object.isInstancedMesh && object.count === 0)) {
         if (!object.frustumCulled || _frustum.intersectsObject(object)) {
           const geometry = object.geometry;
           const material = object.material;
           this._sync(geometry);
+          if (object.isInstancedMesh) this._syncInstances(object);
           if (this.sortObjects) {
             if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
-            _vector4.copy(geometry.boundingSphere.center).applyMatrix4(object.matrixWorld).applyMatrix4(_projScreenMatrix);
+            const sphere = object.isInstancedMesh ? object.boundingSphere ?? geometry.boundingSphere : geometry.boundingSphere;
+            _vector4.copy(sphere.center).applyMatrix4(object.matrixWorld).applyMatrix4(_projScreenMatrix);
           }
           if (Array.isArray(material)) {
             for (const group of geometry.groups) {
@@ -239,6 +241,14 @@ export class Renderer {
     if (geometry._syncedFrame === this._frame) return;
     geometry._syncedFrame = this._frame;
     this.backend.syncGeometry(geometry);
+  }
+
+  /** The copies of an instanced mesh go up with its geometry, once a frame. */
+  _syncInstances(object) {
+    if (object._syncedFrame === this._frame) return;
+    object._syncedFrame = this._frame;
+    this.backend.syncAttribute(object.instancePlace);
+    this.backend.syncAttribute(object.instanceLook);
   }
 
   _push(lists, object, geometry, material, groupOrder, z, group) {
@@ -315,8 +325,10 @@ export class Renderer {
       const collect = (object) => {
         if (object.visible === false) return;
         if (object.layers.test(camera.layers) && (object.isMesh || object.isLine) && object.castShadow
+          && !(object.isInstancedMesh && object.count === 0)
           && (!object.frustumCulled || shadow.frustum.intersectsObject(object))) {
           this._sync(object.geometry);
+          if (object.isInstancedMesh) this._syncInstances(object);
           object.modelViewMatrix.multiplyMatrices(shadow.camera.matrixWorldInverse, object.matrixWorld);
           const material = object.material;
           if (Array.isArray(material)) {
@@ -344,6 +356,7 @@ export class Renderer {
           modelViewMatrix: item.object.modelViewMatrix.elements,
           projectionMatrix: projection,
           cull: cullMode(side, item.object),
+          instances: instancesOf(item.object),
         });
       }
       this.backend.endPass();
@@ -405,6 +418,7 @@ export class Renderer {
     const { key, params, textures } = describe(object, geometry, material, side, context, frame);
     this.backend.draw({
       key, params, textures, material, geometry, ...range,
+      instances: key.instanced ? instancesOf(object) : null,
       object: {
         modelMatrix: object.matrixWorld.elements,
         modelViewMatrix: object.modelViewMatrix.elements,
@@ -420,6 +434,12 @@ export class Renderer {
       },
     });
   }
+}
+
+/** What an instanced mesh's draw needs to know of its copies (null for any other object). */
+function instancesOf(object) {
+  if (!object.isInstancedMesh) return null;
+  return { place: object.instancePlace, look: object.instanceLook, count: object.count };
 }
 
 /** Culling for a side, turned round for a mirrored object. */
@@ -447,12 +467,16 @@ function describe(object, geometry, material, side, context, frame) {
   const hasNormal = geometry.attributes.normal !== undefined;
   const opaque = material.transparent === false && material.blending === NormalBlending;
   const lights = { numDir: frame.directional.length, numPoint: frame.point.length, numHemi: frame.hemi.length };
+  const instanced = object.isInstancedMesh === true;
+  if (instanced && !(material.isMeshStandardMaterial || material.isMeshBasicMaterial)) {
+    throw new Error(`gfx: an InstancedMesh draws with standard and basic materials, not ${material.type}`);
+  }
 
   if (material.isMeshStandardMaterial) {
     const physical = material.isMeshPhysicalMaterial === true;
     const env = context.env;
     const key = {
-      kind: 'standard', physical, output, opaque, hasNormal,
+      kind: 'standard', physical, output, opaque, hasNormal, instanced,
       map: !!material.map,
       bumpMap: !!material.bumpMap,
       vertexColors: material.vertexColors === true,
@@ -516,7 +540,7 @@ function describe(object, geometry, material, side, context, frame) {
   if (material.isMeshBasicMaterial || material.isLineBasicMaterial) {
     const map = material.isMeshBasicMaterial ? material.map : null;
     return {
-      key: { kind: 'basic', output, opaque, map: !!map, vertexColors: material.vertexColors === true },
+      key: { kind: 'basic', output, opaque, map: !!map, vertexColors: material.vertexColors === true, instanced },
       params: { diffuse: colorArray(material.color), opacity: material.opacity, mapTransform: transformOf(map) },
       textures: { map },
     };

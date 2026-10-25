@@ -1422,9 +1422,15 @@ export class Frustum {
   }
 
   intersectsObject(object) {
-    const geometry = object.geometry;
-    if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
-    _sphere.copy(geometry.boundingSphere).applyMatrix4(object.matrixWorld);
+    // Instanced copies carry a sphere round all of them; anything else is bounded by its geometry.
+    let sphere = object.isInstancedMesh ? object.boundingSphere : null;
+    if (object.isInstancedMesh && sphere === null) { object.computeBoundingSphere(); sphere = object.boundingSphere; }
+    if (sphere === null) {
+      const geometry = object.geometry;
+      if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
+      sphere = geometry.boundingSphere;
+    }
+    _sphere.copy(sphere).applyMatrix4(object.matrixWorld);
     return this.intersectsSphere(_sphere);
   }
 
