@@ -1,6 +1,6 @@
 import { coat, mix } from '../models/skins.js';
 import { rgb } from '../models/sdf.js';
-import { body, bones, build, fit, head, hair, joints, moveHumanoid, skinTone } from './humanoid.js';
+import { body, bones, build, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.js';
 
 /**
  * The people of the gig, as one body in different clothes: the humanoid rig
@@ -79,8 +79,11 @@ export function person({
       extras?.(s, J, { b, skin: tone });
       // What they have on their face that is skin (a nose of their own, jowls) is the face's, and melts into it.
       for (const shape of s.shapes) if (shape.part === 'body' && shape.bone === 'head' && shape.mat === 'skin') shape.part = 'head';
-      // And what they wear put on them, not hanging just off them.
+      // Hands that hold something closed round it; what they wear put on them, not hanging just off them;
+      // and its thin pieces (brims, peaks) on a finer grid.
+      grip(s, J);
       fit(s);
+      thin(s);
     },
     animate(kk, state) {
       moveHumanoid(kk, state, style);

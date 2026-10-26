@@ -259,23 +259,8 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
       s.limb(el, wr, 0.0245, 0.0185, { ...F, k: 0.006 });
       if (m('cuff') !== 'skin' && c('hand') !== c('cuff')) s.cylinder(along(el, wr, 0.87), 0.0226, 0.0105, { ...F, k: 0.003, round: 0.004, rot: [-0.17, 0, mm * 0.145] });
     });
-    // A hand, loosely closed, a mesh of its own: the wrist into the cuff, the palm, four fingers curled in
-    // toward it from the knuckles, each a little longer or shorter, and the thumb along the front.
-    const h = J[`hand${S}`];
-    s.part('hands', () => {
-      const H = { color: c('hand'), mat: m('hand'), bone: `hand${S}` };
-      const at = (x, y, z) => [h[0] + mm * x, h[1] + y, h[2] + z];
-      const wr = J[`wrist${S}`];
-      s.limb([wr[0], wr[1] + 0.006, wr[2]], at(0, 0.014, -0.001), 0.0165, 0.0145, { ...H, bone: [[`fore${S}`, 0.5], [`hand${S}`, 0.5]], k: 0.008 });
-      s.ellipsoid(at(0.001, 0.004, 0), [0.0108, 0.0175, 0.0192], { ...H, k: 0.008 });
-      [[0.0135, 0.84], [0.0046, 1], [-0.0044, 0.96], [-0.0132, 0.8]].forEach(([z, l]) => {
-        const knuckle = at(0.0015, -0.011, z), mid = at(-0.003, -0.011 - 0.015 * l, z * 0.96), tip = at(-0.011, -0.016 - 0.021 * l, z * 0.9);
-        s.limb(knuckle, mid, 0.0056, 0.005, { ...H, k: 0.003 });
-        s.limb(mid, tip, 0.005, 0.0043, { ...H, k: 0.002 });
-      });
-      s.limb(at(-0.004, 0.006, 0.014), at(-0.008, -0.005, 0.024), 0.0072, 0.006, { ...H, k: 0.005 });
-      s.limb(at(-0.008, -0.005, 0.024), at(-0.0105, -0.0145, 0.0265), 0.006, 0.0048, { ...H, k: 0.002 });
-    });
+    // A hand, a mesh of its own: open and loosely curled, or a fist round what it holds (`grip`).
+    hand(s, J, S, { color: c('hand'), mat: m('hand') });
     // The leg: the thigh tapering to the knee, the shin with the gentle swell of the calf, narrowing to the ankle.
     s.limb(J[`hip${S}`], J[`knee${S}`], 0.046 * Math.sqrt(b), 0.0335, { ...L, bone: `thigh${S}`, k: 0.012 });
     const kn = J[`knee${S}`], a = J[`ankle${S}`];
@@ -481,6 +466,71 @@ export function hair(s, { color, locks = [], cap = [0.108, 0.1, 0.108], at = [0,
       s.flake(a, b, up, r, r * 0.22, flat, { ...Hh, k: 0.016 });
     }
   });
+}
+
+/**
+ * A hand on side `S`, a mesh of its own: the wrist into the cuff, the palm,
+ * four fingers each a little longer or shorter, and the thumb. Open, they
+ * curl in loosely toward the palm; `closed`, they roll right under it into a
+ * fist, the thumb across them, round where the old fists held things.
+ */
+export function hand(s, J, S, o, closed = false) {
+  const mm = S === 'L' ? 1 : -1, h = J[`hand${S}`], wr = J[`wrist${S}`];
+  const H = { ...o, bone: `hand${S}` };
+  const at = (x, y, z) => [h[0] + mm * x, h[1] + y, h[2] + z];
+  const from = s.shapes.length;
+  s.part('hands', () => {
+    s.limb([wr[0], wr[1] + 0.006, wr[2]], at(0, 0.014, -0.001), 0.0165, 0.0145, { ...H, bone: [[`fore${S}`, 0.5], [`hand${S}`, 0.5]], k: 0.008 });
+    if (!closed) {
+      s.ellipsoid(at(0.001, 0.004, 0), [0.0108, 0.0175, 0.0192], { ...H, k: 0.008 });
+      [[0.0135, 0.84], [0.0046, 1], [-0.0044, 0.96], [-0.0132, 0.8]].forEach(([z, l]) => {
+        const knuckle = at(0.0015, -0.011, z), mid = at(-0.003, -0.011 - 0.015 * l, z * 0.96), tip = at(-0.011, -0.016 - 0.021 * l, z * 0.9);
+        s.limb(knuckle, mid, 0.0056, 0.005, { ...H, k: 0.003 });
+        s.limb(mid, tip, 0.005, 0.0043, { ...H, k: 0.002 });
+      });
+      s.limb(at(-0.004, 0.006, 0.014), at(-0.008, -0.005, 0.024), 0.0072, 0.006, { ...H, k: 0.005 });
+      s.limb(at(-0.008, -0.005, 0.024), at(-0.0105, -0.0145, 0.0265), 0.006, 0.0048, { ...H, k: 0.002 });
+    } else {
+      s.ellipsoid(at(0.003, 0.006, 0), [0.0125, 0.017, 0.0198], { ...H, k: 0.008 });
+      [[0.0135, 0.92], [0.0046, 1], [-0.0044, 0.97], [-0.0132, 0.86]].forEach(([z, l]) => {
+        const knuckle = at(0.006, -0.009, z), mid = at(0.003, -0.009 - 0.016 * l, z), tip = at(-0.01, -0.012 - 0.012 * l, z);
+        s.limb(knuckle, mid, 0.0062, 0.0058, { ...H, k: 0.003 });
+        s.limb(mid, tip, 0.0058, 0.005, { ...H, k: 0.003 });
+      });
+      s.limb(at(-0.006, 0.006, 0.016), at(-0.012, -0.004, 0.016), 0.0074, 0.0064, { ...H, k: 0.004 });
+      s.limb(at(-0.012, -0.004, 0.016), at(-0.013, -0.012, 0.006), 0.0064, 0.0052, { ...H, k: 0.003 });
+    }
+  });
+  for (const x of s.shapes.slice(from)) x.hand = { S, o };
+}
+
+/**
+ * Each hand that holds something (anything worn on its bone: a cigar, a
+ * stick, a bag's handle) closed into a fist round it, as the old fists held
+ * it, rather than left open beside it.
+ */
+export function grip(s, J, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows'] } = {}) {
+  for (const S of ['L', 'R']) {
+    const name = `hand${S}`, on = (bone) => (typeof bone === 'string' ? bone === name : bone.some(([b]) => b === name));
+    if (!s.shapes.some((x) => !core.includes(x.part) && !skip.includes(x.part) && on(x.bone))) continue;
+    const open = s.shapes.filter((x) => x.hand?.S === S);
+    if (!open.length) continue;
+    s.shapes = s.shapes.filter((x) => x.hand?.S !== S);
+    hand(s, J, S, open[0].hand.o, true);
+  }
+}
+
+/**
+ * The thin pieces of what is worn (a brim, a peak, a sheet of paper),
+ * meshed on the finer grid of the `fine` part, so they don't tear.
+ */
+export function thin(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows'] } = {}) {
+  for (const x of s.shapes) {
+    if (x.op !== 'add' || core.includes(x.part) || skip.includes(x.part)) continue;
+    const c = [0, 1, 2].map((i) => (x.box[0][i] + x.box[1][i]) / 2), span = Math.max(...[0, 1, 2].map((i) => x.box[1][i] - x.box[0][i]));
+    const depth = -x.d(c);
+    if (depth > 0 && depth < 0.0045 && span > 0.05) x.part = 'fine';
+  }
 }
 
 /**

@@ -281,9 +281,9 @@ export function robe(s, { color = '#1a1418', trim = null, flare = 1 } = {}) {
 /** A top hat: a tall black crown with a band, a narrow brim. */
 export function topHat(s, { color = '#0c0c10', band = '#8a1c2a' } = {}) {
   s.part('kit', () => {
-    s.cylinder([0, 0.8, -0.005], 0.062, 0.09, { ...HEAD, color, mat: 'cloth', k: 0.006, round: 0.008 });
-    s.torus([0, 0.72, -0.005], 0.1, 0.01, { ...HEAD, color, mat: 'cloth', k: 0.004 });
-    s.torus([0, 0.74, -0.005], 0.064, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003 });
+    s.cylinder([0, 0.812, -0.005], 0.082, 0.075, { ...HEAD, color, mat: 'cloth', k: 0.006, round: 0.008 });
+    s.cylinder([0, 0.74, -0.005], 0.118, 0.0055, { ...HEAD, color, mat: 'cloth', k: 0.004, round: 0.005 });
+    s.torus([0, 0.756, -0.005], 0.083, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003 });
   });
 }
 

@@ -719,6 +719,22 @@ function band(s, y, r, thick, o, tilt = 0.04) {
     // A bare forearm goes with the hand, so there is no seam at the wrist.
     s.part(m('cuff') === 'skin' && m('hand') === 'skin' ? 'hands' : s.current, () => s.limb(J[\`elbow\${S}\`], J[\`wrist\${S}\`], 0.028, 0.02, { color: c('cuff'), mat: m('cuff'), bone: \`fore\${S}\`, k: 0.012 }));
     // A hand, loosely closed, a mesh of its own: the wrist into the cuff, the palm, four fingers curled in
+    // toward it from the knuckles, each a little longer or shorter, and the thumb along the front.
+    const h = J[\`hand\${S}\`];
+    s.part('hands', () => {
+      const H = { color: c('hand'), mat: m('hand'), bone: \`hand\${S}\` };
+      const at = (x, y, z) => [h[0] + mm * x, h[1] + y, h[2] + z];
+      const wr = J[\`wrist\${S}\`];
+      s.limb([wr[0], wr[1] + 0.006, wr[2]], at(0, 0.014, -0.001), 0.0165, 0.0145, { ...H, bone: [[\`fore\${S}\`, 0.5], [\`hand\${S}\`, 0.5]], k: 0.008 });
+      s.ellipsoid(at(0.001, 0.004, 0), [0.0108, 0.0175, 0.0192], { ...H, k: 0.008 });
+      [[0.0135, 0.84], [0.0046, 1], [-0.0044, 0.96], [-0.0132, 0.8]].forEach(([z, l]) => {
+        const knuckle = at(0.0015, -0.011, z), mid = at(-0.003, -0.011 - 0.015 * l, z * 0.96), tip = at(-0.011, -0.016 - 0.021 * l, z * 0.9);
+        s.limb(knuckle, mid, 0.0056, 0.005, { ...H, k: 0.003 });
+        s.limb(mid, tip, 0.005, 0.0043, { ...H, k: 0.002 });
+      });
+      s.limb(at(-0.004, 0.006, 0.014), at(-0.008, -0.005, 0.024), 0.0072, 0.006, { ...H, k: 0.005 });
+      s.limb(at(-0.008, -0.005, 0.024), at(-0.0105, -0.0145, 0.0265), 0.006, 0.0048, { ...H, k: 0.002 });
+    });
 `,
     `  for (const mm of [1, -1]) {
     const S = side(mm), sh = J[\`shoulder\${S}\`], el = J[\`elbow\${S}\`], wr = J[\`wrist\${S}\`];
@@ -735,7 +751,6 @@ function band(s, y, r, thick, o, tilt = 0.04) {
       s.limb(el, wr, 0.0245, 0.0185, { ...F, k: 0.006 });
       if (m('cuff') !== 'skin' && c('hand') !== c('cuff')) s.cylinder(along(el, wr, 0.87), 0.0226, 0.0105, { ...F, k: 0.003, round: 0.004, rot: [-0.17, 0, mm * 0.145] });
     });
-    // A hand, loosely closed, a mesh of its own: the wrist into the cuff, the palm, four fingers curled in
 `],
   [`    });
     // Legs: a thigh, a knee, a calf that swells and narrows to the ankle.
@@ -743,6 +758,8 @@ function band(s, y, r, thick, o, tilt = 0.04) {
     const kn = J[\`knee\${S}\`], a = J[\`ankle\${S}\`];
 `,
     `    });
+    // A hand, a mesh of its own: open and loosely curled, or a fist round what it holds (\`grip\`).
+    hand(s, J, S, { color: c('hand'), mat: m('hand') });
     // The leg: the thigh tapering to the knee, the shin with the gentle swell of the calf, narrowing to the ankle.
     s.limb(J[\`hip\${S}\`], J[\`knee\${S}\`], 0.046 * Math.sqrt(b), 0.0335, { ...L, bone: \`thigh\${S}\`, k: 0.012 });
     const kn = J[\`knee\${S}\`], a = J[\`ankle\${S}\`];
@@ -856,6 +873,71 @@ function band(s, y, r, thick, o, tilt = 0.04) {
 }
 `,
     `  });
+}
+
+/**
+ * A hand on side \`S\`, a mesh of its own: the wrist into the cuff, the palm,
+ * four fingers each a little longer or shorter, and the thumb. Open, they
+ * curl in loosely toward the palm; \`closed\`, they roll right under it into a
+ * fist, the thumb across them, round where the old fists held things.
+ */
+export function hand(s, J, S, o, closed = false) {
+  const mm = S === 'L' ? 1 : -1, h = J[\`hand\${S}\`], wr = J[\`wrist\${S}\`];
+  const H = { ...o, bone: \`hand\${S}\` };
+  const at = (x, y, z) => [h[0] + mm * x, h[1] + y, h[2] + z];
+  const from = s.shapes.length;
+  s.part('hands', () => {
+    s.limb([wr[0], wr[1] + 0.006, wr[2]], at(0, 0.014, -0.001), 0.0165, 0.0145, { ...H, bone: [[\`fore\${S}\`, 0.5], [\`hand\${S}\`, 0.5]], k: 0.008 });
+    if (!closed) {
+      s.ellipsoid(at(0.001, 0.004, 0), [0.0108, 0.0175, 0.0192], { ...H, k: 0.008 });
+      [[0.0135, 0.84], [0.0046, 1], [-0.0044, 0.96], [-0.0132, 0.8]].forEach(([z, l]) => {
+        const knuckle = at(0.0015, -0.011, z), mid = at(-0.003, -0.011 - 0.015 * l, z * 0.96), tip = at(-0.011, -0.016 - 0.021 * l, z * 0.9);
+        s.limb(knuckle, mid, 0.0056, 0.005, { ...H, k: 0.003 });
+        s.limb(mid, tip, 0.005, 0.0043, { ...H, k: 0.002 });
+      });
+      s.limb(at(-0.004, 0.006, 0.014), at(-0.008, -0.005, 0.024), 0.0072, 0.006, { ...H, k: 0.005 });
+      s.limb(at(-0.008, -0.005, 0.024), at(-0.0105, -0.0145, 0.0265), 0.006, 0.0048, { ...H, k: 0.002 });
+    } else {
+      s.ellipsoid(at(0.003, 0.006, 0), [0.0125, 0.017, 0.0198], { ...H, k: 0.008 });
+      [[0.0135, 0.92], [0.0046, 1], [-0.0044, 0.97], [-0.0132, 0.86]].forEach(([z, l]) => {
+        const knuckle = at(0.006, -0.009, z), mid = at(0.003, -0.009 - 0.016 * l, z), tip = at(-0.01, -0.012 - 0.012 * l, z);
+        s.limb(knuckle, mid, 0.0062, 0.0058, { ...H, k: 0.003 });
+        s.limb(mid, tip, 0.0058, 0.005, { ...H, k: 0.003 });
+      });
+      s.limb(at(-0.006, 0.006, 0.016), at(-0.012, -0.004, 0.016), 0.0074, 0.0064, { ...H, k: 0.004 });
+      s.limb(at(-0.012, -0.004, 0.016), at(-0.013, -0.012, 0.006), 0.0064, 0.0052, { ...H, k: 0.003 });
+    }
+  });
+  for (const x of s.shapes.slice(from)) x.hand = { S, o };
+}
+
+/**
+ * Each hand that holds something (anything worn on its bone: a cigar, a
+ * stick, a bag's handle) closed into a fist round it, as the old fists held
+ * it, rather than left open beside it.
+ */
+export function grip(s, J, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows'] } = {}) {
+  for (const S of ['L', 'R']) {
+    const name = \`hand\${S}\`, on = (bone) => (typeof bone === 'string' ? bone === name : bone.some(([b]) => b === name));
+    if (!s.shapes.some((x) => !core.includes(x.part) && !skip.includes(x.part) && on(x.bone))) continue;
+    const open = s.shapes.filter((x) => x.hand?.S === S);
+    if (!open.length) continue;
+    s.shapes = s.shapes.filter((x) => x.hand?.S !== S);
+    hand(s, J, S, open[0].hand.o, true);
+  }
+}
+
+/**
+ * The thin pieces of what is worn (a brim, a peak, a sheet of paper),
+ * meshed on the finer grid of the \`fine\` part, so they don't tear.
+ */
+export function thin(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows'] } = {}) {
+  for (const x of s.shapes) {
+    if (x.op !== 'add' || core.includes(x.part) || skip.includes(x.part)) continue;
+    const c = [0, 1, 2].map((i) => (x.box[0][i] + x.box[1][i]) / 2), span = Math.max(...[0, 1, 2].map((i) => x.box[1][i] - x.box[0][i]));
+    const depth = -x.d(c);
+    if (depth > 0 && depth < 0.0045 && span > 0.05) x.part = 'fine';
+  }
 }
 
 /**
@@ -1031,7 +1113,7 @@ import { body, bones, build, head, hair, joints, moveHumanoid, skinTone } from '
 
 `,
     `import { rgb } from '../models/sdf.js';
-import { body, bones, build, fit, head, hair, joints, moveHumanoid, skinTone } from './humanoid.metroll.js';
+import { body, bones, build, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.metroll.js';
 
 `],
   [`  skin: { roughness: 0.62, sheen: 0.25, sheenColor: '#ffd8c0', sheenRoughness: 0.7 },
@@ -1064,8 +1146,11 @@ export const cloth = (over, under, o = {}) => coat({ over, under: under ?? shade
     },
 `,
     `      for (const shape of s.shapes) if (shape.part === 'body' && shape.bone === 'head' && shape.mat === 'skin') shape.part = 'head';
-      // And what they wear put on them, not hanging just off them.
+      // Hands that hold something closed round it; what they wear put on them, not hanging just off them;
+      // and its thin pieces (brims, peaks) on a finer grid.
+      grip(s, J);
       fit(s);
+      thin(s);
     },
 `],
   [`import { rgb } from '../models/sdf.js';
@@ -1073,12 +1158,43 @@ import { body, bones, build, head, hair, joints, moveHumanoid, skinTone } from '
 
 `,
     `import { rgb } from '../models/sdf.js';
-import { body, bones, build, fit, head, hair, joints, moveHumanoid, skinTone } from './humanoid.js';
+import { body, bones, build, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.js';
 
 `],
 ];
 
 const PEOPLE_VERSIONS = {"humanoid": [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], [0, 1, 14, 4, 5, 6, 15, 8, 9, 10, 11, 12, 13]], "person": [[16, 17, 18, 19, 20], [21, 17, 18, 19, 20]]};
+
+/** Hats whose brims were cones standing up off the head, or that floated over it: each change as the text it replaces and the text it becomes. */
+const HATS = {
+  'raver.js': [
+    [`      s.cone([0, 0.76, -0.005], 0.15, 0.06, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.008 });
+      s.ellipsoid([0, 0.66, 0.05], [0.13, 0.06, 0.1], { op: 'sub', k: 0.01 });
+`,
+      `      s.cylinder([0, 0.712, -0.005], 0.148, 0.0055, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [0.12, 0, 0] });
+`],
+  ],
+  'superfan.js': [
+    [`      s.cone([0, 0.8, -0.004], 0.16, 0.06, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01 });
+`,
+      `      s.cylinder([0, 0.748, -0.004], 0.158, 0.0055, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [0.1, 0, 0] });
+`],
+    [`      s.cylinder([0, 0.775, -0.004], 0.1, 0.035, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
+`,
+      `      s.cylinder([0, 0.785, -0.004], 0.1, 0.042, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
+`],
+  ],
+  'metalwear.js': [
+    [`    s.cylinder([0, 0.8, -0.005], 0.062, 0.09, { ...HEAD, color, mat: 'cloth', k: 0.006, round: 0.008 });
+    s.torus([0, 0.72, -0.005], 0.1, 0.01, { ...HEAD, color, mat: 'cloth', k: 0.004 });
+    s.torus([0, 0.74, -0.005], 0.064, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003 });
+`,
+      `    s.cylinder([0, 0.812, -0.005], 0.082, 0.075, { ...HEAD, color, mat: 'cloth', k: 0.006, round: 0.008 });
+    s.cylinder([0, 0.74, -0.005], 0.118, 0.0055, { ...HEAD, color, mat: 'cloth', k: 0.004, round: 0.005 });
+    s.torus([0, 0.756, -0.005], 0.083, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003 });
+`],
+  ],
+};
 
 export const EDITS = [
   {
@@ -1241,7 +1357,7 @@ export const EDITS = [
   },
   {
     at: /^characters\/(humanoid|person)\.js$/,
-    why: 'The people rebuilt. Their bodies were a dozen ellipsoids melted together, so every one came out a lumpy blob: the trunk is now one form lofted on a smooth curve through its sections (the seat, the waist, the ribs, the chest, the shoulders), squared off at the sides, in three pieces on three bones so that it bends, with the belly part of that curve; the arms and legs are clean tapered limbs; a short sleeve, a cuff, a shirt\'s tail over the trousers, straight trouser legs and shorts are shapes in the outline; a belt is fitted to the waist. Their faces: bigger eyes with an iris darker at the rim, a line of lashes and two catch-lights, arched brows, a flush in the cheeks rather than a disc. Their accessories were placed for the old bodies and floated off them or sank into them: what they wear (badges, buttons, chains, bags, a camera) is fitted onto what it is worn on, a hat is lowered onto the head until its rim sits on it, and what was sunk is brought out (`fit`). Their cloth is cleaner, with a sheen, and the creases deeper. Dungeon Roller\'s body (the orc\'s) is left as it was.',
+    why: 'The people rebuilt. Their bodies were a dozen ellipsoids melted together, so every one came out a lumpy blob: the trunk is now one form lofted on a smooth curve through its sections (the seat, the waist, the ribs, the chest, the shoulders), squared off at the sides, in three pieces on three bones so that it bends, with the belly part of that curve; the arms and legs are clean tapered limbs; a short sleeve, a cuff, a shirt\'s tail over the trousers, straight trouser legs and shorts are shapes in the outline; a belt is fitted to the waist. Their faces: bigger eyes with an iris darker at the rim, a line of lashes and two catch-lights, arched brows, a flush in the cheeks rather than a disc. Their accessories were placed for the old bodies and floated off them or sank into them: what they wear (badges, buttons, chains, bags, a camera) is fitted onto what it is worn on, a hat is lowered onto the head until its rim sits on it, and what was sunk is brought out (`fit`); a hand that holds something closes into a fist round it (`grip`); and thin pieces, brims and peaks, are meshed on a finer grid so their edges don\'t tear (`thin`). Their cloth is cleaner, with a sheen, and the creases deeper. Dungeon Roller\'s body (the orc\'s) is left as it was.',
     edit(text, where) {
       const kind = /humanoid/.test(placeOf(where)) ? 'humanoid' : 'person';
       for (const list of PEOPLE_VERSIONS[kind]) {
@@ -1251,6 +1367,15 @@ export const EDITS = [
       }
       if (kind === 'humanoid' && !text.includes('belly = 0 })')) return text;
       throw new Error(`${where}: the game's code has changed where the engine changes it (scripts/extract/edits.mjs)`);
+    },
+  },
+  {
+    at: /^characters\/(raver|superfan|metalwear)\.js$/,
+    why: 'Hats: the raver\'s and the superfan\'s bucket hats had brims that were solid cones, standing up off the head like lampshades and tearing at the edge; they are flat brims, tilted a little forward. The top hat that Metroll\'s pallbearer wears floated above the head on its brim: it sits on the head, its brim a flat disc and its band on the crown.',
+    edit(text, where) {
+      const name = placeOf(where).split('/').pop();
+      for (const [was, now] of HATS[name]) text = swap(text, was, now, where);
+      return text;
     },
   },
 ];
