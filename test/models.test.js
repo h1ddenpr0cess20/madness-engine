@@ -121,3 +121,26 @@ test('a person\'s head, hands and shoes are meshes of their own, finer than the 
     assert.ok(flat > 20, `${name}'s soles have ${flat} vertices flat on the floor`);
   }
 });
+
+test('what a person wears is put on them: a piece hanging just off the body moves onto it, and a hat comes down onto the head', async () => {
+  const { fit } = await import('../src/characters/humanoid.metroll.js');
+  const s = new Sculpt();
+  s.sphere([0, 0.4, 0], 0.1, { bone: 'chest' });
+  s.sphere([0, 0.7, 0], 0.08, { bone: 'head' });
+  s.part('brows', () => s.sphere([0.03, 0.72, 0.075], 0.004, { bone: 'head' }));
+  s.part('kit', () => {
+    // A badge a centimeter off the chest, a cap floating over the head, and a prop held well away.
+    s.sphere([0, 0.4, 0.115], 0.006, { bone: 'chest' });
+    s.cylinder([0, 0.79, 0], 0.09, 0.012, { bone: 'head', round: 0.004 });
+    s.sphere([0.3, 0.4, 0], 0.03, { bone: 'chest' });
+  });
+  const [badge, cap, prop] = s.shapes.filter((x) => x.part === 'kit');
+  const before = prop.d([0.3, 0.4, 0]);
+  fit(s);
+  // The badge now touches the chest: its nearest point is at the chest's surface.
+  assert.ok(Math.abs(badge.d([0, 0.4, 0.1])) < 0.003, `badge ${badge.d([0, 0.4, 0.1])}`);
+  // The cap has come down: its underside now meets the top of the head.
+  assert.ok(cap.d([0, 0.78, 0]) < 0.004, `cap ${cap.d([0, 0.78, 0])}`);
+  // The prop is where it was.
+  assert.equal(prop.d([0.3, 0.4, 0]), before);
+});

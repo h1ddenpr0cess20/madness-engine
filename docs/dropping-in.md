@@ -114,9 +114,11 @@ And its cast is finer. The mesher spends up to 30% more vertices where the
 grid was too coarse for the detail (sharp bends, lines of paint, small
 parts), the people's and animals' eyes are set by where the face is, not
 just under its skin, and the animals' faces, paws, wings, legs and hooves
-have more to them. The people's heads, hands and shoes are meshes of their
-own on finer grids, with lidded eyes, noses, lips, ears, fingers and welted
-soles, and their hair is in strands. The library's characters and props carry budgets
+have more to them. The people are rebuilt: a lofted trunk with clean
+limbs, clothes that are shapes in the outline, heads, hands and shoes as
+meshes of their own on finer grids (lidded eyes, noses, lips, ears, fingers,
+welted soles), hair in strands, and what they wear fitted onto them. Every
+part of a model is shaded by the whole model. The library's characters and props carry budgets
 half as large again for the finer meshes, and the people 2.2 times that. A game that takes the engine's
 `models/` should take the library's characters and props with them, or
 raise its own budgets the same way (`scripts/extract/edits.mjs` has the

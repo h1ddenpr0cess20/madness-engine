@@ -144,9 +144,10 @@ function trunk(b, belly) {
       const [p0, p1, p2, p3] = P.map((s) => s[j]);
       return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
     });
-    // The belly: forward of the waist, above the belt, round in profile.
-    const g = belly * Math.exp(-(((y - 0.398) / 0.048) ** 2));
-    return [w * b + g * 0.016 * b, d + g * 0.031, zc + g * 0.029, e];
+    // The belly: forward of the waist and over the belt, round in profile; the bigger it is, the lower and
+    // taller. A broad build is deeper through the body too.
+    const g = belly * Math.exp(-(((y - 0.372 + belly * 0.008) / (0.05 + belly * 0.014)) ** 2));
+    return [w * b + g * 0.018 * b, d * (1 + (b - 1) * 0.6) + g * 0.04, zc + g * 0.04, Math.max(2, e - g * 0.35)];
   };
 }
 
@@ -535,11 +536,20 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
         t = Math.max(0, t - v);
       }
       const p = [c[0] + d[0] * t, c[1] + d[1] * t, c[2] + d[2] * t];
-      if (Math.abs(x.d(p)) < 0.002) points.push(p);
+      if (Math.abs(x.d(p)) < 0.002) { points.push(p); rims.push([p, d]); }
     }
     return points;
   };
-  const points = worn.map((x) => (x.op === 'add' ? surface(x) : []));
+  let rims = [];
+  const under_rim = [];
+  const points = worn.map((x, i) => {
+    rims = [];
+    const found = x.op === 'add' ? surface(x) : [];
+    under_rim[i] = rims;
+    return found;
+  });
+  // The brows: no hat comes down past them.
+  const brows = Math.max(...s.shapes.filter((x) => x.part === 'brows').map((x) => x.box[1][1]), -Infinity);
   // Lumps: shapes of one part that touch (or a carving and what it carves).
   const up = worn.map((_, i) => i);
   const find = (i) => (up[i] === i ? i : (up[i] = find(up[i])));
@@ -576,9 +586,33 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
       if (worn[i].op === 'add') for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], worn[i].box[0][a]); hi[a] = Math.max(hi[a], worn[i].box[1][a]); }
     }
     if (!nearest) continue;
-    const size = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+    // A hat (a wide piece on the head, above the eyes) that rests on the crown with a gap under its rim is
+    // lowered until the rim sits on the head, though never down over the brows.
+    const ps = lump.flatMap((i) => points[i]);
+    const bottom = Math.min(...ps.map((p) => p[1])), across = Math.max(...ps.map((p) => p[0])) - Math.min(...ps.map((p) => p[0]));
+    if (lump.every((i) => worn[i].bone === 'head') && across > 0.12 && bottom > brows) {
+      const gaps = [];
+      for (const i of lump) for (const [p, d] of under_rim[i] ?? []) if (d[1] < -0.4) { const g = under(p, mine); if (g > 0.002 && g < 0.04) gaps.push(g); }
+      if (gaps.length >= 3) {
+        gaps.sort((a, b) => a - b);
+        const drop = Math.min(gaps[Math.floor(gaps.length / 2)], Math.max(0, bottom - brows - 0.004));
+        if (drop > 0.002) {
+          for (const i of lump) {
+            const x = worn[i], d = x.d, color = x.color;
+            x.d = (p) => d([p[0], p[1] + drop, p[2]]);
+            x.box = [[x.box[0][0], x.box[0][1] - drop, x.box[0][2]], [x.box[1][0], x.box[1][1] - drop, x.box[1][2]]];
+            if (typeof color === 'function') x.color = (p, nn) => color([p[0], p[1] + drop, p[2]], nn);
+          }
+          continue;
+        }
+      }
+    }
+    const size = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]), thin = Math.min(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
     let by = 0, from = null;
-    if (near > 0.0025 && near < reach) { by = -(near + 0.0012); from = nearest; } else if (far < 0 && far > -0.05 && size < 0.06) { by = 0.0025 - far; from = farthest; }
+    if (near > 0.0025 && near < reach) { by = -(near + 0.0012); from = nearest; }
+    // Sunk out of sight, or sunk deeper than a third of its own thickness: brought out until it sits on the surface.
+    else if (far < 0 && far > -0.05 && size < 0.06) { by = 0.0025 - far; from = farthest; }
+    else if (size < 0.06 && near < -thin * 0.35 && near > -0.05) { by = -near - thin * 0.3; from = nearest; }
     if (!by) continue;
     const e = 0.002, grad = [0, 1, 2].map((a) => {
       const q0 = [...from], q1 = [...from];
