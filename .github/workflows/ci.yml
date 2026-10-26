@@ -48,7 +48,7 @@ jobs:
   # A rendered snapshot of the branch's actual cast geometry, attached to the PR for visual review.
   cast-preview:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
