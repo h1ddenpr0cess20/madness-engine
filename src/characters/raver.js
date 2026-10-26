@@ -28,8 +28,8 @@ export default person({
       const T = time + seed;
       const b = Math.sin(T * 9);
       // Both arms up and waving glow sticks, a bounce in the knees on every beat, the head nodding.
-      hold(k, 'armR', -2.5 + b * 0.2, 0, -0.5 + b * 0.25); hold(k, 'foreR', -0.4, 0, 0);
-      hold(k, 'armL', -2.5 - b * 0.2, 0, 0.5 - b * 0.25); hold(k, 'foreL', -0.4, 0, 0);
+      hold(k, 'armR', -2.5 + b * 0.2, 0, -0.85 + b * 0.2); hold(k, 'foreR', -0.4, 0, 0);
+      hold(k, 'armL', -2.5 - b * 0.2, 0, 0.85 - b * 0.2); hold(k, 'foreL', -0.4, 0, 0);
       k.move('root', 0, Math.abs(b) * 0.014, 0);
       k.turn('head', 0.1 + Math.abs(b) * 0.1, 0, 0);
       k.turn('thighL', -Math.abs(b) * 0.2, 0, 0); k.turn('thighR', -Math.abs(b) * 0.2, 0, 0);
@@ -38,8 +38,8 @@ export default person({
   extras(s, J) {
     s.part('kit', () => {
       // The bucket hat: a crown and a floppy brim all round, neon green.
-      s.ellipsoid([0, 0.75, -0.005], [0.105, 0.065, 0.108], { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.012 });
-      s.cylinder([0, 0.712, -0.005], 0.148, 0.0055, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [0.12, 0, 0] });
+      s.ellipsoid([0, 0.742, -0.005], [0.113, 0.071, 0.116], { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.012 });
+      s.cylinder([0, 0.716, -0.005], 0.148, 0.0055, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [-0.04, 0, 0] });
       // The whistle on its string, the dummy, the glow sticks (one pink, one blue), glowing.
       s.limb([0.0, 0.56, 0.06], [0, 0.44, 0.075], 0.003, 0.003, { color: '#f4f2ee', mat: 'cloth', bone: 'chest', k: 0.001 });
       s.cylinder([0, 0.43, 0.082], 0.01, 0.012, { color: '#e8e8ee', mat: 'plastic', bone: 'chest', k: 0.002, rot: [Math.PI / 2, 0, 0] });

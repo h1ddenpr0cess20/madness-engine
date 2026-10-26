@@ -51,10 +51,26 @@ export function bigHair(s, color, { size = 1.5, drop = 0.1 } = {}) {
   });
 }
 
+/**
+ * A band round the head (and the hair) at height `y`, its front lower than
+ * its back by `tilt`: found where it is all the way round, so that it lies on
+ * whatever is there, a little sunk into it.
+ */
+export function band(s, y, tilt, r, o) {
+  const w = s.warp, to = (p) => (w ? w.to(p) : p), back = (p) => (w ? w.from(p) : p);
+  const c = to([0, y, 0]), ring = [];
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2, d = [Math.sin(a), -Math.cos(a) * Math.sin(tilt), Math.cos(a) * Math.cos(tilt)];
+    const from = c.map((v, j) => v + d[j] * 0.3), hit = s.cast(from, d.map((v) => -v), 0.3);
+    if (hit) ring.push(back(hit.p.map((v, j) => v - d[j] * r * 0.4)));
+  }
+  for (let i = 0; i < ring.length; i++) s.limb(ring[i], ring[(i + 1) % ring.length], r, r, { ...o, k: 0.002 });
+}
+
 /** A headband round the forehead, the ends tied behind. */
 export function headband(s, { color = '#e8202a' } = {}) {
   s.part('kit', () => {
-    s.torus([0, 0.715, 0.0], 0.1, 0.012, { ...HEAD, color, mat: 'cloth', k: 0.004, rot: [0.15, 0, 0] });
+    band(s, 0.715, 0.15, 0.011, { ...HEAD, color, mat: 'cloth' });
     for (const m of [1, -1]) s.flake([m * 0.01, 0.715, -0.1], [m * 0.07, 0.66, -0.15], [0, 0, 1], 0.012, 0.018, 0.3, { ...HEAD, color, mat: 'cloth', k: 0.003 });
   });
 }
@@ -64,7 +80,7 @@ export function beanie(s, { color = '#16161a', fold = null } = {}) {
   s.part('kit', () => {
     s.ellipsoid([0, 0.735, -0.008], [0.107, 0.075, 0.108], { ...HEAD, color, mat: 'cloth', k: 0.012 });
     s.box([0, 0.62, 0.1], [0.13, 0.07, 0.04], 0.02, { op: 'sub', k: 0.01 });
-    if (fold) s.torus([0, 0.7, -0.005], 0.104, 0.016, { ...HEAD, color: fold, mat: 'cloth', k: 0.004, rot: [0.1, 0, 0] });
+    if (fold) band(s, 0.7, 0.1, 0.016, { ...HEAD, color: fold, mat: 'cloth' });
   });
 }
 

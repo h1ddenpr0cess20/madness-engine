@@ -32,9 +32,9 @@ export default person({
       s.ellipsoid([0, 0.455, 0.012], [0.098, 0.078, 0.07], W);
       s.limb([0, 0.52, 0.065], [0, 0.505, 0.07], 0.022, 0.022, { color: '#101014', mat: 'cloth', bone: 'chest', k: 0.004 });
       for (const m of [1, -1]) s.ellipsoid([m * 0.03, 0.512, 0.07], [0.022, 0.014, 0.008], { color: '#101014', mat: 'cloth', bone: 'chest', k: 0.004 });
-      // A pillbox hat.
-      s.cylinder([0, 0.742, 0.0], 0.082, 0.032, { color: '#b81a2a', mat: 'cloth', bone: 'head', k: 0.006, rot: [0.1, 0, 0] });
-      s.torus([0, 0.72, 0.0], 0.082, 0.007, { color: '#ffd23a', mat: 'metal', bone: 'head', k: 0.003 });
+      // A pillbox hat, perched on top of the hair and tipped back a little, its gold band round the foot of it.
+      s.cylinder([0, 0.79, -0.006], 0.078, 0.027, { color: '#b81a2a', mat: 'cloth', bone: 'head', k: 0.006, round: 0.006, rot: [-0.06, 0, 0] });
+      s.torus([0, 0.768, -0.004], 0.078, 0.0065, { color: '#ffd23a', mat: 'metal', bone: 'head', k: 0.003, rot: [-0.06, 0, 0] });
       // The torch, and a gold button or two.
       const h = J.handR;
       s.limb([h[0], h[1] - 0.01, h[2] - 0.04], [h[0], h[1] + 0.0, h[2] + 0.15], 0.018, 0.024, { color: '#1a1a1e', mat: 'plastic', bone: 'handR', k: 0.003 });

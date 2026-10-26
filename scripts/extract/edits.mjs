@@ -947,9 +947,10 @@ export function thin(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], sk
  * on a coat) instead of on it, up to \`reach\` away, is moved onto it, and a
  * small piece sunk out of sight in it is brought up to show.
  * A piece is a lump of shapes of one part that touch; it moves whole. What
- * is held out from the body (further than \`reach\`) stays where it is.
+ * is held out from the body (further than \`reach\`) stays where it is, and so
+ * does a veil, which stands off the face.
  */
-export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows'], reach = 0.035 } = {}) {
+export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows', 'veil'], reach = 0.035 } = {}) {
   const body = new Sculpt();
   body.shapes = s.shapes.filter((x) => core.includes(x.part));
   const [lo, hi] = body.bounds(0.06);
@@ -969,20 +970,11 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
         t = Math.max(0, t - v);
       }
       const p = [c[0] + d[0] * t, c[1] + d[1] * t, c[2] + d[2] * t];
-      if (Math.abs(x.d(p)) < 0.002) { points.push(p); rims.push([p, d]); }
+      if (Math.abs(x.d(p)) < 0.002) points.push(p);
     }
     return points;
   };
-  let rims = [];
-  const under_rim = [];
-  const points = worn.map((x, i) => {
-    rims = [];
-    const found = x.op === 'add' ? surface(x) : [];
-    under_rim[i] = rims;
-    return found;
-  });
-  // The brows: no hat comes down past them.
-  const brows = Math.max(...s.shapes.filter((x) => x.part === 'brows').map((x) => x.box[1][1]), -Infinity);
+  const points = worn.map((x) => (x.op === 'add' ? surface(x) : []));
   // Lumps: shapes of one part that touch (or a carving and what it carves).
   const up = worn.map((_, i) => i);
   const find = (i) => (up[i] === i ? i : (up[i] = find(up[i])));
@@ -995,6 +987,7 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
   for (let i = 0; i < worn.length; i++) for (let j = 0; j < i; j++) if (worn[i].part === worn[j].part && meet(worn[i], worn[j]) && find(i) !== find(j) && touch(i, j)) up[find(i)] = find(j);
   const lumps = new Map();
   worn.forEach((x, i) => { const r = find(i); if (!lumps.has(r)) lumps.set(r, []); lumps.get(r).push(i); });
+  // What a lump sits on: the body, and everything else they wear.
   // What a lump sits on: the body, and everything else they wear.
   const under = (p, mine) => {
     let d = body.field(p);
@@ -1019,27 +1012,6 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
       if (worn[i].op === 'add') for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], worn[i].box[0][a]); hi[a] = Math.max(hi[a], worn[i].box[1][a]); }
     }
     if (!nearest) continue;
-    // A hat (a wide piece on the head, above the eyes) that rests on the crown with a gap under its rim is
-    // lowered until the rim sits on the head, though never down over the brows.
-    const ps = lump.flatMap((i) => points[i]);
-    const bottom = Math.min(...ps.map((p) => p[1])), across = Math.max(...ps.map((p) => p[0])) - Math.min(...ps.map((p) => p[0]));
-    if (lump.every((i) => worn[i].bone === 'head') && across > 0.12 && bottom > brows) {
-      const gaps = [];
-      for (const i of lump) for (const [p, d] of under_rim[i] ?? []) if (d[1] < -0.4) { const g = under(p, mine); if (g > 0.002 && g < 0.04) gaps.push(g); }
-      if (gaps.length >= 3) {
-        gaps.sort((a, b) => a - b);
-        const drop = Math.min(gaps[Math.floor(gaps.length / 2)], Math.max(0, bottom - brows - 0.004));
-        if (drop > 0.002) {
-          for (const i of lump) {
-            const x = worn[i], d = x.d, color = x.color;
-            x.d = (p) => d([p[0], p[1] + drop, p[2]]);
-            x.box = [[x.box[0][0], x.box[0][1] - drop, x.box[0][2]], [x.box[1][0], x.box[1][1] - drop, x.box[1][2]]];
-            if (typeof color === 'function') x.color = (p, nn) => color([p[0], p[1] + drop, p[2]], nn);
-          }
-          continue;
-        }
-      }
-    }
     const size = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]), thin = Math.min(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
     let by = 0, from = null;
     if (near > 0.0025 && near < reach) { by = -(near + 0.0012); from = nearest; }
@@ -1059,6 +1031,77 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
       x.box = [x.box[0].map((v, i) => v + o[i]), x.box[1].map((v, i) => v + o[i])];
       if (typeof color === 'function') x.color = (p, nn) => color([p[0] - o[0], p[1] - o[1], p[2] - o[2]], nn);
     }
+  }
+}
+
+/**
+ * Hair under a hat stays under it: wherever a hat (a wide piece worn on the
+ * head, above the brows) is over the hair, the hair above the hat's
+ * underside is cut away, so it can show below a brim but never come up
+ * through one, or through a crown.
+ */
+export function cover(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows', 'hair'], step = 0.003 } = {}) {
+  if (!s.shapes.some((x) => x.part === 'hair' && x.op === 'add')) return;
+  const skull = s.shapes.filter((x) => x.part === 'head' && x.op === 'add' && x.bone === 'head');
+  const wide = Math.max(...skull.map((x) => x.box[1][0] - x.box[0][0]), 0);
+  const eyes = Math.max(...s.shapes.filter((x) => x.part === 'eyes').map((x) => (x.box[0][1] + x.box[1][1]) / 2), -Infinity);
+  const worn = s.shapes.filter((x) => x.op === 'add' && x.bone === 'head' && !core.includes(x.part) && !skip.includes(x.part));
+  // Hats: what is worn on the head that touches, in lumps, wide, and all above the brows.
+  const up = worn.map((_, i) => i);
+  const find = (i) => (up[i] === i ? i : (up[i] = find(up[i])));
+  const meet = (a, b) => [0, 1, 2].every((i) => a.box[0][i] - 0.002 <= b.box[1][i] && b.box[0][i] - 0.002 <= a.box[1][i]);
+  for (let i = 0; i < worn.length; i++) for (let j = 0; j < i; j++) if (meet(worn[i], worn[j])) up[find(i)] = find(j);
+  const lumps = new Map();
+  worn.forEach((x, i) => { const r = find(i); if (!lumps.has(r)) lumps.set(r, []); lumps.get(r).push(x); });
+  for (const lump of lumps.values()) {
+    const hat = new Sculpt();
+    hat.shapes = lump;
+    const [lo, hi] = hat.bounds(0.004);
+    // Only a hat as wide as the head covers the hair; a small one (a pillbox) sits on top of it.
+    if (hi[0] - lo[0] < wide * 0.95) continue;
+    hat.prepare(lo, hi, 0.01);
+    // The hat's underside over each column of a grid across it: the lowest point it has there.
+    const nx = Math.ceil((hi[0] - lo[0]) / step) + 1, nz = Math.ceil((hi[2] - lo[2]) / step) + 1;
+    const under = new Float32Array(nx * nz).fill(Infinity);
+    // How low it comes over the forehead (a hood or a mask comes down over the eyes, and isn't a hat).
+    let lowest = Infinity, front = Infinity;
+    for (let i = 0; i < nx; i++) {
+      for (let k = 0; k < nz; k++) {
+        const x = lo[0] + i * step, z = lo[2] + k * step;
+        for (let y = lo[1]; y < hi[1];) {
+          const d = hat.field([x, y, z]);
+          if (d < 0) {
+            under[i + nx * k] = y;
+            lowest = Math.min(lowest, y);
+            if (Math.abs(x) < 0.03 && z > 0.04) front = Math.min(front, y);
+            break;
+          }
+          y += Math.max(d * 0.9, 0.001);
+        }
+      }
+    }
+    if (front < eyes + 0.012) continue;
+    // A band round the head (a headband, a hatband) isn't over the crown: only a hat is.
+    const crown = s.warp ? s.warp.to([0, 0.7, 0]) : [0, 0.7, 0];
+    if (crown[0] < lo[0] || crown[0] > hi[0] || crown[2] < lo[2] || crown[2] > hi[2]) continue;
+    if (under[Math.round((crown[0] - lo[0]) / step) + nx * Math.round((crown[2] - lo[2]) / step)] === Infinity) continue;
+    // Between the grid's columns, smoothly, so the hair's cut edge is clean.
+    const at = (x, z) => {
+      const fi = (x - lo[0]) / step, fk = (z - lo[2]) / step, i = Math.floor(fi), k = Math.floor(fk);
+      if (i < 0 || k < 0 || i >= nx - 1 || k >= nz - 1) return Infinity;
+      const a = under[i + nx * k], b = under[i + 1 + nx * k], c = under[i + nx * (k + 1)], d = under[i + 1 + nx * (k + 1)];
+      if (a === Infinity || b === Infinity || c === Infinity || d === Infinity) return Math.min(a, b, c, d);
+      const u = fi - i, v = fk - k;
+      return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+    };
+    // Cut from the hair: above the underside wherever the hat is overhead. As made, not warped again.
+    const warp = s.warp;
+    s.warp = null;
+    s.part('hair', () => s.shape((p) => {
+      const u = at(p[0], p[2]);
+      return u === Infinity ? 0.01 : u - 0.002 - p[1];
+    }, [[lo[0], lowest - 0.004, lo[2]], [hi[0], hi[1] + 0.2, hi[2]]], { op: 'sub', k: 0.002 }));
+    s.warp = warp;
   }
 }
 `],
@@ -1113,7 +1156,7 @@ import { body, bones, build, head, hair, joints, moveHumanoid, skinTone } from '
 
 `,
     `import { rgb } from '../models/sdf.js';
-import { body, bones, build, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.metroll.js';
+import { body, bones, build, cover, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.metroll.js';
 
 `],
   [`  skin: { roughness: 0.62, sheen: 0.25, sheenColor: '#ffd8c0', sheenRoughness: 0.7 },
@@ -1147,10 +1190,12 @@ export const cloth = (over, under, o = {}) => coat({ over, under: under ?? shade
 `,
     `      for (const shape of s.shapes) if (shape.part === 'body' && shape.bone === 'head' && shape.mat === 'skin') shape.part = 'head';
       // Hands that hold something closed round it; what they wear put on them, not hanging just off them;
-      // and its thin pieces (brims, peaks) on a finer grid.
+      // its thin pieces (brims, peaks) on a finer grid.
       grip(s, J);
       fit(s);
       thin(s);
+      // Hair under a hat stays under it.
+      cover(s);
     },
 `],
   [`import { rgb } from '../models/sdf.js';
@@ -1158,22 +1203,487 @@ import { body, bones, build, head, hair, joints, moveHumanoid, skinTone } from '
 
 `,
     `import { rgb } from '../models/sdf.js';
-import { body, bones, build, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.js';
+import { body, bones, build, cover, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.js';
 
 `],
 ];
 
 const PEOPLE_VERSIONS = {"humanoid": [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], [0, 1, 14, 4, 5, 6, 15, 8, 9, 10, 11, 12, 13]], "person": [[16, 17, 18, 19, 20], [21, 17, 18, 19, 20]]};
 
-/** Hats whose brims were cones standing up off the head, or that floated over it: each change as the text it replaces and the text it becomes. */
+/** The hats and what else was crude about how people's heads are dressed: each change as the text it replaces and the text it becomes, by the file (whichever game's version) it is in. */
 const HATS = {
+  'dame.js': [
+    [`import { cloth, person } from './person.rocknroller.js';
+
+`,
+      `import { cloth, MATERIALS, person } from './person.rocknroller.js';
+
+`],
+    [`
+export default person({
+  name: 'dame',
+`,
+      `
+const dame = person({
+  name: 'dame',
+`],
+    [`  face: { eyeColor: '#3a6a5a', brow: '#8a6a3a', blush: 0.6, jaw: 0.88 },
+  style: {
+`,
+      `  face: { eyeColor: '#3a6a5a', brow: '#8a6a3a', blush: 0.6, jaw: 0.88 },
+  cells: { veil: 0.0014 },
+  style: {
+`],
+    [`      // The veil's net, and the cigarette's glow.
+      s.panel([0.0, 0.79, 0.07], [0.09, 0.79, 0.06], [0.04, 0.7, 0.11], 0.002, { color: '#2a2a30', mat: 'cloth', bone: 'head', k: 0 });
+      const r = J.handR;
+`,
+      `      // The veil's net, and the cigarette's glow.
+      // The veil: a net of fine black threads from the hat's brim down over the right brow, lying just off the face.
+      const off = (q) => {
+        const d = [-q[0], 0.69 - q[1], -q[2]], l = Math.hypot(...d), hit = s.cast(q, d.map((v) => v / l), 0.3);
+        return hit ? hit.p.map((v, i) => v + hit.n[i] * 0.009) : q;
+      };
+      const corner = [[-0.01, 0.79, 0.1], [0.095, 0.785, 0.07], [-0.005, 0.715, 0.13], [0.095, 0.708, 0.1]];
+      const at = (u, v) => off([0, 1, 2].map((i) => (corner[0][i] * (1 - u) + corner[1][i] * u) * (1 - v) + (corner[2][i] * (1 - u) + corner[3][i] * u) * v));
+      const N = 6;
+      const grid = Array.from({ length: N + 1 }, (_, i) => Array.from({ length: N + 1 }, (__, j) => at(i / N, j / N)));
+      // Sheer: a thin curved sheet of it, see-through, with its mesh drawn on.
+      const net = (q) => {
+        const u = ((q[0] * 260) % 1 + 1) % 1, v = (((q[1] + q[2]) * 260) % 1 + 1) % 1;
+        return Math.min(u, 1 - u) < 0.18 || Math.min(v, 1 - v) < 0.18 ? [0.01, 0.01, 0.012] : [0.08, 0.08, 0.09];
+      };
+      s.part('veil', () => {
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            s.panel(grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], 0.004, { color: net, mat: 'veil', bone: 'head', k: 0.002 });
+            s.panel(grid[i][j], grid[i + 1][j + 1], grid[i][j + 1], 0.004, { color: net, mat: 'veil', bone: 'head', k: 0.002 });
+          }
+        }
+      });
+      const r = J.handR;
+`],
+    [`  },
+});
+`,
+      `  },
+});
+
+// The veil is sheer.
+export default { ...dame, materials: { ...MATERIALS, veil: { roughness: 0.8, opacity: 0.55, side: 'double' } } };
+`],
+  ],
+  'dancer.js': [
+    [`      s.limb([r[0], r[1] + 0.13, r[2]], [r[0], r[1] - 0.2, r[2]], 0.007, 0.007, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.002 });
+      s.sphere([r[0], r[1] + 0.135, r[2]], 0.013, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.002 });
+      s.cylinder([r[0], r[1] - 0.2, r[2]], 0.008, 0.008, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.001 });
+`,
+      `      s.limb([r[0], r[1] + 0.13, r[2]], [r[0], r[1] - 0.2, r[2]], 0.007, 0.007, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.002 });
+      s.sphere([r[0], r[1] + 0.135, r[2]], 0.013, { color: '#f4f6fc', mat: 'plastic', bone: 'handR', k: 0.002 });
+      s.cylinder([r[0], r[1] - 0.2, r[2]], 0.008, 0.008, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.001 });
+`],
+  ],
+  'dancer.rocknroller-ii.js': [
+    [`      s.limb([r[0], r[1] + 0.13, r[2]], [r[0], r[1] - 0.2, r[2]], 0.007, 0.007, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.002 });
+      s.sphere([r[0], r[1] + 0.135, r[2]], 0.013, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.002 });
+      s.cylinder([r[0], r[1] - 0.2, r[2]], 0.008, 0.008, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.001 });
+`,
+      `      s.limb([r[0], r[1] + 0.13, r[2]], [r[0], r[1] - 0.2, r[2]], 0.007, 0.007, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.002 });
+      s.sphere([r[0], r[1] + 0.135, r[2]], 0.013, { color: '#f4f6fc', mat: 'plastic', bone: 'handR', k: 0.002 });
+      s.cylinder([r[0], r[1] - 0.2, r[2]], 0.008, 0.008, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.001 });
+`],
+  ],
+  'hippie.rocknroller.js': [
+    [`import { cloth, person } from './person.rocknroller.js';
+
+`,
+      `import { cloth, person } from './person.rocknroller.js';
+import { band } from './metalwear.js';
+
+`],
+    [`    s.part('kit', () => {
+      s.torus([0, 0.728, 0.0], 0.108, 0.01, { color: '#ffd23a', mat: 'cloth', bone: 'head', k: 0.004, rot: [0.1, 0, 0] });
+      // Two bongos, joined, in front of the hips.
+`,
+      `    s.part('kit', () => {
+      band(s, 0.728, 0.1, 0.01, { color: '#ffd23a', mat: 'cloth', bone: 'head' });
+      // Two bongos, joined, in front of the hips.
+`],
+  ],
+  'metalwear.js': [
+    [`
+/** A headband round the forehead, the ends tied behind. */
+`,
+      `
+/**
+ * A band round the head (and the hair) at height \`y\`, its front lower than
+ * its back by \`tilt\`: found where it is all the way round, so that it lies on
+ * whatever is there, a little sunk into it.
+ */
+export function band(s, y, tilt, r, o) {
+  const w = s.warp, to = (p) => (w ? w.to(p) : p), back = (p) => (w ? w.from(p) : p);
+  const c = to([0, y, 0]), ring = [];
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2, d = [Math.sin(a), -Math.cos(a) * Math.sin(tilt), Math.cos(a) * Math.cos(tilt)];
+    const from = c.map((v, j) => v + d[j] * 0.3), hit = s.cast(from, d.map((v) => -v), 0.3);
+    if (hit) ring.push(back(hit.p.map((v, j) => v - d[j] * r * 0.4)));
+  }
+  for (let i = 0; i < ring.length; i++) s.limb(ring[i], ring[(i + 1) % ring.length], r, r, { ...o, k: 0.002 });
+}
+
+/** A headband round the forehead, the ends tied behind. */
+`],
+    [`  s.part('kit', () => {
+    s.torus([0, 0.715, 0.0], 0.1, 0.012, { ...HEAD, color, mat: 'cloth', k: 0.004, rot: [0.15, 0, 0] });
+    for (const m of [1, -1]) s.flake([m * 0.01, 0.715, -0.1], [m * 0.07, 0.66, -0.15], [0, 0, 1], 0.012, 0.018, 0.3, { ...HEAD, color, mat: 'cloth', k: 0.003 });
+`,
+      `  s.part('kit', () => {
+    band(s, 0.715, 0.15, 0.011, { ...HEAD, color, mat: 'cloth' });
+    for (const m of [1, -1]) s.flake([m * 0.01, 0.715, -0.1], [m * 0.07, 0.66, -0.15], [0, 0, 1], 0.012, 0.018, 0.3, { ...HEAD, color, mat: 'cloth', k: 0.003 });
+`],
+    [`    s.box([0, 0.62, 0.1], [0.13, 0.07, 0.04], 0.02, { op: 'sub', k: 0.01 });
+    if (fold) s.torus([0, 0.7, -0.005], 0.104, 0.016, { ...HEAD, color: fold, mat: 'cloth', k: 0.004, rot: [0.1, 0, 0] });
+  });
+`,
+      `    s.box([0, 0.62, 0.1], [0.13, 0.07, 0.04], 0.02, { op: 'sub', k: 0.01 });
+    if (fold) band(s, 0.7, 0.1, 0.016, { ...HEAD, color: fold, mat: 'cloth' });
+  });
+`],
+    [`  s.part('kit', () => {
+    s.cylinder([0, 0.8, -0.005], 0.062, 0.09, { ...HEAD, color, mat: 'cloth', k: 0.006, round: 0.008 });
+    s.torus([0, 0.72, -0.005], 0.1, 0.01, { ...HEAD, color, mat: 'cloth', k: 0.004 });
+    s.torus([0, 0.74, -0.005], 0.064, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003 });
+  });
+`,
+      `  s.part('kit', () => {
+    s.cylinder([0, 0.812, -0.005], 0.082, 0.075, { ...HEAD, color, mat: 'cloth', k: 0.006, round: 0.008 });
+    s.cylinder([0, 0.74, -0.005], 0.118, 0.0055, { ...HEAD, color, mat: 'cloth', k: 0.004, round: 0.005 });
+    s.torus([0, 0.756, -0.005], 0.083, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003 });
+  });
+`],
+  ],
+  'neighbour.js': [
+    [`      // A comb-over, and a moustache like a pair of wings.
+      s.limb([-0.05, 0.768, -0.01], [0.05, 0.76, 0.03], 0.016, 0.012, { color: hairy, mat: 'hair', bone: 'head', k: 0.008 });
+      for (const m of [1, -1]) {
+`,
+      `      // A comb-over, and a moustache like a pair of wings.
+      // Three thin strands combed across the bald top, lying on it.
+      for (const [dz, arc] of [[-0.028, 0.62], [0.002, 0.66], [0.032, 0.52]]) s.torus([0, 0.668, dz], 0.104, 0.0062, { color: hairy, mat: 'hair', bone: 'head', k: 0.003, arc, rot: [-Math.PI / 2, 0, 0.12] });
+      for (const m of [1, -1]) {
+`],
+    [`      }
+      for (const m of [1, -1]) s.ellipsoid([m * 0.11, 0.7, -0.01], [0.012, 0.03, 0.024], { color: hairy, mat: 'hair', bone: 'head', k: 0.008 });
+    });
+`,
+      `      }
+      // What is left round the back and over the ears: a fringe of grey, lying close to the head.
+      // Cropped close, so it is in the skin: higher at the back, down to the ears at the sides, a soft edge.
+      s.paint((p) => {
+        const top = 0.7 - Math.max(0, p[2]) * 0.6 + Math.max(0, -p[2]) * 0.25;
+        return Math.max(p[1] - top, 0.632 - p[1], p[2] - 0.035);
+      }, hairy, 0.012);
+    });
+`],
+  ],
+  'neighbour.rocknroller.js': [
+    [`      // A comb-over, and a moustache like a pair of wings.
+      s.limb([-0.05, 0.768, -0.01], [0.05, 0.76, 0.03], 0.016, 0.012, { color: hairy, mat: 'hair', bone: 'head', k: 0.008 });
+      for (const m of [1, -1]) {
+`,
+      `      // A comb-over, and a moustache like a pair of wings.
+      // Three thin strands combed across the bald top, lying on it.
+      for (const [dz, arc] of [[-0.028, 0.62], [0.002, 0.66], [0.032, 0.52]]) s.torus([0, 0.668, dz], 0.104, 0.0062, { color: hairy, mat: 'hair', bone: 'head', k: 0.003, arc, rot: [-Math.PI / 2, 0, 0.12] });
+      for (const m of [1, -1]) {
+`],
+    [`      }
+      for (const m of [1, -1]) s.ellipsoid([m * 0.11, 0.7, -0.01], [0.012, 0.03, 0.024], { color: hairy, mat: 'hair', bone: 'head', k: 0.008 });
+    });
+`,
+      `      }
+      // What is left round the back and over the ears: a fringe of grey, lying close to the head.
+      // Cropped close, so it is in the skin: higher at the back, down to the ears at the sides, a soft edge.
+      s.paint((p) => {
+        const top = 0.7 - Math.max(0, p[2]) * 0.6 + Math.max(0, -p[2]) * 0.25;
+        return Math.max(p[1] - top, 0.632 - p[1], p[2] - 0.035);
+      }, hairy, 0.012);
+    });
+`],
+  ],
+  'ninja.js': [
+    [`import { cloth, hold, person } from './person.js';
+
+`,
+      `import { cloth, hold, person } from './person.js';
+import { band } from './metalwear.js';
+
+`],
+    [`      // The headband, red, its tails flying behind.
+      s.torus([0, 0.715, 0.0], 0.11, 0.008, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.002 });
+      for (const m of [1, -1]) s.flake([m * 0.01, 0.71, -0.11], [m * 0.04, 0.68, -0.2], [0, 1, 0], 0.01, 0.012, 0.3, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.002 });
+`,
+      `      // The headband, red, its tails flying behind.
+      band(s, 0.715, 0, 0.008, { color: '#c8141e', mat: 'cloth', bone: 'head' });
+      for (const m of [1, -1]) s.flake([m * 0.01, 0.71, -0.11], [m * 0.04, 0.68, -0.2], [0, 1, 0], 0.01, 0.012, 0.3, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.002 });
+`],
+  ],
+  'raver.js': [
+    [`      // Both arms up and waving glow sticks, a bounce in the knees on every beat, the head nodding.
+      hold(k, 'armR', -2.5 + b * 0.2, 0, -0.5 + b * 0.25); hold(k, 'foreR', -0.4, 0, 0);
+      hold(k, 'armL', -2.5 - b * 0.2, 0, 0.5 - b * 0.25); hold(k, 'foreL', -0.4, 0, 0);
+      k.move('root', 0, Math.abs(b) * 0.014, 0);
+`,
+      `      // Both arms up and waving glow sticks, a bounce in the knees on every beat, the head nodding.
+      hold(k, 'armR', -2.5 + b * 0.2, 0, -0.85 + b * 0.2); hold(k, 'foreR', -0.4, 0, 0);
+      hold(k, 'armL', -2.5 - b * 0.2, 0, 0.85 - b * 0.2); hold(k, 'foreL', -0.4, 0, 0);
+      k.move('root', 0, Math.abs(b) * 0.014, 0);
+`],
+    [`      // The bucket hat: a crown and a floppy brim all round, neon green.
+      s.ellipsoid([0, 0.75, -0.005], [0.105, 0.065, 0.108], { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.012 });
+      s.cone([0, 0.76, -0.005], 0.15, 0.06, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.008 });
+      s.ellipsoid([0, 0.66, 0.05], [0.13, 0.06, 0.1], { op: 'sub', k: 0.01 });
+      // The whistle on its string, the dummy, the glow sticks (one pink, one blue), glowing.
+`,
+      `      // The bucket hat: a crown and a floppy brim all round, neon green.
+      s.ellipsoid([0, 0.742, -0.005], [0.113, 0.071, 0.116], { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.012 });
+      s.cylinder([0, 0.716, -0.005], 0.148, 0.0055, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [-0.04, 0, 0] });
+      // The whistle on its string, the dummy, the glow sticks (one pink, one blue), glowing.
+`],
+  ],
+  'salaryman.js': [
+    [`import { glasses, suitFront } from './wardrobe.js';
+
+`,
+      `import { glasses, suitFront } from './wardrobe.js';
+import { band } from './metalwear.js';
+
+`],
+    [`      // The tie, round the head, its ends down behind.
+      s.torus([0, 0.735, 0.0], 0.104, 0.01, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.003, rot: [-0.1, 0, 0.08] });
+      for (const m of [1, -1]) s.flake([m * 0.01, 0.73, -0.1], [m * 0.04, 0.62, -0.13], [0, 0, -1], 0.012, 0.016, 0.3, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.002 });
+`,
+      `      // The tie, round the head, its ends down behind.
+      band(s, 0.728, -0.1, 0.01, { color: '#c8141e', mat: 'cloth', bone: 'head' });
+      for (const m of [1, -1]) s.flake([m * 0.01, 0.73, -0.1], [m * 0.04, 0.62, -0.13], [0, 0, -1], 0.012, 0.016, 0.3, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.002 });
+`],
+  ],
+  'stuntman.js': [
+    [`    s.part('kit', () => {
+      // The helmet: a shell over the head, the visor raised over the brow, a stripe down it.
+      s.ellipsoid([0, 0.7, -0.004], [0.118, 0.115, 0.12], { color: '#f4f2ee', mat: 'plastic', bone: 'head', k: 0.01 });
+      s.box([0, 0.62, 0.0], [0.13, 0.08, 0.14], 0.03, { op: 'sub', k: 0.02 });
+      s.box([0, 0.67, 0.11], [0.09, 0.05, 0.05], 0.02, { op: 'sub', k: 0.01 });
+      s.flake([-0.09, 0.735, 0.08], [0.09, 0.735, 0.08], [0, 1, 0.6], 0.03, 0.03, 0.2, { color: '#3a3a44', mat: 'glass', bone: 'head', k: 0.004 });
+      s.paint((p) => Math.max(Math.abs(p[0]) - 0.015, 0.74 - p[1]), '#d81c2a', 0.004);
+`,
+      `    s.part('kit', () => {
+      // The helmet: a shell fitted over the head, its padded rim closing round it, the visor raised over the
+      // brow, a stripe down it.
+      const SHELL = { color: '#f4f2ee', mat: 'plastic', bone: 'head' };
+      s.ellipsoid([0, 0.69, -0.006], [0.108, 0.1, 0.112], { ...SHELL, k: 0.01 });
+      s.box([0, 0.6, 0.0], [0.13, 0.09, 0.14], 0.01, { op: 'sub', k: 0.006 });
+      s.box([0, 0.66, 0.11], [0.08, 0.045, 0.05], 0.02, { op: 'sub', k: 0.008 });
+      s.torus([0, 0.693, -0.006], 0.097, 0.0115, { color: '#26262c', mat: 'rubber', bone: 'head', k: 0.004 });
+      s.paint((p) => Math.max(Math.abs(p[1] - 0.728) - 0.016, 0.04 - p[2]), '#2a2c34', 0.003);
+      s.paint((p) => Math.max(Math.abs(p[0]) - 0.015, 0.74 - p[1]), '#d81c2a', 0.004);
+`],
+  ],
+  'superfan.js': [
+    [`      // The bucket hat, badges all round it.
+      s.cylinder([0, 0.775, -0.004], 0.1, 0.035, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
+      s.cone([0, 0.8, -0.004], 0.16, 0.06, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01 });
+      for (let i = 0; i < 8; i++) {
+`,
+      `      // The bucket hat, badges all round it.
+      s.cylinder([0, 0.785, -0.004], 0.1, 0.042, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
+      s.cylinder([0, 0.748, -0.004], 0.158, 0.0055, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [0.1, 0, 0] });
+      for (let i = 0; i < 8; i++) {
+`],
+  ],
+  'usher.js': [
+    [`      for (const m of [1, -1]) s.ellipsoid([m * 0.03, 0.512, 0.07], [0.022, 0.014, 0.008], { color: '#101014', mat: 'cloth', bone: 'chest', k: 0.004 });
+      // A pillbox hat.
+      s.cylinder([0, 0.742, 0.0], 0.082, 0.032, { color: '#b81a2a', mat: 'cloth', bone: 'head', k: 0.006, rot: [0.1, 0, 0] });
+      s.torus([0, 0.72, 0.0], 0.082, 0.007, { color: '#ffd23a', mat: 'metal', bone: 'head', k: 0.003 });
+      // The torch, and a gold button or two.
+`,
+      `      for (const m of [1, -1]) s.ellipsoid([m * 0.03, 0.512, 0.07], [0.022, 0.014, 0.008], { color: '#101014', mat: 'cloth', bone: 'chest', k: 0.004 });
+      // A pillbox hat, perched on top of the hair and tipped back a little, its gold band round the foot of it.
+      s.cylinder([0, 0.79, -0.006], 0.078, 0.027, { color: '#b81a2a', mat: 'cloth', bone: 'head', k: 0.006, round: 0.006, rot: [-0.06, 0, 0] });
+      s.torus([0, 0.768, -0.004], 0.078, 0.0065, { color: '#ffd23a', mat: 'metal', bone: 'head', k: 0.003, rot: [-0.06, 0, 0] });
+      // The torch, and a gold button or two.
+`],
+  ],
+  'wardrobe.js': [
+    [`    const C = { ...HEAD, color, mat: 'cloth' };
+    s.cylinder([0, 0.752, 0.008], brim, 0.006, { ...C, k: 0.004, round: 0.004, rot: [tilt, 0, 0] });
+    s.ellipsoid([0, 0.8, -0.004], [0.094, 0.055, 0.1], { ...C, k: 0.01, rot: [tilt, 0, 0] });
+    // The pinch at the front and the dent along the top.
+    s.ellipsoid([0, 0.85, 0.02], [0.03, 0.02, 0.07], { op: 'sub', k: 0.012 });
+    s.torus([0, 0.768, -0.002], 0.095, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003, rot: [tilt, 0, 0] });
+  });
+`,
+      `    const C = { ...HEAD, color, mat: 'cloth' };
+    // Down on the head: the brim, a crown as wide as the head with its band round the foot of it, the dent
+    // along the top and the pinch either side of the front.
+    const y = 0.742;
+    s.cylinder([0, y, 0.008], brim, 0.006, { ...C, k: 0.004, round: 0.004, rot: [tilt, 0, 0] });
+    s.cylinder([0, y + 0.042, -0.004], 0.093, 0.042, { ...C, k: 0.006, round: 0.028, rot: [tilt, 0, 0] });
+    s.ellipsoid([0, y + 0.094, 0.01], [0.026, 0.018, 0.075], { op: 'sub', k: 0.012 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.058, y + 0.07, 0.07], [0.022, 0.03, 0.03], { op: 'sub', k: 0.01 });
+    s.torus([0, y + 0.014, -0.004], 0.093, 0.0085, { ...HEAD, color: band, mat: 'cloth', k: 0.003, rot: [tilt, 0, 0] });
+  });
+`],
+    [`    const C = { ...HEAD, color, mat: 'leather' };
+    s.cylinder([0, 0.752, 0.0], 0.17, 0.006, { ...C, k: 0.004, round: 0.004 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.15, 0.768, 0], [0.032, 0.008, 0.11], { ...C, k: 0.012, rot: [0, 0, m * 0.7] });
+    s.ellipsoid([0, 0.81, -0.004], [0.09, 0.07, 0.1], { ...C, k: 0.012 });
+    s.ellipsoid([0, 0.875, 0], [0.025, 0.03, 0.08], { op: 'sub', k: 0.015 });
+    s.torus([0, 0.768, 0], 0.092, 0.008, { ...HEAD, color: band, mat: 'leather', k: 0.003 });
+  });
+`,
+      `    const C = { ...HEAD, color, mat: 'leather' };
+    // The brim: wide, swept up at the sides (a sheet bent up beyond the crown either side) and dipping a little
+    // at the front and back.
+    const y = 0.742, R = 0.172;
+    s.shape((p) => {
+      const x = p[0], z = p[2], r = Math.hypot(x, z);
+      const lift = Math.max(0, Math.abs(x) - 0.1) ** 2 * 3.4 - Math.max(0, Math.abs(z) - 0.09) * 0.12;
+      const flat = Math.abs(p[1] - y - lift) - 0.0045;
+      return Math.max(flat * 0.8, r - R);
+    }, [[-R, y - 0.02, -R], [R, y + 0.06, R]], { ...C, k: 0.004 });
+    // The crown: tall and squared, pinched in at the front, a crease down the top.
+    s.cylinder([0, y + 0.05, -0.004], 0.091, 0.05, { ...C, k: 0.006, round: 0.03 });
+    s.ellipsoid([0, y + 0.104, 0], [0.024, 0.022, 0.08], { op: 'sub', k: 0.012 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.06, y + 0.08, 0.075], [0.024, 0.036, 0.03], { op: 'sub', k: 0.01 });
+    s.torus([0, y + 0.012, -0.004], 0.092, 0.0085, { ...HEAD, color: band, mat: 'leather', k: 0.003 });
+  });
+`],
+    [`  s.part('kit', () => {
+    s.ellipsoid([0.02, 0.775, -0.01], [0.12, 0.035, 0.115], { ...HEAD, color, mat: 'cloth', k: 0.012, rot: [0, 0, -0.2] });
+    s.sphere([0.03, 0.81, -0.01], 0.008, { ...HEAD, color, mat: 'cloth', k: 0.004 });
+  });
+`,
+      `  s.part('kit', () => {
+    // Snug round the head at the band, puffing out to a wide soft top pulled down to one side, and the stalk.
+    s.ellipsoid([0, 0.742, -0.004], [0.104, 0.046, 0.108], { ...HEAD, color, mat: 'cloth', k: 0.012 });
+    s.ellipsoid([0.018, 0.772, -0.008], [0.126, 0.032, 0.122], { ...HEAD, color, mat: 'cloth', k: 0.014, rot: [0, 0, -0.18] });
+    s.limb([0.024, 0.8, -0.008], [0.026, 0.814, -0.008], 0.005, 0.0035, { ...HEAD, color, mat: 'cloth', k: 0.003 });
+  });
+`],
+    [`    const C = { ...HEAD, color, mat: 'cloth' };
+    if (flat) s.cylinder([0, 0.775, -0.005], 0.11, 0.022, { ...C, k: 0.008, round: 0.01 });
+    else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
+`,
+      `    const C = { ...HEAD, color, mat: 'cloth' };
+    // A flat cap comes down over the head like any cap, and is flat and full on top, overhanging a little.
+    if (flat) {
+      s.ellipsoid([0, 0.748, -0.002], [0.108, 0.046, 0.114], { ...C, k: 0.01 });
+      s.cylinder([0, 0.778, 0.004], 0.106, 0.012, { ...C, k: 0.012, round: 0.011 });
+    }
+    else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
+`],
+    [`    else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
+    s.flake([0, 0.74, 0.08], [0, 0.735, 0.15], [0, 1, 0], 0.07, 0.055, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.005 });
+    if (badge) s.cylinder([0, 0.77, 0.105], 0.016, 0.004, { ...HEAD, color: badge, mat: 'metal', k: 0.001, rot: [Math.PI / 2, 0, 0] });
+`,
+      `    else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
+    // The peak grows out of the front of the cap, over the brows; a flat cap's out of its band, lower down.
+    if (flat) s.flake([0, 0.728, 0.07], [0, 0.716, 0.158], [0, 1, 0.12], 0.072, 0.056, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.008 });
+    else s.flake([0, 0.74, 0.08], [0, 0.735, 0.15], [0, 1, 0], 0.07, 0.055, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.005 });
+    if (badge) s.cylinder([0, 0.77, 0.105], 0.016, 0.004, { ...HEAD, color: badge, mat: 'metal', k: 0.001, rot: [Math.PI / 2, 0, 0] });
+`],
+  ],
+  'wardrobe.rocknroller-ii.js': [
+    [`    const C = { ...HEAD, color, mat: 'cloth' };
+    s.cylinder([0, 0.752, 0.008], brim, 0.006, { ...C, k: 0.004, round: 0.004, rot: [tilt, 0, 0] });
+    s.ellipsoid([0, 0.8, -0.004], [0.094, 0.055, 0.1], { ...C, k: 0.01, rot: [tilt, 0, 0] });
+    // The pinch at the front and the dent along the top.
+    s.ellipsoid([0, 0.85, 0.02], [0.03, 0.02, 0.07], { op: 'sub', k: 0.012 });
+    s.torus([0, 0.768, -0.002], 0.095, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003, rot: [tilt, 0, 0] });
+  });
+`,
+      `    const C = { ...HEAD, color, mat: 'cloth' };
+    // Down on the head: the brim, a crown as wide as the head with its band round the foot of it, the dent
+    // along the top and the pinch either side of the front.
+    const y = 0.742;
+    s.cylinder([0, y, 0.008], brim, 0.006, { ...C, k: 0.004, round: 0.004, rot: [tilt, 0, 0] });
+    s.cylinder([0, y + 0.042, -0.004], 0.093, 0.042, { ...C, k: 0.006, round: 0.028, rot: [tilt, 0, 0] });
+    s.ellipsoid([0, y + 0.094, 0.01], [0.026, 0.018, 0.075], { op: 'sub', k: 0.012 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.058, y + 0.07, 0.07], [0.022, 0.03, 0.03], { op: 'sub', k: 0.01 });
+    s.torus([0, y + 0.014, -0.004], 0.093, 0.0085, { ...HEAD, color: band, mat: 'cloth', k: 0.003, rot: [tilt, 0, 0] });
+  });
+`],
+    [`    const C = { ...HEAD, color, mat: 'leather' };
+    s.cylinder([0, 0.752, 0.0], 0.17, 0.006, { ...C, k: 0.004, round: 0.004 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.15, 0.768, 0], [0.032, 0.008, 0.11], { ...C, k: 0.012, rot: [0, 0, m * 0.7] });
+    s.ellipsoid([0, 0.81, -0.004], [0.09, 0.07, 0.1], { ...C, k: 0.012 });
+    s.ellipsoid([0, 0.875, 0], [0.025, 0.03, 0.08], { op: 'sub', k: 0.015 });
+    s.torus([0, 0.768, 0], 0.092, 0.008, { ...HEAD, color: band, mat: 'leather', k: 0.003 });
+  });
+`,
+      `    const C = { ...HEAD, color, mat: 'leather' };
+    // The brim: wide, swept up at the sides (a sheet bent up beyond the crown either side) and dipping a little
+    // at the front and back.
+    const y = 0.742, R = 0.172;
+    s.shape((p) => {
+      const x = p[0], z = p[2], r = Math.hypot(x, z);
+      const lift = Math.max(0, Math.abs(x) - 0.1) ** 2 * 3.4 - Math.max(0, Math.abs(z) - 0.09) * 0.12;
+      const flat = Math.abs(p[1] - y - lift) - 0.0045;
+      return Math.max(flat * 0.8, r - R);
+    }, [[-R, y - 0.02, -R], [R, y + 0.06, R]], { ...C, k: 0.004 });
+    // The crown: tall and squared, pinched in at the front, a crease down the top.
+    s.cylinder([0, y + 0.05, -0.004], 0.091, 0.05, { ...C, k: 0.006, round: 0.03 });
+    s.ellipsoid([0, y + 0.104, 0], [0.024, 0.022, 0.08], { op: 'sub', k: 0.012 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.06, y + 0.08, 0.075], [0.024, 0.036, 0.03], { op: 'sub', k: 0.01 });
+    s.torus([0, y + 0.012, -0.004], 0.092, 0.0085, { ...HEAD, color: band, mat: 'leather', k: 0.003 });
+  });
+`],
+    [`  s.part('kit', () => {
+    s.ellipsoid([0.02, 0.775, -0.01], [0.12, 0.035, 0.115], { ...HEAD, color, mat: 'cloth', k: 0.012, rot: [0, 0, -0.2] });
+    s.sphere([0.03, 0.81, -0.01], 0.008, { ...HEAD, color, mat: 'cloth', k: 0.004 });
+  });
+`,
+      `  s.part('kit', () => {
+    // Snug round the head at the band, puffing out to a wide soft top pulled down to one side, and the stalk.
+    s.ellipsoid([0, 0.742, -0.004], [0.104, 0.046, 0.108], { ...HEAD, color, mat: 'cloth', k: 0.012 });
+    s.ellipsoid([0.018, 0.772, -0.008], [0.126, 0.032, 0.122], { ...HEAD, color, mat: 'cloth', k: 0.014, rot: [0, 0, -0.18] });
+    s.limb([0.024, 0.8, -0.008], [0.026, 0.814, -0.008], 0.005, 0.0035, { ...HEAD, color, mat: 'cloth', k: 0.003 });
+  });
+`],
+    [`    const C = { ...HEAD, color, mat: 'cloth' };
+    if (flat) s.cylinder([0, 0.775, -0.005], 0.11, 0.022, { ...C, k: 0.008, round: 0.01 });
+    else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
+`,
+      `    const C = { ...HEAD, color, mat: 'cloth' };
+    // A flat cap comes down over the head like any cap, and is flat and full on top, overhanging a little.
+    if (flat) {
+      s.ellipsoid([0, 0.748, -0.002], [0.108, 0.046, 0.114], { ...C, k: 0.01 });
+      s.cylinder([0, 0.778, 0.004], 0.106, 0.012, { ...C, k: 0.012, round: 0.011 });
+    }
+    else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
+`],
+    [`    else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
+    s.flake([0, 0.74, 0.08], [0, 0.735, 0.15], [0, 1, 0], 0.07, 0.055, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.005 });
+    if (badge) s.cylinder([0, 0.77, 0.105], 0.016, 0.004, { ...HEAD, color: badge, mat: 'metal', k: 0.001, rot: [Math.PI / 2, 0, 0] });
+`,
+      `    else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
+    // The peak grows out of the front of the cap, over the brows; a flat cap's out of its band, lower down.
+    if (flat) s.flake([0, 0.728, 0.07], [0, 0.716, 0.158], [0, 1, 0.12], 0.072, 0.056, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.008 });
+    else s.flake([0, 0.74, 0.08], [0, 0.735, 0.15], [0, 1, 0], 0.07, 0.055, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.005 });
+    if (badge) s.cylinder([0, 0.77, 0.105], 0.016, 0.004, { ...HEAD, color: badge, mat: 'metal', k: 0.001, rot: [Math.PI / 2, 0, 0] });
+`],
+  ],
   'wizard.js': [
-    [`      // The hat: a wide brim and a tall crooked cone, a gold star on the front.
+    [`    s.part('kit', () => {
+      // The hat: a wide brim and a tall crooked cone, a gold star on the front.
       s.torus([0, 0.71, 0.0], 0.14, 0.012, { color: '#3a2a8a', mat: 'cloth', bone: 'head', k: 0.006 });
       s.cone([0.025, 0.97, -0.035], 0.1, 0.24, { color: '#3a2a8a', mat: 'cloth', bone: 'head', k: 0.01, rot: [-0.15, 0, -0.1] });
       s.sphere([0, 0.76, 0.1], 0.012, { color: '#f0c840', mat: 'metal', bone: 'head', k: 0.002 });
+      // The staff: a gnarled shaft and a glowing blue stone in a claw at the top.
 `,
-      `      // The hat: a wide soft brim down to the brows, its edge rolled; a crown as wide as the head, rising and
+      `    s.part('kit', () => {
+      // The hat: a wide soft brim down to the brows, its edge rolled; a crown as wide as the head, rising and
       // tapering, then bending back and over at the top where it has given up; a gold band, and gold stars.
       const HAT = { color: cloth('#3a2a8a', '#22185a'), mat: 'cloth', bone: 'head' }, GOLD = { color: '#ffd84a', mat: 'plastic', bone: 'head' };
       s.cylinder([0, 0.738, 0.004], 0.168, 0.0048, { ...HAT, k: 0.006, round: 0.0045, rot: [0.1, 0, 0] });
@@ -1193,33 +1703,39 @@ const HATS = {
       };
       star([0, 0.815, 0.083], [0, 0.15, 1], 0.026);
       star([0.05, 0.89, 0.016], [0.85, 0.2, 0.5], 0.016);
+      // The staff: a gnarled shaft and a glowing blue stone in a claw at the top.
 `],
   ],
-  'raver.js': [
-    [`      s.cone([0, 0.76, -0.005], 0.15, 0.06, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.008 });
-      s.ellipsoid([0, 0.66, 0.05], [0.13, 0.06, 0.1], { op: 'sub', k: 0.01 });
+  'wizard.metroll.js': [
+    [`    s.part('kit', () => {
+      // The hat: a wide brim and a tall crooked cone, a gold star on the front.
+      s.torus([0, 0.71, 0.0], 0.14, 0.012, { color: '#3a2a8a', mat: 'cloth', bone: 'head', k: 0.006 });
+      s.cone([0.025, 0.97, -0.035], 0.1, 0.24, { color: '#3a2a8a', mat: 'cloth', bone: 'head', k: 0.01, rot: [-0.15, 0, -0.1] });
+      s.sphere([0, 0.76, 0.1], 0.012, { color: '#f0c840', mat: 'metal', bone: 'head', k: 0.002 });
+      // The staff: a gnarled shaft and a glowing blue stone in a claw at the top.
 `,
-      `      s.cylinder([0, 0.712, -0.005], 0.148, 0.0055, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [0.12, 0, 0] });
-`],
-  ],
-  'superfan.js': [
-    [`      s.cone([0, 0.8, -0.004], 0.16, 0.06, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01 });
-`,
-      `      s.cylinder([0, 0.748, -0.004], 0.158, 0.0055, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [0.1, 0, 0] });
-`],
-    [`      s.cylinder([0, 0.775, -0.004], 0.1, 0.035, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
-`,
-      `      s.cylinder([0, 0.785, -0.004], 0.1, 0.042, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
-`],
-  ],
-  'metalwear.js': [
-    [`    s.cylinder([0, 0.8, -0.005], 0.062, 0.09, { ...HEAD, color, mat: 'cloth', k: 0.006, round: 0.008 });
-    s.torus([0, 0.72, -0.005], 0.1, 0.01, { ...HEAD, color, mat: 'cloth', k: 0.004 });
-    s.torus([0, 0.74, -0.005], 0.064, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003 });
-`,
-      `    s.cylinder([0, 0.812, -0.005], 0.082, 0.075, { ...HEAD, color, mat: 'cloth', k: 0.006, round: 0.008 });
-    s.cylinder([0, 0.74, -0.005], 0.118, 0.0055, { ...HEAD, color, mat: 'cloth', k: 0.004, round: 0.005 });
-    s.torus([0, 0.756, -0.005], 0.083, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003 });
+      `    s.part('kit', () => {
+      // The hat: a wide soft brim down to the brows, its edge rolled; a crown as wide as the head, rising and
+      // tapering, then bending back and over at the top where it has given up; a gold band, and gold stars.
+      const HAT = { color: cloth('#3a2a8a', '#22185a'), mat: 'cloth', bone: 'head' }, GOLD = { color: '#ffd84a', mat: 'plastic', bone: 'head' };
+      s.cylinder([0, 0.738, 0.004], 0.168, 0.0048, { ...HAT, k: 0.006, round: 0.0045, rot: [0.1, 0, 0] });
+      s.torus([0, 0.738, 0.004], 0.166, 0.0058, { ...HAT, k: 0.003, rot: [0.1, 0, 0] });
+      const crown = [[0, 0.73, -0.004], [0, 0.81, -0.01], [0.006, 0.89, -0.022], [0.02, 0.955, -0.045], [0.045, 0.993, -0.085], [0.077, 0.99, -0.126], [0.102, 0.962, -0.152]];
+      const thick = [0.092, 0.074, 0.055, 0.038, 0.025, 0.015, 0.0065];
+      for (let i = 0; i < crown.length - 1; i++) s.limb(crown[i], crown[i + 1], thick[i], thick[i + 1], { ...HAT, k: 0.006 });
+      s.torus([0, 0.758, -0.005], 0.088, 0.0085, { ...GOLD, k: 0.003, rot: [0.04, 0, 0] });
+      // A five-pointed star on the front of the crown, and a smaller one higher up the side.
+      const star = (c, n, r) => {
+        const up = [0, 1, 0], side = [n[2], 0, -n[0]];
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          const d = [0, 1, 2].map((j) => up[j] * Math.cos(a) + side[j] * Math.sin(a));
+          s.flake(c, c.map((v, j) => v + d[j] * r), n, r * 0.36, r * 0.07, 0.4, { ...GOLD, k: 0.002 });
+        }
+      };
+      star([0, 0.815, 0.083], [0, 0.15, 1], 0.026);
+      star([0.05, 0.89, 0.016], [0.85, 0.2, 0.5], 0.016);
+      // The staff: a gnarled shaft and a glowing blue stone in a claw at the top.
 `],
   ],
 };
@@ -1385,7 +1901,7 @@ export const EDITS = [
   },
   {
     at: /^characters\/(humanoid|person)\.js$/,
-    why: 'The people rebuilt. Their bodies were a dozen ellipsoids melted together, so every one came out a lumpy blob: the trunk is now one form lofted on a smooth curve through its sections (the seat, the waist, the ribs, the chest, the shoulders), squared off at the sides, in three pieces on three bones so that it bends, with the belly part of that curve; the arms and legs are clean tapered limbs; a short sleeve, a cuff, a shirt\'s tail over the trousers, straight trouser legs and shorts are shapes in the outline; a belt is fitted to the waist. Their faces: bigger eyes with an iris darker at the rim, a line of lashes and two catch-lights, arched brows, a flush in the cheeks rather than a disc. Their accessories were placed for the old bodies and floated off them or sank into them: what they wear (badges, buttons, chains, bags, a camera) is fitted onto what it is worn on, a hat is lowered onto the head until its rim sits on it, and what was sunk is brought out (`fit`); a hand that holds something closes into a fist round it (`grip`); and thin pieces, brims and peaks, are meshed on a finer grid so their edges don\'t tear (`thin`). Their cloth is cleaner, with a sheen, and the creases deeper. Dungeon Roller\'s body (the orc\'s) is left as it was.',
+    why: 'The people rebuilt. Their bodies were a dozen ellipsoids melted together, so every one came out a lumpy blob: the trunk is now one form lofted on a smooth curve through its sections (the seat, the waist, the ribs, the chest, the shoulders), squared off at the sides, in three pieces on three bones so that it bends, with the belly part of that curve; the arms and legs are clean tapered limbs; a short sleeve, a cuff, a shirt\'s tail over the trousers, straight trouser legs and shorts are shapes in the outline; a belt is fitted to the waist. Their faces: bigger eyes with an iris darker at the rim, a line of lashes and two catch-lights, arched brows, a flush in the cheeks rather than a disc. Their accessories were placed for the old bodies and floated off them or sank into them: what they wear (badges, buttons, chains, bags, a camera) is fitted onto what it is worn on, a hat is lowered onto the head until its rim sits on it, and what was sunk is brought out (`fit`); a hand that holds something closes into a fist round it (`grip`); thin pieces, brims and peaks, are meshed on a finer grid so their edges don\'t tear (`thin`); and the hair under a hat is cut away so it can\'t come up through it (`cover`). Their cloth is cleaner, with a sheen, and the creases deeper. Dungeon Roller\'s body (the orc\'s) is left as it was.',
     edit(text, where) {
       const kind = /humanoid/.test(placeOf(where)) ? 'humanoid' : 'person';
       for (const list of PEOPLE_VERSIONS[kind]) {
@@ -1398,11 +1914,10 @@ export const EDITS = [
     },
   },
   {
-    at: /^characters\/(raver|superfan|metalwear|wizard)\.js$/,
-    why: 'Hats: the raver\'s and the superfan\'s bucket hats had brims that were solid cones, standing up off the head like lampshades and tearing at the edge; they are flat brims, tilted a little forward. The top hat that Metroll\'s pallbearer wears floated above the head on its brim: it sits on the head, its brim a flat disc and its band on the crown. The wizard\'s hat was a hoop floating round the forehead under a stiff cone: it has a soft brim with a rolled edge down to the brows, a crown as wide as the head that tapers and flops over at the top, a gold band and gold stars.',
+    at: /^characters\/(dame|dancer|hippie|metalwear|neighbour|ninja|raver|salaryman|stuntman|superfan|usher|wardrobe|wizard)\.js$/,
+    why: 'The hats, and what else people wear on their heads, were made for heads they no longer fitted, or made crudely: brims that were cones standing up off the head, hats floating over the head or sunk into it with the hair and the head coming through them, a peak not joined to its cap, a hoop round the forehead for a wizard\'s brim, rings for headbands, a top hat on stilts. Each is made again to sit on the head: a bucket hat\'s and a cowboy hat\'s brims, a fedora\'s, a flat cap\'s, a beret\'s and a top hat\'s crowns, bands that lie on the head and hair all the way round (`band`), the wizard\'s soft brim and floppy crown, the stuntman\'s helmet, the dame\'s sheer veil, the usher\'s pillbox perched on the hair; and the hair under a hat as wide as the head is cut away under it (`cover`, humanoid.js).',
     edit(text, where) {
-      const name = placeOf(where).split('/').pop();
-      for (const [was, now] of HATS[name]) text = swap(text, was, now, where);
+      for (const [was, now] of HATS[where.split('/').pop()] ?? []) text = swap(text, was, now, where);
       return text;
     },
   },

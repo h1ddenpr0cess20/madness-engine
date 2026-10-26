@@ -1,6 +1,6 @@
 import { coat, mix } from '../models/skins.js';
 import { rgb } from '../models/sdf.js';
-import { body, bones, build, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.metroll.js';
+import { body, bones, build, cover, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.metroll.js';
 
 /**
  * The people of the gig, as one body in different clothes: the humanoid rig
@@ -87,10 +87,12 @@ export function person({
       // What they have on their face that is skin (a nose of their own, jowls) is the face's, and melts into it.
       for (const shape of s.shapes) if (shape.part === 'body' && shape.bone === 'head' && shape.mat === 'skin') shape.part = 'head';
       // Hands that hold something closed round it; what they wear put on them, not hanging just off them;
-      // and its thin pieces (brims, peaks) on a finer grid.
+      // its thin pieces (brims, peaks) on a finer grid.
       grip(s, J);
       fit(s);
       thin(s);
+      // Hair under a hat stays under it.
+      cover(s);
     },
     animate(kk, state) {
       moveHumanoid(kk, state, style);

@@ -540,9 +540,10 @@ export function thin(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], sk
  * on a coat) instead of on it, up to `reach` away, is moved onto it, and a
  * small piece sunk out of sight in it is brought up to show.
  * A piece is a lump of shapes of one part that touch; it moves whole. What
- * is held out from the body (further than `reach`) stays where it is.
+ * is held out from the body (further than `reach`) stays where it is, and so
+ * does a veil, which stands off the face.
  */
-export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows'], reach = 0.035 } = {}) {
+export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows', 'veil'], reach = 0.035 } = {}) {
   const body = new Sculpt();
   body.shapes = s.shapes.filter((x) => core.includes(x.part));
   const [lo, hi] = body.bounds(0.06);
@@ -562,20 +563,11 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
         t = Math.max(0, t - v);
       }
       const p = [c[0] + d[0] * t, c[1] + d[1] * t, c[2] + d[2] * t];
-      if (Math.abs(x.d(p)) < 0.002) { points.push(p); rims.push([p, d]); }
+      if (Math.abs(x.d(p)) < 0.002) points.push(p);
     }
     return points;
   };
-  let rims = [];
-  const under_rim = [];
-  const points = worn.map((x, i) => {
-    rims = [];
-    const found = x.op === 'add' ? surface(x) : [];
-    under_rim[i] = rims;
-    return found;
-  });
-  // The brows: no hat comes down past them.
-  const brows = Math.max(...s.shapes.filter((x) => x.part === 'brows').map((x) => x.box[1][1]), -Infinity);
+  const points = worn.map((x) => (x.op === 'add' ? surface(x) : []));
   // Lumps: shapes of one part that touch (or a carving and what it carves).
   const up = worn.map((_, i) => i);
   const find = (i) => (up[i] === i ? i : (up[i] = find(up[i])));
@@ -588,6 +580,7 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
   for (let i = 0; i < worn.length; i++) for (let j = 0; j < i; j++) if (worn[i].part === worn[j].part && meet(worn[i], worn[j]) && find(i) !== find(j) && touch(i, j)) up[find(i)] = find(j);
   const lumps = new Map();
   worn.forEach((x, i) => { const r = find(i); if (!lumps.has(r)) lumps.set(r, []); lumps.get(r).push(i); });
+  // What a lump sits on: the body, and everything else they wear.
   // What a lump sits on: the body, and everything else they wear.
   const under = (p, mine) => {
     let d = body.field(p);
@@ -612,27 +605,6 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
       if (worn[i].op === 'add') for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], worn[i].box[0][a]); hi[a] = Math.max(hi[a], worn[i].box[1][a]); }
     }
     if (!nearest) continue;
-    // A hat (a wide piece on the head, above the eyes) that rests on the crown with a gap under its rim is
-    // lowered until the rim sits on the head, though never down over the brows.
-    const ps = lump.flatMap((i) => points[i]);
-    const bottom = Math.min(...ps.map((p) => p[1])), across = Math.max(...ps.map((p) => p[0])) - Math.min(...ps.map((p) => p[0]));
-    if (lump.every((i) => worn[i].bone === 'head') && across > 0.12 && bottom > brows) {
-      const gaps = [];
-      for (const i of lump) for (const [p, d] of under_rim[i] ?? []) if (d[1] < -0.4) { const g = under(p, mine); if (g > 0.002 && g < 0.04) gaps.push(g); }
-      if (gaps.length >= 3) {
-        gaps.sort((a, b) => a - b);
-        const drop = Math.min(gaps[Math.floor(gaps.length / 2)], Math.max(0, bottom - brows - 0.004));
-        if (drop > 0.002) {
-          for (const i of lump) {
-            const x = worn[i], d = x.d, color = x.color;
-            x.d = (p) => d([p[0], p[1] + drop, p[2]]);
-            x.box = [[x.box[0][0], x.box[0][1] - drop, x.box[0][2]], [x.box[1][0], x.box[1][1] - drop, x.box[1][2]]];
-            if (typeof color === 'function') x.color = (p, nn) => color([p[0], p[1] + drop, p[2]], nn);
-          }
-          continue;
-        }
-      }
-    }
     const size = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]), thin = Math.min(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
     let by = 0, from = null;
     if (near > 0.0025 && near < reach) { by = -(near + 0.0012); from = nearest; }
@@ -652,6 +624,77 @@ export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], ski
       x.box = [x.box[0].map((v, i) => v + o[i]), x.box[1].map((v, i) => v + o[i])];
       if (typeof color === 'function') x.color = (p, nn) => color([p[0] - o[0], p[1] - o[1], p[2] - o[2]], nn);
     }
+  }
+}
+
+/**
+ * Hair under a hat stays under it: wherever a hat (a wide piece worn on the
+ * head, above the brows) is over the hair, the hair above the hat's
+ * underside is cut away, so it can show below a brim but never come up
+ * through one, or through a crown.
+ */
+export function cover(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows', 'hair'], step = 0.003 } = {}) {
+  if (!s.shapes.some((x) => x.part === 'hair' && x.op === 'add')) return;
+  const skull = s.shapes.filter((x) => x.part === 'head' && x.op === 'add' && x.bone === 'head');
+  const wide = Math.max(...skull.map((x) => x.box[1][0] - x.box[0][0]), 0);
+  const eyes = Math.max(...s.shapes.filter((x) => x.part === 'eyes').map((x) => (x.box[0][1] + x.box[1][1]) / 2), -Infinity);
+  const worn = s.shapes.filter((x) => x.op === 'add' && x.bone === 'head' && !core.includes(x.part) && !skip.includes(x.part));
+  // Hats: what is worn on the head that touches, in lumps, wide, and all above the brows.
+  const up = worn.map((_, i) => i);
+  const find = (i) => (up[i] === i ? i : (up[i] = find(up[i])));
+  const meet = (a, b) => [0, 1, 2].every((i) => a.box[0][i] - 0.002 <= b.box[1][i] && b.box[0][i] - 0.002 <= a.box[1][i]);
+  for (let i = 0; i < worn.length; i++) for (let j = 0; j < i; j++) if (meet(worn[i], worn[j])) up[find(i)] = find(j);
+  const lumps = new Map();
+  worn.forEach((x, i) => { const r = find(i); if (!lumps.has(r)) lumps.set(r, []); lumps.get(r).push(x); });
+  for (const lump of lumps.values()) {
+    const hat = new Sculpt();
+    hat.shapes = lump;
+    const [lo, hi] = hat.bounds(0.004);
+    // Only a hat as wide as the head covers the hair; a small one (a pillbox) sits on top of it.
+    if (hi[0] - lo[0] < wide * 0.95) continue;
+    hat.prepare(lo, hi, 0.01);
+    // The hat's underside over each column of a grid across it: the lowest point it has there.
+    const nx = Math.ceil((hi[0] - lo[0]) / step) + 1, nz = Math.ceil((hi[2] - lo[2]) / step) + 1;
+    const under = new Float32Array(nx * nz).fill(Infinity);
+    // How low it comes over the forehead (a hood or a mask comes down over the eyes, and isn't a hat).
+    let lowest = Infinity, front = Infinity;
+    for (let i = 0; i < nx; i++) {
+      for (let k = 0; k < nz; k++) {
+        const x = lo[0] + i * step, z = lo[2] + k * step;
+        for (let y = lo[1]; y < hi[1];) {
+          const d = hat.field([x, y, z]);
+          if (d < 0) {
+            under[i + nx * k] = y;
+            lowest = Math.min(lowest, y);
+            if (Math.abs(x) < 0.03 && z > 0.04) front = Math.min(front, y);
+            break;
+          }
+          y += Math.max(d * 0.9, 0.001);
+        }
+      }
+    }
+    if (front < eyes + 0.012) continue;
+    // A band round the head (a headband, a hatband) isn't over the crown: only a hat is.
+    const crown = s.warp ? s.warp.to([0, 0.7, 0]) : [0, 0.7, 0];
+    if (crown[0] < lo[0] || crown[0] > hi[0] || crown[2] < lo[2] || crown[2] > hi[2]) continue;
+    if (under[Math.round((crown[0] - lo[0]) / step) + nx * Math.round((crown[2] - lo[2]) / step)] === Infinity) continue;
+    // Between the grid's columns, smoothly, so the hair's cut edge is clean.
+    const at = (x, z) => {
+      const fi = (x - lo[0]) / step, fk = (z - lo[2]) / step, i = Math.floor(fi), k = Math.floor(fk);
+      if (i < 0 || k < 0 || i >= nx - 1 || k >= nz - 1) return Infinity;
+      const a = under[i + nx * k], b = under[i + 1 + nx * k], c = under[i + nx * (k + 1)], d = under[i + 1 + nx * (k + 1)];
+      if (a === Infinity || b === Infinity || c === Infinity || d === Infinity) return Math.min(a, b, c, d);
+      const u = fi - i, v = fk - k;
+      return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+    };
+    // Cut from the hair: above the underside wherever the hat is overhead. As made, not warped again.
+    const warp = s.warp;
+    s.warp = null;
+    s.part('hair', () => s.shape((p) => {
+      const u = at(p[0], p[2]);
+      return u === Infinity ? 0.01 : u - 0.002 - p[1];
+    }, [[lo[0], lowest - 0.004, lo[2]], [hi[0], hi[1] + 0.2, hi[2]]], { op: 'sub', k: 0.002 }));
+    s.warp = warp;
   }
 }
 

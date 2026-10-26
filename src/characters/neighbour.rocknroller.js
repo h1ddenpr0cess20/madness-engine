@@ -36,11 +36,17 @@ export default person({
         s.ellipsoid([a[0], 0.032, a[2] + 0.03], [0.045, 0.036, 0.07], { color: '#ee7aa8', mat: 'cloth', bone: m > 0 ? 'footL' : 'footR', k: 0.01 });
       }
       // A comb-over, and a moustache like a pair of wings.
-      s.limb([-0.05, 0.768, -0.01], [0.05, 0.76, 0.03], 0.016, 0.012, { color: hairy, mat: 'hair', bone: 'head', k: 0.008 });
+      // Three thin strands combed across the bald top, lying on it.
+      for (const [dz, arc] of [[-0.028, 0.62], [0.002, 0.66], [0.032, 0.52]]) s.torus([0, 0.668, dz], 0.104, 0.0062, { color: hairy, mat: 'hair', bone: 'head', k: 0.003, arc, rot: [-Math.PI / 2, 0, 0.12] });
       for (const m of [1, -1]) {
         s.ellipsoid([m * 0.03, 0.627, 0.102], [0.034, 0.012, 0.016], { color: hairy, mat: 'hair', bone: 'head', k: 0.008, rot: [0, 0, m * -0.45] });
       }
-      for (const m of [1, -1]) s.ellipsoid([m * 0.11, 0.7, -0.01], [0.012, 0.03, 0.024], { color: hairy, mat: 'hair', bone: 'head', k: 0.008 });
+      // What is left round the back and over the ears: a fringe of grey, lying close to the head.
+      // Cropped close, so it is in the skin: higher at the back, down to the ears at the sides, a soft edge.
+      s.paint((p) => {
+        const top = 0.7 - Math.max(0, p[2]) * 0.6 + Math.max(0, -p[2]) * 0.25;
+        return Math.max(p[1] - top, 0.632 - p[1], p[2] - 0.035);
+      }, hairy, 0.012);
     });
     // The broom: a long wooden handle through the right hand, a fan of straw at the end.
     const h = J.handR;

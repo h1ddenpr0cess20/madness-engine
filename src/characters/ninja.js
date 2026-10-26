@@ -1,4 +1,5 @@
 import { cloth, hold, person } from './person.js';
+import { band } from './metalwear.js';
 
 /**
  * The Theme-Park Ninja: from the ninja village at the park outside town,
@@ -46,7 +47,7 @@ export default person({
       s.limb([0, 0.64, 0.1], [0, 0.62, 0.122], 0.02, 0.016, { color: BLACK, mat: 'cloth', bone: 'head', k: 0.02 });
       s.box([0, 0.668, 0.11], [0.066, 0.015, 0.03], 0.008, { op: 'sub', k: 0.004 });
       // The headband, red, its tails flying behind.
-      s.torus([0, 0.715, 0.0], 0.11, 0.008, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.002 });
+      band(s, 0.715, 0, 0.008, { color: '#c8141e', mat: 'cloth', bone: 'head' });
       for (const m of [1, -1]) s.flake([m * 0.01, 0.71, -0.11], [m * 0.04, 0.68, -0.2], [0, 1, 0], 0.01, 0.012, 0.3, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.002 });
       // The sword across the back, the hilt over the right shoulder.
       s.limb([0.08, 0.3, -0.08], [-0.08, 0.58, -0.08], 0.012, 0.012, { color: '#14141a', mat: 'leather', bone: 'chest', k: 0.002 });

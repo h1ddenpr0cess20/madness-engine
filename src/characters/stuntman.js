@@ -31,11 +31,14 @@ export default person({
   },
   extras(s, J) {
     s.part('kit', () => {
-      // The helmet: a shell over the head, the visor raised over the brow, a stripe down it.
-      s.ellipsoid([0, 0.7, -0.004], [0.118, 0.115, 0.12], { color: '#f4f2ee', mat: 'plastic', bone: 'head', k: 0.01 });
-      s.box([0, 0.62, 0.0], [0.13, 0.08, 0.14], 0.03, { op: 'sub', k: 0.02 });
-      s.box([0, 0.67, 0.11], [0.09, 0.05, 0.05], 0.02, { op: 'sub', k: 0.01 });
-      s.flake([-0.09, 0.735, 0.08], [0.09, 0.735, 0.08], [0, 1, 0.6], 0.03, 0.03, 0.2, { color: '#3a3a44', mat: 'glass', bone: 'head', k: 0.004 });
+      // The helmet: a shell fitted over the head, its padded rim closing round it, the visor raised over the
+      // brow, a stripe down it.
+      const SHELL = { color: '#f4f2ee', mat: 'plastic', bone: 'head' };
+      s.ellipsoid([0, 0.69, -0.006], [0.108, 0.1, 0.112], { ...SHELL, k: 0.01 });
+      s.box([0, 0.6, 0.0], [0.13, 0.09, 0.14], 0.01, { op: 'sub', k: 0.006 });
+      s.box([0, 0.66, 0.11], [0.08, 0.045, 0.05], 0.02, { op: 'sub', k: 0.008 });
+      s.torus([0, 0.693, -0.006], 0.097, 0.0115, { color: '#26262c', mat: 'rubber', bone: 'head', k: 0.004 });
+      s.paint((p) => Math.max(Math.abs(p[1] - 0.728) - 0.016, 0.04 - p[2]), '#2a2c34', 0.003);
       s.paint((p) => Math.max(Math.abs(p[0]) - 0.015, 0.74 - p[1]), '#d81c2a', 0.004);
       // Pads at the knees and elbows.
       for (const S of ['L', 'R']) {
