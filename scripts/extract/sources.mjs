@@ -19,9 +19,10 @@ export const ORDER = ['madness', 'dungeon-roller', 'catroller', 'rocknroller', '
  * The games that run on the engine: they import the library rather than
  * keep their own copies, so what the library has of them is the source, and
  * extracting takes it from the library as it is (where `origins.json` says
- * their files went) rather than from the game.
+ * their files went) rather than from the game: their moods too, and the
+ * cores of the long modules they share (SPLIT).
  */
-export const ON_ENGINE = new Set(['madness', 'catroller']);
+export const ON_ENGINE = new Set(['madness', 'catroller', 'rocknroller', 'rocknroller-ii', 'rocknroller-iii']);
 
 /** The town games keep their own people-kit (the engine's models now) and its glue beside their people. */
 const TOWN_KIT = ['model.js', 'rig.js', 'library.js', 'bake.worker.js', 'viewer.js', 'sdf.js', 'skins.js'];

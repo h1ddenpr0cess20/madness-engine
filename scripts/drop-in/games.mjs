@@ -54,9 +54,9 @@ export const GAMES = {
   'dungeon-roller': { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...ARCADE, models: 'kit' },
   catroller: { onEngine: true },
   metroll: { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
-  rocknroller: { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
-  'rocknroller-ii': { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
-  'rocknroller-iii': { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
+  rocknroller: { onEngine: true },
+  'rocknroller-ii': { onEngine: true },
+  'rocknroller-iii': { onEngine: true },
   metrlol: { gfx: 'src/vendor/gfx', physics: 'slide', boost: BOOST, api: 'boost', ...TOWN, models: 'legacy', worldFile: 'src/map.js', cast: METRLOL_CAST },
   petroll: { gfx: 'src/vendor/gfx', physics: 'slide', boost: null, ...TOWN, models: 'legacy', worldFile: 'src/map.js', controls: JOBS_CONTROLS, cast: PETROLL_CAST },
 };
