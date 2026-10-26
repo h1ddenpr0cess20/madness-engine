@@ -305,7 +305,7 @@ export function cathedral(m, v) {
     }
     for (let z = nz0 + 0.8; z < nz1 - 0.5; z += 0.7) {
       const f = s > 0 ? faces(ax0, nz0, ax1, nz1, 0.2, 1.05).right : faces(ax0, nz0, ax1, nz1, 0.2, 1.05).left;
-      lancet(m, f, s > 0 ? nz1 - z : z - nz0, 0.38, 0.2, 0.5, pickFrom(rnd, ['#ff6a8a', '#6aa8ff', '#ffcf6a', '#6ad88a']));
+      lancet(m, f, s > 0 ? nz1 - z : z - nz0, 0.3, 0.2, 0.5, pickFrom(rnd, ['#ff6a8a', '#6aa8ff', '#ffcf6a', '#6ad88a']));
     }
   }
   m.gable('slate', nx0, nz0, nx1, nz1, 1.9, 2.75, '#59626c', { over: 0.08, gable: 'stone', gableColor: STONE[0], axis: 'z', ridge: { mat: 'stone', col: STONE[3] } });

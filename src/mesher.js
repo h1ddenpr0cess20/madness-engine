@@ -208,6 +208,11 @@ export class Mesher {
    * at `yRidge`, running along x (or z, with `axis: 'z'`). It overhangs by `over`
    * and is `thick` through (0.06). Gable ends are filled in with `o.gable` (a
    * material) in `o.gableColor`.
+   *
+   * The slopes stand half their thickness above the line from the eaves to the
+   * ridge, so the tops of the walls and the edges of the gable ends run through
+   * the middle of the roof, not along its top: an edge in the roof's top face
+   * fights it, a thin line drawn round the roof wherever the walls meet it.
    */
   gable(mat, x0, z0, x1, z1, yEave, yRidge, col, o = {}) {
     const over = o.over ?? 0.1;
@@ -215,18 +220,19 @@ export class Mesher {
     const [a0, a1, b0, b1] = alongZ ? [z0, z1, x0, x1] : [x0, x1, z0, z1];
     const mid = (b0 + b1) / 2;
     const rise = (yRidge - yEave) / ((b1 - b0) / 2);
-    const yo = yEave - rise * over;
+    const thick = o.thick ?? 0.06;
+    const lift = thick / 2;
+    const yo = yEave - rise * over + lift, yr = yRidge + lift;
     const P = (a, b, y) => (alongZ ? [b, y, a] : [a, y, b]);
     const A0 = a0 - over, A1 = a1 + over, B0 = b0 - over, B1 = b1 + over;
     // The two slopes (normals up and out), each with its underside and the edges at the eaves and the gable ends.
-    const thick = o.thick ?? 0.06;
     const side = [0, 1, 3];
     if (alongZ) {
-      this.slab(mat, P(A1, B1, yo), P(A0, B1, yo), P(A0, mid, yRidge), P(A1, mid, yRidge), col, thick, side, o);
-      this.slab(mat, P(A0, B0, yo), P(A1, B0, yo), P(A1, mid, yRidge), P(A0, mid, yRidge), col, thick, side, o);
+      this.slab(mat, P(A1, B1, yo), P(A0, B1, yo), P(A0, mid, yr), P(A1, mid, yr), col, thick, side, o);
+      this.slab(mat, P(A0, B0, yo), P(A1, B0, yo), P(A1, mid, yr), P(A0, mid, yr), col, thick, side, o);
     } else {
-      this.slab(mat, P(A0, B1, yo), P(A1, B1, yo), P(A1, mid, yRidge), P(A0, mid, yRidge), col, thick, side, o);
-      this.slab(mat, P(A1, B0, yo), P(A0, B0, yo), P(A0, mid, yRidge), P(A1, mid, yRidge), col, thick, side, o);
+      this.slab(mat, P(A0, B1, yo), P(A1, B1, yo), P(A1, mid, yr), P(A0, mid, yr), col, thick, side, o);
+      this.slab(mat, P(A1, B0, yo), P(A0, B0, yo), P(A0, mid, yr), P(A1, mid, yr), col, thick, side, o);
     }
     // The gable ends, flush with the walls.
     if (o.gable) {
@@ -245,8 +251,8 @@ export class Mesher {
     if (o.ridge) {
       const r = o.ridge;
       const hr = 0.035;
-      if (alongZ) this.box(r.mat ?? 'wood', mid - hr, yRidge - 0.01, A0 - 0.01, mid + hr, yRidge + 0.05, A1 + 0.01, r.col ?? col, { skip: ['bottom'] });
-      else this.box(r.mat ?? 'wood', A0 - 0.01, yRidge - 0.01, mid - hr, A1 + 0.01, yRidge + 0.05, mid + hr, r.col ?? col, { skip: ['bottom'] });
+      if (alongZ) this.box(r.mat ?? 'wood', mid - hr, yr - 0.01, A0 - 0.01, mid + hr, yr + 0.05, A1 + 0.01, r.col ?? col, { skip: ['bottom'] });
+      else this.box(r.mat ?? 'wood', A0 - 0.01, yr - 0.01, mid - hr, A1 + 0.01, yr + 0.05, mid + hr, r.col ?? col, { skip: ['bottom'] });
     }
     return this;
   }

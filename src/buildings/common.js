@@ -72,9 +72,18 @@ export function panel(m, mat, f, u0, v0, u1, v1, off, col, o) {
  */
 export const LAYER = Object.freeze({ glass: 0.006, glow: 0.011, frame: 0.016, shutter: 0.034 });
 
-/** A window on a face: glass in a timber frame, with a lit pane over it that shows at night, and shutters if asked. */
+/**
+ * How far under the top of its wall a window's or a door's frame stops. The
+ * roof comes down to the top of the wall and slopes away below it, so a frame
+ * that reaches the eaves stands out over the roof, seen from above.
+ */
+const EAVES = 0.04;
+
+/** A window on a face: glass in a timber frame, with a lit pane over it that shows at night, and shutters if asked. A window too tall for its wall is cut down to fit under the eaves. */
 export function windowOn(m, f, u, v, w, h, { shutters = null, sill = true, glow = true, frame = PALETTE.timber } = {}) {
   const t = 0.028;
+  const top = (f.h ?? Infinity) - EAVES - t;
+  if (v + h > top) { h = Math.max(0.08, top - v); v = Math.min(v, top - h); }
   const reach = w / 2 + t + (shutters ? 0.09 : 0);
   f.holes?.push([u - reach, u + reach, v - t, v + h + t]);
   panel(m, 'glass', f, u - w / 2, v, u + w / 2, v + h, LAYER.glass, PALETTE.glass);
@@ -97,8 +106,9 @@ export function windowOn(m, f, u, v, w, h, { shutters = null, sill = true, glow 
   }
 }
 
-/** A door on a face: planks, a lintel, a stone step, an iron ring. */
+/** A door on a face: planks, a lintel, a stone step, an iron ring. A door too tall for its wall is cut down to fit under the eaves. */
 export function doorOn(m, f, u, w, h, col, { step = true } = {}) {
+  h = Math.min(h, (f.h ?? Infinity) - EAVES - 0.04);
   f.holes?.push([u - w / 2 - 0.035, u + w / 2 + 0.035, 0, h + 0.04]);
   panel(m, 'wood', f, u - w / 2, 0, u + w / 2, h, 0.012, col);
   panel(m, 'trim', f, u - w / 2 - 0.035, h, u + w / 2 + 0.035, h + 0.04, 0.016, PALETTE.timber, { uvScale: 2 });
