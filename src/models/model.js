@@ -99,7 +99,7 @@ export function bake(def, { detail = 1 } = {}) {
 
 const materialCache = new WeakMap();
 
-function materialsOf(GFX, def) {
+export function materialsOf(GFX, def) {
   let byDef = materialCache.get(GFX);
   if (!byDef) materialCache.set(GFX, (byDef = new Map()));
   if (!byDef.has(def.name)) {

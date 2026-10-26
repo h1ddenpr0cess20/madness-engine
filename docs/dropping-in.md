@@ -10,12 +10,12 @@ game's tests (`scripts/drop-in/overlay.mjs` is the recipe in code).
 | Game | physics | input | view | models |
 |---|---|---|---|---|
 | madness | on the engine (below) | | | |
-| dungeon-roller | – | – | `views/arcade` | kit |
+| dungeon-roller | on the engine (below) | | | |
 | catroller | on the engine (below) | | | |
 | metroll | – | `boost: { pad: [0, 2, 7, 6] }` (`rev()`) | `views/arcade` | kit |
 | rocknroller, -ii, -iii | on the engine (below) | | | |
-| metrlol | `slideUnder: true` | `boost: { pad: [0, 2, 7], element: 'accel-touch' }` (`boost()`) | `views/town` | sculpt + cast |
-| petroll | `slideUnder: true` | `presses`, `padPresses` (below) | `views/town` | sculpt + cast |
+| metrlol | on the engine (below) | | | |
+| petroll | on the engine (below) | | | |
 
 ## A game rewritten on the engine: Catroller
 
@@ -101,6 +101,35 @@ grades) from the library as they are, and does the same with the cores
 their versions of `textures/venue` and `music/band` share
 (`textures/painters`, `music/theory`), keeping the off-engine games'
 versions of those whole.
+
+## Dungeon Roller, Metrlol and Petroll
+
+These three went the same way, each depending on the engine at a commit and
+keeping no copies. They took the drop-in's swap (`drop-in/package-mode.mjs`)
+and then dropped the re-exports it leaves behind, importing
+`madness-engine/...` directly:
+
+- The renderer is `madness-engine/gfx`, the physics `madness-engine/physics`
+  (the town maps' `new World({ ..., slideUnder: true })`), the input
+  `madness-engine/input` (Metrlol passes `boost: { pad: [0, 2, 7], element:
+  'accel-touch' }`; Petroll keeps its jobs' buttons in `src/controls.js`
+  and passes `presses` and `padPresses`), and the view `views/arcade`
+  (Dungeon Roller) or `views/town`.
+- Dungeon Roller's `models/library.js` is `createBakeLibrary` and its
+  `bake.worker.js` `serveBakes`; the town games' `sculpt/` is gone for
+  `models/sdf`, `models/skins` and `models/legacy-bake`, and their
+  `cast/library.js` is `createCastLibrary`. The rosters (`cast/index.js`,
+  `props/index.js`, `models/index.js`) list the library's characters,
+  props and scenery.
+- `stage.js` keeps its own lights and loop, but its sky and reflections
+  are the library's: `textures/skies/embers` and `textures/rooms/vault`
+  for the dungeon, `textures/skies/town` (Metrlol's `town.metrlol`) and
+  `textures/rooms/town` for the towns. The town maps' `linearRGB` is
+  `madness-engine/color`, and their prop kit `madness-engine/kit`.
+- Where the game's copy and the library's differ, the library's is the
+  one: the people are the rebuilt ones, with the budgets that go with them.
+  `models/model` exports `materialsOf` now, which Metrlol uses to warm its
+  people's shaders before they are baked.
 
 ## Swapping the files
 
