@@ -13,7 +13,7 @@ game's tests (`scripts/drop-in/overlay.mjs` is the recipe in code).
 | dungeon-roller | – | – | `views/arcade` | kit |
 | catroller | on the engine (below) | | | |
 | metroll | – | `boost: { pad: [0, 2, 7, 6] }` (`rev()`) | `views/arcade` | kit |
-| rocknroller, -ii, -iii | – | `boost: { pad: [0, 2, 7, 6] }` (`rev()`) | `views/arcade` | kit |
+| rocknroller, -ii, -iii | on the engine (below) | | | |
 | metrlol | `slideUnder: true` | `boost: { pad: [0, 2, 7], element: 'accel-touch' }` (`boost()`) | `views/town` | sculpt + cast |
 | petroll | `slideUnder: true` | `presses`, `padPresses` (below) | `views/town` | sculpt + cast |
 
@@ -62,6 +62,45 @@ courses, the races, the hazards, the HUD, and these, on the engine's:
 
 It is `onEngine` in `scripts/drop-in/games.mjs` and in `ON_ENGINE` in
 `scripts/extract/sources.mjs`, as Catroller is.
+
+## Rock 'n' Roller I–III
+
+The three Rock 'n' Roller games went the same way, each depending on the
+engine and keeping no copies. Their renderer, physics, input (with
+`boost: { pad: [0, 2, 7, 6] }`, the rev) and arcade view are the engine's;
+Rock is `heroes/rock`, the rig `scenery/lightshow.<game>`, the band
+`music/band.<game>`, the textures `textures/venue.<game>`, and the cast and
+props the library's, which the rosters (`models/cast/index.js`,
+`models/props/index.js`) list. What is left of each is the game: the venues,
+the rules, the machinery, the props and the HUD, and these, on the engine's:
+
+- `stage.js` is `createStage(host, { lens, view, lights, fixtures: 5, ui })`,
+  and dresses itself for a set with `stage.setMood(mood)`: `moods.js`
+  lists the library's mood of each set in the order the game plays them
+  (`moods/garage` … `moods/stadium`, `moods/casting` … `moods/premiere`,
+  `moods/london` … `moods/newyork`). The lantern hangs over Rock rather
+  than the camera's target, as it did. The film each set is shot on (the
+  noir's black and white, the grades, the grain, the vignette and the
+  sandstorm's haze) is the engine's `film`, not the stylesheet's, and in
+  the noir the interface (`#ui`, `.corner`, `#rev-button`) is shot on it
+  too. `main.js` runs the game with `stage.run`.
+- `audio.js` is `createAudio({ storageKey, level: 0.75, glue: true, onWake })`
+  with the roll, the rev and the crowd as `loop`s and the band started in
+  `onWake`, and every sound made on its `tone` and `burst`.
+- `effects.js` is the engine's `createEffects`, with the game's smoke,
+  stars, picks, popcorn, confetti, sparks, embers, dust and chips thrown by
+  its `spawn` and `outward`, its `ring`, and its weather (`mood.weather`);
+  `storage.js` is a `saveSlot` with `SETTINGS` and `pickSettings`.
+- `models/library.js` is `createBakeLibrary`, `bake.worker.js`
+  `serveBakes`, and `models.html` turns any of the library's characters
+  and props round, not only the game's.
+
+They are `onEngine` and in `ON_ENGINE` as Madness and Catroller are. Since
+their moods are now the library's, `npm run extract` takes them (and their
+grades) from the library as they are, and does the same with the cores
+their versions of `textures/venue` and `music/band` share
+(`textures/painters`, `music/theory`), keeping the off-engine games'
+versions of those whole.
 
 ## Swapping the files
 

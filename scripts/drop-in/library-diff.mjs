@@ -154,7 +154,7 @@ export async function compareMoods(game, dir) {
     }
   }
   const { GRADES } = await import(pathToFileURL(join(SRC, 'moods/grades.js')).href);
-  const grades = Object.entries(gradesOf(game, dir));
+  const grades = Object.entries(await gradesOf(game, dir));
   for (const [name, film] of grades) {
     const versions = Object.keys(GRADES).filter((k) => k === name || k.startsWith(`${name}.`));
     if (!versions.some((k) => isDeepStrictEqual(GRADES[k], film))) return { ok: false, detail: `the library hasn't the ${name} grade as the game has it (npm run extract)` };

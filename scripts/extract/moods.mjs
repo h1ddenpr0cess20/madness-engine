@@ -22,7 +22,44 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { MOODS, ORDER, SOURCES } from './sources.mjs';
+import { MOODS, ON_ENGINE, ORDER, SOURCES } from './sources.mjs';
+
+const LIBRARY = join(import.meta.dirname, '..', '..', 'src', 'moods');
+
+/** A file's name in the library less any game's version of it: `club.metroll` is `club`. */
+const unversioned = (name) => name.replace(new RegExp(`\\.(${ORDER.join('|')})$`), '');
+
+/**
+ * The moods of a game on the engine: its sets' moods as the library has
+ * them, which are the game's own (it dresses its stage in them), each its
+ * file as it is (`own`).
+ */
+async function ownMoods(game) {
+  const found = [];
+  for (const file of readdirSync(LIBRARY).filter((n) => n.endsWith('.js') && n !== 'index.js' && n !== 'grades.js')) {
+    const { default: mood } = await import(pathToFileURL(join(LIBRARY, file)).href);
+    if (mood.game !== game) continue;
+    found.push({ name: unversioned(posix.basename(file, '.js')), game, mood, own: readFileSync(join(LIBRARY, file), 'utf8') });
+  }
+  if (!found.length) throw new Error(`${game} is on the engine, but the library has no moods of it`);
+  // In the order the game plays them, as the library lists them.
+  const { MOODS: listed } = await import(pathToFileURL(join(LIBRARY, 'index.js')).href);
+  const order = Object.values(listed);
+  return found.sort((a, b) => order.indexOf(a.mood) - order.indexOf(b.mood));
+}
+
+/** The grades of a game on the engine, as the library has them: those under the game's name in `moods/grades.js`. */
+async function ownGrades(game) {
+  const { GRADES } = await import(pathToFileURL(join(LIBRARY, 'grades.js')).href);
+  const out = {};
+  let current = null;
+  for (const line of readFileSync(join(LIBRARY, 'grades.js'), 'utf8').split('\n')) {
+    let m;
+    if ((m = /^ {2}\/\/ ([\w-]+)$/.exec(line))) current = m[1];
+    else if (current === game && (m = /^ {2}(?:'([^']+)'|([\w$]+)): /.exec(line))) out[unversioned(m[1] ?? m[2])] = GRADES[m[1] ?? m[2]];
+  }
+  return out;
+}
 
 /** A stylesheet's rules outside @-blocks, in order: each its selectors and its declarations. */
 export function rules(css) {
@@ -152,6 +189,7 @@ const header = (text) => {
 export async function moodsOf(game, dir, origins) {
   const spec = MOODS[game];
   if (!spec) return [];
+  if (ON_ENGINE.has(game)) return ownMoods(game);
   const film = filmOf(game, dir);
   const stage = readFileSync(join(dir, spec.stage), 'utf8');
   const sky = skyOptions(game, stage);
@@ -204,8 +242,9 @@ export async function moodsOf(game, dir, origins) {
 }
 
 /** Every grade the game in `dir` has, by name, on the film the game gives it. */
-export function gradesOf(game, dir) {
+export async function gradesOf(game, dir) {
   if (!MOODS[game]) return {};
+  if (ON_ENGINE.has(game)) return ownGrades(game);
   const film = filmOf(game, dir);
   return Object.fromEntries(Object.keys(film.grades).map((grade) => {
     // The film of a set that has the grade and nothing else: no weather, no class but the grade's own.

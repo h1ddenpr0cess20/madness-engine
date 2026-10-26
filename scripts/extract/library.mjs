@@ -39,6 +39,9 @@ export const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'm
 export const ORIGINS = join(HERE, 'origins.json');
 
 const md5 = (text) => createHash('md5').update(text).digest('hex');
+/** The cores of the long modules (SPLIT): what their versions share. */
+const CORES = new Set(Object.values(SPLIT));
+
 const IMPORT = /(\b(?:from|import)\s+)(['"])(\.{1,2}\/[^'"]+)\2/g;
 const rel = (from, to) => {
   const r = posix.relative(posix.dirname(from), to);
@@ -138,14 +141,18 @@ export function plan(dirs) {
   // Where a file is, to read its imports from: in the game, or in the library for a game on the engine.
   const where = (f) => f.at ?? f.gamePath.replace(/#.*$/, '');
   const byGamePath = new Map(files.map((f) => [`${f.game}:${where(f)}`, f]));
+  // Where each file is in the library now: a file of a game on the engine may import another game's.
+  const prior = existsSync(ORIGINS) ? JSON.parse(readFileSync(ORIGINS, 'utf8')) : {};
+  const byLibrary = new Map(files.map((f) => [f.at ?? prior[f.game]?.[f.gamePath], f]).filter(([at]) => at));
 
   // What each import is: another file the library takes from the same game, or an engine file.
   for (const f of files) {
     f.imports = [...f.text.matchAll(IMPORT)].map((m) => {
       const target = posix.normalize(posix.join(posix.dirname(where(f)), m[3]));
-      const dep = byGamePath.get(`${f.game}:${target}`);
+      const dep = byGamePath.get(`${f.game}:${target}`) ?? (f.at ? byLibrary.get(target) : undefined);
       if (dep) return { dep };
-      const engine = f.at ? (existsSync(join(SRC, target)) && !KINDS.includes(target.split('/')[0]) ? target : null) : engineOf(target);
+      // A file of a game on the engine may import the engine, or the core of the long modules it shares (SPLIT).
+      const engine = f.at ? (existsSync(join(SRC, target)) && (!KINDS.includes(target.split('/')[0]) || CORES.has(target)) ? target : null) : engineOf(target);
       if (!engine) throw new Error(`${f.game}: ${f.gamePath} imports ${m[3]} (${target}), which is neither in the library nor in the engine`);
       return { engine };
     });
@@ -297,19 +304,25 @@ function contents(places, moods) {
 export async function planMoods(dirs, origins) {
   const found = [];
   for (const [game, dir] of Object.entries(dirs)) found.push(...await moodsOf(game, dir, origins));
-  const moods = versions(found.map((m) => ({ ...m, text: moodText(m, `moods/${m.name}.js`) })))
+  // A mood of a game on the engine is its file as it is (`own`); the others are made from the game.
+  const moods = versions(found.map((m) => ({ ...m, text: m.own ?? moodText(m, `moods/${m.name}.js`) })))
     .map((m) => ({ ...m, path: `moods/${m.key}.js` }));
-  for (const m of moods) m.text = moodText(m, m.path);
-  const grades = versions(Object.entries(dirs).flatMap(([game, dir]) => Object.entries(gradesOf(game, dir))
-    .map(([name, film]) => ({ game, name, film, text: JSON.stringify(film) }))));
+  for (const m of moods) m.text = m.own ?? moodText(m, m.path);
+  const graded = [];
+  for (const [game, dir] of Object.entries(dirs)) {
+    for (const [name, film] of Object.entries(await gradesOf(game, dir))) graded.push({ game, name, film, text: JSON.stringify(film) });
+  }
+  const grades = versions(graded);
   return { moods, grades, files: { ...Object.fromEntries(moods.map((m) => [m.path, m.text])), 'moods/index.js': indexText(moods), 'moods/grades.js': gradesText(grades) } };
 }
 
 /** Writes the library into `src/`. */
 export async function build(dirs) {
   const { files, places, origins } = plan(dirs);
-  for (const kind of [...KINDS, 'moods']) rmSync(join(SRC, kind), { recursive: true, force: true });
   const moods = await planMoods(dirs, origins);
+  // A core shared by a game on the engine is that game's as it is, so it is read before the library is cleared.
+  const cores = Object.fromEntries([...CORES].filter((p) => existsSync(join(SRC, p))).map((p) => [p, readFileSync(join(SRC, p), 'utf8')]));
+  for (const kind of [...KINDS, 'moods']) rmSync(join(SRC, kind), { recursive: true, force: true });
 
   const out = new Map();
   for (const versions of places.values()) for (const v of versions.values()) out.set(v.path, libraryText(v.files[0]));
@@ -318,6 +331,14 @@ export async function build(dirs) {
   for (const [place, corePath] of Object.entries(SPLIT)) {
     const versions = [...places.get(place).values()];
     if (versions.length < 2) continue;
+    // The versions of a game on the engine are its library files, already split against the core: the core is
+    // theirs, and stays as it is. The other games' versions are kept whole.
+    if (versions.some((v) => v.files.some((f) => ON_ENGINE.has(f.game)))) {
+      if (!cores[corePath]) throw new Error(`${corePath}: a game on the engine shares it, but the library has none`);
+      out.set(corePath, cores[corePath]);
+      console.log(`${place}: ${corePath} kept, as games on the engine have it`);
+      continue;
+    }
     const { core, variants, report } = dedupe(Object.fromEntries(versions.map((v) => [v.path, out.get(v.path)])));
     out.set(corePath, core);
     const spec = rel(place, corePath);
