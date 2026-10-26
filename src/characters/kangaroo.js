@@ -18,7 +18,7 @@ export default {
   name: 'kangaroo',
   scale: 1.5,
   cell: 0.0075,
-  cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025, ears: 0.0024, nose: 0.0016 },
+  cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025, highlights: 0.0006, ears: 0.0024, nose: 0.0016 },
   budget: 18000,
   bones: [
     ['root', null, [0, 0, 0]],
@@ -95,7 +95,7 @@ export default {
       for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });
     });
     // A catch-light in each.
-    for (const m of [1, -1]) s.paint((p) => Math.hypot(p[0] - m * 0.029, p[1] - 0.602, p[2] - 0.1) - 0.0018, '#ffffff', 0.0006);
+    for (const m of [1, -1]) s.part('highlights', () => s.sphere([m * 0.029, 0.602, 0.1], 0.0018, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 }));
   },
   animate(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 }) {
     const T = time + seed;
