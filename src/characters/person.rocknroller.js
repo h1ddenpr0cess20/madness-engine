@@ -59,7 +59,7 @@ export function person({
     name,
     scale,
     cell,
-    cells: { eyes: 0.0026, irises: 0.0017, pupils: 0.0011, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, ...cells },
+    cells: { eyes: 0.0026, irises: 0.0017, pupils: 0.0011, highlights: 0.0008, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, ...cells },
     budget,
     bones: bones(b, warp),
     materials: MATERIALS,
