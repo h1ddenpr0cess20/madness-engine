@@ -44,6 +44,63 @@ jobs:
       - run: npm ci
       - run: npm test
 
+
+  # A rendered snapshot of the branch's actual cast geometry, attached to the PR for visual review.
+  cast-preview:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: examples/starter/package-lock.json
+      - run: npm ci
+        working-directory: examples/starter
+      - name: Install Chromium for the rendered preview
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+        working-directory: examples/starter
+      - name: Start the preview server
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 5173 > /tmp/cast-preview-vite.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:5173/cast-preview.html >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/cast-preview-vite.log
+          exit 1
+        working-directory: examples/starter
+      - name: Capture the rendered cast
+        run: npx --yes playwright@1.55.0 screenshot --browser chromium --viewport-size "1600,1000" --wait-for-timeout 5000 http://127.0.0.1:5173/cast-preview.html /tmp/cast-preview.png
+        working-directory: examples/starter
+      - name: Upload screenshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cast-design-preview
+          path: /tmp/cast-preview.png
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish screenshot to the PR branch
+        env:
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          mkdir -p docs
+          cp /tmp/cast-preview.png docs/cast-preview.png
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/cast-preview.png
+          if git diff --cached --quiet; then
+            echo "Screenshot unchanged."
+            exit 0
+          fi
+          git commit -m "Add rendered cast design preview"
+          git push origin "HEAD:${PR_BRANCH}"
+
   # The starter game: a new game built on nothing but the engine still installs and bundles.
   example:
     runs-on: ubuntu-latest
