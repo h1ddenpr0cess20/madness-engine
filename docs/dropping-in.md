@@ -9,7 +9,7 @@ game's tests (`scripts/drop-in/overlay.mjs` is the recipe in code).
 
 | Game | physics | input | view | models |
 |---|---|---|---|---|
-| madness | – | – | `views/arcade` | – |
+| madness | on the engine (below) | | | |
 | dungeon-roller | – | – | `views/arcade` | kit |
 | catroller | on the engine (below) | | | |
 | metroll | – | `boost: { pad: [0, 2, 7, 6] }` (`rev()`) | `views/arcade` | kit |
@@ -42,6 +42,26 @@ with the game's own on top:
 It is `onEngine` in `scripts/drop-in/games.mjs` and in `ON_ENGINE` in
 `scripts/extract/sources.mjs`: the library's files of it are the source,
 and the verify runs its tests on the engine rather than comparing copies.
+
+## Madness
+
+Madness went the same way. It depends on the engine at a commit and keeps no
+copies: its renderer, physics, input and arcade view are the engine's, its
+marble is `heroes/marble`, and its sky and studio are `textures/skies/haze`
+and `textures/rooms/studio`. What is left of its own is the game: the
+courses, the races, the hazards, the HUD, and these, on the engine's:
+
+- `stage.js` is `createStage(host, { lens, view, sky, room })`, with the
+  camera a little further back than the engine's (`distance: 12`).
+  `main.js` runs the game with `stage.run`.
+- `audio.js` is `createAudio({ storageKey, volume })` with the roll as a
+  `loop`, and the knocks, the shattering, the fizz, the jingles and the
+  tune made on its `tone` and `burst`.
+- `effects.js` is the engine's `spawn` and `outward` with the game's glass
+  shards, spark, bubbles and confetti; `storage.js` is a `saveSlot`.
+
+It is `onEngine` in `scripts/drop-in/games.mjs` and in `ON_ENGINE` in
+`scripts/extract/sources.mjs`, as Catroller is.
 
 ## Swapping the files
 
