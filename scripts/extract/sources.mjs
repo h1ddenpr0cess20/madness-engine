@@ -21,7 +21,7 @@ export const ORDER = ['madness', 'dungeon-roller', 'catroller', 'rocknroller', '
  * extracting takes it from the library as it is (where `origins.json` says
  * their files went) rather than from the game.
  */
-export const ON_ENGINE = new Set(['catroller']);
+export const ON_ENGINE = new Set(['madness', 'catroller']);
 
 /** The town games keep their own people-kit (the engine's models now) and its glue beside their people. */
 const TOWN_KIT = ['model.js', 'rig.js', 'library.js', 'bake.worker.js', 'viewer.js', 'sdf.js', 'skins.js'];

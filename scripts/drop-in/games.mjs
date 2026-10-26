@@ -50,7 +50,7 @@ const ARCADE = { view: 'arcade', home: {} };
 const TOWN = { view: 'town', home: TOWN_HOME };
 
 export const GAMES = {
-  madness: { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...ARCADE, models: null },
+  madness: { onEngine: true },
   'dungeon-roller': { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...ARCADE, models: 'kit' },
   catroller: { onEngine: true },
   metroll: { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
