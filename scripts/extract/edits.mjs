@@ -168,7 +168,7 @@ function eyesOn(s, P, Hd, { color, lid }) {
     s.part('eyes', () => s.sphere(c, r, { color, mat: 'eye', bone: 'head', k: 0 }));
     s.part('pupils', () => s.ellipsoid(add(c, n, r * 0.84), [r * 0.46, r * 0.5, r * 0.2], { color: '#050405', mat: 'eye', bone: 'head', k: 0, rot }));
     const hl = add(add(c, n, r * 1.02), [m * -r * 0.18, r * 0.25, 0]);
-    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - r * 0.17, '#ffffff', r * 0.05);
+    s.part('highlights', () => s.sphere(hl, r * 0.17, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 }));
     // The upper lid: a fold of the head's own skin over the top of the eye.
     s.ellipsoid(add(add(c, [0, r * 0.62, 0]), n, -r * 0.12), [r * 1.08, r * 0.5, r * 1.02], { ...lid, bone: 'head', k: r * 0.25, rot });
   }
@@ -327,7 +327,7 @@ export const EDITS = [
         where);
       text = swap(text,
         '    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, ...cells },\n',
-        '    // The small things on the head get grids of their own, as fine as the head is small.\n    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },\n',
+        '    // The small things on the head get grids of their own, as fine as the head is small.\n    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, highlights: Hd.r * 0.015, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },\n',
         where);
       text = swap(text, QUADRUPED_HEAD_WAS, QUADRUPED_HEAD, where);
       text = swap(text, QUADRUPED_EARS_WAS, QUADRUPED_EARS, where);
@@ -391,6 +391,16 @@ export const EDITS = [
         where);
       text = swap(text, '/** Both eyes shut by `shut` (0 open, 1 closed). */', `${CAT_PLANT}/** Both eyes shut by \`shut\` (0 open, 1 closed). */`, where);
       return swap(text, '    animate: pose,\n', '    animate: pose,\n    settle: plant,\n', where);
+    },
+  },
+  {
+    at: /^characters\/person\.js$/,
+    why: 'Eye catch-lights are geometry in their own fine-meshed part rather than painted marks shared across the whole sculpt.',
+    edit(text, where) {
+      return swap(text,
+        'cells: { eyes: 0.0026, irises: 0.0017, pupils: 0.0011, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, ...cells },',
+        'cells: { eyes: 0.0026, irises: 0.0017, pupils: 0.0011, highlights: 0.0008, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, ...cells },',
+        where);
     },
   },
   {
