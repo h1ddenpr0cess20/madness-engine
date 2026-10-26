@@ -124,7 +124,7 @@ export function quadruped({
     scale,
     cell,
     // The small things on the head get grids of their own, as fine as the head is small.
-    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },
+    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, highlights: Hd.r * 0.015, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },
     budget,
     bones,
     materials: { ...ANIMAL, ...materials },
@@ -250,7 +250,7 @@ function eyesOn(s, P, Hd, { color, lid }) {
     s.part('eyes', () => s.sphere(c, r, { color, mat: 'eye', bone: 'head', k: 0 }));
     s.part('pupils', () => s.ellipsoid(add(c, n, r * 0.84), [r * 0.46, r * 0.5, r * 0.2], { color: '#050405', mat: 'eye', bone: 'head', k: 0, rot }));
     const hl = add(add(c, n, r * 1.02), [m * -r * 0.18, r * 0.25, 0]);
-    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - r * 0.17, '#ffffff', r * 0.05);
+    s.part('highlights', () => s.sphere(hl, r * 0.17, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 }));
     // The upper lid: a fold of the head's own skin over the top of the eye.
     s.ellipsoid(add(add(c, [0, r * 0.62, 0]), n, -r * 0.12), [r * 1.08, r * 0.5, r * 1.02], { ...lid, bone: 'head', k: r * 0.25, rot });
   }
