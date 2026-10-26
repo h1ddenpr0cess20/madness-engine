@@ -175,3 +175,37 @@ test('a roof has thickness: an underside, and an edge at the eaves and the gable
     assert.ok(up > 0 && down > 0 && side > 0, `${kind}: ${up} up, ${down} down, ${side} edge faces`);
   }
 });
+
+/** The height of a triangle's plane over (x, z), if (x, z) lies under the triangle. */
+function heightOver([A, B, C], x, z) {
+  const d = (B[0] - A[0]) * (C[2] - A[2]) - (C[0] - A[0]) * (B[2] - A[2]);
+  if (Math.abs(d) < 1e-9) return null;
+  const u = ((x - A[0]) * (C[2] - A[2]) - (C[0] - A[0]) * (z - A[2])) / d;
+  const v = ((B[0] - A[0]) * (z - A[2]) - (x - A[0]) * (B[2] - A[2])) / d;
+  if (u < -1e-6 || v < -1e-6 || u + v > 1 + 1e-6) return null;
+  return A[1] + u * (B[1] - A[1]) + v * (C[1] - A[1]);
+}
+
+test('no window, door or timber stands out over a roof', () => {
+  const found = [];
+  for (const type of Object.keys(FOOTPRINTS)) {
+    for (const variant of [0, 1, 2, 3, 4, 5, 6, 7]) {
+      const { parts } = modelFor(type, { variant });
+      const tris = (p) => Array.from({ length: p.count / 3 }, (_, i) => [0, 1, 2].map((k) => [p.pos[(i * 3 + k) * 3], p.pos[(i * 3 + k) * 3 + 1], p.pos[(i * 3 + k) * 3 + 2]]));
+      // The top faces of the roofs: those that face up.
+      const roofs = ['tile', 'thatch', 'slate'].flatMap((mat) => (parts[mat] ? tris(parts[mat]) : []))
+        .filter(([A, B, C]) => cross(sub(B, A), sub(C, A))[1] > 1e-9);
+      for (const mat of ['glass', 'glow', 'trim']) {
+        if (!parts[mat]) continue;
+        for (const tri of tris(parts[mat])) {
+          for (const p of tri) {
+            // Just over a roof is through it; well over it is a tower or a gable standing above a lower roof.
+            const y = roofs.map((r) => heightOver(r, p[0], p[2])).find((h) => h !== null && p[1] > h + 0.001 && p[1] < h + 0.25);
+            if (y !== undefined) found.push(`${type} ${variant}: ${mat} at ${p.map((x) => x.toFixed(2)).join(',')} over a roof at ${y.toFixed(2)}`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual([...new Set(found)], []);
+});
