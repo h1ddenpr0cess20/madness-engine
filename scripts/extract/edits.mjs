@@ -365,7 +365,7 @@ export const EDITS = [
         "    s.part('fine', () => {\n      for (const m of [1, -1]) s.box(add(P.H, [m * 0.03, 0.036, 0.0265]), [0.0015, 0.007, 0.001], 0.0005, { color: '#0a0a08', mat: 'eye', bone: 'head', k: 0 });\n    });",
         "    s.part('fine', () => {\n      for (const m of [1, -1]) s.box(add(P.H, [m * 0.03, 0.036, 0.0265]), [0.0015, 0.007, 0.001], 0.0005, { color: '#0a0a08', mat: 'eye', bone: 'head', k: 0 });\n    });\n    s.part('highlights', () => {\n      for (const m of [1, -1]) s.sphere(add(P.H, [m * 0.027, 0.041, 0.026]), 0.0018, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 });\n    });",
         where);
-      return swap(text, '  sculptHead: false,\\n', '  sculptHead: false,\\n  cells: { teeth: 0.0014, highlights: 0.0006 },\\n', where);
+      return swap(text, '  sculptHead: false,\n', '  sculptHead: false,\n  cells: { teeth: 0.0014, highlights: 0.0006 },\n', where);
     },
   },
   {
