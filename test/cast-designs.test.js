@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { Sculpt } from '../src/models/sdf.js';
+import { Skeleton } from '../src/models/rig.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '../src/characters');
@@ -40,6 +41,7 @@ test('every cast definition sculpts finite geometry with a valid rig', async () 
 
       const names = def.bones.map(([name]) => name);
       assert.equal(new Set(names).size, names.length, `${label}: duplicate bone names`);
+      assert.doesNotThrow(() => new Skeleton(def.bones), `${label}: invalid rig hierarchy`);
       const sculpt = new Sculpt();
       assert.doesNotThrow(() => def.sculpt(sculpt), `${label}: sculpt threw`);
       assert.ok(sculpt.shapes.length > 0, `${label}: empty sculpt`);
