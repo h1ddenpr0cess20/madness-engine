@@ -297,9 +297,13 @@ export const EDITS = [
     why: 'The eyes sat with their fronts just under the skin of the face, and showed only through the mesh\'s errors: a finer mesh hid them. Each is set by where the face actually is, its front a little proud of it.',
     edit(text, where) {
       text = swap(text, '/**\n * A head: skull and cheeks', `${HUMANOID_SEAT}/**\n * A head: skull and cheeks`, where);
-      return swap(text,
+      text = swap(text,
         '    const c = [m * 0.041, 0.668, 0.088];\n    const d = [m * 0.3, 0.02, 0.95];\n    const l = Math.hypot(...d);\n    const n = d.map((v) => v / l);\n',
         '    const d = [m * 0.3, 0.02, 0.95];\n    const l = Math.hypot(...d);\n    const n = d.map((v) => v / l);\n    const c = seat(s, [m * 0.041, 0.668, 0.088], n);\n',
+        where);
+      return swap(text,
+        "    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - 0.0032, '#ffffff', 0.0012);",
+        "    s.part('highlights', () => s.sphere(hl, 0.0032, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 }));",
         where);
     },
   },
@@ -364,14 +368,14 @@ export const EDITS = [
     at: /^characters\/kangaroo\.js$/,
     why: 'The kangaroo\'s ears were thinner than its grid and tore at the tips, and its nose was a blob. Both are meshes of their own on finer grids, the nose with nostrils, and the eyes have catch-lights.',
     edit(text, where) {
-      text = swap(text, 'cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025 },', 'cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025, ears: 0.0024, nose: 0.0016 },', where);
+      text = swap(text, 'cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025 },', 'cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025, highlights: 0.0006, ears: 0.0024, nose: 0.0016 },', where);
       text = swap(text,
         "    s.sphere([0, 0.572, 0.158], 0.012, { color: '#1a1210', mat: 'nose', bone: 'head', k: 0.005 });\n    for (const m of [1, -1]) s.flake([m * 0.018, 0.61, 0.05], [m * 0.036, 0.675, 0.035], [0, 0, 1], 0.017, 0.008, 0.35, { ...F, bone: 'head', k: 0.008 });\n",
         KANGAROO_NOSE_EARS,
         where);
       return swap(text,
         "      for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });\n    });\n",
-        "      for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });\n    });\n    // A catch-light in each.\n    for (const m of [1, -1]) s.paint((p) => Math.hypot(p[0] - m * 0.029, p[1] - 0.602, p[2] - 0.1) - 0.0018, '#ffffff', 0.0006);\n",
+        "      for (const m of [1, -1]) s.sphere([m * 0.026, 0.598, 0.093], 0.008, { color: '#120c0a', mat: 'eye', bone: 'head', k: 0 });\n    });\n    // A catch-light in each.\n    for (const m of [1, -1]) s.part('highlights', () => s.sphere([m * 0.029, 0.602, 0.1], 0.0018, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 }));\n",
         where);
     },
   },
