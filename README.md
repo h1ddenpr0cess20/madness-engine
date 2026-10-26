@@ -110,11 +110,14 @@ proves that the engine can stand in for each game's own copies:
 
 `docs/dropping-in.md` covers moving a game onto the engine.
 
-Madness, Catroller and Rock 'n' Roller I–III have moved: they import
-`madness-engine/...` for all of it and keep no copies. Madness's marble,
-sky and studio are the library's, and so are Catroller's cats, mouse, yarn
-ball, music and house, and the Rock 'n' Roller games' Rock, cast, props,
-rigs, bands, textures and the mood of every set. For a game on the engine
+Every game but Metroll has moved: Madness, Dungeon Roller, Catroller, Rock
+'n' Roller I–III, Metrlol and Petroll import `madness-engine/...` for all
+of it and keep no copies. Madness's marble, sky and studio are the
+library's, and so are Dungeon Roller's d20, monsters, treasure, dungeon,
+lava and score, Catroller's cats, mouse, yarn ball, music and house, the
+Rock 'n' Roller games' Rock, cast, props, rigs, bands, textures and the
+mood of every set, and the town games' people, streets, vehicles,
+surfaces, sky, reflections, balls, hamster and band. For a game on the engine
 (`ON_ENGINE` in `scripts/extract/sources.mjs`), what the library has of it
 is the source: `npm run extract` keeps those files as they are (its moods,
 and the cores of the long modules it shares, too), and `npm run verify`
