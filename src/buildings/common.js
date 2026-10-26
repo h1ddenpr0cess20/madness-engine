@@ -104,7 +104,11 @@ export function doorOn(m, f, u, w, h, col, { step = true } = {}) {
   panel(m, 'trim', f, u - w / 2 - 0.035, h, u + w / 2 + 0.035, h + 0.04, 0.016, PALETTE.timber, { uvScale: 2 });
   panel(m, 'trim', f, u - w / 2 - 0.035, 0, u - w / 2, h, 0.016, PALETTE.timber, { uvScale: 2 });
   panel(m, 'trim', f, u + w / 2, 0, u + w / 2 + 0.035, h, 0.016, PALETTE.timber, { uvScale: 2 });
-  panel(m, 'metal', f, u + w / 2 - 0.07, h * 0.45, u + w / 2 - 0.045, h * 0.45 + 0.025, 0.02, '#2a2a2a');
+  // The joints between the planks, two strap hinges across them, the ring.
+  const planks = Math.max(2, Math.round(w / 0.07));
+  for (let i = 1; i < planks; i++) { const x = u - w / 2 + (w * i) / planks; panel(m, 'plain', f, x - 0.003, 0.01, x + 0.003, h - 0.01, 0.019, '#1e140c'); }
+  for (const y of [h * 0.2, h * 0.78]) panel(m, 'metal', f, u - w / 2 + 0.012, y, u + w / 2 - 0.05, y + 0.018, 0.023, '#262422');
+  panel(m, 'metal', f, u + w / 2 - 0.07, h * 0.45, u + w / 2 - 0.045, h * 0.45 + 0.025, 0.027, '#2a2a2a');
   if (step) m.box('stone', ...bounds(f, u - w / 2 - 0.05, u + w / 2 + 0.05, 0, 0.055, 0.0, 0.1), PALETTE.stone[0], { skip: ['bottom'] });
 }
 
@@ -174,12 +178,55 @@ function drawHalfTimber(m, f, { cols, rails, brace, thick, col, skip, capped }) 
   }
 }
 
-/** A chimney: a stone stack with a lip and a cap. Returns the top, where the smoke comes from. */
-export function chimney(m, x, z, y0, y1, { w = 0.17, col = PALETTE.stone[1] } = {}) {
-  m.box('stone', x - w / 2, y0, z - w / 2, x + w / 2, y1, z + w / 2, col, { skip: ['bottom'] });
-  m.box('stone', x - w / 2 - 0.03, y1 - 0.05, z - w / 2 - 0.03, x + w / 2 + 0.03, y1 + 0.03, z + w / 2 + 0.03, PALETTE.stone[3], { skip: ['bottom'] });
-  m.box('plain', x - w / 4, y1 + 0.02, z - w / 4, x + w / 4, y1 + 0.035, z + w / 4, '#1a1612', { skip: ['bottom', 'front', 'back', 'left', 'right'] });
-  return [x, y1 + 0.05, z];
+/**
+ * A chimney: a rubble stack, a dressed course a little below the top, a
+ * dressed cap, and a clay pot or two. Returns the top of the pot, where the
+ * smoke comes from.
+ */
+export function chimney(m, x, z, y0, y1, { w = 0.17, col = PALETTE.stone[1], pots = null } = {}) {
+  const h = w / 2;
+  m.box('rubble', x - h, y0, z - h, x + h, y1 - 0.09, z + h, col, { skip: ['bottom', 'top'] });
+  m.box('stone', x - h - 0.015, y1 - 0.13, z - h - 0.015, x + h + 0.015, y1 - 0.09, z + h + 0.015, PALETTE.stone[2], { skip: ['bottom'] });
+  m.box('rubble', x - h, y1 - 0.09, z - h, x + h, y1 - 0.03, z + h, col, { skip: ['bottom', 'top'] });
+  m.box('stone', x - h - 0.03, y1 - 0.03, z - h - 0.03, x + h + 0.03, y1 + 0.02, z + h + 0.03, PALETTE.stone[3], { skip: ['bottom'] });
+  // Wide stacks carry two pots side by side; the pots stand on the cap, round, a dark mouth at the top.
+  const n = pots ?? (w > 0.21 ? 2 : 1);
+  const r = Math.min(0.045, w * 0.24);
+  const xs = n === 2 ? [x - w * 0.24, x + w * 0.24] : [x];
+  for (const px of xs) {
+    m.cylinder('plain', px, y1 + 0.02, z, r * 0.8, r, 0.09, 8, '#a8583a', { smooth: true, caps: false });
+    m.cylinder('plain', px, y1 + 0.1, z, r * 0.95, r * 0.8, 0.02, 8, '#b4643f', { smooth: true, caps: false });
+    m.disc('plain', px, y1 + 0.115, z, r * 0.7, 8, '#120e0b');
+    m.ring('plain', px, y1 + 0.12, z, r * 0.7, r * 0.95, 8, '#9a5034');
+  }
+  return [x, y1 + 0.14, z];
+}
+
+/** The footing a building stands on: rubble, sunk into the ground so it sits on any slope, `out` proud of the walls. */
+export function footing(m, x0, z0, x1, z1, y1, { out = 0.03, depth = 0.35, col = PALETTE.stone[0] } = {}) {
+  m.box('rubble', x0 - out, -depth, z0 - out, x1 + out, y1, z1 + out, col, { skip: ['bottom'] });
+}
+
+/**
+ * Quoins: the dressed blocks at the corners of a stone wall, long and short in
+ * turn up the height, standing a little proud. A rubble or ashlar wall
+ * reads as built, not cast, once its corners are drawn.
+ */
+export function quoins(m, x0, z0, x1, z1, y0, y1, { size = 0.13, proud = 0.012, col = PALETTE.stone[2], corners = [0, 1, 2, 3] } = {}) {
+  const n = Math.max(2, Math.round((y1 - y0) / size));
+  const step = (y1 - y0) / n;
+  const pts = [[x0, z0, -1, -1], [x1, z0, 1, -1], [x1, z1, 1, 1], [x0, z1, -1, 1]];
+  for (const c of corners) {
+    const [x, z, sx, sz] = pts[c];
+    for (let i = 0; i < n; i++) {
+      // Long one way, short the other, and the other way round on the next course.
+      const long = i % 2 === 0, la = long ? size * 1.5 : size * 0.85, lb = long ? size * 0.85 : size * 1.5;
+      const ax = sx < 0 ? [x - proud, x + la] : [x - la, x + proud];
+      const az = sz < 0 ? [z - proud, z + lb] : [z - lb, z + proud];
+      const ya = y0 + i * step + 0.004, yb = y0 + (i + 1) * step - 0.004;
+      m.box('stone', ax[0], ya, az[0], ax[1], yb, az[1], col, { skip: ['bottom'] });
+    }
+  }
 }
 
 /** A run of post-and-rail fence between two points. A run that starts where another ended leaves out its first post (`first: false`), as two posts in one place fight. */

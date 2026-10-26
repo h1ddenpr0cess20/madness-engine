@@ -1,4 +1,4 @@
-import { PALETTE, barrel, chimney, crate, doorOn, faces, fenceRun, halfTimber, logPile, panel, pickFrom, sack, sign, windowOn } from './common.js';
+import { PALETTE, barrel, chimney, crate, doorOn, faces, fenceRun, halfTimber, logPile, panel, pickFrom, quoins, sack, sign, windowOn } from './common.js';
 
 /**
  * The people's own buildings: cottages, houses and townhouses on the housing
@@ -30,7 +30,7 @@ function path(m, x, z0, z1) {
 /** The standard small house: walls, timber, roof, chimney, door and windows. All four faces are done. */
 function body(m, rnd, v, o) {
   const { x0, x1, z0, z1, h0, h1, wall, roof, roofMat, ridgeH, over = 0.13, gableAxis = 'x', doorU, doorCol, shutters = null, floors = 1, upper = null } = o;
-  m.box('stone', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, h0, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
+  m.box('rubble', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, h0, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
   m.box('plaster', x0, h0, z0, x1, h1, z1, wall, { skip: ['bottom', 'top'] });
   const F = faces(x0, z0, x1, z1, h0, h1);
   const cols = Math.max(2, Math.round((x1 - x0) / 0.42));
@@ -77,7 +77,7 @@ export function house(m, v) {
   const roof = rnd() < 0.15 ? pickFrom(rnd, PALETTE.slate) : pickFrom(rnd, PALETTE.tile);
   const left = rnd() < 0.5;
   // Ground floor, then the upper floor jettied a hand out in front.
-  m.box('stone', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.1, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
+  m.box('rubble', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.1, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
   const g = faces(x0, z0, x1, z1, 0.1, 0.62);
   m.box('plaster', x0, 0.1, z0, x1, 0.62, z1, wall, { skip: ['bottom', 'top'] });
   for (const n of ['front', 'back']) halfTimber(m, g[n], { cols: 4, rails: [0, 0.52], rnd, capped: false });
@@ -119,7 +119,8 @@ export function townhouse(m, v) {
   const roof = pickFrom(rnd, [...PALETTE.tile, ...PALETTE.slate]);
   const shut = pickFrom(rnd, PALETTE.shutter);
   // A stone ground floor, with a shop's wide door.
-  m.box('stone', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.62, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
+  m.box('rubble', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.62, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
+  quoins(m, x0 - 0.03, z0 - 0.03, x1 + 0.03, z1 + 0.03, 0, 0.58);
   const G = faces(x0 - 0.03, z0 - 0.03, x1 + 0.03, z1 + 0.03, 0.0, 0.62);
   doorOn(m, G.front, 1.66 * 0.36, 0.3, 0.46, pickFrom(rnd, PALETTE.door));
   windowOn(m, G.front, 1.66 * 0.74, 0.18, 0.32, 0.26, { shutters: shut });
@@ -202,7 +203,7 @@ export function shop(m, v) {
   panel(m, 'glass', F.front, 0.75, 0.2, 1.3, 0.46, 0.047, PALETTE.glass);
   panel(m, 'glow', F.front, 0.76, 0.21, 1.29, 0.45, 0.052, PALETTE.warm);
   awning(m, x0 + 0.62, x0 + 1.4, z1 + 0.02, z1 + 0.34, 0.54, pickFrom(rnd, ['#b32a2a', '#2a4a9a', '#2a7a4a']), '#efe4cc');
-  sign(m, F.front, 1.05, 0.64);
+  sign(m, F.front, 0.14, 0.6);
   const top = chimney(m, 0.55, -0.3, 0.55, 1.35);
   crate(m, 0.7, 0.09, 0.62, 0.13);
   barrel(m, -0.92, 0.09, 0.3);
@@ -217,7 +218,8 @@ export function merchant(m, v) {
   const wall = pickFrom(rnd, PALETTE.plaster);
   const x0 = -0.82, x1 = 0.82, z0 = -0.86, z1 = 0.4;
   const roof = pickFrom(rnd, PALETTE.slate);
-  m.box('stone', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.6, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
+  m.box('rubble', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.6, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
+  quoins(m, x0 - 0.03, z0 - 0.03, x1 + 0.03, z1 + 0.03, 0, 0.56);
   const G = faces(x0 - 0.03, z0 - 0.03, x1 + 0.03, z1 + 0.03, 0, 0.6);
   // A wide arched loading door, and a small door beside it.
   panel(m, 'wood', G.front, 0.34, 0, 0.98, 0.46, 0.012, '#4a3220');

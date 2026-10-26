@@ -14,7 +14,7 @@ export function gabled(m, rnd, o) {
     over = 0.12, axis = 'x', frame = wallMat === 'plaster', base = true, baseCol = pickFrom(rnd, PALETTE.stone), doors = [], windows = [], gableMat = wallMat, cols = null,
     stilts = 0,
   } = o;
-  if (base) m.box('stone', x0 - 0.03, -0.35 + stilts, z0 - 0.03, x1 + 0.03, h0, z1 + 0.03, baseCol, { skip: ['bottom'] });
+  if (base) m.box('rubble', x0 - 0.03, -0.35 + stilts, z0 - 0.03, x1 + 0.03, h0, z1 + 0.03, baseCol, { skip: ['bottom'] });
   m.box(wallMat, x0, h0, z0, x1, h1, z1, wall, { skip: ['bottom', 'top'] });
   const F = faces(x0, z0, x1, z1, h0, h1);
   if (frame) {

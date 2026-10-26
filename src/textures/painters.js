@@ -669,6 +669,102 @@ export function stone(GFX) {
   return pair(GFX, 256, paint(false), paint(true));
 }
 
+/**
+ * Ashlar: dressed stone laid in level courses, eight to the tile, each block
+ * its own length and its own tone, the arrises a little worn and the joints
+ * fine. At a town's scale a tile is about a storey, so a wall shows three or
+ * four courses to a storey. The courses tile across and up; with `level`
+ * texture coordinates (see the mesher) they run level round a building.
+ */
+export function ashlar(GFX) {
+  const rnd = random(239);
+  const pit = fractal(241, 16, 3), weather = fractal(251, 3, 3);
+  const courses = 8;
+  // Each course is a run of blocks whose lengths add up to one tile, so it wraps.
+  const rows = Array.from({ length: courses }, () => {
+    const lens = [];
+    let sum = 0;
+    while (sum < 1) { const l = 0.17 + rnd() * 0.2; lens.push(l); sum += l; }
+    const start = rnd();
+    let at = start;
+    return lens.map((l) => { const b = { u0: at, len: l / sum, tone: 0.8 + rnd() * 0.2, dv: rnd() }; at += l / sum; return b; });
+  });
+  const paint = (relief) => (size) => pixels(size, (u, v) => {
+    const r = Math.min(courses - 1, Math.floor(v * courses)), fv = (v * courses) % 1;
+    const row = rows[r];
+    let blk = row[row.length - 1], fu = 0;
+    for (const b of row) { const d = (((u - b.u0) % 1) + 1) % 1; if (d < b.len) { blk = b; fu = d / b.len; break; } }
+    // Distance to the nearest joint, in pixels.
+    const px = Math.min(fu * blk.len, (1 - fu) * blk.len) * size, py = Math.min(fv, 1 - fv) * (size / courses);
+    const e = Math.min(px, py);
+    if (e < 1.1) return grey(Math.round(255 * (relief ? 0.08 : 0.5)));
+    const arris = smoothstep(1.1, 3.6, e);
+    const p = pit(u, v), w = weather(u, v);
+    const k = relief ? 0.35 + arris * 0.4 + p * 0.25 : (blk.tone * (0.9 + p * 0.12) * (0.82 + arris * 0.18)) * (0.92 + w * 0.12) * (1 - (blk.dv - 0.5) * fv * 0.06);
+    return grey(Math.round(255 * Math.min(1, k)));
+  });
+  return pair(GFX, 256, paint(false), paint(true));
+}
+
+/**
+ * Rubble: fieldstone laid roughly in courses, the stones lumpy and of every
+ * size, mortar thick between them. The footings of cottages, a mine's
+ * walling, a smithy, a dovecote, the base of a mill.
+ */
+export function rubble(GFX) {
+  const rnd = random(263);
+  const cx = 7, cy = 9;
+  // A jittered grid of stone middles that wraps, each with its own tone and a warm or cool cast.
+  const cells = Array.from({ length: cx * cy }, () => ({ x: 0.15 + rnd() * 0.7, y: 0.2 + rnd() * 0.6, tone: 0.66 + rnd() * 0.34, cast: rnd() - 0.5 }));
+  const grit = fractal(269, 24, 3), lump = fractal(271, 6, 2);
+  const paint = (relief) => (size) => pixels(size, (u, v) => {
+    const gx = u * cx, gy = v * cy;
+    const ix = Math.floor(gx), iy = Math.floor(gy);
+    let d1 = 9, d2 = 9, best = cells[0];
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const c = cells[(((iy + j) % cy + cy) % cy) * cx + (((ix + i) % cx) + cx) % cx];
+      // The stones are wider than they are tall: distance across counts for less.
+      const dx = (ix + i + c.x - gx) * 0.72, dy = iy + j + c.y - gy;
+      const d = Math.hypot(dx, dy) + (lump(u, v) - 0.5) * 0.12;
+      if (d < d1) { d2 = d1; d1 = d; best = c; } else if (d < d2) d2 = d;
+    }
+    const edge = d2 - d1;
+    const g = grit(u, v);
+    if (edge < 0.07) {
+      const k = relief ? 0.05 + g * 0.1 : 0.58 + g * 0.1;
+      return grey(Math.round(255 * k));
+    }
+    const dome = smoothstep(0.07, 0.3, edge);
+    const k = relief ? 0.25 + dome * 0.55 + g * 0.2 : best.tone * (0.8 + dome * 0.2) * (0.9 + g * 0.14);
+    if (relief) return grey(Math.round(255 * Math.min(1, k)));
+    const t = best.cast * 0.08;
+    return [Math.round(255 * Math.min(1, k * (1 + t))), Math.round(255 * Math.min(1, k)), Math.round(255 * Math.min(1, k * (1 - t)))];
+  });
+  return pair(GFX, 256, paint(false), paint(true));
+}
+
+/**
+ * Bedrock: weathered stone as it lies in the ground, for boulders, outcrops
+ * and the faces of a quarry. Grain at two sizes, pitting, faint bedding that
+ * runs across, and here and there a hairline crack that only darkens the
+ * stone a little. Nothing in it is sharp enough to read as a vein.
+ */
+export function bedrock(GFX) {
+  const big = fractal(281, 3, 4), grain = fractal(283, 12, 3), fine = fractal(293, 40, 2), warp = fractal(307, 4, 2), crack = fractal(311, 5, 3);
+  const paint = (relief) => (size) => pixels(size, (u, v) => {
+    const w = warp(u, v);
+    const bed = 0.5 + 0.5 * Math.sin((v * 7 + w * 1.6) * Math.PI * 2);
+    const c = Math.abs(crack(u, v) - 0.5) * 2;
+    const line = smoothstep(0.035, 0.0, c);
+    const g = grain(u, v), f = fine(u, v), b = big(u, v);
+    const k = relief
+      ? 0.35 + g * 0.35 + f * 0.2 + bed * 0.08 - line * 0.25
+      : (0.74 + (b - 0.5) * 0.22 + (g - 0.5) * 0.16 + (f - 0.5) * 0.1 + (bed - 0.5) * 0.05) * (1 - line * 0.16);
+    return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
+  });
+  return pair(GFX, 256, paint(false), paint(true));
+}
+
 /** Striped wallpaper over dark wainscot, a dado rail between: hotel corridors and palazzo halls. */
 export function wallpaper(GFX) {
   const n = fractal(229, 6, 2);
