@@ -13,8 +13,17 @@ import { linearRGB } from './color.js';
 
 /** How many texture repeats a world unit is, by material: the bigger the number, the finer the weave. */
 export const UV_SCALE = Object.freeze({
-  plaster: 0.7, stone: 0.85, timber: 1, wood: 0.9, thatch: 1.1, tile: 1.25, slate: 1.25, metal: 1, dirt: 0.7, cloth: 1, brick: 0.9, bark: 1, hedge: 1.2,
+  plaster: 0.7, stone: 1.05, rubble: 1.35, rock: 0.9, timber: 1, wood: 0.9, siding: 1, thatch: 1.1, tile: 1.25, slate: 1.25, metal: 1, dirt: 0.7, cloth: 1, brick: 0.9, bark: 1, hedge: 1.2,
 });
+
+/**
+ * The materials laid in courses (dressed stone, rubble, brick, boards). On an
+ * upright face their texture is set by height, not by the face's own corner,
+ * so the courses run level from one wall round the corner to the next, and
+ * round a tower; elsewhere a face's texture starts at a random place, so that
+ * no two walls repeat.
+ */
+export const LEVEL = new Set(['stone', 'rubble', 'brick', 'siding']);
 
 const colorCache = new Map();
 /** A colour as the linear RGB the vertex colours are in, from a hex string or an [r, g, b] already linear. */
@@ -126,6 +135,16 @@ export class Mesher {
     const A = this.tp(a), B = this.tp(b), D = this.tp(d);
     // One set of texture coordinates for the whole quad, from its own edges.
     let uv = o.uv;
+    if (!uv) {
+      const s = o.uvScale ?? UV_SCALE[mat] ?? 1;
+      const n = norm(cross(sub(B, A), sub(D, A)));
+      if (LEVEL.has(mat) && Math.abs(n[1]) < 0.35) {
+        // Across the face from its own corner; up it by height in the model.
+        const h = norm([-n[2], 0, n[0]]);
+        const ox = hash(A[0], A[1], A[2]);
+        uv = [a, b, c, d].map((P) => { const W = this.tp(P); return [((W[0] - A[0]) * h[0] + (W[2] - A[2]) * h[2]) * s + ox * 4, W[1] * s]; });
+      }
+    }
     if (!uv) {
       const s = o.uvScale ?? UV_SCALE[mat] ?? 1;
       const n = norm(cross(sub(B, A), sub(D, A)));
@@ -275,10 +294,13 @@ export class Mesher {
       const am = (a0 + a1) / 2;
       const nm = nrm(am);
       const normalsAt = smooth ? [nrm(a1), nrm(a0)] : [nm, nm];
-      // Wound so the outside faces out.
+      // Wound so the outside faces out. A coursed material wraps round without a seam at each side, its courses level.
       if (rTop > 1e-6) {
+        const s = o.uvScale ?? UV_SCALE[mat] ?? 1;
+        const arc = (a, r) => -a * r * s;
+        const uv = LEVEL.has(mat) && !o.uv ? [[arc(a1, rBot), y0 * s], [arc(a0, rBot), y0 * s], [arc(a0, rTop), (y0 + h) * s], [arc(a1, rTop), (y0 + h) * s]] : o.uv;
         this.quad(mat, p(a1, rBot, y0), p(a0, rBot, y0), p(a0, rTop, y0 + h), p(a1, rTop, y0 + h), col, {
-          ...o, normals: smooth ? [normalsAt[0], normalsAt[1], normalsAt[1], normalsAt[0]] : undefined,
+          ...o, uv, normals: smooth ? [normalsAt[0], normalsAt[1], normalsAt[1], normalsAt[0]] : undefined,
         });
       } else {
         this.tri(mat, p(a1, rBot, y0), p(a0, rBot, y0), [cx, y0 + h, cz], col, { ...o, normals: smooth ? [normalsAt[0], normalsAt[1], nrm(am)] : undefined });

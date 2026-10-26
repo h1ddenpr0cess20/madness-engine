@@ -110,7 +110,7 @@ export function smallholding(m, v) {
 export function grange(m, v) {
   const { rnd } = v;
   // The house, two storeys, stone below.
-  m.box('stone', -0.95, -0.35, 0.35, 0.95, 0.42, 1.3, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
+  m.box('rubble', -0.95, -0.35, 0.35, 0.95, 0.42, 1.3, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
   gabled(m, rnd, {
     x0: -0.92, x1: 0.92, z0: 0.38, z1: 1.27, h0: 0.42, h1: 0.88, roof: pickFrom(rnd, PALETTE.tile), ridgeH: 0.5, over: 0.13, base: false,
     windows: [{ face: 'front', u: 0.4 }, { face: 'front', u: 0.92 }, { face: 'front', u: 1.45 }, { face: 'left', u: 0.45 }],
@@ -187,7 +187,7 @@ export function guildhall(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, PALETTE.plaster);
   const x0 = -0.92, x1 = 0.92, z0 = -0.7, z1 = 1.15;
-  m.box('stone', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.09, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
+  m.box('rubble', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.09, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
   m.box('plaster', x0, 0.09, z0, x1, 0.6, z1, wall, { skip: ['bottom', 'top'] });
   const G = faces(x0, z0, x1, z1, 0.09, 0.6);
   for (const n of ['front', 'back']) halfTimber(m, G[n], { cols: 4, rails: [0, 0.51], rnd, capped: false });

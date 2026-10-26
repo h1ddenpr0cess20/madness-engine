@@ -59,7 +59,7 @@ function underConstruction(m, v) {
   const big = w * d >= 9;
   const H = big ? 1.5 : 0.95;
   const x0 = -w / 2 + 0.22, x1 = w / 2 - 0.22, z0 = -d / 2 + 0.22, z1 = d / 2 - 0.22;
-  m.box('stone', x0 - 0.05, -0.35, z0 - 0.05, x1 + 0.05, 0.07, z1 + 0.05, PALETTE.stone[1], { skip: ['bottom'] });
+  m.box('rubble', x0 - 0.05, -0.35, z0 - 0.05, x1 + 0.05, 0.07, z1 + 0.05, PALETTE.stone[1], { skip: ['bottom'] });
   // The walls: timber frame first, then filled.
   const wallH = Math.max(0.05, Math.min(progress / 0.7, 1) * H * 0.7);
   m.box('wood', x0, 0.07, z0, x1, 0.07 + wallH, z1, '#a98c62', { skip: ['bottom', 'top'], uvScale: 1.2 });

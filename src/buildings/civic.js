@@ -50,7 +50,7 @@ export function green(m, v) {
 export function tavern(m, v) {
   const { rnd } = v;
   const x0 = -1.25, x1 = 1.25, z0 = -1.25, z1 = 0.7;
-  m.box('stone', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.1, z1 + 0.03, STONE[0], { skip: ['bottom'] });
+  m.box('rubble', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, 0.1, z1 + 0.03, STONE[0], { skip: ['bottom'] });
   m.box('plaster', x0, 0.1, z0, x1, 0.62, z1, pickFrom(rnd, PALETTE.plaster), { skip: ['bottom', 'top'] });
   const G = faces(x0, z0, x1, z1, 0.1, 0.62);
   for (const n of ['front', 'back']) halfTimber(m, G[n], { cols: 6, rails: [0, 0.52], rnd, capped: false });
@@ -99,6 +99,42 @@ function lancet(m, f, u, v, w, h, col) {
   for (const [a, b] of [[u - w / 2 - 0.02, u - w / 2 + 0.005], [u + w / 2 - 0.005, u + w / 2 + 0.02]]) panel(m, 'stone', f, a, v, b, v + h * 0.72, 0.02, STONE[2], { uvScale: 2 });
 }
 
+/** A belfry opening: a pointed arch in a dressed surround, the dark within, and wooden louvres across it to keep the rain off the bell. */
+function belfry(m, f, u, v, w, h) {
+  const spring = v + h * 0.72;
+  panel(m, 'plain', f, u - w / 2, v, u + w / 2, spring, 0.006, '#0d0a08');
+  m.tri('plain', at(f, u - w / 2, spring, 0.006), at(f, u + w / 2, spring, 0.006), at(f, u, v + h, 0.006), '#0d0a08');
+  for (let i = 0; i < 5; i++) {
+    const y = v + 0.03 + i * ((spring - v - 0.04) / 5);
+    m.quad('wood', at(f, u - w / 2, y, 0.004), at(f, u + w / 2, y, 0.004), at(f, u + w / 2, y + 0.04, 0.03), at(f, u - w / 2, y + 0.04, 0.03), '#5a4630');
+  }
+  for (const [a, b] of [[u - w / 2 - 0.035, u - w / 2], [u + w / 2, u + w / 2 + 0.035]]) panel(m, 'stone', f, a, v - 0.02, b, spring, 0.014, STONE[2], { uvScale: 2 });
+  panel(m, 'stone', f, u - w / 2 - 0.05, v - 0.04, u + w / 2 + 0.05, v - 0.005, 0.03, STONE[3], { uvScale: 2 });
+}
+
+/** A buttress against a wall: a pier stepped back once, each stage finished with a sloping weathering. `s` is the side it stands out to along x. */
+function buttress(m, x, z, s, h, { d = 0.11, w = 0.1, col = STONE[2] } = {}) {
+  const wedge = (y0, depth, rise) => {
+    const xo = x + s * depth, z0 = z - w / 2, z1 = z + w / 2;
+    // The sloping top, its two ends, and the face it runs down to.
+    if (s > 0) {
+      m.quad('stone', [xo, y0, z1], [xo, y0, z0], [x, y0 + rise, z0], [x, y0 + rise, z1], col);
+      m.tri('stone', [x, y0, z1], [xo, y0, z1], [x, y0 + rise, z1], col);
+      m.tri('stone', [xo, y0, z0], [x, y0, z0], [x, y0 + rise, z0], col);
+    } else {
+      m.quad('stone', [xo, y0, z0], [xo, y0, z1], [x, y0 + rise, z1], [x, y0 + rise, z0], col);
+      m.tri('stone', [xo, y0, z1], [x, y0, z1], [x, y0 + rise, z1], col);
+      m.tri('stone', [x, y0, z0], [xo, y0, z0], [x, y0 + rise, z0], col);
+    }
+  };
+  const lo = h * 0.5;
+  const bx = (depth, y0, y1) => m.box('stone', s > 0 ? x : x - depth, y0, z - w / 2, s > 0 ? x + depth : x, y1, z + w / 2, col, { skip: ['bottom', 'top', s > 0 ? 'left' : 'right'] });
+  bx(d, 0.1, lo);
+  wedge(lo, d, 0.05);
+  bx(d * 0.6, lo + 0.002, h);
+  wedge(h, d * 0.6, 0.09);
+}
+
 export function chapel(m) {
   // The nave (x half 0.62), the tower at the front, a porch.
   const x0 = -0.62, x1 = 0.62, z0 = -1.75, z1 = 0.35;
@@ -106,11 +142,7 @@ export function chapel(m) {
   m.box('stone', x0, 0.1, z0, x1, 0.95, z1, STONE[0], { skip: ['bottom', 'top'] });
   const F = faces(x0, z0, x1, z1, 0.1, 0.95);
   // Buttresses and windows along both sides.
-  for (const zz of [-1.5, -1.0, -0.5, 0.0]) {
-    for (const s of [-1, 1]) {
-      m.box('stone', s > 0 ? x1 : x0 - 0.1, 0.1, zz - 0.05, s > 0 ? x1 + 0.1 : x0, 0.75, zz + 0.05, STONE[2], { skip: ['bottom'] });
-    }
-  }
+  for (const zz of [-1.5, -1.0, -0.5, 0.0]) for (const s of [-1, 1]) buttress(m, s > 0 ? x1 : x0, zz, s, 0.78);
   for (const u of [0.45, 0.95, 1.45]) { lancet(m, F.right, u, 0.35, 0.16, 0.42, '#ff6a8a'); lancet(m, F.left, u + 0.25, 0.35, 0.16, 0.42, '#6aa8ff'); }
   m.gable('slate', x0, z0, x1, z1, 0.95, 1.6, '#5a626c', { over: 0.1, gable: 'stone', gableColor: STONE[0], axis: 'z', ridge: { mat: 'stone', col: STONE[3] } });
   // The bell tower at the front of the nave.
@@ -121,7 +153,7 @@ export function chapel(m) {
   panel(m, 'stone', T.front, 0.1, 0.5, 0.74, 0.6, 0.03, STONE[3]);
   lancet(m, T.front, 0.42, 0.95, 0.14, 0.4, '#ffcf6a');
   // Louvred belfry openings with the bell glowing within.
-  for (const f of [T.front, T.back, T.left, T.right]) panel(m, 'plain', f, f.w / 2 - 0.1, 1.35, f.w / 2 + 0.1, 1.7, 0.012, '#15110e');
+  for (const f of [T.front, T.back, T.left, T.right]) belfry(m, f, f.w / 2, 1.35, 0.2, 0.38);
   crenellate(m, [tx0, 0, tz1], [tx1, 0, tz1], 1.85, { h: 0.08, w: 0.1, gap: 0.08, t: 0.08 });
   crenellate(m, [tx0, 0, tz0], [tx1, 0, tz0], 1.85, { h: 0.08, w: 0.1, gap: 0.08, t: 0.08 });
   m.cylinder('slate', 0, 1.85, 0.41, 0.0, 0.5, 0.95, 4, '#4f5760', { rot: Math.PI / 4, smooth: false, caps: false });

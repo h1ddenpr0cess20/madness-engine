@@ -16,7 +16,7 @@ const SLATE = '#59626c';
 function roundTower(m, x, z, r, h, { roof = null, roofH = 0.9, crenel = true, col = STONE[0], banner = null } = {}) {
   m.cylinder('stone', x, -1.3, z, r * 1.08, r * 1.2, 1.3 + 0.25, 14, STONE[3], { smooth: true, bottom: false });
   m.cylinder('stone', x, 0.25, z, r, r * 1.04, h - 0.25, 14, col, { smooth: true, bottom: false });
-  m.cylinder('stone', x, h - 0.12, z, r * 1.14, r * 1.1, 0.14, 14, STONE[2], { smooth: true, capMat: 'plain' });
+  m.cylinder('stone', x, h - 0.12, z, r * 1.14, r * 1.1, 0.14, 14, STONE[2], { smooth: true, capMat: 'plain', capCol: '#7f796e' });
   if (roof) {
     m.cylinder('slate', x, h, z, 0.02, r * 1.2, roofH, 14, roof, { smooth: true, caps: false });
     m.sphere('metal', x, h + roofH + 0.03, z, 0.04, 0.04, 0.04, '#d4b24a', { detail: 0 });

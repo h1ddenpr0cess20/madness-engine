@@ -32,9 +32,11 @@ function sails() {
 export function mill(m, v) {
   const { rnd } = v;
   const tower = '#eee6d6';
-  m.cylinder('stone', 0, -0.35, -0.2, 0.84, 0.88, 0.66, 10, PALETTE.stone[1], { smooth: true, bottom: false });
-  m.cylinder('plaster', 0, 0.3, -0.2, 0.52, 0.76, 1.85, 10, tower, { smooth: true, bottom: false });
-  m.cylinder('timber', 0, 0.28, -0.2, 0.78, 0.78, 0.05, 10, PALETTE.timber, { smooth: true, caps: false });
+  // A smock mill: eight boarded sides painted white, on an eight-sided rubble base. A face of each looks to the front.
+  const rot = Math.PI / 2 - Math.PI / 8;
+  m.cylinder('rubble', 0, -0.35, -0.2, 0.84, 0.88, 0.66, 8, PALETTE.stone[1], { smooth: false, bottom: false, rot });
+  m.cylinder('siding', 0, 0.3, -0.2, 0.52, 0.76, 1.85, 8, tower, { smooth: false, bottom: false, rot });
+  m.cylinder('timber', 0, 0.28, -0.2, 0.78, 0.78, 0.05, 8, PALETTE.timber, { smooth: false, caps: false, rot });
   m.cylinder('wood', 0, 2.05, -0.2, 0.54, 0.54, 0.07, 10, PALETTE.wood[1], { smooth: true });
   // The cap, and the hood the axle comes out of.
   m.cylinder('thatch', 0, 2.1, -0.2, 0.01, 0.62, 0.62, 10, pickFrom(rnd, PALETTE.thatch), { smooth: true, caps: false });
@@ -43,10 +45,11 @@ export function mill(m, v) {
   m.sphere('wood', 0, 2.25, 0.64, 0.07, 0.07, 0.07, '#3a2a1a', { detail: 1 });
   // A door in the foot and windows up the tower.
   m.box('wood', -0.17, 0.0, 0.54, 0.17, 0.52, 0.6, '#4a3220', { skip: ['bottom', 'back'] });
-  m.cylinder('stone', 0, 0.38, 0.56, 0.17, 0.2, 0.1, 10, PALETTE.stone[0], { caps: true, rot: 0 });
-  for (const [y, k] of [[1.0, 0.64], [1.55, 0.58]]) {
+  // The windows sit on the faces either side of the front, the tower's batter taken off how far out they stand.
+  const apothem = (y) => (0.76 - 0.24 * (y - 0.3) / 1.85) * Math.cos(Math.PI / 8);
+  for (const y of [1.0, 1.55]) {
     for (const s of [-1, 1]) {
-      const a = s * 0.9;
+      const a = s * Math.PI / 4, k = apothem(y + 0.085) + 0.004;
       const x = Math.sin(a) * k, z = -0.2 + Math.cos(a) * k;
       m.at(x, y, z, () => {
         m.box('glass', -0.07, 0, -0.01, 0.07, 0.17, 0.02, '#27384a', { skip: ['bottom'] });
