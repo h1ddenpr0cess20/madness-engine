@@ -1167,6 +1167,34 @@ const PEOPLE_VERSIONS = {"humanoid": [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 
 /** Hats whose brims were cones standing up off the head, or that floated over it: each change as the text it replaces and the text it becomes. */
 const HATS = {
+  'wizard.js': [
+    [`      // The hat: a wide brim and a tall crooked cone, a gold star on the front.
+      s.torus([0, 0.71, 0.0], 0.14, 0.012, { color: '#3a2a8a', mat: 'cloth', bone: 'head', k: 0.006 });
+      s.cone([0.025, 0.97, -0.035], 0.1, 0.24, { color: '#3a2a8a', mat: 'cloth', bone: 'head', k: 0.01, rot: [-0.15, 0, -0.1] });
+      s.sphere([0, 0.76, 0.1], 0.012, { color: '#f0c840', mat: 'metal', bone: 'head', k: 0.002 });
+`,
+      `      // The hat: a wide soft brim down to the brows, its edge rolled; a crown as wide as the head, rising and
+      // tapering, then bending back and over at the top where it has given up; a gold band, and gold stars.
+      const HAT = { color: cloth('#3a2a8a', '#22185a'), mat: 'cloth', bone: 'head' }, GOLD = { color: '#ffd84a', mat: 'plastic', bone: 'head' };
+      s.cylinder([0, 0.738, 0.004], 0.168, 0.0048, { ...HAT, k: 0.006, round: 0.0045, rot: [0.1, 0, 0] });
+      s.torus([0, 0.738, 0.004], 0.166, 0.0058, { ...HAT, k: 0.003, rot: [0.1, 0, 0] });
+      const crown = [[0, 0.73, -0.004], [0, 0.81, -0.01], [0.006, 0.89, -0.022], [0.02, 0.955, -0.045], [0.045, 0.993, -0.085], [0.077, 0.99, -0.126], [0.102, 0.962, -0.152]];
+      const thick = [0.092, 0.074, 0.055, 0.038, 0.025, 0.015, 0.0065];
+      for (let i = 0; i < crown.length - 1; i++) s.limb(crown[i], crown[i + 1], thick[i], thick[i + 1], { ...HAT, k: 0.006 });
+      s.torus([0, 0.758, -0.005], 0.088, 0.0085, { ...GOLD, k: 0.003, rot: [0.04, 0, 0] });
+      // A five-pointed star on the front of the crown, and a smaller one higher up the side.
+      const star = (c, n, r) => {
+        const up = [0, 1, 0], side = [n[2], 0, -n[0]];
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          const d = [0, 1, 2].map((j) => up[j] * Math.cos(a) + side[j] * Math.sin(a));
+          s.flake(c, c.map((v, j) => v + d[j] * r), n, r * 0.36, r * 0.07, 0.4, { ...GOLD, k: 0.002 });
+        }
+      };
+      star([0, 0.815, 0.083], [0, 0.15, 1], 0.026);
+      star([0.05, 0.89, 0.016], [0.85, 0.2, 0.5], 0.016);
+`],
+  ],
   'raver.js': [
     [`      s.cone([0, 0.76, -0.005], 0.15, 0.06, { color: '#a8ff3a', mat: 'cloth', bone: 'head', k: 0.008 });
       s.ellipsoid([0, 0.66, 0.05], [0.13, 0.06, 0.1], { op: 'sub', k: 0.01 });
@@ -1370,8 +1398,8 @@ export const EDITS = [
     },
   },
   {
-    at: /^characters\/(raver|superfan|metalwear)\.js$/,
-    why: 'Hats: the raver\'s and the superfan\'s bucket hats had brims that were solid cones, standing up off the head like lampshades and tearing at the edge; they are flat brims, tilted a little forward. The top hat that Metroll\'s pallbearer wears floated above the head on its brim: it sits on the head, its brim a flat disc and its band on the crown.',
+    at: /^characters\/(raver|superfan|metalwear|wizard)\.js$/,
+    why: 'Hats: the raver\'s and the superfan\'s bucket hats had brims that were solid cones, standing up off the head like lampshades and tearing at the edge; they are flat brims, tilted a little forward. The top hat that Metroll\'s pallbearer wears floated above the head on its brim: it sits on the head, its brim a flat disc and its band on the crown. The wizard\'s hat was a hoop floating round the forehead under a stiff cone: it has a soft brim with a rolled edge down to the brows, a crown as wide as the head that tapers and flops over at the top, a gold band and gold stars.',
     edit(text, where) {
       const name = placeOf(where).split('/').pop();
       for (const [was, now] of HATS[name]) text = swap(text, was, now, where);

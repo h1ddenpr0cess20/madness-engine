@@ -38,10 +38,26 @@ export default person({
     robe(s, { color: '#3a2a8a', trim: '#f0c840', flare: 1.1 });
     beard(s, { color: '#e8e8ee', long: 1.4 });
     s.part('kit', () => {
-      // The hat: a wide brim and a tall crooked cone, a gold star on the front.
-      s.torus([0, 0.71, 0.0], 0.14, 0.012, { color: '#3a2a8a', mat: 'cloth', bone: 'head', k: 0.006 });
-      s.cone([0.025, 0.97, -0.035], 0.1, 0.24, { color: '#3a2a8a', mat: 'cloth', bone: 'head', k: 0.01, rot: [-0.15, 0, -0.1] });
-      s.sphere([0, 0.76, 0.1], 0.012, { color: '#f0c840', mat: 'metal', bone: 'head', k: 0.002 });
+      // The hat: a wide soft brim down to the brows, its edge rolled; a crown as wide as the head, rising and
+      // tapering, then bending back and over at the top where it has given up; a gold band, and gold stars.
+      const HAT = { color: cloth('#3a2a8a', '#22185a'), mat: 'cloth', bone: 'head' }, GOLD = { color: '#ffd84a', mat: 'plastic', bone: 'head' };
+      s.cylinder([0, 0.738, 0.004], 0.168, 0.0048, { ...HAT, k: 0.006, round: 0.0045, rot: [0.1, 0, 0] });
+      s.torus([0, 0.738, 0.004], 0.166, 0.0058, { ...HAT, k: 0.003, rot: [0.1, 0, 0] });
+      const crown = [[0, 0.73, -0.004], [0, 0.81, -0.01], [0.006, 0.89, -0.022], [0.02, 0.955, -0.045], [0.045, 0.993, -0.085], [0.077, 0.99, -0.126], [0.102, 0.962, -0.152]];
+      const thick = [0.092, 0.074, 0.055, 0.038, 0.025, 0.015, 0.0065];
+      for (let i = 0; i < crown.length - 1; i++) s.limb(crown[i], crown[i + 1], thick[i], thick[i + 1], { ...HAT, k: 0.006 });
+      s.torus([0, 0.758, -0.005], 0.088, 0.0085, { ...GOLD, k: 0.003, rot: [0.04, 0, 0] });
+      // A five-pointed star on the front of the crown, and a smaller one higher up the side.
+      const star = (c, n, r) => {
+        const up = [0, 1, 0], side = [n[2], 0, -n[0]];
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          const d = [0, 1, 2].map((j) => up[j] * Math.cos(a) + side[j] * Math.sin(a));
+          s.flake(c, c.map((v, j) => v + d[j] * r), n, r * 0.36, r * 0.07, 0.4, { ...GOLD, k: 0.002 });
+        }
+      };
+      star([0, 0.815, 0.083], [0, 0.15, 1], 0.026);
+      star([0.05, 0.89, 0.016], [0.85, 0.2, 0.5], 0.016);
       // The staff: a gnarled shaft and a glowing blue stone in a claw at the top.
       // Planted upright by the posed right fist, on the chest so it stands straight.
       const x = -0.152, z = 0.13;
