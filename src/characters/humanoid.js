@@ -207,7 +207,7 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
     s.part('pupils', () => s.ellipsoid(at(0.0135), [0.0062, 0.0085, 0.0032], { color: '#08080c', mat: 'eye', bone: 'head', k: 0, rot }));
     // A catch-light.
     const hl = at(0.016).map((v, i) => v + [m * -0.003, 0.006, 0][i]);
-    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - 0.0032, '#ffffff', 0.0012);
+    s.part('highlights', () => s.sphere(hl, 0.0032, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 }));
     eyes.push(c);
     // Brows: a firm stroke of hair over each eye.
     s.part('brows', () => s.flake([m * 0.066, 0.702 - mood * 0.005, 0.088], [m * 0.019, 0.706 + mood * 0.008, 0.106], [0, 1, 0.45], 0.0085, 0.0065, 0.6, { color: brow, mat: 'hair', bone: 'head', k: 0.003 }));
