@@ -47,12 +47,33 @@ const town = [
 const room = (from, fn, as) => ({ from, fn, kind: 'textures', to: 'rooms', as, name: 'paintRoom' });
 const sky = (from, fn, as) => ({ from, fn, kind: 'textures', to: 'skies', as, name: 'paintSky' });
 
-const rocker = [
+/**
+ * What the sets are dressed with: the band's kit, the bars and the
+ * furniture (every game), the pictures' props (from Rock 'n' Roller II on),
+ * and the sights of the tour (from Rock 'n' Roller III on).
+ */
+const DECOR = ['decor.js', 'furniture.js'];
+const DRESSED = [...DECOR, 'dressing.js'];
+const TOURED = [...DRESSED, 'sights.js'];
+
+/**
+ * The machinery of the sets the library takes, one function at a time (the
+ * rest of machinery.js is the game's): the bumpers, in each set's look, and
+ * the pyro and steam that go up on the beat.
+ */
+const machinery = [
+  { from: 'src/machinery.js', fn: 'createBumperMesh', kind: 'scenery', as: 'bumper.js', name: 'createBumperMesh' },
+  { from: 'src/machinery.js', fn: 'createPyroMesh', kind: 'scenery', as: 'pyro.js', name: 'createPyroMesh' },
+];
+
+const rocker = (decor, extra = []) => [
   ...sculpted,
   room('src/stage.js', 'paintRoom', 'venue.js'),
   sky('src/stage.js', 'paintBackdrop', 'skyline.js'),
   { from: 'src', kind: 'heroes', only: ['rock.js', 'boulder.js'] },
-  { from: 'src', kind: 'scenery', only: ['lightshow.js'] },
+  { from: 'src', kind: 'scenery', only: ['lightshow.js', ...decor] },
+  ...machinery,
+  ...extra,
   { from: 'src', kind: 'textures', only: ['textures.js'], as: 'venue.js' },
   { from: 'src', kind: 'music', only: ['music.js'], as: 'band.js' },
 ];
@@ -60,6 +81,8 @@ const rocker = [
 export const SOURCES = {
   madness: [
     { from: 'src', kind: 'heroes', only: ['marble.js'] },
+    // The course as it is drawn: the glossy bevelled tiles, the walls into the dark, the goal gate.
+    { from: 'src', kind: 'scenery', only: ['scenery.js'], as: 'course.js' },
     room('src/stage.js', 'paintStudio', 'studio.js'),
     sky('src/stage.js', 'paintBackdrop', 'haze.js'),
   ],
@@ -82,13 +105,16 @@ export const SOURCES = {
     room('src/stage.js', 'paintRoom', 'house.js'),
     sky('src/stage.js', 'paintBackdrop', 'night.js'),
   ],
-  rocknroller: rocker,
-  'rocknroller-ii': rocker,
-  'rocknroller-iii': rocker,
+  rocknroller: rocker(DECOR),
+  'rocknroller-ii': rocker(DRESSED),
+  // The tour's own bumpers, drops, bursts and rides, which the machinery's bumpers draw on.
+  'rocknroller-iii': rocker(TOURED, [{ from: 'src', kind: 'scenery', only: ['travel.js'] }]),
   metroll: [
     ...sculpted,
     { from: 'src', kind: 'heroes', only: ['mace.js', 'morningstar.js', 'boulder.js'] },
-    { from: 'src', kind: 'scenery', only: ['lightshow.js'] },
+    { from: 'src', kind: 'scenery', only: ['lightshow.js', ...TOURED] },
+    ...machinery,
+    { from: 'src/travel', kind: 'scenery', to: 'travel' },
     { from: 'src', kind: 'textures', only: ['textures.js'], as: 'venue.js' },
     { from: 'src', kind: 'music', only: ['music.js'], as: 'band.js' },
     room('src/stage.js', 'paintRoom', 'venue.js'),

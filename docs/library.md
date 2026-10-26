@@ -235,13 +235,27 @@ The world round the ball: the town's street furniture and vehicles (`bakeData` i
 
 | Path | Versions (games) | What it is |
 |---|---|---|
+| `scenery/bumper` | `bumper` (metroll)<br>`bumper.rocknroller-ii` (rocknroller-ii)<br>`bumper.rocknroller-iii` (rocknroller-iii)<br>`bumper.rocknroller` (rocknroller) | A bumper, by its `look`: 'post' (a chrome post with a lit ring), 'rope' (a brass stanchion of a velvet rope, the rope looped round it), 'podium' (a dancer's lit cube), 'drum' (a kick drum on its si… |
 | `scenery/civic` | `civic` (metrlol) | The machinery of the city, sculpted (same conventions as `street.js`): the charging posts on the Brussels forecourt, the rubber stamps of the stamping hall (their gantry standing still, the stamp i… |
+| `scenery/course` | `course` (madness) | The course as it is drawn: bevelled glossy tiles, walls that fall away into the dark, a gate over the goal. |
+| `scenery/decor` | `decor` (metroll)<br>`decor.rocknroller-ii` (rocknroller-ii)<br>`decor.rocknroller-iii` (rocknroller-iii)<br>`decor.rocknroller` (rocknroller) | What the venues are furnished with. |
 | `scenery/discourse` | `discourse` (metrlol) | What there is to find in the discourse, sculpted the same way as the rest (see `street.js`): the whetstone stand (Metroll's whetstone on a bench, where the spikes get sharpened back and the ball is… |
+| `scenery/dressing` | `dressing` (metroll)<br>`dressing.rocknroller-ii` (rocknroller-ii)<br>`dressing.rocknroller-iii` (rocknroller-iii) | Set dressing: the everyday furniture of the tour (see decor.js, which these join, and sights.js for the furniture of the places themselves): the folding chair, the chest, the water cooler, the buff… |
 | `scenery/dungeon` | `dungeon` (dungeon-roller) | The dungeon as it is drawn: flagstone floors, brick walls falling away into the dark, the lava (lava.js), torches with live flames, and the stairs down — a ring of runes on the floor under a stone … |
+| `scenery/furniture` | `furniture` (metroll)<br>`furniture.rocknroller-ii` (rocknroller-ii)<br>`furniture.rocknroller-iii` (rocknroller-iii)<br>`furniture.rocknroller` (rocknroller) | More of what venues are furnished with (see decor.js, which these join): a mixing desk and a rack of gear, an arena's seats, pianos grand and upright, hay bales, portable loos and tents. |
 | `scenery/lightshow` | `lightshow` (metroll)<br>`lightshow.rocknroller-ii` (rocknroller-ii)<br>`lightshow.rocknroller-iii` (rocknroller-iii)<br>`lightshow.rocknroller` (rocknroller) | The light show. |
 | `scenery/odds` | `odds` (petroll) | Odds and ends for the jobs and for knocking flying: lawn flamingos, yard signs, crates, survey flags, and the things a job has the hamster carry (a jar of pickled eggs, dynamite, a film reel). |
 | `scenery/oil` | `oil` (petroll) | The gas station's and the oil field's machinery, sculpted: the pumps and the air pump, the pumpjack (its frame standing still, its walking beam and horsehead nodding), oil drums, a wellhead, a flar… |
+| `scenery/pyro` | `pyro` (metroll)<br>`pyro.rocknroller-ii` (rocknroller-ii)<br>`pyro.rocknroller-iii` (rocknroller-iii)<br>`pyro.rocknroller` (rocknroller) | Pyro: a grating in the floor with a pilot light in it; on the beat it bursts into a column of flame. |
+| `scenery/sights` | `sights` (metroll)<br>`sights.rocknroller-iii` (rocknroller-iii) | The furniture of the places on the compilation (see decor.js, which these join): the anvils, furnaces and oil drums of Birmingham's foundry; the pink limousines, hot tubs and motorbikes of the Suns… |
 | `scenery/street` | `street` (petroll)<br>`street.metrlol` (metrlol) | The furniture of the streets and yards, sculpted. |
+| `scenery/travel` | `travel` (rocknroller-iii) | The machinery of the world tour, as it is drawn, joining machinery.js's: what comes down on the beat at each stop, what Rock rides across the gaps, what he bounces off, and what bursts out of the f… |
+| `scenery/travel/bumpers` | `bumpers` (metroll) | What Metroll bounces off (a bumper's `look`), each `radius` wide at its foot, a ring of light round it that flashes when it throws Metroll back: a red oil drum, a stage monitor wedge, a palm in a t… |
+| `scenery/travel/bursts` | `bursts` (metroll) | What bursts out of the floor (`look.pyro`) beyond flame and steam: its colours, and whether it billows (as steam does) rather than licks up. |
+| `scenery/travel/common` | `common` (metroll) | What the machinery of the tracks is built from: the materials, a row of something along a drop, the chains it hangs from, and a hull for the boats Metroll rides across the gaps. |
+| `scenery/travel/drops` | `drops` (metroll) | What comes down on the beat at each track (`look.crusher`), each built `w` by `d` and `height` tall round its middle, swaying a little as it waits at the top: Birmingham's anvils, the Strip's cans … |
+| `scenery/travel/index` | `index` (metroll) | The machinery of the tracks, as it is drawn, joining machinery.js's: what comes down on the beat (drops.js), what Metroll rides across the gaps (rides.js), what it bounces off (bumpers.js) and what… |
+| `scenery/travel/rides` | `rides` (metroll) | What Metroll rides across the gaps (`look.lift`), `w` by `d` with the deck on top, bobbing on its way: a narrowboat on the Birmingham canal, a pink limousine on the Strip, a hearse in Whitby, a sub… |
 | `scenery/vehicles` | `vehicles` (petroll)<br>`vehicles.metrlol` (metrlol) | The traffic, sculpted: a sedan, a hatchback, a pickup, a box truck, a tanker, and a rusted-out junker for the yard. |
 
 ## textures
