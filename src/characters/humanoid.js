@@ -1,4 +1,4 @@
-import { rgb } from '../models/sdf.js';
+import { noise, rgb, rotation } from '../models/sdf.js';
 import { coat, mix } from '../models/skins.js';
 
 /**
@@ -87,6 +87,30 @@ export function joints(b = 1) {
   return J;
 }
 
+/** A colour (or a colour function) darkened, for a sole that wasn't given one. */
+const darker = (color) => (typeof color === 'function' ? (p, n) => color(p, n).map((v) => v * 0.42) : rgb(color).map((v) => v * 0.42));
+
+/** A slab of sole: flat top and bottom, straight sides round an oval of radii `r`[0] by `r`[2], `r`[1] either side of `c` up and down, its edges rounded. */
+function sole(s, c, r, o) {
+  const round = 0.0028;
+  s.shape((p) => {
+    const across = (Math.hypot((p[0] - c[0]) / r[0], (p[2] - c[2]) / r[2]) - 1) * Math.min(r[0], r[2]) + round;
+    const up = Math.abs(p[1] - c[1]) - r[1] + round;
+    return Math.hypot(Math.max(across, 0), Math.max(up, 0)) + Math.min(Math.max(across, up), 0) - round;
+  }, [[c[0] - r[0], c[1] - r[1], c[2] - r[2]], [c[0] + r[0], c[1] + r[1], c[2] + r[2]]], { ...o, k: 0.003 });
+}
+
+/** A bare foot at the ankle `a` on side `m`: the heel, the instep, the ball and five toes, the big one inside; flat on the floor. */
+function bareFoot(s, a, m, o) {
+  s.ellipsoid([a[0], 0.024, a[2] - 0.004], [0.022, 0.024, 0.026], { ...o, k: 0.016 });
+  s.ellipsoid([a[0] + m * 0.002, 0.022, a[2] + 0.03], [0.025, 0.02, 0.04], { ...o, k: 0.016 });
+  s.ellipsoid([a[0] + m * 0.002, 0.014, a[2] + 0.06], [0.029, 0.013, 0.02], { ...o, k: 0.012 });
+  [[-0.018, 0.0088, 0.088], [-0.005, 0.0068, 0.086], [0.0055, 0.0062, 0.083], [0.0155, 0.0057, 0.078], [0.024, 0.0052, 0.071]].forEach(([x, r, z]) => {
+    s.limb([a[0] + m * x, r + 0.001, a[2] + z - 0.012], [a[0] + m * x, r + 0.001, a[2] + z], r, r * 0.95, { ...o, k: 0.004 });
+  });
+  s.box([0, 1, 0], [2, 1, 2], 0, { op: 'inter', k: 0.002 });
+}
+
 /** Skin: warm, rosier where it faces forward and down a little. */
 export function skinTone(hex = '#e9b48f') {
   const base = coat({ over: hex, under: hex, vary: 0.06, freq: 14, grain: 0.03 });
@@ -127,24 +151,47 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
     s.sphere([mm * 0.098 * b, 0.494, 0], 0.039, { color: c('sleeve'), mat: m('sleeve'), bone: `arm${S}`, k: 0.035 });
     // Arms: the upper arm a little thicker at the shoulder, the forearm at the elbow.
     s.limb(J[`shoulder${S}`], J[`elbow${S}`], 0.034, 0.027, { color: c('sleeve'), mat: m('sleeve'), bone: `arm${S}`, k: 0.012 });
-    s.limb(J[`elbow${S}`], J[`wrist${S}`], 0.028, 0.02, { color: c('cuff'), mat: m('cuff'), bone: `fore${S}`, k: 0.012 });
-    // A hand: a fist, knuckles forward, with a thumb over it.
+    // A bare forearm goes with the hand, so there is no seam at the wrist.
+    s.part(m('cuff') === 'skin' && m('hand') === 'skin' ? 'hands' : s.current, () => s.limb(J[`elbow${S}`], J[`wrist${S}`], 0.028, 0.02, { color: c('cuff'), mat: m('cuff'), bone: `fore${S}`, k: 0.012 }));
+    // A hand, loosely closed, a mesh of its own: the wrist into the cuff, the palm, four fingers curled in
+    // toward it from the knuckles, each a little longer or shorter, and the thumb along the front.
     const h = J[`hand${S}`];
-    s.ellipsoid(h, [0.021, 0.028, 0.026], { color: c('hand'), mat: m('hand'), bone: `hand${S}`, k: 0.012 });
-    s.ellipsoid([h[0] - mm * 0.002, h[1] - 0.012, h[2] + 0.01], [0.019, 0.016, 0.022], { color: c('hand'), mat: m('hand'), bone: `hand${S}`, k: 0.01 });
-    s.limb([h[0] - mm * 0.012, h[1] + 0.008, h[2] + 0.016], [h[0] - mm * 0.016, h[1] - 0.006, h[2] + 0.026], 0.0085, 0.008, { color: c('hand'), mat: m('hand'), bone: `hand${S}`, k: 0.006 });
+    s.part('hands', () => {
+      const H = { color: c('hand'), mat: m('hand'), bone: `hand${S}` };
+      const at = (x, y, z) => [h[0] + mm * x, h[1] + y, h[2] + z];
+      const wr = J[`wrist${S}`];
+      s.limb([wr[0], wr[1] + 0.006, wr[2]], at(0, 0.014, -0.001), 0.0165, 0.0145, { ...H, bone: [[`fore${S}`, 0.5], [`hand${S}`, 0.5]], k: 0.008 });
+      s.ellipsoid(at(0.001, 0.004, 0), [0.0108, 0.0175, 0.0192], { ...H, k: 0.008 });
+      [[0.0135, 0.84], [0.0046, 1], [-0.0044, 0.96], [-0.0132, 0.8]].forEach(([z, l]) => {
+        const knuckle = at(0.0015, -0.011, z), mid = at(-0.003, -0.011 - 0.015 * l, z * 0.96), tip = at(-0.011, -0.016 - 0.021 * l, z * 0.9);
+        s.limb(knuckle, mid, 0.0056, 0.005, { ...H, k: 0.003 });
+        s.limb(mid, tip, 0.005, 0.0043, { ...H, k: 0.002 });
+      });
+      s.limb(at(-0.004, 0.006, 0.014), at(-0.008, -0.005, 0.024), 0.0072, 0.006, { ...H, k: 0.005 });
+      s.limb(at(-0.008, -0.005, 0.024), at(-0.0105, -0.0145, 0.0265), 0.006, 0.0048, { ...H, k: 0.002 });
+    });
     // Legs: a thigh, a knee, a calf that swells and narrows to the ankle.
     s.limb(J[`hip${S}`], J[`knee${S}`], 0.047 * Math.sqrt(b), 0.034, { color: c('legs'), mat: m('legs'), bone: `thigh${S}`, k: 0.02 });
     const kn = J[`knee${S}`], a = J[`ankle${S}`];
     s.limb(kn, [a[0], a[1] + 0.06, a[2] - 0.004], 0.033, 0.031, { color: c('boot'), mat: m('boot'), bone: `shin${S}`, k: 0.014 });
     s.limb([a[0], a[1] + 0.06, a[2] - 0.004], a, 0.031, 0.025, { color: c('boot'), mat: m('boot'), bone: `shin${S}`, k: 0.012 });
-    // A shoe: heel, the foot, a rounded toe, and a sole under it.
-    s.ellipsoid([a[0], 0.032, a[2] + 0.024], [0.032, 0.03, 0.05], { color: c('boot'), mat: m('boot'), bone: `foot${S}`, k: 0.02 });
-    s.ellipsoid([a[0], 0.024, a[2] + 0.062], [0.03, 0.022, 0.03], { color: c('boot'), mat: m('boot'), bone: `foot${S}`, k: 0.015 });
-    if (look.sole) s.box([a[0], 0.006, a[2] + 0.034], [0.031, 0.006, 0.064], 0.005, { color: look.sole, mat: 'rubber', bone: `foot${S}`, k: 0.006 });
+    // Bare feet: a foot, melted into the leg, with its toes; no shoe.
+    if (m('boot') === 'skin' && !look.sole && !look.boots) {
+      bareFoot(s, a, mm, { color: c('boot'), mat: 'skin', bone: `foot${S}` });
+      continue;
+    }
+    // A shoe: heel, instep and a rounded toe, and a sole under it just proud of it all round (a welt), flat underneath.
+    const F = { color: c('boot'), mat: m('boot'), bone: `foot${S}` };
+    s.box([a[0], 0.034, a[2] + 0.02], [0.03, 0.025, 0.046], 0.021, { ...F, k: 0.02 });
+    s.ellipsoid([a[0], 0.03, a[2] + 0.061], [0.0285, 0.021, 0.034], { ...F, k: 0.016 });
+    const SO = { color: look.sole ?? darker(c('boot')), mat: look.sole ? 'rubber' : m('boot'), bone: `foot${S}` };
+    s.part('soles', () => {
+      sole(s, [a[0], 0.007, a[2] + 0.003], [0.0325, 0.007, 0.035], SO);
+      sole(s, [a[0], 0.007, a[2] + 0.054], [0.0335, 0.007, 0.046], SO);
+    });
   }
   // Neck.
-  s.limb([0, 0.51, 0], [0, 0.585, 0.008], 0.03, 0.028, { color: c('skin'), mat: m('skin'), bone: 'neck', k: 0.02 });
+  s.part('head', () => s.limb([0, 0.51, 0], [0, 0.585, 0.008], 0.03, 0.028, { color: c('skin'), mat: m('skin'), bone: 'neck', k: 0.02 }));
   return J;
 }
 
@@ -167,46 +214,110 @@ function seat(s, c, n, proud = 0.004) {
   return c.map((v, i) => v + n[i] * (depth - 0.014 + proud));
 }
 
+/** Where the face is at (x, y), as sculpted, looking straight at it from the front; `z` if it isn't found. */
+function faceAt(s, x, y, z) {
+  const w = s.warp;
+  const toWorld = (p) => (w ? w.to(p) : p);
+  const from = toWorld([x, y, 0.2]), to = toWorld([x, y, 0]);
+  const dir = to.map((v, i) => v - from[i]), dl = Math.hypot(...dir);
+  const hit = s.cast(from, dir.map((v) => v / dl), dl);
+  if (!hit) return z;
+  return (w ? w.from(hit.p) : hit.p)[2];
+}
+
+/** How far p is outside an ellipsoid of radii `r` at `c` turned by `R` (rows, as `rotation` gives), near enough: for paint. */
+function outside(p, c, R, r) {
+  const v = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
+  const q = [0, 1, 2].map((j) => (R[0][j] * v[0] + R[1][j] * v[1] + R[2][j] * v[2]) / r[j]);
+  return (Math.hypot(...q) - 1) * Math.min(...r);
+}
+
 /**
  * A head: skull and cheeks, a nose, ears, big eyes (white, a coloured iris,
- * a black pupil and a catch-light), brows. `brow` is the brows' colour;
- * `ears` false hides them (under a hood or a helmet); `mood` 1 sets the
- * brows in a frown and the mouth firm.
+ * a black pupil and a catch-light) under lids, a mouth, brows. `brow` is
+ * the brows' colour; `ears` false hides them (under a hood or a helmet);
+ * `mood` 1 sets the brows in a frown and the mouth firm. The head and the
+ * neck are a mesh of their own, finer than the body's, so the face is
+ * crisp, and the neck goes into the collar on a clean line.
  */
 export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a8a', jaw = 1, mood = 0, blush = 0.25 }) {
   const H = { color: skin, mat: 'skin', bone: 'head' };
-  s.ellipsoid([0, 0.67, 0.006], [0.098, 0.104, 0.098], { ...H, k: 0.03 });
-  s.ellipsoid([0, 0.63, 0.03], [0.082 * jaw, 0.064, 0.076], { ...H, k: 0.05 });
-  // Brow ridge, nose, ears.
-  s.ellipsoid([0, 0.702, 0.075], [0.07, 0.018, 0.026], { ...H, k: 0.03 });
-  s.limb([0, 0.672, 0.1], [0, 0.645, 0.112], 0.011, 0.016, { ...H, k: 0.016 });
-  if (ears) {
-    for (const m of [1, -1]) {
-      s.ellipsoid([m * 0.095, 0.66, -0.004], [0.017, 0.031, 0.022], { ...H, k: 0.016, rot: [0, m * 0.45, 0] });
-      s.ellipsoid([m * 0.103, 0.66, 0.0], [0.006, 0.018, 0.012], { op: 'sub', k: 0.006, rot: [0, m * 0.45, 0] });
+  const tone = (p, n) => (typeof skin === 'function' ? skin(p, n) : rgb(skin));
+  const eyes = [];
+  const curve = mood ? -2.5 : 3;
+  s.part('head', () => {
+    s.ellipsoid([0, 0.67, 0.006], [0.098, 0.104, 0.098], { ...H, k: 0.03 });
+    s.ellipsoid([0, 0.63, 0.03], [0.082 * jaw, 0.064, 0.076], { ...H, k: 0.05 });
+    // Cheekbones under the eyes, and the point of the chin.
+    for (const m of [1, -1]) s.ellipsoid([m * 0.05 * jaw, 0.642, 0.066], [0.03, 0.022, 0.026], { ...H, k: 0.03 });
+    s.ellipsoid([0, 0.586, 0.072], [0.024 * jaw, 0.015, 0.016], { ...H, k: 0.03 });
+    // Brow ridge.
+    s.ellipsoid([0, 0.702, 0.075], [0.07, 0.018, 0.026], { ...H, k: 0.03 });
+    // The nose: the bridge, a round tip, the wings either side, and the nostrils under them.
+    s.limb([0, 0.68, 0.096], [0, 0.652, 0.111], 0.0075, 0.0105, { ...H, k: 0.014 });
+    s.sphere([0, 0.647, 0.113], 0.0118, { ...H, k: 0.008 });
+    for (const m of [1, -1]) s.sphere([m * 0.0112, 0.6425, 0.105], 0.0074, { ...H, k: 0.007 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.0062, 0.6365, 0.1085], [0.0034, 0.0022, 0.0042], { op: 'sub', k: 0.0016, rot: [0.5, 0, 0] });
+    if (ears) {
+      for (const m of [1, -1]) {
+        // Each ear a shell standing off the side of the head, turned a little forward: its rim rolled over,
+        // the bowl inside it, and a lobe.
+        const rot = [0, m * 0.45, 0], R = rotation(rot);
+        const c = [m * 0.096, 0.66, -0.004];
+        const on = (x, y, z) => [0, 1, 2].map((i) => c[i] + R[i][0] * x * m + R[i][1] * y + R[i][2] * z);
+        s.ellipsoid(c, [0.011, 0.03, 0.021], { ...H, k: 0.014, rot });
+        s.ellipsoid(on(0.0095, 0.001, 0.001), [0.0068, 0.0205, 0.0135], { op: 'sub', k: 0.004, rot });
+        const rim = [];
+        for (let i = 0; i <= 8; i++) {
+          // Round the back and over the top, from the lobe to where it meets the face.
+          const a = -1.2 + (i / 8) * 3.6;
+          rim.push(on(0.0078, Math.sin(a) * 0.026, -Math.cos(a) * 0.017 + 0.002));
+        }
+        for (let i = 0; i < 8; i++) s.limb(rim[i], rim[i + 1], 0.0038, 0.0038, { ...H, k: 0.004 });
+        s.ellipsoid(on(0.002, -0.025, 0.004), [0.0065, 0.009, 0.0085], { ...H, k: 0.008, rot });
+      }
     }
-  }
-  // The mouth: a short dark line, a little lower lip.
-  s.paint((p) => Math.max(Math.abs(p[1] - (0.611 + p[0] * p[0] * (mood ? -2.5 : 3))) - 0.003, Math.abs(p[0]) - 0.022, 0.08 - p[2]), '#6a2e28', 0.0025);
-  s.ellipsoid([0, 0.603, 0.093], [0.016, 0.006, 0.008], { ...H, k: 0.008 });
+    // The mouth: a crease along the face, a corner at each end, a fuller lower lip and a thin upper one.
+    const mouth = (x) => [x, 0.611 + x * x * curve, faceAt(s, x, 0.611 + x * x * curve, 0.1)];
+    const line = [-0.021, -0.0105, 0, 0.0105, 0.021].map(mouth);
+    for (let i = 0; i < 4; i++) s.limb(line[i], line[i + 1], 0.0016, 0.0016, { op: 'sub', k: 0.0014 });
+    for (const p of [line[0], line[4]]) s.sphere(p, 0.0024, { op: 'sub', k: 0.002 });
+    const mid = line[2];
+    s.ellipsoid([0, mid[1] + 0.0042, mid[2] - 0.0032], [0.017, 0.0036, 0.0045], { ...H, k: 0.005 });
+    s.ellipsoid([0, mid[1] - 0.0072, mid[2] - 0.0048], [0.0145, 0.0056, 0.0062], { ...H, k: 0.007 });
+  });
+  // The lips a little rosier than the face, and the line between them dark.
+  const lips = rgb('#b25a52');
+  s.paint((p) => Math.max(Math.hypot(p[0] / 1.6, (p[1] - 0.6085 - p[0] * p[0] * curve) * 1.4) - 0.0125, 0.08 - p[2]), (p, n) => mix(tone(p, n), lips, 0.32), 0.004);
+  s.paint((p) => Math.max(Math.abs(p[1] - (0.611 + p[0] * p[0] * curve)) - 0.0014, Math.abs(p[0]) - 0.0215, 0.08 - p[2]), '#4a1e1c', 0.0012);
   // Rosy cheeks.
   if (blush) s.paint((p) => Math.hypot(Math.abs(p[0]) - 0.058, (p[1] - 0.636) * 1.3, Math.max(0, 0.06 - p[2])) - 0.022, '#e08a7a', 0.02);
   // Eyes, set into the face.
-  const eyes = [];
   for (const m of [1, -1]) {
     const d = [m * 0.3, 0.02, 0.95];
     const l = Math.hypot(...d);
     const n = d.map((v) => v / l);
     const c = seat(s, [m * 0.041, 0.668, 0.088], n);
     const at = (t) => c.map((v, i) => v + n[i] * t);
-    const rot = [-Math.asin(n[1]), Math.atan2(n[0], n[2]), 0];
+    const rot = [-Math.asin(n[1]), Math.atan2(n[0], n[2]), 0], R = rotation(rot);
+    const eyeAt = (x, y, z) => [0, 1, 2].map((i) => c[i] + R[i][0] * x + R[i][1] * y + R[i][2] * z);
     // A socket just the size of the eye, so it sits snug with no dark rim.
-    s.ellipsoid(c, [0.0185, 0.0245, 0.0135], { op: 'sub', k: 0.003, rot });
+    s.part('head', () => s.ellipsoid(c, [0.0185, 0.0245, 0.0135], { op: 'sub', k: 0.003, rot }));
     s.part('eyes', () => s.ellipsoid(c, [0.019, 0.025, 0.014], { color: '#f4efe8', mat: 'eye', bone: 'head', k: 0, rot }));
     s.part('irises', () => s.ellipsoid(at(0.009), [0.012, 0.016, 0.0065], { color: eyeColor, mat: 'eye', bone: 'head', k: 0, rot }));
     s.part('pupils', () => s.ellipsoid(at(0.0135), [0.0062, 0.0085, 0.0032], { color: '#08080c', mat: 'eye', bone: 'head', k: 0, rot }));
+    // The upper lid, a fold of skin over the top of the eye; lower in a frown.
+    const lid = eyeAt(0, 0.021 - mood * 0.0015, -0.0008), lidR = [0.0208, 0.0115, 0.0156];
+    s.part('head', () => s.ellipsoid(lid, lidR, { ...H, k: 0.004, rot }));
+    // And a softer one under it, so the white meets the face on a clean line.
+    s.part('head', () => s.ellipsoid(eyeAt(0, -0.0215, -0.0008), [0.0205, 0.0065, 0.0152], { ...H, k: 0.004, rot }));
+    // The lashes: a dark line along the lid's edge, thickening to the outer corner.
+    s.paint((p) => {
+      const out = Math.max(0, (p[0] - c[0]) * m) / 0.019;
+      return Math.max(Math.abs(outside(p, lid, R, lidR)) - 0.0008 - out * 0.0012, Math.abs(outside(p, c, R, [0.019, 0.025, 0.014])) - 0.0016 - out * 0.0012);
+    }, '#16100e', 0.0007);
     // A catch-light.
-    const hl = at(0.016).map((v, i) => v + [m * -0.003, 0.006, 0][i]);
+    const hl = at(0.016).map((v, i) => v + [m * -0.003, 0.004, 0][i]);
     s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - 0.0032, '#ffffff', 0.0012);
     eyes.push(c);
     // Brows: a firm stroke of hair over each eye.
@@ -216,12 +327,25 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
 }
 
 /**
+ * Hair's colour (a function or hex) in strands: lighter and darker streaks
+ * running down from the crown `at`, fine ones over broad ones.
+ */
+function strands(color, at) {
+  const base = typeof color === 'function' ? color : () => rgb(color);
+  return (p, n) => {
+    const a = Math.atan2(p[0] - at[0], p[2] - at[2]), x = Math.cos(a), z = Math.sin(a);
+    const v = noise(x * 5.5, z * 5.5, p[1] * 4) * 0.5 + noise(x * 10 + 40, z * 10, p[1] * 6) * 0.5;
+    return base(p, n).map((c) => c * (0.66 + v * 0.62));
+  };
+}
+
+/**
  * Hair, in a part of its own so it sits crisp on the skin: a cap over the
  * skull, then locks ([from, to, radius, flat]) swept from the crown down
  * and back. `color` a function or hex.
  */
 export function hair(s, { color, locks = [], cap = [0.108, 0.1, 0.108], at = [0, 0.695, -0.006], k = 0.02, front = 0.07 }) {
-  const Hh = { color, mat: 'hair', bone: 'head' };
+  const Hh = { color: strands(color, at), mat: 'hair', bone: 'head' };
   s.part('hair', () => {
     s.ellipsoid(at, cap, { ...Hh, k });
     // Off the forehead and the face.

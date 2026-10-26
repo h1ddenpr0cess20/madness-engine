@@ -15,7 +15,7 @@ const GOLD = { color: '#f0c040', mat: 'metal' };
 
 export default person({
   name: 'mogul',
-  budget: 25500,
+  budget: 56100,
   scale: 3.0,
   b: 1.7,
   skin: '#e8b494',

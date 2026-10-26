@@ -15,7 +15,7 @@ const ROBE = cloth('#16121a', '#08060c');
 
 export default person({
   name: 'doomlord',
-  budget: 31500,
+  budget: 69300,
   scale: 2.8,
   b: 1.05,
   shape: { legs: 1.2, torso: 1.14, head: 0.95, girth: 0.92 },

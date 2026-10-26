@@ -14,7 +14,7 @@ const tee = cloth('#101014', '#08080a');
 
 export default person({
   name: 'gatekeeper',
-  budget: 25500,
+  budget: 56100,
   scale: 1.62,
   b: 1.36,
   shape: { legs: 0.96, girth: 1.18, hips: 1.08, head: 1.04 },

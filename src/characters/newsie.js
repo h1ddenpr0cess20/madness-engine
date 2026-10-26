@@ -12,7 +12,7 @@ const tweed = cloth('#6a5a44', '#4a3e2e', { vary: 0.2, freq: 30, grain: 0.12 });
 
 export default person({
   name: 'newsie',
-  budget: 19500,
+  budget: 42900,
   scale: 1.0,
   b: 0.94,
   shape: { legs: 0.86, girth: 0.9, head: 1.16 },

@@ -10,7 +10,7 @@ import { cloth, hold, person } from './person.metroll.js';
 
 export default person({
   name: 'mourner',
-  budget: 31500,
+  budget: 69300,
   scale: 1.48,
   b: 1.06,
   shape: { legs: 0.96, girth: 1.04, head: 1.0 },

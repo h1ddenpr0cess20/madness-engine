@@ -94,3 +94,30 @@ test('a shape shared between bones weighs its skin to each by its share', () => 
     assert.ok(Math.abs(w[1] - 0.25) < 1e-4 && Math.abs(w[2] - 0.75) < 1e-4, `vertex ${v}: ${JSON.stringify(w)}`);
   }
 });
+
+test('a person\'s head, hands and shoes are meshes of their own, finer than the body, and the soles are flat on the floor', async () => {
+  for (const name of ['tourist', 'punk']) {
+    const { default: def } = await import(`../src/characters/${name}.js`);
+    const s = new Sculpt();
+    def.sculpt(s);
+    const parts = s.split();
+    for (const part of ['head', 'hands']) {
+      assert.ok(parts.has(part), `${name} has ${part}`);
+      assert.ok(def.cells[part] < def.cell / 1.5, `${name}'s ${part} is finer`);
+    }
+    // Ten fingers and two thumbs, each in two.
+    assert.ok(parts.get('hands').shapes.filter((x) => x.op === 'add').length >= 24, `${name}'s hands`);
+    // The neck goes with the head, into the collar.
+    assert.ok(parts.get('head').shapes.some((x) => x.bone === 'neck'), `${name}'s neck`);
+    // The shoes are a part of their own, or (in Rock 'n' Roller) only their soles are.
+    const shoes = build(parts.get('shoes') ?? parts.get('soles'), { cell: 0.006, bones: def.bones.map(([b]) => b), refine: 0 });
+    let low = Infinity, flat = 0;
+    for (let v = 0; v < shoes.count; v++) {
+      const y = shoes.position[v * 3 + 1];
+      low = Math.min(low, y);
+      if (y < 0.002 && shoes.normal[v * 3 + 1] < -0.9) flat++;
+    }
+    assert.ok(low > -0.002 && low < 0.002, `${name}'s soles reach ${low}`);
+    assert.ok(flat > 20, `${name}'s soles have ${flat} vertices flat on the floor`);
+  }
+});

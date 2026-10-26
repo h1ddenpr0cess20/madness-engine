@@ -291,6 +291,264 @@ function plant(k) {
 
 `;
 
+const HUMANOID_HEAD = `/** Where the face is at (x, y), as sculpted, looking straight at it from the front; \`z\` if it isn't found. */
+function faceAt(s, x, y, z) {
+  const w = s.warp;
+  const toWorld = (p) => (w ? w.to(p) : p);
+  const from = toWorld([x, y, 0.2]), to = toWorld([x, y, 0]);
+  const dir = to.map((v, i) => v - from[i]), dl = Math.hypot(...dir);
+  const hit = s.cast(from, dir.map((v) => v / dl), dl);
+  if (!hit) return z;
+  return (w ? w.from(hit.p) : hit.p)[2];
+}
+
+/** How far p is outside an ellipsoid of radii \`r\` at \`c\` turned by \`R\` (rows, as \`rotation\` gives), near enough: for paint. */
+function outside(p, c, R, r) {
+  const v = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
+  const q = [0, 1, 2].map((j) => (R[0][j] * v[0] + R[1][j] * v[1] + R[2][j] * v[2]) / r[j]);
+  return (Math.hypot(...q) - 1) * Math.min(...r);
+}
+
+/**
+ * A head: skull and cheeks, a nose, ears, big eyes (white, a coloured iris,
+ * a black pupil and a catch-light) under lids, a mouth, brows. \`brow\` is
+ * the brows' colour; \`ears\` false hides them (under a hood or a helmet);
+ * \`mood\` 1 sets the brows in a frown and the mouth firm. The head and the
+ * neck are a mesh of their own, finer than the body's, so the face is
+ * crisp, and the neck goes into the collar on a clean line.
+ */
+export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a8a', jaw = 1, mood = 0, blush = 0.25 }) {
+  const H = { color: skin, mat: 'skin', bone: 'head' };
+  const tone = (p, n) => (typeof skin === 'function' ? skin(p, n) : rgb(skin));
+  const eyes = [];
+  const curve = mood ? -2.5 : 3;
+  s.part('head', () => {
+    s.ellipsoid([0, 0.67, 0.006], [0.098, 0.104, 0.098], { ...H, k: 0.03 });
+    s.ellipsoid([0, 0.63, 0.03], [0.082 * jaw, 0.064, 0.076], { ...H, k: 0.05 });
+    // Cheekbones under the eyes, and the point of the chin.
+    for (const m of [1, -1]) s.ellipsoid([m * 0.05 * jaw, 0.642, 0.066], [0.03, 0.022, 0.026], { ...H, k: 0.03 });
+    s.ellipsoid([0, 0.586, 0.072], [0.024 * jaw, 0.015, 0.016], { ...H, k: 0.03 });
+    // Brow ridge.
+    s.ellipsoid([0, 0.702, 0.075], [0.07, 0.018, 0.026], { ...H, k: 0.03 });
+    // The nose: the bridge, a round tip, the wings either side, and the nostrils under them.
+    s.limb([0, 0.68, 0.096], [0, 0.652, 0.111], 0.0075, 0.0105, { ...H, k: 0.014 });
+    s.sphere([0, 0.647, 0.113], 0.0118, { ...H, k: 0.008 });
+    for (const m of [1, -1]) s.sphere([m * 0.0112, 0.6425, 0.105], 0.0074, { ...H, k: 0.007 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.0062, 0.6365, 0.1085], [0.0034, 0.0022, 0.0042], { op: 'sub', k: 0.0016, rot: [0.5, 0, 0] });
+    if (ears) {
+      for (const m of [1, -1]) {
+        // Each ear a shell standing off the side of the head, turned a little forward: its rim rolled over,
+        // the bowl inside it, and a lobe.
+        const rot = [0, m * 0.45, 0], R = rotation(rot);
+        const c = [m * 0.096, 0.66, -0.004];
+        const on = (x, y, z) => [0, 1, 2].map((i) => c[i] + R[i][0] * x * m + R[i][1] * y + R[i][2] * z);
+        s.ellipsoid(c, [0.011, 0.03, 0.021], { ...H, k: 0.014, rot });
+        s.ellipsoid(on(0.0095, 0.001, 0.001), [0.0068, 0.0205, 0.0135], { op: 'sub', k: 0.004, rot });
+        const rim = [];
+        for (let i = 0; i <= 8; i++) {
+          // Round the back and over the top, from the lobe to where it meets the face.
+          const a = -1.2 + (i / 8) * 3.6;
+          rim.push(on(0.0078, Math.sin(a) * 0.026, -Math.cos(a) * 0.017 + 0.002));
+        }
+        for (let i = 0; i < 8; i++) s.limb(rim[i], rim[i + 1], 0.0038, 0.0038, { ...H, k: 0.004 });
+        s.ellipsoid(on(0.002, -0.025, 0.004), [0.0065, 0.009, 0.0085], { ...H, k: 0.008, rot });
+      }
+    }
+    // The mouth: a crease along the face, a corner at each end, a fuller lower lip and a thin upper one.
+    const mouth = (x) => [x, 0.611 + x * x * curve, faceAt(s, x, 0.611 + x * x * curve, 0.1)];
+    const line = [-0.021, -0.0105, 0, 0.0105, 0.021].map(mouth);
+    for (let i = 0; i < 4; i++) s.limb(line[i], line[i + 1], 0.0016, 0.0016, { op: 'sub', k: 0.0014 });
+    for (const p of [line[0], line[4]]) s.sphere(p, 0.0024, { op: 'sub', k: 0.002 });
+    const mid = line[2];
+    s.ellipsoid([0, mid[1] + 0.0042, mid[2] - 0.0032], [0.017, 0.0036, 0.0045], { ...H, k: 0.005 });
+    s.ellipsoid([0, mid[1] - 0.0072, mid[2] - 0.0048], [0.0145, 0.0056, 0.0062], { ...H, k: 0.007 });
+  });
+  // The lips a little rosier than the face, and the line between them dark.
+  const lips = rgb('#b25a52');
+  s.paint((p) => Math.max(Math.hypot(p[0] / 1.6, (p[1] - 0.6085 - p[0] * p[0] * curve) * 1.4) - 0.0125, 0.08 - p[2]), (p, n) => mix(tone(p, n), lips, 0.32), 0.004);
+  s.paint((p) => Math.max(Math.abs(p[1] - (0.611 + p[0] * p[0] * curve)) - 0.0014, Math.abs(p[0]) - 0.0215, 0.08 - p[2]), '#4a1e1c', 0.0012);
+  // Rosy cheeks.
+  if (blush) s.paint((p) => Math.hypot(Math.abs(p[0]) - 0.058, (p[1] - 0.636) * 1.3, Math.max(0, 0.06 - p[2])) - 0.022, '#e08a7a', 0.02);
+  // Eyes, set into the face.
+  for (const m of [1, -1]) {
+    const d = [m * 0.3, 0.02, 0.95];
+    const l = Math.hypot(...d);
+    const n = d.map((v) => v / l);
+    const c = seat(s, [m * 0.041, 0.668, 0.088], n);
+    const at = (t) => c.map((v, i) => v + n[i] * t);
+    const rot = [-Math.asin(n[1]), Math.atan2(n[0], n[2]), 0], R = rotation(rot);
+    const eyeAt = (x, y, z) => [0, 1, 2].map((i) => c[i] + R[i][0] * x + R[i][1] * y + R[i][2] * z);
+    // A socket just the size of the eye, so it sits snug with no dark rim.
+    s.part('head', () => s.ellipsoid(c, [0.0185, 0.0245, 0.0135], { op: 'sub', k: 0.003, rot }));
+    s.part('eyes', () => s.ellipsoid(c, [0.019, 0.025, 0.014], { color: '#f4efe8', mat: 'eye', bone: 'head', k: 0, rot }));
+    s.part('irises', () => s.ellipsoid(at(0.009), [0.012, 0.016, 0.0065], { color: eyeColor, mat: 'eye', bone: 'head', k: 0, rot }));
+    s.part('pupils', () => s.ellipsoid(at(0.0135), [0.0062, 0.0085, 0.0032], { color: '#08080c', mat: 'eye', bone: 'head', k: 0, rot }));
+    // The upper lid, a fold of skin over the top of the eye; lower in a frown.
+    const lid = eyeAt(0, 0.021 - mood * 0.0015, -0.0008), lidR = [0.0208, 0.0115, 0.0156];
+    s.part('head', () => s.ellipsoid(lid, lidR, { ...H, k: 0.004, rot }));
+    // And a softer one under it, so the white meets the face on a clean line.
+    s.part('head', () => s.ellipsoid(eyeAt(0, -0.0215, -0.0008), [0.0205, 0.0065, 0.0152], { ...H, k: 0.004, rot }));
+    // The lashes: a dark line along the lid's edge, thickening to the outer corner.
+    s.paint((p) => {
+      const out = Math.max(0, (p[0] - c[0]) * m) / 0.019;
+      return Math.max(Math.abs(outside(p, lid, R, lidR)) - 0.0008 - out * 0.0012, Math.abs(outside(p, c, R, [0.019, 0.025, 0.014])) - 0.0016 - out * 0.0012);
+    }, '#16100e', 0.0007);
+    // A catch-light.
+    const hl = at(0.016).map((v, i) => v + [m * -0.003, 0.004, 0][i]);
+    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - 0.0032, '#ffffff', 0.0012);
+    eyes.push(c);
+    // Brows: a firm stroke of hair over each eye.
+    s.part('brows', () => s.flake([m * 0.066, 0.702 - mood * 0.005, 0.088], [m * 0.019, 0.706 + mood * 0.008, 0.106], [0, 1, 0.45], 0.0085, 0.0065, 0.6, { color: brow, mat: 'hair', bone: 'head', k: 0.003 }));
+  }
+  return eyes;
+}
+`;
+
+const HUMANOID_STRANDS = `/**
+ * Hair's colour (a function or hex) in strands: lighter and darker streaks
+ * running down from the crown \`at\`, fine ones over broad ones.
+ */
+function strands(color, at) {
+  const base = typeof color === 'function' ? color : () => rgb(color);
+  return (p, n) => {
+    const a = Math.atan2(p[0] - at[0], p[2] - at[2]), x = Math.cos(a), z = Math.sin(a);
+    const v = noise(x * 5.5, z * 5.5, p[1] * 4) * 0.5 + noise(x * 10 + 40, z * 10, p[1] * 6) * 0.5;
+    return base(p, n).map((c) => c * (0.66 + v * 0.62));
+  };
+}
+
+`;
+
+const HUMANOID_HAND_WAS = `    s.limb(J[\`elbow\${S}\`], J[\`wrist\${S}\`], 0.028, 0.02, { color: c('cuff'), mat: m('cuff'), bone: \`fore\${S}\`, k: 0.012 });
+    // A hand: a fist, knuckles forward, with a thumb over it.
+    const h = J[\`hand\${S}\`];
+    s.ellipsoid(h, [0.021, 0.028, 0.026], { color: c('hand'), mat: m('hand'), bone: \`hand\${S}\`, k: 0.012 });
+    s.ellipsoid([h[0] - mm * 0.002, h[1] - 0.012, h[2] + 0.01], [0.019, 0.016, 0.022], { color: c('hand'), mat: m('hand'), bone: \`hand\${S}\`, k: 0.01 });
+    s.limb([h[0] - mm * 0.012, h[1] + 0.008, h[2] + 0.016], [h[0] - mm * 0.016, h[1] - 0.006, h[2] + 0.026], 0.0085, 0.008, { color: c('hand'), mat: m('hand'), bone: \`hand\${S}\`, k: 0.006 });
+`;
+
+const HUMANOID_HAND = `    // A bare forearm goes with the hand, so there is no seam at the wrist.
+    s.part(m('cuff') === 'skin' && m('hand') === 'skin' ? 'hands' : s.current, () => s.limb(J[\`elbow\${S}\`], J[\`wrist\${S}\`], 0.028, 0.02, { color: c('cuff'), mat: m('cuff'), bone: \`fore\${S}\`, k: 0.012 }));
+    // A hand, loosely closed, a mesh of its own: the wrist into the cuff, the palm, four fingers curled in
+    // toward it from the knuckles, each a little longer or shorter, and the thumb along the front.
+    const h = J[\`hand\${S}\`];
+    s.part('hands', () => {
+      const H = { color: c('hand'), mat: m('hand'), bone: \`hand\${S}\` };
+      const at = (x, y, z) => [h[0] + mm * x, h[1] + y, h[2] + z];
+      const wr = J[\`wrist\${S}\`];
+      s.limb([wr[0], wr[1] + 0.006, wr[2]], at(0, 0.014, -0.001), 0.0165, 0.0145, { ...H, bone: [[\`fore\${S}\`, 0.5], [\`hand\${S}\`, 0.5]], k: 0.008 });
+      s.ellipsoid(at(0.001, 0.004, 0), [0.0108, 0.0175, 0.0192], { ...H, k: 0.008 });
+      [[0.0135, 0.84], [0.0046, 1], [-0.0044, 0.96], [-0.0132, 0.8]].forEach(([z, l]) => {
+        const knuckle = at(0.0015, -0.011, z), mid = at(-0.003, -0.011 - 0.015 * l, z * 0.96), tip = at(-0.011, -0.016 - 0.021 * l, z * 0.9);
+        s.limb(knuckle, mid, 0.0056, 0.005, { ...H, k: 0.003 });
+        s.limb(mid, tip, 0.005, 0.0043, { ...H, k: 0.002 });
+      });
+      s.limb(at(-0.004, 0.006, 0.014), at(-0.008, -0.005, 0.024), 0.0072, 0.006, { ...H, k: 0.005 });
+      s.limb(at(-0.008, -0.005, 0.024), at(-0.0105, -0.0145, 0.0265), 0.006, 0.0048, { ...H, k: 0.002 });
+    });
+`;
+
+/** The shoes where they are a mesh of their own (Metroll's and Metrlol's people)... */
+const SHOES_PARTED_WAS = `      s.box([a[0], 0.03, a[2] + 0.022], [0.029, 0.026, 0.05], 0.02, { ...F, k: 0.016 });
+      s.ellipsoid([a[0], 0.028, a[2] + 0.06], [0.029, 0.024, 0.034], { ...F, k: 0.016 });
+      s.ellipsoid([a[0], 0.055, a[2] + 0.004], [0.03, 0.028, 0.032], { ...F, k: 0.014 });
+    });
+    if (look.sole) s.part('soles', () => s.box([a[0], 0.007, a[2] + 0.031], [0.029, 0.007, 0.058], 0.007, { color: look.sole, mat: 'rubber', bone: \`foot\${S}\`, k: 0 }));
+`;
+
+const SHOES_PARTED = `      s.box([a[0], 0.034, a[2] + 0.02], [0.028, 0.024, 0.046], 0.02, { ...F, k: 0.016 });
+      s.ellipsoid([a[0], 0.03, a[2] + 0.061], [0.0285, 0.021, 0.034], { ...F, k: 0.016 });
+      s.ellipsoid([a[0], 0.056, a[2] + 0.004], [0.029, 0.027, 0.031], { ...F, k: 0.014 });
+      // The sole: the heel and the tread, just proud of the upper all round (a welt), and flat underneath.
+      const SO = { color: look.sole ?? darker(c('boot')), mat: look.sole ? 'rubber' : m('boot'), bone: \`foot\${S}\` };
+      sole(s, [a[0], 0.007, a[2] + 0.003], [0.0305, 0.007, 0.034], SO);
+      sole(s, [a[0], 0.007, a[2] + 0.054], [0.032, 0.007, 0.045], SO);
+    });
+`;
+
+/** ...and where they are melted into the leg (Rock 'n' Roller's). */
+const SHOES_MELTED_WAS = `    // A shoe: heel, the foot, a rounded toe, and a sole under it.
+    s.ellipsoid([a[0], 0.032, a[2] + 0.024], [0.032, 0.03, 0.05], { color: c('boot'), mat: m('boot'), bone: \`foot\${S}\`, k: 0.02 });
+    s.ellipsoid([a[0], 0.024, a[2] + 0.062], [0.03, 0.022, 0.03], { color: c('boot'), mat: m('boot'), bone: \`foot\${S}\`, k: 0.015 });
+    if (look.sole) s.box([a[0], 0.006, a[2] + 0.034], [0.031, 0.006, 0.064], 0.005, { color: look.sole, mat: 'rubber', bone: \`foot\${S}\`, k: 0.006 });
+`;
+
+const SHOES_MELTED = `    // A shoe: heel, instep and a rounded toe, and a sole under it just proud of it all round (a welt), flat underneath.
+    const F = { color: c('boot'), mat: m('boot'), bone: \`foot\${S}\` };
+    s.box([a[0], 0.034, a[2] + 0.02], [0.03, 0.025, 0.046], 0.021, { ...F, k: 0.02 });
+    s.ellipsoid([a[0], 0.03, a[2] + 0.061], [0.0285, 0.021, 0.034], { ...F, k: 0.016 });
+    const SO = { color: look.sole ?? darker(c('boot')), mat: look.sole ? 'rubber' : m('boot'), bone: \`foot\${S}\` };
+    s.part('soles', () => {
+      sole(s, [a[0], 0.007, a[2] + 0.003], [0.0325, 0.007, 0.035], SO);
+      sole(s, [a[0], 0.007, a[2] + 0.054], [0.0335, 0.007, 0.046], SO);
+    });
+`;
+
+const BARE_FEET = `    // Bare feet: a foot, melted into the leg, with its toes; no shoe.
+    if (m('boot') === 'skin' && !look.sole && !look.boots) {
+      bareFoot(s, a, mm, { color: c('boot'), mat: 'skin', bone: \`foot\${S}\` });
+      continue;
+    }
+`;
+
+/** What the soles and the bare feet are made with, before the skin. */
+const HUMANOID_FEET = `/** A colour (or a colour function) darkened, for a sole that wasn't given one. */
+const darker = (color) => (typeof color === 'function' ? (p, n) => color(p, n).map((v) => v * 0.42) : rgb(color).map((v) => v * 0.42));
+
+/** A slab of sole: flat top and bottom, straight sides round an oval of radii \`r\`[0] by \`r\`[2], \`r\`[1] either side of \`c\` up and down, its edges rounded. */
+function sole(s, c, r, o) {
+  const round = 0.0028;
+  s.shape((p) => {
+    const across = (Math.hypot((p[0] - c[0]) / r[0], (p[2] - c[2]) / r[2]) - 1) * Math.min(r[0], r[2]) + round;
+    const up = Math.abs(p[1] - c[1]) - r[1] + round;
+    return Math.hypot(Math.max(across, 0), Math.max(up, 0)) + Math.min(Math.max(across, up), 0) - round;
+  }, [[c[0] - r[0], c[1] - r[1], c[2] - r[2]], [c[0] + r[0], c[1] + r[1], c[2] + r[2]]], { ...o, k: 0.003 });
+}
+
+/** A bare foot at the ankle \`a\` on side \`m\`: the heel, the instep, the ball and five toes, the big one inside; flat on the floor. */
+function bareFoot(s, a, m, o) {
+  s.ellipsoid([a[0], 0.024, a[2] - 0.004], [0.022, 0.024, 0.026], { ...o, k: 0.016 });
+  s.ellipsoid([a[0] + m * 0.002, 0.022, a[2] + 0.03], [0.025, 0.02, 0.04], { ...o, k: 0.016 });
+  s.ellipsoid([a[0] + m * 0.002, 0.014, a[2] + 0.06], [0.029, 0.013, 0.02], { ...o, k: 0.012 });
+  [[-0.018, 0.0088, 0.088], [-0.005, 0.0068, 0.086], [0.0055, 0.0062, 0.083], [0.0155, 0.0057, 0.078], [0.024, 0.0052, 0.071]].forEach(([x, r, z]) => {
+    s.limb([a[0] + m * x, r + 0.001, a[2] + z - 0.012], [a[0] + m * x, r + 0.001, a[2] + z], r, r * 0.95, { ...o, k: 0.004 });
+  });
+  s.box([0, 1, 0], [2, 1, 2], 0, { op: 'inter', k: 0.002 });
+}
+
+`;
+
+const QUADRUPED_LEGS_WAS = `        s.limb(add(L.top, [0, gy * 0.3, 0]), L.knee, top, leg[1], { color: C.legs, mat: M.legs, bone: \`thigh\${n}\`, k: k * 0.8 });
+        s.limb(L.knee, add(L.foot, [0, leg[2] * 1.2, 0]), leg[1], leg[2], { color: C.legs, mat: M.legs, bone: \`shin\${n}\`, k: k * 0.4 });
+`;
+
+const QUADRUPED_LEGS = `        const Lg = { color: C.legs, mat: M.legs };
+        s.limb(add(L.top, [0, gy * 0.3, 0]), L.knee, top, leg[1], { ...Lg, bone: \`thigh\${n}\`, k: k * 0.8 });
+        // The muscle of the shoulder or the haunch: flat to the side, full fore and aft, tapering to the knee.
+        const upper = L.top[1] + gy * 0.3 - L.knee[1];
+        s.ellipsoid(add(L.top, [0, -upper * 0.22, f > 0 ? top * 0.1 : -top * 0.15]), [top * 1.02, upper * 0.42, top * (f > 0 ? 1.25 : 1.45)], { ...Lg, bone: \`thigh\${n}\`, k: k * 0.6 });
+        // The shin: slim and clean down to the foot, with no knob at the knee.
+        s.limb(L.knee, add(L.foot, [0, leg[2] * 1.2, 0]), leg[1] * 0.92, leg[2] * 0.85, { ...Lg, bone: \`shin\${n}\`, k: k * 0.2 });
+`;
+
+const QUADRUPED_HOOF_WAS = `    s.cylinder(add(at, [0, r * 0.7, r * 0.15]), r * 1.05, r * 0.7, { ...o, bone, k: 0.006, round: r * 0.25 });
+    s.box(add(at, [0, r * 0.7, r * 1.1]), [r * 0.12, r * 0.75, r * 0.2], 0.001, { op: 'sub', k: 0.002 });
+`;
+
+const QUADRUPED_HOOF = `    // Wider at the ground than at the top, its front sloping back, the cleft up the front, and flat underneath.
+    s.limb(add(at, [0, r * 0.3, r * 0.2]), add(at, [0, r * 1.25, r * 0.02]), r * 1.12, r * 0.86, { ...o, bone, k: 0.006 });
+    s.box(add(at, [0, r * 0.7, r * 1.15]), [r * 0.1, r * 0.8, r * 0.25], 0.001, { op: 'sub', k: 0.002 });
+    s.box(add(at, [0, -r, 0]), [r * 3, r, r * 3], 0, { op: 'sub', k: 0.001 });
+`;
+
+/** The function \`name\`, its doc comment with it, made \`to\`; nothing if it is \`to\` already. */
+const rewrite = (text, name, to, where) => {
+  if (text.includes(to)) return text;
+  const re = new RegExp(`/\\*\\*\\n(?: \\*.*\\n)* \\*/\\nexport function ${name}\\([\\s\\S]*?\\n\\}\\n`);
+  if (!re.test(text)) throw new Error(`${where}: the game's code has changed where the engine changes it (scripts/extract/edits.mjs)`);
+  return text.replace(re, to);
+};
+
 export const EDITS = [
   {
     at: /^characters\/humanoid\.js$/,
@@ -390,11 +648,64 @@ export const EDITS = [
     },
   },
   {
+    at: /^characters\/humanoid\.js$/,
+    why: 'The people were low on detail where it shows: a mitten for a hand, a smudge of a nose, a mouth that broke into dashes, a nub with a dent for an ear, eyes with a ragged rim and no lids, a neckline sawn by the coarse grid, shoes on a plank of sole, and hair like a helmet. The head and neck are a mesh of their own on a grid twice as fine, so the neck goes into the collar on a clean line; the face has cheekbones and a chin, a nose with a bridge, a tip, wings and nostrils, a mouth carved in with lips (rosier) and corners, ears with a rolled rim, a bowl and a lobe, and over each eye a lid with a line of lashes. The hands are a mesh of their own: a palm, four fingers curled in from the knuckles and a thumb, loosely closed so that what they hold is held; a bare forearm goes with the hand, so there is no seam at the wrist. The shoes have a sole shaped to the foot, just proud of the upper all round, and flat underneath (Rock \'n\' Roller\'s shoes too, melted into the leg as they were); a boot is wide enough that the trousers don\'t come through it; a bare foot (skin for a shoe) is a foot, with an arch and toes. Hair is in strands. Dungeon Roller\'s body (the orc\'s, who has a head of his own) keeps its neck, hands and feet.',
+    edit(text, where) {
+      text = text.replace(/^import \{ rgb \} from '(.*)sdf\.js';$/m, "import { noise, rgb, rotation } from '$1sdf.js';");
+      text = rewrite(text, 'head', HUMANOID_HEAD, where);
+      text = swap(text, '/**\n * Hair, in a part of its own', `${HUMANOID_STRANDS}/**\n * Hair, in a part of its own`, where);
+      text = swap(text, "  const Hh = { color, mat: 'hair', bone: 'head' };", "  const Hh = { color: strands(color, at), mat: 'hair', bone: 'head' };", where);
+      // The people's bodies; Dungeon Roller's, under the orc, has hands and feet of its own.
+      if (text.includes(HUMANOID_HAND_WAS)) {
+        text = text.replace(HUMANOID_HAND_WAS, HUMANOID_HAND);
+        // The neck goes with the head.
+        text = text.replace(/^ {2}(s\.limb\(\[0, 0\.51, 0\], \[0, 0\.585, 0\.008\], .*bone: 'neck'.*\));$/m, "  s.part('head', () => $1);");
+      }
+      if (text.includes(SHOES_PARTED_WAS)) {
+        text = text.replace(SHOES_PARTED_WAS, SHOES_PARTED);
+        text = swap(text, '0.03, 0.036, { ...F, bone: `shin${S}`, k: 0.012 });', '0.033, 0.0395, { ...F, bone: `shin${S}`, k: 0.012 });', where);
+        text = swap(text, 's.torus([a[0], top, a[2] - 0.004], 0.035, 0.006,', 's.torus([a[0], top, a[2] - 0.004], 0.0395, 0.0065,', where);
+        text = swap(text, '    // A shoe, a mesh of its own so', `${BARE_FEET}    // A shoe, a mesh of its own so`, where);
+      } else if (text.includes(SHOES_MELTED_WAS)) {
+        text = text.replace(SHOES_MELTED_WAS, `${BARE_FEET}${SHOES_MELTED}`);
+      }
+      if (text.includes('bareFoot(s,')) text = swap(text, '/** Skin: warm, rosier', `${HUMANOID_FEET}/** Skin: warm, rosier`, where);
+      return text;
+    },
+  },
+  {
+    at: /^characters\/person\.js$/,
+    why: 'The finer grids for the people\'s heads, hands, shoes and soles; and what a person has on their face that is skin (a nose of their own, jowls) goes with the head, to melt into it.',
+    edit(text, where) {
+      text = swap(text, 'cells: { eyes: 0.0026,', 'cells: { head: 0.005, hands: 0.0024, shoes: 0.0042, soles: 0.0032, eyes: 0.0026,', where);
+      return swap(text,
+        '      extras?.(s, J, { b, skin: tone });\n',
+        "      extras?.(s, J, { b, skin: tone });\n      // What they have on their face that is skin (a nose of their own, jowls) is the face's, and melts into it.\n      for (const shape of s.shapes) if (shape.part === 'body' && shape.bone === 'head' && shape.mat === 'skin') shape.part = 'head';\n",
+        where);
+    },
+  },
+  {
+    at: /^characters\/quadruped\.js$/,
+    why: 'The animals\' legs were tubes with a knob at the knee, and a hoof was a drum. A leg has the muscle of the shoulder or the haunch at its top and a slim shin; a hoof is wider at the ground than at the top, sloped in front, cleft, and flat underneath.',
+    edit(text, where) {
+      text = swap(text, QUADRUPED_LEGS_WAS, QUADRUPED_LEGS, where);
+      return swap(text, QUADRUPED_HOOF_WAS, QUADRUPED_HOOF, where);
+    },
+  },
+  {
     at: /^(characters|props|heroes)\//,
     why: 'The mesher spends up to a third more vertices on fine detail (models/sdf.js `refine`), so every model may have half as many again: a budget given is raised, and a model that had none (the tests\' 9000) is given 13500.',
     edit(text) {
       if (/^export default \{/m.test(text) && !/\bbudget\b/.test(text)) return text.replace(/^( {2}cell: [\d.]+,\n)/m, '$1  budget: 13500,\n');
       return text.replace(/\bbudget(: | = )(\d+)\b/g, (all, sep, n) => `budget${sep}${Math.floor(n * 1.5)}`);
+    },
+  },
+  {
+    at: /^characters\//,
+    why: 'The people\'s heads and hands (and bare forearms) on their finer grids take more vertices: at most 2.15 times as many, the median 1.4. Their budgets are 2.2 times what they were.',
+    edit(text, where) {
+      if (!/^characters\/person\.js$/.test(placeOf(where)) && !/^import .* from '(?:\.\.?\/)+(?:[\w-]+\/)*person(\.[\w-]+)?\.js';$/m.test(text)) return text;
+      return text.replace(/\bbudget(: | = )(\d+)\b/g, (all, sep, n) => `budget${sep}${Math.round(n * 2.2)}`);
     },
   },
 ];

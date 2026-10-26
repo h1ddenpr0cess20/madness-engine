@@ -155,8 +155,13 @@ export function quadruped({
       for (const [n, , f] of LEGS) {
         const L = P.legs[n];
         const top = f > 0 ? leg[0] : leg[0] * 1.15;
-        s.limb(add(L.top, [0, gy * 0.3, 0]), L.knee, top, leg[1], { color: C.legs, mat: M.legs, bone: `thigh${n}`, k: k * 0.8 });
-        s.limb(L.knee, add(L.foot, [0, leg[2] * 1.2, 0]), leg[1], leg[2], { color: C.legs, mat: M.legs, bone: `shin${n}`, k: k * 0.4 });
+        const Lg = { color: C.legs, mat: M.legs };
+        s.limb(add(L.top, [0, gy * 0.3, 0]), L.knee, top, leg[1], { ...Lg, bone: `thigh${n}`, k: k * 0.8 });
+        // The muscle of the shoulder or the haunch: flat to the side, full fore and aft, tapering to the knee.
+        const upper = L.top[1] + gy * 0.3 - L.knee[1];
+        s.ellipsoid(add(L.top, [0, -upper * 0.22, f > 0 ? top * 0.1 : -top * 0.15]), [top * 1.02, upper * 0.42, top * (f > 0 ? 1.25 : 1.45)], { ...Lg, bone: `thigh${n}`, k: k * 0.6 });
+        // The shin: slim and clean down to the foot, with no knob at the knee.
+        s.limb(L.knee, add(L.foot, [0, leg[2] * 1.2, 0]), leg[1] * 0.92, leg[2] * 0.85, { ...Lg, bone: `shin${n}`, k: k * 0.2 });
         footOn(s, L.foot, n, feet, leg[2], { color: C.feet, mat: M.feet });
       }
       extras?.(s, P, { C, Hd, N, T, hip, len, girth, stance, leg });
@@ -200,8 +205,10 @@ function earShapes(s, P, Hd, kind, size, o, inner) {
 function footOn(s, at, n, kind, r, o) {
   const bone = `foot${n}`;
   if (kind === 'hoof') {
-    s.cylinder(add(at, [0, r * 0.7, r * 0.15]), r * 1.05, r * 0.7, { ...o, bone, k: 0.006, round: r * 0.25 });
-    s.box(add(at, [0, r * 0.7, r * 1.1]), [r * 0.12, r * 0.75, r * 0.2], 0.001, { op: 'sub', k: 0.002 });
+    // Wider at the ground than at the top, its front sloping back, the cleft up the front, and flat underneath.
+    s.limb(add(at, [0, r * 0.3, r * 0.2]), add(at, [0, r * 1.25, r * 0.02]), r * 1.12, r * 0.86, { ...o, bone, k: 0.006 });
+    s.box(add(at, [0, r * 0.7, r * 1.15]), [r * 0.1, r * 0.8, r * 0.25], 0.001, { op: 'sub', k: 0.002 });
+    s.box(add(at, [0, -r, 0]), [r * 3, r, r * 3], 0, { op: 'sub', k: 0.001 });
   } else if (kind === 'claw') {
     s.ellipsoid(add(at, [0, r * 0.55, r * 0.6]), [r * 1.3, r * 0.55, r * 1.4], { ...o, bone, k: 0.008 });
     for (const t of [-1, 0, 1]) s.cone(add(at, [t * r * 0.7, r * 0.3, r * 2.4]), r * 0.22, r * 0.7, { color: '#e8e0c8', mat: 'tooth', bone, k: 0.002, rot: [-Math.PI / 2 + 0.3, 0, 0] });

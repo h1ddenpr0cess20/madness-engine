@@ -133,6 +133,28 @@ the people (`humanoid`) and of the animals (`quadruped`) sat with their
 fronts just under the skin of the face, and showed only because the coarse
 mesh cut corners. Each eye is now set by where the face actually is.
 
+The people (`humanoid`, under every `person`) are finished as a studio
+would finish them. The head and neck are a mesh of their own on a grid
+nearly twice as fine as the body's, so the face is crisp and the neck goes
+into the collar on a clean line. The face has cheekbones and a chin; a nose
+with a bridge, a round tip, wings and nostrils; a mouth carved in, with
+corners, a thin upper lip and a fuller lower one, a little rosier than the
+face; ears with a rolled rim, a bowl and a lobe; and over each eye an upper
+lid edged with a line of lashes, and a softer lower one. What a person has
+on their face that is skin (a nose of their own, jowls) melts into it. The
+hands are a mesh of their own too: a palm, four fingers curled in from the
+knuckles, each its own length, and a thumb, loosely closed so that what a
+hand holds is held; a bare forearm goes with the hand, so there is no seam
+at the wrist. The shoes stand on a sole shaped to the foot, just proud of
+the upper all round and flat underneath; boots are wide enough that the
+trousers don't come through them; and someone barefoot has feet, with
+arches and toes. Hair is in strands. The `quadruped`s' legs have the muscle
+of the shoulder or the haunch at the top and a clean shin below, with no
+knob at the knee, and their hooves are hooves: wider at the ground, sloped
+in front, cleft and flat underneath. All of that costs the people about
+1.4 times the vertices (2.15 at most, for bare arms) and the bakes about
+half as long again.
+
 The animals have more besides. The `quadruped`s' eyes have pupils,
 catch-lights and lids; their noses (with nostrils) and ears (cupped and
 coloured inside when they stand up) are meshes of their own on grids as
@@ -148,7 +170,7 @@ just enough, and the tail by raising it at the root (a definition's
 `settle`).
 
 These, and the vertex budgets (half as many again, to make room for the
-finer meshes), are changes to files the library takes from the games.
+finer meshes, and the people's 2.2 times that), are changes to files the library takes from the games.
 `scripts/extract/edits.mjs` says what they are. `npm run extract` makes
 them as it takes the files, and `npm run verify` makes them before it
 compares the files and in the copy of each game whose tests it runs.

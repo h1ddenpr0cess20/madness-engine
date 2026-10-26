@@ -17,7 +17,7 @@ const FRONT = [0, R, 0.24], BACK = [0, R, -0.22], CRANK = [0, 0.13, 0.0];
 
 const base = person({
   name: 'cyclist',
-  budget: 22500,
+  budget: 49500,
   scale: 1.42,
   b: 0.96,
   shape: { legs: 1.02, girth: 0.9 },

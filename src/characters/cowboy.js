@@ -19,7 +19,7 @@ const hide = cloth('#7a4a26', '#4a2a14');
 
 export default person({
   name: 'cowboy',
-  budget: 27000,
+  budget: 59400,
   scale: 1.45,
   b: 1.06,
   shape: { legs: 1.08, girth: 0.98, hips: 0.95 },

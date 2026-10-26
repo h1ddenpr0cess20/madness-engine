@@ -56,7 +56,7 @@ export function hold(k, name, x = 0, y = 0, z = 0) {
  */
 export function person({
   name, scale = 1.1, b = 1, skin = '#e9b48f', look, mats = {}, face = {}, hair: hairOpts = null,
-  extras = null, style = {}, cells = {}, budget = 18000, cell = 0.0085, k = 0.03, shape = {}, belly = 0,
+  extras = null, style = {}, cells = {}, budget = 39600, cell = 0.0085, k = 0.03, shape = {}, belly = 0,
 }) {
   const tone = typeof skin === 'string' ? skinTone(skin) : skin;
   const full = { skin: tone, hand: tone, ...look };
@@ -65,7 +65,7 @@ export function person({
     name,
     scale,
     cell,
-    cells: { eyes: 0.0026, irises: 0.0017, pupils: 0.0011, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, ...cells },
+    cells: { head: 0.005, hands: 0.0024, shoes: 0.0042, soles: 0.0032, eyes: 0.0026, irises: 0.0017, pupils: 0.0011, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, ...cells },
     budget,
     bones: bones(b, warp),
     materials: MATERIALS,
@@ -75,6 +75,8 @@ export function person({
       head(s, { skin: tone, ...face });
       if (hairOpts) hair(s, hairOpts);
       extras?.(s, J, { b, skin: tone });
+      // What they have on their face that is skin (a nose of their own, jowls) is the face's, and melts into it.
+      for (const shape of s.shapes) if (shape.part === 'body' && shape.bone === 'head' && shape.mat === 'skin') shape.part = 'head';
     },
     animate(kk, state) {
       moveHumanoid(kk, state, style);
