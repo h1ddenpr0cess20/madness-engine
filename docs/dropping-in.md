@@ -12,7 +12,7 @@ game's tests (`scripts/drop-in/overlay.mjs` is the recipe in code).
 | madness | on the engine (below) | | | |
 | dungeon-roller | – | – | `views/arcade` | kit |
 | catroller | on the engine (below) | | | |
-| metroll | – | `boost: { pad: [0, 2, 7, 6] }` (`rev()`) | `views/arcade` | kit |
+| metroll | on the engine (below) | | | |
 | rocknroller, -ii, -iii | on the engine (below) | | | |
 | metrlol | `slideUnder: true` | `boost: { pad: [0, 2, 7], element: 'accel-touch' }` (`boost()`) | `views/town` | sculpt + cast |
 | petroll | `slideUnder: true` | `presses`, `padPresses` (below) | `views/town` | sculpt + cast |
@@ -99,8 +99,18 @@ They are `onEngine` and in `ON_ENGINE` as Madness and Catroller are. Since
 their moods are now the library's, `npm run extract` takes them (and their
 grades) from the library as they are, and does the same with the cores
 their versions of `textures/venue` and `music/band` share
-(`textures/painters`, `music/theory`), keeping the off-engine games'
-versions of those whole.
+(`textures/painters`, `music/theory`). A game off the engine whose file is
+one of those versions (Metrlol's band is Metroll's) keeps it, the library's
+as it is; one that has changed it is kept whole beside it.
+
+## Metroll
+
+Metroll went the same way as Rock 'n' Roller III, whose engine it was on:
+the same stage, moods (`moods/birmingham` … `moods/wacken`), film, audio,
+effects, storage and bakers, with the lantern over Metroll (`stage.troll`).
+Metroll is `heroes/mace` on `heroes/morningstar`; Rock, the last boss, is
+`heroes/boulder`; the rig, the band and the textures are the defaults,
+`scenery/lightshow`, `music/band` and `textures/venue`.
 
 ## Swapping the files
 

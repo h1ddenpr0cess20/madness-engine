@@ -27,6 +27,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { compareVersion } from '../drop-in/library-diff.mjs';
 import { dedupe } from './dedupe.mjs';
 import { edited, placeOf } from './edits.mjs';
 import { gradesOf, gradesText, indexText, moodLine, moodsOf, moodText, versions } from './moods.mjs';
@@ -166,6 +167,19 @@ export function plan(dirs) {
     return f.closure;
   };
   files.forEach((f) => closure(f));
+
+  // A game off the engine whose file is a version a game on the engine has (that version and what it takes from
+  // the core, statement for statement) has that version: the library's, as it is, rather than one more of it whole.
+  for (const corePath of CORES) {
+    const place = Object.keys(SPLIT).find((k) => SPLIT[k] === corePath);
+    const own = files.filter((f) => f.at && f.place === place);
+    if (!own.length || !existsSync(join(SRC, corePath))) continue;
+    const core = readFileSync(join(SRC, corePath), 'utf8');
+    for (const f of files.filter((x) => !x.at && x.place === place)) {
+      const same = own.find((o) => compareVersion(f.text, o.text, core, rel(o.at, corePath)).ok);
+      if (same) Object.assign(f, { text: same.text, imports: same.imports, closure: same.closure });
+    }
+  }
 
   // The versions at each place, and which is the default.
   const newest = (games) => Math.max(...games.map((g) => ORDER.indexOf(g)));

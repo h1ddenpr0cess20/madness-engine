@@ -22,7 +22,7 @@ export const ORDER = ['madness', 'dungeon-roller', 'catroller', 'rocknroller', '
  * their files went) rather than from the game: their moods too, and the
  * cores of the long modules they share (SPLIT).
  */
-export const ON_ENGINE = new Set(['madness', 'catroller', 'rocknroller', 'rocknroller-ii', 'rocknroller-iii']);
+export const ON_ENGINE = new Set(['madness', 'catroller', 'rocknroller', 'rocknroller-ii', 'rocknroller-iii', 'metroll']);
 
 /** The town games keep their own people-kit (the engine's models now) and its glue beside their people. */
 const TOWN_KIT = ['model.js', 'rig.js', 'library.js', 'bake.worker.js', 'viewer.js', 'sdf.js', 'skins.js'];

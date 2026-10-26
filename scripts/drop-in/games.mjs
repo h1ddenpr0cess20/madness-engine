@@ -19,7 +19,6 @@
  * textures, music) is `extract/sources.mjs`'s, and where each file went is
  * `extract/origins.json`.
  */
-const REV = { pad: [0, 2, 7, 6] };
 const BOOST = { pad: [0, 2, 7], element: 'accel-touch' };
 const TOWN_HOME = { pitch: 0.92, zoom: 0.95 };
 
@@ -53,7 +52,7 @@ export const GAMES = {
   madness: { onEngine: true },
   'dungeon-roller': { gfx: 'src/vendor/gfx', physics: 'base', boost: null, ...ARCADE, models: 'kit' },
   catroller: { onEngine: true },
-  metroll: { gfx: 'src/vendor/gfx', physics: 'base', boost: REV, api: 'rev', ...ARCADE, models: 'kit' },
+  metroll: { onEngine: true },
   rocknroller: { onEngine: true },
   'rocknroller-ii': { onEngine: true },
   'rocknroller-iii': { onEngine: true },
