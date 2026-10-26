@@ -672,9 +672,12 @@ function onto(sculpt, p, reach, e) {
  * vertex up to four bones and their weights. `bones` names the bones in
  * order. `shade(color, p, n, ao)` can finish a vertex's colour. `refine` is
  * how many more vertices (as a fraction of what the grid makes) it may add
- * where the grid is too coarse for the detail.
+ * where the grid is too coarse for the detail. `shadow` is what shades it
+ * (the occlusion is taken from its field): the sculpt itself, or the whole
+ * of a model that this is a part of, prepared, so that a part is shaded by
+ * the parts round it.
  */
-export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, shade = null, refine = 0.3 } = {}) {
+export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, shade = null, refine = 0.3, shadow = sculpt } = {}) {
   const [lo, hi] = sculpt.bounds(cell * 3);
   const C = 4;
   sculpt.prepare(lo, hi, Math.max(cell * C * 2, 0.035));
@@ -893,7 +896,7 @@ export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, 
   for (let v = 0; v < count; v++) {
     const p = P[v], n = N[v];
     const s = surfaceAt(v);
-    const ao = sculpt.occlusion(p, n, scale * 0.35);
+    const ao = shadow.occlusion(p, n, scale * 0.35);
     let c = s.color.map((x) => x * mix(ambient, 1, ao));
     if (shade) c = shade(c, p, n, ao);
     position.set(p, v * 3);

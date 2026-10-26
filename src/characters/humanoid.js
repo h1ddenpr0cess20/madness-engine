@@ -1,4 +1,4 @@
-import { noise, rgb, rotation } from '../models/sdf.js';
+import { noise, rgb, rotation, Sculpt } from '../models/sdf.js';
 import { coat, mix } from '../models/skins.js';
 
 /**
@@ -111,6 +111,98 @@ function bareFoot(s, a, m, o) {
   s.box([0, 1, 0], [2, 1, 2], 0, { op: 'inter', k: 0.002 });
 }
 
+/**
+ * The trunk's sections, up from the crotch to the base of the neck: [height,
+ * half its width (times the breadth), half its depth, how far forward its
+ * middle is, how square it is (2 round, higher squarer)].
+ */
+const TRUNK = [
+  [0.268, 0.05, 0.04, -0.004, 2.2],
+  [0.295, 0.072, 0.054, -0.006, 2.4],
+  [0.33, 0.079, 0.059, -0.008, 2.5],
+  [0.372, 0.072, 0.058, 0.004, 2.5],
+  [0.43, 0.086, 0.065, 0.008, 2.6],
+  [0.472, 0.094, 0.07, 0.009, 2.7],
+  [0.505, 0.09, 0.057, 0.001, 2.6],
+  [0.53, 0.056, 0.038, -0.006, 2.2],
+  [0.548, 0.03, 0.028, -0.006, 2],
+];
+
+/**
+ * The trunk's section at height y, for breadth `b` and `belly`: a smooth
+ * curve through TRUNK (each measure on a Catmull-Rom spline, so the profile
+ * has no kinks or flats), the belly carried out in front of the waist.
+ */
+function trunk(b, belly) {
+  const n = TRUNK.length;
+  return (y) => {
+    let i = 0;
+    while (i < n - 2 && y > TRUNK[i + 1][0]) i++;
+    const t = Math.max(0, Math.min(1, (y - TRUNK[i][0]) / (TRUNK[i + 1][0] - TRUNK[i][0])));
+    const P = [TRUNK[Math.max(0, i - 1)], TRUNK[i], TRUNK[i + 1], TRUNK[Math.min(n - 1, i + 2)]];
+    const [w, d, zc, e] = [1, 2, 3, 4].map((j) => {
+      const [p0, p1, p2, p3] = P.map((s) => s[j]);
+      return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
+    });
+    // The belly: forward of the waist, above the belt, round in profile.
+    const g = belly * Math.exp(-(((y - 0.398) / 0.048) ** 2));
+    return [w * b + g * 0.016 * b, d + g * 0.031, zc + g * 0.029, e];
+  };
+}
+
+/**
+ * A piece of a lofted body from height `y0` to `y1`, its section at each
+ * height `at(y)` ([half width, half depth, middle, squareness]), flat at
+ * either end (the pieces overlap and meet there). `grow` makes it that much
+ * bigger all round at its bottom and not at all at its top: a shirt's tail
+ * standing out over the trousers.
+ */
+function loft(s, at, y0, y1, o, grow = 0) {
+  let wide = 0, deep = 0;
+  for (let y = y0; y <= y1 + 1e-9; y += 0.005) {
+    const [w, d, zc] = at(y);
+    wide = Math.max(wide, w + grow);
+    deep = Math.max(deep, d + grow + Math.abs(zc));
+  }
+  s.shape((p) => {
+    const y = Math.max(y0, Math.min(y1, p[1]));
+    const g = grow * (1 - (y - y0) / (y1 - y0));
+    const [w0, d0, zc, e] = at(y), w = w0 + g, d = d0 + g;
+    const x = Math.abs(p[0]) / w, z = Math.abs(p[2] - zc) / d;
+    const around = ((x ** e + z ** e) ** (1 / e) - 1) * Math.min(w, d) * 0.9;
+    return Math.max(around, y0 - p[1], p[1] - y1);
+  }, [[-wide, y0, -deep], [wide, y1, deep]], o);
+}
+
+/**
+ * A band of `o`'s leather (a belt) round the trunk at height `y`, `r` high
+ * and `thick` thick, fitted to the surface as sculpted so far, its front
+ * lower than its back by `tilt`. Returns where its front is.
+ */
+function band(s, y, r, thick, o, tilt = 0.04) {
+  const w = s.warp, to = (p) => (w ? w.to(p) : p), back = (p) => (w ? w.from(p) : p);
+  // Out from the middle each way until out of the body.
+  const reach = (dir) => {
+    const from = to([0, y, 0]);
+    const at = (t) => from.map((v, i) => v + dir[i] * t);
+    let lo = 0, hi = 0.01;
+    while (s.field(at(hi)) < 0 && hi < 0.4) { lo = hi; hi += 0.01; }
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2;
+      if (s.field(at(mid)) < 0) lo = mid; else hi = mid;
+    }
+    return back(at(hi));
+  };
+  const right = reach([1, 0, 0])[0], left = reach([-1, 0, 0])[0], front = reach([0, 0, 1])[2], rear = reach([0, 0, -1])[2];
+  const c = [(right + left) / 2, y, (front + rear) / 2], rx = (right - left) / 2 + thick * 0.3, rz = (front - rear) / 2 + thick * 0.3;
+  s.shape((p) => {
+    const x = p[0] - c[0], z = p[2] - c[2];
+    const around = (Math.hypot(x / rx, z / rz) - 1) * Math.min(rx, rz);
+    return (Math.hypot(around / thick, (p[1] - c[1] + tilt * z) / r) - 1) * Math.min(r, thick);
+  }, [[c[0] - rx - thick, y - r - tilt * rz, c[2] - rz - thick], [c[0] + rx + thick, y + r + tilt * rz, c[2] + rz + thick]], { ...o, k: 0.003 });
+  return c[2] + rz + thick;
+}
+
 /** Skin: warm, rosier where it faces forward and down a little. */
 export function skinTone(hex = '#e9b48f') {
   const base = coat({ over: hex, under: hex, vary: 0.06, freq: 14, grain: 0.03 });
@@ -130,29 +222,42 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
   const J = joints(b);
   const m = (part) => mats[part] ?? (part === 'skin' || part === 'hand' ? 'skin' : 'cloth');
   const c = (part) => look[part] ?? look.torso;
-  const T = { color: c('torso'), mat: m('torso') };
-  // Pelvis, a waist narrower than the chest, the chest, and the slope of the shoulders up to the neck.
-  s.ellipsoid([0, 0.318, 0], [0.083 * b, 0.056, 0.06], { color: c('legs'), mat: m('legs'), bone: 'hips', k });
-  s.limb([0, 0.33, 0.002], [0, 0.42, 0.004], 0.066 * b, 0.074 * b, { ...T, bone: 'spine', k: 0.04 });
-  s.ellipsoid([0, 0.458, 0.008], [0.098 * b, 0.07, 0.066], { ...T, bone: 'chest', k: 0.04 });
-  s.ellipsoid([0, 0.47, 0.03], [0.074 * b, 0.05, 0.05], { ...T, bone: 'chest', k: 0.03 });
-  for (const mm of [1, -1]) s.limb([mm * 0.03, 0.515, -0.004], [mm * 0.092 * b, 0.494, 0], 0.03, 0.034, { ...T, bone: 'chest', k: 0.025 });
-  // A belly, for those who have one: out in front and a little down.
-  if (belly > 0) {
-    s.ellipsoid([0, 0.372 - belly * 0.008, 0.02 + belly * 0.03], [(0.07 + belly * 0.022) * b, 0.068 + belly * 0.018, 0.06 + belly * 0.034], { ...T, bone: 'spine', k: 0.04 });
-  }
-  // A belt, if they wear one: a band round the top of the trousers, a buckle.
+  const T = { color: c('torso'), mat: m('torso') }, L = { color: c('legs'), mat: m('legs') };
+  // The trunk: one form, lofted through its sections from the crotch to the base of the neck, so its outline
+  // runs clean from the seat in at the waist and out over the ribs to the shoulders. In three pieces on three
+  // bones (the hips, the belly, the chest), so that it bends; the trousers below the waistline, the top above.
+  const at = trunk(b, belly);
+  const paint = (o) => (typeof o.color === 'function' ? o.color : () => rgb(o.color));
+  const dress = (p, n) => {
+    const t = Math.max(0, Math.min(1, (p[1] - 0.344) / 0.008));
+    const lo = paint(L)(p, n), hi = paint(T)(p, n);
+    return lo.map((v, i) => v + (hi[i] - v) * t);
+  };
+  loft(s, at, 0.268, 0.362, { color: dress, mat: m('legs'), bone: 'hips', k: k * 0.15 });
+  loft(s, at, 0.34, 0.445, { color: dress, mat: m('torso'), bone: 'spine', k: 0.003 });
+  loft(s, at, 0.425, 0.548, { ...T, bone: 'chest', k: 0.003 });
+  // A shirt worn loose stands out over the trousers at its tail, and stops there.
+  if (m('torso') !== 'skin' && c('torso') !== c('legs') && !look.belt) loft(s, at, 0.336, 0.39, { ...T, bone: 'spine', k: 0.002 }, 0.0065);
+  // A belt, if they wear one: a band fitted round the top of the trousers, and a buckle.
   if (look.belt) {
-    s.torus([0, 0.338, 0.004 + belly * 0.012], 0.074 * b + belly * 0.012, 0.009, { color: look.belt, mat: 'leather', bone: 'hips', k: 0.004 });
-    if (look.buckle) s.box([0, 0.338, 0.08 * b + belly * 0.05], [0.014, 0.011, 0.005], 0.002, { color: look.buckle, mat: 'metal', bone: 'hips', k: 0.002 });
+    const front = band(s, 0.338, 0.0085, 0.0035, { color: look.belt, mat: 'leather', bone: 'hips' });
+    if (look.buckle) s.box([0, 0.338, front + 0.002], [0.014, 0.011, 0.004], 0.002, { color: look.buckle, mat: 'metal', bone: 'hips', k: 0.002 });
   }
   for (const mm of [1, -1]) {
-    const S = side(mm);
-    s.sphere([mm * 0.098 * b, 0.494, 0], 0.039, { color: c('sleeve'), mat: m('sleeve'), bone: `arm${S}`, k: 0.035 });
-    // Arms: the upper arm a little thicker at the shoulder, the forearm at the elbow.
-    s.limb(J[`shoulder${S}`], J[`elbow${S}`], 0.034, 0.027, { color: c('sleeve'), mat: m('sleeve'), bone: `arm${S}`, k: 0.012 });
-    // A bare forearm goes with the hand, so there is no seam at the wrist.
-    s.part(m('cuff') === 'skin' && m('hand') === 'skin' ? 'hands' : s.current, () => s.limb(J[`elbow${S}`], J[`wrist${S}`], 0.028, 0.02, { color: c('cuff'), mat: m('cuff'), bone: `fore${S}`, k: 0.012 }));
+    const S = side(mm), sh = J[`shoulder${S}`], el = J[`elbow${S}`], wr = J[`wrist${S}`];
+    const along = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
+    const U = { color: c('sleeve'), mat: m('sleeve'), bone: `arm${S}` };
+    // The arm: a round shoulder grown out of the top of the trunk, the upper arm tapering to the elbow; a
+    // short sleeve is a tube of cloth over it, open just above the elbow.
+    s.limb([sh[0] - mm * 0.006, sh[1] + 0.004, sh[2]], el, 0.0345, 0.0245, { ...U, k: 0.016 });
+    if (m('sleeve') !== 'skin' && c('sleeve') !== c('cuff')) s.cylinder(along(sh, el, 0.48), 0.036, 0.046, { ...U, k: 0.004, round: 0.005, rot: [0, 0, mm * 0.28] });
+    // The forearm, tapering to the wrist; a bare one goes with the hand, so there is no seam at the wrist. A
+    // long sleeve ends in a cuff the hand comes out of.
+    s.part(m('cuff') === 'skin' && m('hand') === 'skin' ? 'hands' : s.current, () => {
+      const F = { color: c('cuff'), mat: m('cuff'), bone: `fore${S}` };
+      s.limb(el, wr, 0.0245, 0.0185, { ...F, k: 0.006 });
+      if (m('cuff') !== 'skin' && c('hand') !== c('cuff')) s.cylinder(along(el, wr, 0.87), 0.0226, 0.0105, { ...F, k: 0.003, round: 0.004, rot: [-0.17, 0, mm * 0.145] });
+    });
     // A hand, loosely closed, a mesh of its own: the wrist into the cuff, the palm, four fingers curled in
     // toward it from the knuckles, each a little longer or shorter, and the thumb along the front.
     const h = J[`hand${S}`];
@@ -170,11 +275,12 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
       s.limb(at(-0.004, 0.006, 0.014), at(-0.008, -0.005, 0.024), 0.0072, 0.006, { ...H, k: 0.005 });
       s.limb(at(-0.008, -0.005, 0.024), at(-0.0105, -0.0145, 0.0265), 0.006, 0.0048, { ...H, k: 0.002 });
     });
-    // Legs: a thigh, a knee, a calf that swells and narrows to the ankle.
-    s.limb(J[`hip${S}`], J[`knee${S}`], 0.047 * Math.sqrt(b), 0.034, { color: c('legs'), mat: m('legs'), bone: `thigh${S}`, k: 0.02 });
+    // The leg: the thigh tapering to the knee, the shin with the gentle swell of the calf, narrowing to the ankle.
+    s.limb(J[`hip${S}`], J[`knee${S}`], 0.046 * Math.sqrt(b), 0.0335, { ...L, bone: `thigh${S}`, k: 0.012 });
     const kn = J[`knee${S}`], a = J[`ankle${S}`];
-    s.limb(kn, [a[0], a[1] + 0.06, a[2] - 0.004], 0.033, 0.031, { color: c('boot'), mat: m('boot'), bone: `shin${S}`, k: 0.014 });
-    s.limb([a[0], a[1] + 0.06, a[2] - 0.004], a, 0.031, 0.025, { color: c('boot'), mat: m('boot'), bone: `shin${S}`, k: 0.012 });
+    const calf = { color: c('boot'), mat: m('boot'), bone: `shin${S}` };
+    s.limb(kn, [a[0], a[1] + 0.07, a[2] - 0.004], 0.0325, 0.0305, { ...calf, k: 0.006 });
+    s.limb([a[0], a[1] + 0.07, a[2] - 0.004], a, 0.0305, 0.0245, { ...calf, k: 0.006 });
     // Bare feet: a foot, melted into the leg, with its toes; no shoe.
     if (m('boot') === 'skin' && !look.sole && !look.boots) {
       bareFoot(s, a, mm, { color: c('boot'), mat: 'skin', bone: `foot${S}` });
@@ -290,8 +396,9 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
   const lips = rgb('#b25a52');
   s.paint((p) => Math.max(Math.hypot(p[0] / 1.6, (p[1] - 0.6085 - p[0] * p[0] * curve) * 1.4) - 0.0125, 0.08 - p[2]), (p, n) => mix(tone(p, n), lips, 0.32), 0.004);
   s.paint((p) => Math.max(Math.abs(p[1] - (0.611 + p[0] * p[0] * curve)) - 0.0014, Math.abs(p[0]) - 0.0215, 0.08 - p[2]), '#4a1e1c', 0.0012);
-  // Rosy cheeks.
-  if (blush) s.paint((p) => Math.hypot(Math.abs(p[0]) - 0.058, (p[1] - 0.636) * 1.3, Math.max(0, 0.06 - p[2])) - 0.022, '#e08a7a', 0.02);
+  // Rosy cheeks: a warm flush in the skin, not a disc painted on it.
+  const rose = rgb('#e07a6e');
+  if (blush) s.paint((p) => Math.hypot(Math.abs(p[0]) - 0.056, (p[1] - 0.634) * 1.3, Math.max(0, 0.06 - p[2])) - 0.019, (p, n) => mix(tone(p, n), rose, Math.min(0.55, blush * 1.6)), 0.016);
   // Eyes, set into the face.
   for (const m of [1, -1]) {
     const d = [m * 0.3, 0.02, 0.95];
@@ -302,26 +409,44 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
     const rot = [-Math.asin(n[1]), Math.atan2(n[0], n[2]), 0], R = rotation(rot);
     const eyeAt = (x, y, z) => [0, 1, 2].map((i) => c[i] + R[i][0] * x + R[i][1] * y + R[i][2] * z);
     // A socket just the size of the eye, so it sits snug with no dark rim.
-    s.part('head', () => s.ellipsoid(c, [0.0185, 0.0245, 0.0135], { op: 'sub', k: 0.003, rot }));
-    s.part('eyes', () => s.ellipsoid(c, [0.019, 0.025, 0.014], { color: '#f4efe8', mat: 'eye', bone: 'head', k: 0, rot }));
-    s.part('irises', () => s.ellipsoid(at(0.009), [0.012, 0.016, 0.0065], { color: eyeColor, mat: 'eye', bone: 'head', k: 0, rot }));
-    s.part('pupils', () => s.ellipsoid(at(0.0135), [0.0062, 0.0085, 0.0032], { color: '#08080c', mat: 'eye', bone: 'head', k: 0, rot }));
-    // The upper lid, a fold of skin over the top of the eye; lower in a frown.
-    const lid = eyeAt(0, 0.021 - mood * 0.0015, -0.0008), lidR = [0.0208, 0.0115, 0.0156];
-    s.part('head', () => s.ellipsoid(lid, lidR, { ...H, k: 0.004, rot }));
-    // And a softer one under it, so the white meets the face on a clean line.
-    s.part('head', () => s.ellipsoid(eyeAt(0, -0.0215, -0.0008), [0.0205, 0.0065, 0.0152], { ...H, k: 0.004, rot }));
-    // The lashes: a dark line along the lid's edge, thickening to the outer corner.
+    // Big and bright: a white, a wide iris, a pupil, two catch-lights.
+    const E = [0.0205, 0.027, 0.0148];
+    s.part('head', () => s.ellipsoid(c, [0.02, 0.0265, 0.0143], { op: 'sub', k: 0.003, rot }));
+    s.part('eyes', () => s.ellipsoid(c, E, { color: '#f6f2ec', mat: 'eye', bone: 'head', k: 0, rot }));
+    s.part('irises', () => s.ellipsoid(at(0.0095), [0.0145, 0.0185, 0.0068], { color: eyeColor, mat: 'eye', bone: 'head', k: 0, rot }));
+    s.part('pupils', () => s.ellipsoid(at(0.0142), [0.0068, 0.0092, 0.0032], { color: '#08080c', mat: 'eye', bone: 'head', k: 0, rot }));
+    // The iris darker round its rim.
+    const iris = at(0.0095), rim = rgb(eyeColor).map((v) => v * 0.4);
     s.paint((p) => {
-      const out = Math.max(0, (p[0] - c[0]) * m) / 0.019;
-      return Math.max(Math.abs(outside(p, lid, R, lidR)) - 0.0008 - out * 0.0012, Math.abs(outside(p, c, R, [0.019, 0.025, 0.014])) - 0.0016 - out * 0.0012);
-    }, '#16100e', 0.0007);
-    // A catch-light.
-    const hl = at(0.016).map((v, i) => v + [m * -0.003, 0.004, 0][i]);
-    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - 0.0032, '#ffffff', 0.0012);
+      const v = [p[0] - iris[0], p[1] - iris[1], p[2] - iris[2]];
+      const x = (R[0][0] * v[0] + R[1][0] * v[1] + R[2][0] * v[2]) / 0.0145, y = (R[0][1] * v[0] + R[1][1] * v[1] + R[2][1] * v[2]) / 0.0185;
+      const r = Math.hypot(x, y);
+      // Only on the iris: a ring from three quarters of the way out to its edge.
+      return Math.max((0.76 - r) * 0.0145, (r - 1.05) * 0.0145, Math.abs(outside(p, iris, R, [0.0145, 0.0185, 0.0068])) - 0.0015);
+    }, rim, 0.0012);
+    // The upper lid over the top of the eye (lower in a frown), and a softer lower one.
+    const lid = eyeAt(0, 0.0245 - mood * 0.002, -0.0008), lidR = [0.0222, 0.011, 0.0165];
+    s.part('head', () => s.ellipsoid(lid, lidR, { ...H, k: 0.004, rot }));
+    s.part('head', () => s.ellipsoid(eyeAt(0, -0.0255, -0.0008), [0.0215, 0.0065, 0.016], { ...H, k: 0.004, rot }));
+    // The lashes: a bold dark line along the lid's edge, thickening to the outer corner.
+    s.paint((p) => {
+      const out = Math.max(0, (p[0] - c[0]) * m) / E[0];
+      return Math.max(Math.abs(outside(p, lid, R, lidR)) - 0.0011 - out * 0.0016, Math.abs(outside(p, c, R, E)) - 0.002 - out * 0.0016);
+    }, '#140e0c', 0.0006);
+    // Catch-lights: a big one up toward the light, a little one below.
+    const hl = at(0.0172).map((v, i) => v + [m * -0.004, 0.0055, 0][i]), lo = at(0.0168).map((v, i) => v + [m * 0.0042, -0.0058, 0][i]);
+    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - 0.0042, '#ffffff', 0.0011);
+    s.paint((p) => Math.hypot(p[0] - lo[0], p[1] - lo[1], p[2] - lo[2]) - 0.0017, '#ffffff', 0.0008);
     eyes.push(c);
-    // Brows: a firm stroke of hair over each eye.
-    s.part('brows', () => s.flake([m * 0.066, 0.702 - mood * 0.005, 0.088], [m * 0.019, 0.706 + mood * 0.008, 0.106], [0, 1, 0.45], 0.0085, 0.0065, 0.6, { color: brow, mat: 'hair', bone: 'head', k: 0.003 }));
+  }
+  // Brows: arched strokes of hair, thick at the inner end and tapering out; pulled down at the middle in a frown.
+  for (const m of [1, -1]) {
+    const on = (x, y) => [m * x, y, faceAt(s, m * x, y, 0.095) + 0.0005];
+    const inner = on(0.02, 0.704 - mood * 0.008), peak = on(0.045, 0.711 - mood * 0.002), outer = on(0.069, 0.703);
+    s.part('brows', () => {
+      s.flake(inner, peak, [0, 1, 0.45], 0.0058, 0.005, 0.55, { color: brow, mat: 'hair', bone: 'head', k: 0.002 });
+      s.flake(peak, outer, [0, 1, 0.3], 0.005, 0.0026, 0.55, { color: brow, mat: 'hair', bone: 'head', k: 0.002 });
+    });
   }
   return eyes;
 }
@@ -355,6 +480,95 @@ export function hair(s, { color, locks = [], cap = [0.108, 0.1, 0.108], at = [0,
       s.flake(a, b, up, r, r * 0.22, flat, { ...Hh, k: 0.016 });
     }
   });
+}
+
+/**
+ * The pieces a person wears put on them: everything sculpted onto the body
+ * in parts of its own (badges, buttons, chains, hats, a bag) that, at rest,
+ * stands just off what it is worn on (the body, or another piece: a button
+ * on a coat) instead of on it, up to `reach` away, is moved onto it, and a
+ * small piece sunk out of sight in it is brought up to show.
+ * A piece is a lump of shapes of one part that touch; it moves whole. What
+ * is held out from the body (further than `reach`) stays where it is.
+ */
+export function fit(s, { core = ['body', 'head', 'hands', 'shoes', 'soles'], skip = ['eyes', 'irises', 'pupils', 'brows'], reach = 0.035 } = {}) {
+  const body = new Sculpt();
+  body.shapes = s.shapes.filter((x) => core.includes(x.part));
+  const [lo, hi] = body.bounds(0.06);
+  body.prepare(lo, hi, reach + 0.03);
+  const worn = s.shapes.filter((x) => !core.includes(x.part) && !skip.includes(x.part));
+  const DIRS = [];
+  for (const x of [-1, 0, 1]) for (const y of [-1, 0, 1]) for (const z of [-1, 0, 1]) if (x || y || z) DIRS.push([x, y, z].map((v) => v / Math.hypot(x, y, z)));
+  // Points on each shape's surface: from round its middle in, to where it begins.
+  const surface = (x) => {
+    const c = [0, 1, 2].map((i) => (x.box[0][i] + x.box[1][i]) / 2), half = Math.hypot(...[0, 1, 2].map((i) => x.box[1][i] - x.box[0][i])) / 2;
+    const points = [];
+    for (const d of DIRS) {
+      let t = half;
+      for (let k = 0; k < 24; k++) {
+        const v = x.d([c[0] + d[0] * t, c[1] + d[1] * t, c[2] + d[2] * t]);
+        if (Math.abs(v) < 0.0004) break;
+        t = Math.max(0, t - v);
+      }
+      const p = [c[0] + d[0] * t, c[1] + d[1] * t, c[2] + d[2] * t];
+      if (Math.abs(x.d(p)) < 0.002) points.push(p);
+    }
+    return points;
+  };
+  const points = worn.map((x) => (x.op === 'add' ? surface(x) : []));
+  // Lumps: shapes of one part that touch (or a carving and what it carves).
+  const up = worn.map((_, i) => i);
+  const find = (i) => (up[i] === i ? i : (up[i] = find(up[i])));
+  const meet = (a, b) => [0, 1, 2].every((i) => a.box[0][i] - 0.002 <= b.box[1][i] && b.box[0][i] - 0.002 <= a.box[1][i]);
+  const touch = (i, j) => {
+    const a = worn[i], b = worn[j];
+    if (a.op !== 'add' || b.op !== 'add') return true;
+    return points[i].some((p) => b.d(p) < a.k + b.k + 0.0015) || points[j].some((p) => a.d(p) < a.k + b.k + 0.0015);
+  };
+  for (let i = 0; i < worn.length; i++) for (let j = 0; j < i; j++) if (worn[i].part === worn[j].part && meet(worn[i], worn[j]) && find(i) !== find(j) && touch(i, j)) up[find(i)] = find(j);
+  const lumps = new Map();
+  worn.forEach((x, i) => { const r = find(i); if (!lumps.has(r)) lumps.set(r, []); lumps.get(r).push(i); });
+  // What a lump sits on: the body, and everything else they wear.
+  const under = (p, mine) => {
+    let d = body.field(p);
+    for (let j = 0; j < worn.length; j++) {
+      const x = worn[j];
+      if (x.op !== 'add' || mine.has(j)) continue;
+      if (p[0] < x.box[0][0] - d || p[0] > x.box[1][0] + d || p[1] < x.box[0][1] - d || p[1] > x.box[1][1] + d || p[2] < x.box[0][2] - d || p[2] > x.box[1][2] + d) continue;
+      d = Math.min(d, x.d(p));
+    }
+    return d;
+  };
+  for (const lump of lumps.values()) {
+    const mine = new Set(lump);
+    let near = Infinity, nearest = null, far = -Infinity, farthest = null;
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (const i of lump) {
+      for (const p of points[i]) {
+        const g = under(p, mine);
+        if (g < near) { near = g; nearest = p; }
+        if (g > far) { far = g; farthest = p; }
+      }
+      if (worn[i].op === 'add') for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], worn[i].box[0][a]); hi[a] = Math.max(hi[a], worn[i].box[1][a]); }
+    }
+    if (!nearest) continue;
+    const size = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+    let by = 0, from = null;
+    if (near > 0.0025 && near < reach) { by = -(near + 0.0012); from = nearest; } else if (far < 0 && far > -0.05 && size < 0.06) { by = 0.0025 - far; from = farthest; }
+    if (!by) continue;
+    const e = 0.002, grad = [0, 1, 2].map((a) => {
+      const q0 = [...from], q1 = [...from];
+      q0[a] -= e; q1[a] += e;
+      return under(q1, mine) - under(q0, mine);
+    });
+    const gl = Math.hypot(...grad) || 1, o = grad.map((v) => (v / gl) * by);
+    for (const i of lump) {
+      const x = worn[i], d = x.d, color = x.color;
+      x.d = (p) => d([p[0] - o[0], p[1] - o[1], p[2] - o[2]]);
+      x.box = [x.box[0].map((v, i) => v + o[i]), x.box[1].map((v, i) => v + o[i])];
+      if (typeof color === 'function') x.color = (p, nn) => color([p[0] - o[0], p[1] - o[1], p[2] - o[2]], nn);
+    }
+  }
 }
 
 // ——————————————————————————————————————————————— moving
