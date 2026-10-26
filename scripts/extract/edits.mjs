@@ -327,7 +327,7 @@ export const EDITS = [
         where);
       text = swap(text,
         '    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, ...cells },\n',
-        '    // The small things on the head get grids of their own, as fine as the head is small.\n    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, highlights: Hd.r * 0.015, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },\n',
+        '    // The small things on the head get grids of their own, as fine as the head is small.\n    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, highlights: sculptHead ? Hd.r * 0.015 : undefined, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },\n',
         where);
       text = swap(text, QUADRUPED_HEAD_WAS, QUADRUPED_HEAD, where);
       text = swap(text, QUADRUPED_EARS_WAS, QUADRUPED_EARS, where);
@@ -361,7 +361,11 @@ export const EDITS = [
         "s.cone([m * (w - 0.004), P.H[1] - 0.022, z + 0.01], 0.0035, 0.01, { ...TOOTH, bone: 'jaw' });",
         "s.part('teeth', () => s.cone([m * (w - 0.004), P.H[1] - 0.022, z + 0.01], 0.0035, 0.01, { ...TOOTH, bone: 'jaw' }));",
         where);
-      return swap(text, '  sculptHead: false,\n', '  sculptHead: false,\n  cells: { teeth: 0.0014 },\n', where);
+      text = swap(text,
+        "    s.part('fine', () => {\n      for (const m of [1, -1]) s.box(add(P.H, [m * 0.03, 0.036, 0.0265]), [0.0015, 0.007, 0.001], 0.0005, { color: '#0a0a08', mat: 'eye', bone: 'head', k: 0 });\n    });",
+        "    s.part('fine', () => {\n      for (const m of [1, -1]) s.box(add(P.H, [m * 0.03, 0.036, 0.0265]), [0.0015, 0.007, 0.001], 0.0005, { color: '#0a0a08', mat: 'eye', bone: 'head', k: 0 });\n    });\n    s.part('highlights', () => {\n      for (const m of [1, -1]) s.sphere(add(P.H, [m * 0.027, 0.041, 0.026]), 0.0018, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 });\n    });",
+        where);
+      return swap(text, '  sculptHead: false,\\n', '  sculptHead: false,\\n  cells: { teeth: 0.0014, highlights: 0.0006 },\\n', where);
     },
   },
   {
