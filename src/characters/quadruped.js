@@ -124,7 +124,7 @@ export function quadruped({
     scale,
     cell,
     // The small things on the head get grids of their own, as fine as the head is small.
-    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, highlights: Hd.r * 0.015, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },
+    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, highlights: sculptHead ? Hd.r * 0.015 : undefined, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },
     budget,
     bones,
     materials: { ...ANIMAL, ...materials },
