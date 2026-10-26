@@ -1,3 +1,4 @@
+/* global document */
 import * as GFX from 'madness-engine/gfx';
 import { CHARACTERS } from 'madness-engine/characters';
 import { createModel } from 'madness-engine/models/model';
