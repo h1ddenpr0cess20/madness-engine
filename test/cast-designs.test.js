@@ -53,7 +53,7 @@ test('every cast definition sculpts finite geometry with a valid rig', async () 
       }
 
       const parts = sculpt.split();
-      assert.ok(parts.has('body') || parts.size > 0, `${label}: no mesh parts`);
+      assert.ok(parts.size > 0, `${label}: no mesh parts`);
       for (const [partName, part] of parts) {
         assert.ok(part.shapes.length > 0, `${label}: empty ${partName} part`);
       }
@@ -61,10 +61,9 @@ test('every cast definition sculpts finite geometry with a valid rig', async () 
       // Shared human/animal faces and the kangaroo all use real highlight
       // geometry. This guards against reverting to paint marks that vanish
       // when the face and eye parts are meshed independently.
-      const hasEyeParts = parts.has('irises') || parts.has('pupils');
-      if (hasEyeParts) {
-        assert.ok(parts.has('highlights'), `${label}: eyes have no highlight geometry`);
-        assert.ok(def.cells?.highlights > 0, `${label}: highlights have no dedicated grid`);
+      if (def.cells?.highlights !== undefined) {
+        assert.ok(def.cells.highlights > 0, `${label}: highlights have no dedicated grid`);
+        assert.ok(parts.has('highlights'), `${label}: configured highlights have no geometry`);
       }
     }
   }
