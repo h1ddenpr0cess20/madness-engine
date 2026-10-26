@@ -53,7 +53,7 @@ export default person({
       // The cane: black, a silver top, held at its middle.
       const r = J.handR;
       s.limb([r[0], r[1] + 0.13, r[2]], [r[0], r[1] - 0.2, r[2]], 0.007, 0.007, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.002 });
-      s.sphere([r[0], r[1] + 0.135, r[2]], 0.013, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.002 });
+      s.sphere([r[0], r[1] + 0.135, r[2]], 0.013, { color: '#f4f6fc', mat: 'plastic', bone: 'handR', k: 0.002 });
       s.cylinder([r[0], r[1] - 0.2, r[2]], 0.008, 0.008, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.001 });
     });
     s.part('fine', () => {

@@ -16,7 +16,7 @@ const KHAKI = cloth('#c8b080', '#a08a5a');
 
 export default person({
   name: 'archaeologist',
-  budget: 24000,
+  budget: 52800,
   scale: 1.45,
   b: 1.02,
   shape: { legs: 1.04, girth: 0.98 },

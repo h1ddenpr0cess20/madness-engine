@@ -1,5 +1,6 @@
 import { cloth, hold, person } from './person.js';
 import { glasses, suitFront } from './wardrobe.js';
+import { band } from './metalwear.js';
 
 /**
  * The Salaryman: missed the last train home from Shinjuku, found a karaoke
@@ -41,7 +42,7 @@ export default person({
     suitFront(s, { shirt: '#f2f0ec', tie: null, lapel: '#22262e' });
     s.part('kit', () => {
       // The tie, round the head, its ends down behind.
-      s.torus([0, 0.735, 0.0], 0.104, 0.01, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.003, rot: [-0.1, 0, 0.08] });
+      band(s, 0.728, -0.1, 0.01, { color: '#c8141e', mat: 'cloth', bone: 'head' });
       for (const m of [1, -1]) s.flake([m * 0.01, 0.73, -0.1], [m * 0.04, 0.62, -0.13], [0, 0, -1], 0.012, 0.016, 0.3, { color: '#c8141e', mat: 'cloth', bone: 'head', k: 0.002 });
       // The shirt tail out of the trousers.
       s.ellipsoid([0.04, 0.32, 0.07], [0.04, 0.03, 0.015], { color: '#f2f0ec', mat: 'cloth', bone: 'hips', k: 0.008 });

@@ -1,5 +1,6 @@
 import { bands } from '../models/skins.js';
 import { cloth, person } from './person.rocknroller.js';
+import { band } from './metalwear.js';
 
 /**
  * The Drum Circle: a tie-dye shirt in every colour there is, a headband,
@@ -40,7 +41,7 @@ export default person({
       s.flake([0, 0.72, -0.1], [0, 0.5, -0.12], [0, 0, -1], 0.08, 0.08, 0.3, H);
     });
     s.part('kit', () => {
-      s.torus([0, 0.728, 0.0], 0.108, 0.01, { color: '#ffd23a', mat: 'cloth', bone: 'head', k: 0.004, rot: [0.1, 0, 0] });
+      band(s, 0.728, 0.1, 0.01, { color: '#ffd23a', mat: 'cloth', bone: 'head' });
       // Two bongos, joined, in front of the hips.
       for (const m of [1, -1]) {
         s.cylinder([m * 0.06, 0.3, 0.12], 0.05, 0.075, { color: '#b8682a', mat: 'leather', bone: 'hips', k: 0.004, round: 0.006 });

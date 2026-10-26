@@ -11,11 +11,14 @@ const HEAD = { bone: 'head' };
 export function fedora(s, { color = '#2a2a30', band = '#101014', tilt = 0.08, brim = 0.15 } = {}) {
   s.part('kit', () => {
     const C = { ...HEAD, color, mat: 'cloth' };
-    s.cylinder([0, 0.752, 0.008], brim, 0.006, { ...C, k: 0.004, round: 0.004, rot: [tilt, 0, 0] });
-    s.ellipsoid([0, 0.8, -0.004], [0.094, 0.055, 0.1], { ...C, k: 0.01, rot: [tilt, 0, 0] });
-    // The pinch at the front and the dent along the top.
-    s.ellipsoid([0, 0.85, 0.02], [0.03, 0.02, 0.07], { op: 'sub', k: 0.012 });
-    s.torus([0, 0.768, -0.002], 0.095, 0.009, { ...HEAD, color: band, mat: 'cloth', k: 0.003, rot: [tilt, 0, 0] });
+    // Down on the head: the brim, a crown as wide as the head with its band round the foot of it, the dent
+    // along the top and the pinch either side of the front.
+    const y = 0.742;
+    s.cylinder([0, y, 0.008], brim, 0.006, { ...C, k: 0.004, round: 0.004, rot: [tilt, 0, 0] });
+    s.cylinder([0, y + 0.042, -0.004], 0.093, 0.042, { ...C, k: 0.006, round: 0.028, rot: [tilt, 0, 0] });
+    s.ellipsoid([0, y + 0.094, 0.01], [0.026, 0.018, 0.075], { op: 'sub', k: 0.012 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.058, y + 0.07, 0.07], [0.022, 0.03, 0.03], { op: 'sub', k: 0.01 });
+    s.torus([0, y + 0.014, -0.004], 0.093, 0.0085, { ...HEAD, color: band, mat: 'cloth', k: 0.003, rot: [tilt, 0, 0] });
   });
 }
 
@@ -23,11 +26,20 @@ export function fedora(s, { color = '#2a2a30', band = '#101014', tilt = 0.08, br
 export function stetson(s, { color = '#8a5a32', band = '#3a2414' } = {}) {
   s.part('kit', () => {
     const C = { ...HEAD, color, mat: 'leather' };
-    s.cylinder([0, 0.752, 0.0], 0.17, 0.006, { ...C, k: 0.004, round: 0.004 });
-    for (const m of [1, -1]) s.ellipsoid([m * 0.15, 0.768, 0], [0.032, 0.008, 0.11], { ...C, k: 0.012, rot: [0, 0, m * 0.7] });
-    s.ellipsoid([0, 0.81, -0.004], [0.09, 0.07, 0.1], { ...C, k: 0.012 });
-    s.ellipsoid([0, 0.875, 0], [0.025, 0.03, 0.08], { op: 'sub', k: 0.015 });
-    s.torus([0, 0.768, 0], 0.092, 0.008, { ...HEAD, color: band, mat: 'leather', k: 0.003 });
+    // The brim: wide, swept up at the sides (a sheet bent up beyond the crown either side) and dipping a little
+    // at the front and back.
+    const y = 0.742, R = 0.172;
+    s.shape((p) => {
+      const x = p[0], z = p[2], r = Math.hypot(x, z);
+      const lift = Math.max(0, Math.abs(x) - 0.1) ** 2 * 3.4 - Math.max(0, Math.abs(z) - 0.09) * 0.12;
+      const flat = Math.abs(p[1] - y - lift) - 0.0045;
+      return Math.max(flat * 0.8, r - R);
+    }, [[-R, y - 0.02, -R], [R, y + 0.06, R]], { ...C, k: 0.004 });
+    // The crown: tall and squared, pinched in at the front, a crease down the top.
+    s.cylinder([0, y + 0.05, -0.004], 0.091, 0.05, { ...C, k: 0.006, round: 0.03 });
+    s.ellipsoid([0, y + 0.104, 0], [0.024, 0.022, 0.08], { op: 'sub', k: 0.012 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.06, y + 0.08, 0.075], [0.024, 0.036, 0.03], { op: 'sub', k: 0.01 });
+    s.torus([0, y + 0.012, -0.004], 0.092, 0.0085, { ...HEAD, color: band, mat: 'leather', k: 0.003 });
   });
 }
 
@@ -44,8 +56,10 @@ export function topHat(s, { color = '#101014', band = '#3a3a44', height = 0.075 
 /** A beret, worn to one side. */
 export function beret(s, { color = '#101014' } = {}) {
   s.part('kit', () => {
-    s.ellipsoid([0.02, 0.775, -0.01], [0.12, 0.035, 0.115], { ...HEAD, color, mat: 'cloth', k: 0.012, rot: [0, 0, -0.2] });
-    s.sphere([0.03, 0.81, -0.01], 0.008, { ...HEAD, color, mat: 'cloth', k: 0.004 });
+    // Snug round the head at the band, puffing out to a wide soft top pulled down to one side, and the stalk.
+    s.ellipsoid([0, 0.742, -0.004], [0.104, 0.046, 0.108], { ...HEAD, color, mat: 'cloth', k: 0.012 });
+    s.ellipsoid([0.018, 0.772, -0.008], [0.126, 0.032, 0.122], { ...HEAD, color, mat: 'cloth', k: 0.014, rot: [0, 0, -0.18] });
+    s.limb([0.024, 0.8, -0.008], [0.026, 0.814, -0.008], 0.005, 0.0035, { ...HEAD, color, mat: 'cloth', k: 0.003 });
   });
 }
 
@@ -53,9 +67,15 @@ export function beret(s, { color = '#101014' } = {}) {
 export function cap(s, { color = '#1a2a5a', peak = '#101014', badge = null, flat = false } = {}) {
   s.part('kit', () => {
     const C = { ...HEAD, color, mat: 'cloth' };
-    if (flat) s.cylinder([0, 0.775, -0.005], 0.11, 0.022, { ...C, k: 0.008, round: 0.01 });
+    // A flat cap comes down over the head like any cap, and is flat and full on top, overhanging a little.
+    if (flat) {
+      s.ellipsoid([0, 0.748, -0.002], [0.108, 0.046, 0.114], { ...C, k: 0.01 });
+      s.cylinder([0, 0.778, 0.004], 0.106, 0.012, { ...C, k: 0.012, round: 0.011 });
+    }
     else s.ellipsoid([0, 0.745, -0.005], [0.108, 0.05, 0.108], { ...C, k: 0.01 });
-    s.flake([0, 0.74, 0.08], [0, 0.735, 0.15], [0, 1, 0], 0.07, 0.055, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.005 });
+    // The peak grows out of the front of the cap, over the brows; a flat cap's out of its band, lower down.
+    if (flat) s.flake([0, 0.728, 0.07], [0, 0.716, 0.158], [0, 1, 0.12], 0.072, 0.056, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.008 });
+    else s.flake([0, 0.74, 0.08], [0, 0.735, 0.15], [0, 1, 0], 0.07, 0.055, 0.12, { ...HEAD, color: peak, mat: 'leather', k: 0.005 });
     if (badge) s.cylinder([0, 0.77, 0.105], 0.016, 0.004, { ...HEAD, color: badge, mat: 'metal', k: 0.001, rot: [Math.PI / 2, 0, 0] });
   });
 }

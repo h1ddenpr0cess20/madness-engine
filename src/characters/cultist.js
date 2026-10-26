@@ -13,7 +13,7 @@ const ROBE = cloth('#3a1a3a', '#1e0c20');
 
 export default person({
   name: 'cultist',
-  budget: 28500,
+  budget: 62700,
   scale: 1.5,
   b: 1.04,
   shape: { legs: 0.9, girth: 1.0 },

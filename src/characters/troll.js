@@ -12,7 +12,7 @@ const SLATE = '#6a7a68';
 
 export default person({
   name: 'troll',
-  budget: 30000,
+  budget: 66000,
   scale: 2.0,
   b: 1.1,
   shape: { legs: 0.8, torso: 1.2, head: 1.1, girth: 1.5 },

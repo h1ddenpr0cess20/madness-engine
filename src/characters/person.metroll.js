@@ -1,6 +1,6 @@
 import { coat, mix } from '../models/skins.js';
 import { rgb } from '../models/sdf.js';
-import { body, bones, build, head, hair, joints, moveHumanoid, skinTone } from './humanoid.metroll.js';
+import { body, bones, build, cover, fit, grip, head, hair, joints, moveHumanoid, skinTone, thin } from './humanoid.metroll.js';
 
 /**
  * The people of the gig, as one body in different clothes: the humanoid rig
@@ -15,8 +15,8 @@ import { body, bones, build, head, hair, joints, moveHumanoid, skinTone } from '
 
 export const MATERIALS = {
   skin: { roughness: 0.62, sheen: 0.25, sheenColor: '#ffd8c0', sheenRoughness: 0.7 },
-  cloth: { roughness: 0.86 },
-  denim: { roughness: 0.92 },
+  cloth: { roughness: 0.84, sheen: 0.28, sheenColor: '#9a9aa4', sheenRoughness: 0.5 },
+  denim: { roughness: 0.9, sheen: 0.22, sheenColor: '#8c98ac', sheenRoughness: 0.55 },
   leather: { roughness: 0.48, clearcoat: 0.25, clearcoatRoughness: 0.5 },
   hair: { roughness: 0.5, sheen: 0.8, sheenColor: '#6a5a4a' },
   eye: { roughness: 0.1, clearcoat: 1 },
@@ -32,7 +32,7 @@ export const MATERIALS = {
 };
 
 /** Cloth: a colour that is lighter on top and darker beneath, with a little mottling. */
-export const cloth = (over, under, o = {}) => coat({ over, under: under ?? shade(over, 0.7), vary: 0.1, freq: 14, grain: 0.05, ...o });
+export const cloth = (over, under, o = {}) => coat({ over, under: under ?? shade(over, 0.8), vary: 0.04, freq: 14, grain: 0.03, ...o });
 
 /** `hex` darkened (or lightened, above 1) by `k`. */
 export function shade(hex, k) {
@@ -59,7 +59,7 @@ export function hold(k, name, x = 0, y = 0, z = 0) {
  */
 export function person({
   name, scale = 1.1, b = 1, skin = '#e9b48f', look, mats = {}, face = {}, hair: hairOpts = null,
-  extras = null, style = {}, cells = {}, budget = 18000, cell = 0.0085, k = 0.03, shape = {}, belly = 0,
+  extras = null, style = {}, cells = {}, budget = 39600, cell = 0.0085, k = 0.03, shape = {}, belly = 0,
 }) {
   const tone = typeof skin === 'string' ? skinTone(skin) : skin;
   const full = { skin: tone, hand: tone, ...look };
@@ -70,18 +70,29 @@ export function person({
     name,
     scale,
     cell,
-    cells: { eyes: 0.0026, irises: 0.0017, pupils: 0.0011, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, ...cells },
+    cells: { head: 0.005, hands: 0.0024, shoes: 0.0042, soles: 0.0032, eyes: 0.0026, irises: 0.0017, pupils: 0.0011, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, ...cells },
     budget,
     bones: bones(b, warp),
     /** Their build, to take a posed point back to where it was sculpted. */
     warp,
     materials: MATERIALS,
+    // Deep in the creases: under the arms, the collar, between the legs.
+    ambient: 0.22,
     sculpt(s) {
       s.setWarp(warp);
       const J = body(s, { b, look: full, mats, k, belly });
       head(s, { skin: tone, ...face });
       if (hairOpts) hair(s, hairOpts);
       extras?.(s, J, { b, skin: tone });
+      // What they have on their face that is skin (a nose of their own, jowls) is the face's, and melts into it.
+      for (const shape of s.shapes) if (shape.part === 'body' && shape.bone === 'head' && shape.mat === 'skin') shape.part = 'head';
+      // Hands that hold something closed round it; what they wear put on them, not hanging just off them;
+      // its thin pieces (brims, peaks) on a finer grid.
+      grip(s, J);
+      fit(s);
+      thin(s);
+      // Hair under a hat stays under it.
+      cover(s);
     },
     animate(kk, state) {
       moveHumanoid(kk, state, style);

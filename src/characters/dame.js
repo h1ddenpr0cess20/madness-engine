@@ -1,4 +1,4 @@
-import { cloth, person } from './person.rocknroller.js';
+import { cloth, MATERIALS, person } from './person.rocknroller.js';
 
 /**
  * The Dame: walked in out of the rain. A satin gown to the calf, long black
@@ -10,7 +10,7 @@ import { cloth, person } from './person.rocknroller.js';
 const satin = cloth('#8a1428', '#4a0a14', { vary: 0.16, freq: 20 });
 const HAIR = { color: cloth('#f2e2b0', '#c0a868'), mat: 'hair', bone: 'head' };
 
-export default person({
+const dame = person({
   name: 'dame',
   scale: 1.44,
   b: 0.92,
@@ -19,6 +19,7 @@ export default person({
   look: { torso: satin, sleeve: '#f2d0b8', cuff: '#101014', hand: '#101014', legs: satin, boot: '#101014' },
   mats: { torso: 'leather', sleeve: 'skin', cuff: 'cloth', hand: 'cloth', legs: 'leather', boot: 'leather' },
   face: { eyeColor: '#3a6a5a', brow: '#8a6a3a', blush: 0.6, jaw: 0.88 },
+  cells: { veil: 0.0014 },
   style: {
     attack: 'shove', twist: 0,
     after(k, { clip, time, seed }) {
@@ -65,9 +66,33 @@ export default person({
         s.sphere([Math.sin(a) * 0.04, 0.545 - Math.max(0, Math.cos(a)) * 0.03, Math.cos(a) * 0.035 + 0.01], 0.006, { color: '#f4f0e8', mat: 'eye', bone: 'chest', k: 0.001 });
       }
       // The veil's net, and the cigarette's glow.
-      s.panel([0.0, 0.79, 0.07], [0.09, 0.79, 0.06], [0.04, 0.7, 0.11], 0.002, { color: '#2a2a30', mat: 'cloth', bone: 'head', k: 0 });
+      // The veil: a net of fine black threads from the hat's brim down over the right brow, lying just off the face.
+      const off = (q) => {
+        const d = [-q[0], 0.69 - q[1], -q[2]], l = Math.hypot(...d), hit = s.cast(q, d.map((v) => v / l), 0.3);
+        return hit ? hit.p.map((v, i) => v + hit.n[i] * 0.009) : q;
+      };
+      const corner = [[-0.01, 0.79, 0.1], [0.095, 0.785, 0.07], [-0.005, 0.715, 0.13], [0.095, 0.708, 0.1]];
+      const at = (u, v) => off([0, 1, 2].map((i) => (corner[0][i] * (1 - u) + corner[1][i] * u) * (1 - v) + (corner[2][i] * (1 - u) + corner[3][i] * u) * v));
+      const N = 6;
+      const grid = Array.from({ length: N + 1 }, (_, i) => Array.from({ length: N + 1 }, (__, j) => at(i / N, j / N)));
+      // Sheer: a thin curved sheet of it, see-through, with its mesh drawn on.
+      const net = (q) => {
+        const u = ((q[0] * 260) % 1 + 1) % 1, v = (((q[1] + q[2]) * 260) % 1 + 1) % 1;
+        return Math.min(u, 1 - u) < 0.18 || Math.min(v, 1 - v) < 0.18 ? [0.01, 0.01, 0.012] : [0.08, 0.08, 0.09];
+      };
+      s.part('veil', () => {
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            s.panel(grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], 0.004, { color: net, mat: 'veil', bone: 'head', k: 0.002 });
+            s.panel(grid[i][j], grid[i + 1][j + 1], grid[i][j + 1], 0.004, { color: net, mat: 'veil', bone: 'head', k: 0.002 });
+          }
+        }
+      });
       const r = J.handR;
       s.sphere([r[0] + 0.024, r[1] + 0.068, r[2] + 0.172], 0.005, { color: '#ff6a2a', mat: 'glow', bone: 'handR', k: 0.001 });
     });
   },
 });
+
+// The veil is sheer.
+export default { ...dame, materials: { ...MATERIALS, veil: { roughness: 0.8, opacity: 0.55, side: 'double' } } };

@@ -44,6 +44,9 @@ export function bake(def, { detail = 1 } = {}) {
   const cell = (def.cell ?? 0.012) / detail;
   const sculpt = new Sculpt();
   def.sculpt(sculpt);
+  // Each part is shaded by the whole: a hat darkens the hair under it, a collar the neck, an arm the side.
+  const [wlo, whi] = sculpt.bounds(0.06);
+  sculpt.prepare(wlo, whi, 0.07);
   const bones = def.bones.map(([name]) => name);
   const matNames = Object.keys(def.materials);
   const buckets = matNames.map(() => []);
@@ -53,7 +56,7 @@ export function bake(def, { detail = 1 } = {}) {
     // Far off (detail under 1) the fine parts needn't be much finer than the rest: they're a few pixels. But the
     // smallest (a pupil, an iris) still need a few grid steps across, or they are lost.
     const fine = def.cells?.[name] ? Math.max(def.cells[name] / detail, detail < 1 ? Math.min(cell * 0.35, largest(part) / 8) : 0) : cell;
-    const m = build(part, { cell: fine, bones, ambient: def.ambient ?? 0.3, shade: def.shade, refine: def.refine });
+    const m = build(part, { cell: fine, bones, ambient: def.ambient ?? 0.3, shade: def.shade, refine: def.refine, shadow: sculpt });
     chunks.push(m);
     // Each triangle takes the material most of its corners have.
     for (let t = 0; t < m.index.length; t += 3) {

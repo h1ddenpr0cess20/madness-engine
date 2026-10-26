@@ -133,6 +133,42 @@ the people (`humanoid`) and of the animals (`quadruped`) sat with their
 fronts just under the skin of the face, and showed only because the coarse
 mesh cut corners. Each eye is now set by where the face actually is.
 
+The people (`humanoid`, under every `person`) are rebuilt. Their trunk is
+one form lofted on a smooth curve through its sections (the seat, the
+waist, the ribs, the chest and the shoulders), wider than it is deep and
+squared off at the sides, in three pieces on the hips, spine and chest
+bones so that it bends; a belly is part of that curve rather than a ball
+stuck on. Arms and legs are clean tapered limbs. Clothes are shapes in the
+outline: a short sleeve stands off the arm, a long one ends in a cuff the
+hand comes out of, a loose shirt's tail stands out over the trousers,
+trouser legs hang straight to the shoe, shorts end above the knee, and a
+belt is fitted to the waist. The head and neck are a mesh of their own on
+a finer grid, so the face is crisp and the neck meets the collar on a
+clean line: big eyes with an iris darker at its rim, a line of lashes on
+an upper lid, a softer lower lid and two catch-lights; arched brows (pulled
+down in a frown); a nose with a bridge, tip and nostrils; a mouth carved in
+with lips; ears with a rim, bowl and lobe; a flush in the cheeks. The hands
+are a palm, four curled fingers and a thumb, loosely closed so what they
+hold is held, and a bare forearm goes with the hand so there is no seam at
+the wrist. Shoes stand on a welted sole, flat underneath; someone barefoot
+has feet with arches and toes. Hair is in strands. Cloth is cleaner, with a
+soft sheen. And what a person wears is put on them (`fit`): a badge, a
+button, a chain or a bag that stood just off the body (or off the coat it
+is on) is moved onto it, a hat that rested on the crown with a gap under
+its rim is lowered until the rim sits on the head (never past the brows),
+and a small piece sunk out of sight is brought out; what is held out from
+the body stays where it is. All of it costs the people about 1.4 times the
+vertices (2.15 at most, for bare arms) and their bakes about twice as long.
+
+Every model is shaded by the whole of itself (`build`'s `shadow`): a part
+meshed on its own, a hat or a hand or a head, is darkened where the parts
+round it come close, so hats shade hair, collars shade necks and arms shade
+sides.
+
+The `quadruped`s' legs have the muscle of the shoulder or the haunch at the
+top and a clean shin below, with no knob at the knee, and their hooves are
+wider at the ground, sloped in front, cleft and flat underneath.
+
 The animals have more besides. The `quadruped`s' eyes have pupils,
 catch-lights and lids; their noses (with nostrils) and ears (cupped and
 coloured inside when they stand up) are meshes of their own on grids as
@@ -148,7 +184,7 @@ just enough, and the tail by raising it at the root (a definition's
 `settle`).
 
 These, and the vertex budgets (half as many again, to make room for the
-finer meshes), are changes to files the library takes from the games.
+finer meshes, and the people's 2.2 times that), are changes to files the library takes from the games.
 `scripts/extract/edits.mjs` says what they are. `npm run extract` makes
 them as it takes the files, and `npm run verify` makes them before it
 compares the files and in the copy of each game whose tests it runs.

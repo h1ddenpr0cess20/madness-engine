@@ -51,8 +51,8 @@ export default person({
   extras(s, J) {
     s.part('kit', () => {
       // The bucket hat, badges all round it.
-      s.cylinder([0, 0.775, -0.004], 0.1, 0.035, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
-      s.cone([0, 0.8, -0.004], 0.16, 0.06, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01 });
+      s.cylinder([0, 0.785, -0.004], 0.1, 0.042, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
+      s.cylinder([0, 0.748, -0.004], 0.158, 0.0055, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [0.1, 0, 0] });
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
         s.cylinder([Math.sin(a) * 0.1, 0.785, Math.cos(a) * 0.1 - 0.004], 0.014, 0.003, { color: BADGES[i % 6], mat: 'plastic', bone: 'head', k: 0.001, rot: [Math.PI / 2, a, 0] });
