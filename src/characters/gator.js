@@ -27,7 +27,7 @@ export default quadruped({
   tail: { len: 0.4, rise: -0.1, r: 0.05, tip: 0.008, curl: 0.04 },
   feet: 'claw',
   sculptHead: false,
-  cells: { teeth: 0.0014 },
+  cells: { teeth: 0.0014, highlights: 0.0006 },
   paint: { body: HIDE, feet: HIDE },
   mats: { body: 'scale', legs: 'scale', tail: 'scale', feet: 'scale' },
   style: { gait: 'sprawl', rate: 7, wag: 0.5, after(k, { clip, t }) {
@@ -71,6 +71,9 @@ export default quadruped({
     });
     s.part('fine', () => {
       for (const m of [1, -1]) s.box(add(P.H, [m * 0.03, 0.036, 0.0265]), [0.0015, 0.007, 0.001], 0.0005, { color: '#0a0a08', mat: 'eye', bone: 'head', k: 0 });
+    });
+    s.part('highlights', () => {
+      for (const m of [1, -1]) s.sphere(add(P.H, [m * 0.027, 0.041, 0.026]), 0.0018, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 });
     });
   },
 });
