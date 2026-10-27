@@ -88,6 +88,21 @@ export function createOcean(GFX, { sea = 'breeze', sky = 'noon', reach = 1400, r
   const phase = new Float64Array(COUNT);
   const TAU = Math.PI * 2;
   const wrap = (v) => ((v % 256) + 256) % 256;
+  // The ripples, the foam's streaks and the clouds are kept as the waves
+  // are: as they stand at a point near the camera, `drift`, moved on a step
+  // at a time. Worked out afresh from where the camera is and how long the
+  // sea has run, every turn of the wind would swing them round the far-off
+  // point where they started, faster the further away it is, and the
+  // glints and the foam would race across the water.
+  const drift = [0, 0];
+  const rippleAt = Float64Array.from(RIPPLES, (r) => r.phi);
+  const rippleWay = new Float64Array(RIPPLES.length * 2);
+  const noiseAt = [0, 0], cloudAt = [0, 0];
+  const turnRipples = () => RIPPLES.forEach(({ off }, i) => {
+    rippleWay[i * 2] = Math.cos(running.wind + off);
+    rippleWay[i * 2 + 1] = Math.sin(running.wind + off);
+  });
+  turnRipples();
   const setMatrix = (m, values) => {
     for (let i = 0; i < COUNT; i++) m.elements[i] = values[i];
   };
@@ -141,6 +156,18 @@ export function createOcean(GFX, { sea = 'breeze', sky = 'noon', reach = 1400, r
     /** Moves the sea and the sky on by `dt` seconds. */
     update(dt) {
       running.step(dt);
+      // The ripples run with the wind, and with the water if it runs; so do the foam's streaks.
+      turnRipples();
+      const [ux, uz] = running.current;
+      RIPPLES.forEach(({ k, w: omega }, i) => {
+        const dx = rippleWay[i * 2], dz = rippleWay[i * 2 + 1];
+        rippleAt[i] = (((rippleAt[i] - (omega * running.run + k * (dx * ux + dz * uz)) * dt) % TAU) + TAU) % TAU;
+      });
+      const wx = Math.cos(running.wind), wz = Math.sin(running.wind);
+      noiseAt[0] = wrap(noiseAt[0] - (1.2 * running.run + ux * wx + uz * wz) * dt * 0.16);
+      noiseAt[1] = wrap(noiseAt[1] - (-ux * wz + uz * wx) * dt * 0.32);
+      cloudAt[0] = wrap(cloudAt[0] - 0.006 * wx * dt);
+      cloudAt[1] = wrap(cloudAt[1] - 0.006 * wz * dt);
       if (skyBlend < 1) {
         skyBlend = Math.min(1, skyBlend + dt / skyOver);
         mixLight(skyFrom, skyTo, skyBlend * skyBlend * (3 - 2 * skyBlend), light);
@@ -182,28 +209,28 @@ export function createOcean(GFX, { sea = 'breeze', sky = 'noon', reach = 1400, r
     setMatrix(uniforms.uPhase.value, phase);
 
     const t = running.time;
-    // The ripples, turned with the wind, and their phases under the camera.
+    // The ripples and the foam's streaks, moved from where they were kept to under this camera.
+    const mx = cx - drift[0], mz = cz - drift[1];
+    drift[0] = cx;
+    drift[1] = cz;
     const ripples = [uniforms.uR1.value.elements, uniforms.uR2.value.elements, uniforms.uR3.value.elements];
-    // Water that runs carries them along: they are where they were, up the current.
-    const [ux, uz] = running.carried;
-    RIPPLES.forEach(({ k, w: omega, off, phi }, i) => {
-      const a = running.wind + off;
-      const dx = Math.cos(a), dz = Math.sin(a);
-      const th = k * (dx * (cx - ux) + dz * (cz - uz)) - omega * running.run * t + phi;
+    RIPPLES.forEach(({ k }, i) => {
+      const dx = rippleWay[i * 2], dz = rippleWay[i * 2 + 1];
+      rippleAt[i] = (((rippleAt[i] + k * (dx * mx + dz * mz)) % TAU) + TAU) % TAU;
       const m = ripples[i >> 2], o = (i & 3) * 4;
       m[o] = k;
       m[o + 1] = dx;
       m[o + 2] = dz;
-      m[o + 3] = ((th % TAU) + TAU) % TAU;
+      m[o + 3] = rippleAt[i];
     });
 
-    // The foam's streaks' offset, along the wind and across it, running with the wind.
+    // The foam's streaks' offset, along the wind and across it.
     const wx = Math.cos(running.wind), wz = Math.sin(running.wind);
-    const along = cx * wx + cz * wz, across = -cx * wz + cz * wx;
+    noiseAt[0] = wrap(noiseAt[0] + (mx * wx + mz * wz) * 0.16);
+    noiseAt[1] = wrap(noiseAt[1] + (-mx * wz + mz * wx) * 0.32);
     uniforms.uWind.value.set(wx, wz);
-    const carried = ux * wx + uz * wz, aside = -ux * wz + uz * wx;
-    uniforms.uNoiseC.value.set(wrap((along - t * 1.2 * running.run - carried) * 0.16), wrap((across - aside) * 0.32));
-    uniforms.uCloudShift.value.set(wrap(-t * 0.006 * wx), wrap(-t * 0.006 * wz));
+    uniforms.uNoiseC.value.set(noiseAt[0], noiseAt[1]);
+    uniforms.uCloudShift.value.set(cloudAt[0], cloudAt[1]);
 
     set3('uSun', light.sun);
     set3('uSunColor', light.sunColor);

@@ -114,6 +114,34 @@ test('the ocean: a grid round the camera, set for each camera before it is drawn
   assert.ok(spacing[256 * 3 + 1] < 0.4 && spacing[200 * 256 * 3 + 1] > 20);
 });
 
+test('the ripples, the foam and the clouds turn with the wind about the camera, however far it has come', () => {
+  // Two seas a long way down a river, the water running all the while; then the wind turns on one, as it does round a bend.
+  const run = (turn) => {
+    const ocean = createOcean(GFX, { sea: 'calm', rings: 8, segments: 16 });
+    const camera = new GFX.PerspectiveCamera(40, 1, 0.3, 400);
+    const draw = () => ocean.dome.onBeforeRender({ domElement: { height: 720 } }, null, camera);
+    ocean.sea.current = [3, 0];
+    for (let i = 0; i < 600; i++) {
+      camera.position.set(i * 2, 6, 40);
+      ocean.update(1 / 60);
+      draw();
+    }
+    if (turn) ocean.setSea({ ...SEAS.calm, wind: SEAS.calm.wind + turn }, 1 / 60);
+    ocean.update(1 / 60);
+    draw();
+    const u = ocean.water.material.uniforms;
+    return {
+      ripples: [u.uR1, u.uR2, u.uR3].flatMap((m) => [3, 7, 11, 15].map((o) => m.value.elements[o])),
+      noise: u.uNoiseC.value, clouds: u.uCloudShift.value,
+    };
+  };
+  const still = run(0), turned = run(0.05);
+  const off = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  turned.ripples.forEach((p, i) => assert.ok(off(p, still.ripples[i]) < 0.05, `ripple ${i} jumped by ${off(p, still.ripples[i])}`));
+  assert.ok(still.noise.distanceTo(turned.noise) < 0.01, 'the foam stays put');
+  assert.ok(still.clouds.distanceTo(turned.clouds) < 1e-3, 'the clouds stay put');
+});
+
 test('the shaders declare every uniform the ocean hands them, in both languages', () => {
   const ocean = createOcean(GFX);
   for (const mesh of [ocean.water, ocean.dome]) {
