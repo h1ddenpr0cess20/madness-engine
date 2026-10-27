@@ -137,6 +137,15 @@ export function createSea(start) {
     choppy: 0,
     /** Seconds since it started. */
     time: 0,
+    /**
+     * Water that runs, as a river does: `current` ([x, z], m/s) carries every
+     * wave along with it, and `run` is how far the waves still run on their
+     * own through the water (1 for the sea, less for a river's ripples).
+     */
+    current: [0, 0],
+    run: 1,
+    /** How far the current has carried the water so far, [x, z]. */
+    carried: [0, 0],
 
     /** Turns the sea into `next` over `seconds`. */
     to(next, seconds = 5) {
@@ -150,7 +159,13 @@ export function createSea(start) {
     /** Moves the sea on by `dt` seconds. */
     step(dt) {
       sea.time += dt;
-      for (let i = 0; i < COUNT; i++) psi[i] = (((psi[i] - now.w[i] * dt) % TAU) + TAU) % TAU;
+      const [ux, uz] = sea.current;
+      sea.carried[0] += ux * dt;
+      sea.carried[1] += uz * dt;
+      for (let i = 0; i < COUNT; i++) {
+        const w = now.w[i] * sea.run + now.k[i] * (now.dx[i] * ux + now.dz[i] * uz);
+        psi[i] = (((psi[i] - w * dt) % TAU) + TAU) % TAU;
+      }
       if (blend < 1) {
         // Waves that change while you watch change about where you are watching: keep the anchor there.
         blend = Math.min(1, blend + dt / over);
