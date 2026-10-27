@@ -282,7 +282,7 @@ export function techpark(m, v) {
 // ---- The city ----
 
 /** The police station: a blue-trimmed civic block, a flagpole and cruisers out front. */
-export function police(m, v) {
+export function police(m) {
   const F = slabBlock(m, -0.8, -0.8, 0.8, 0.3, 0, 0.8, '#e8e4dc', { parapet: 0.08 });
   panel(m, 'plain', F.front, 0, 0.62, 1.6, 0.74, 0.04, '#24408a');
   doorOn(m, F.front, 0.8, 0.3, 0.42, '#24408a');
@@ -298,7 +298,7 @@ export function police(m, v) {
 }
 
 /** The fire station: brick red, two tall bay doors, a hose tower. */
-export function firehouse(m, v) {
+export function firehouse(m) {
   const F = slabBlock(m, -0.85, -1.2, 0.85, 0.8, 0, 0.9, '#b8402e', { parapet: 0.08 });
   for (const u of [0.45, 1.25]) {
     panel(m, 'metal', F.front, u - 0.3, 0, u + 0.3, 0.58, 0.01, '#e8e8e8');
@@ -312,7 +312,7 @@ export function firehouse(m, v) {
 }
 
 /** A school: a long two-storey wing, a bell tower, a playground and a field with a track. */
-export function school(m, v) {
+export function school(m) {
   const F = slabBlock(m, -1.4, -1.4, 1.4, -0.5, 0, 0.8, '#f0dcb8', { parapet: 0 });
   m.hip('tile', -1.4, -1.4, 1.4, -0.5, 0.8, 1.05, CAL.tile[0], { over: 0.08 });
   windowRows(m, F, 2, 0.4, { gap: 0.36, skipDoor: 1.4 });
@@ -360,7 +360,7 @@ export function plaza(m, v) {
 }
 
 /** The hospital: a white block in two wings, a red cross, a helipad on the roof. */
-export function hospital(m, v) {
+export function hospital(m) {
   const F = slabBlock(m, -1.4, -1.9, 1.4, 0.6, 0, 1.6, '#f4f4f2', { parapet: 0.08 });
   windowRows(m, F, 4, 0.4, { gap: 0.36, skipDoor: 1.4, frame: '#5a8aa8' });
   panel(m, 'glass', F.front, 1.1, 0, 1.7, 0.36, 0.006, CAL.glass[2]);

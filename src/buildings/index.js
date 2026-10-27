@@ -26,7 +26,8 @@ export { CALIFORNIA_FOOTPRINTS } from './california.js';
  * from 0 to 1): a footing, walls that rise, scaffolding and stacked materials.
  */
 
-const { CALIFORNIA_FOOTPRINTS: _cf, ...coast } = california;
+// The California models, without the footprints that come with them.
+const coast = Object.fromEntries(Object.entries(california).filter(([k]) => k !== 'CALIFORNIA_FOOTPRINTS'));
 export const MODELS = { ...homes, ...farm, ...works, ...industry, ...civic, ...coast, castle: castle.castle };
 
 /** The footprint each model is drawn for: [width along the street, depth] in tiles. */
