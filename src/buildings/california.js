@@ -73,7 +73,7 @@ function curtain(m, x0, z0, x1, z1, y0, y1, fh, glass, band = '#d8dde0') {
 /** A strip of lawn, a driveway and a palm or two in front of a house. */
 function frontYard(m, rnd, w, z, { palms = 1 } = {}) {
   m.box('hedge', -w / 2 + 0.06, 0, z, w / 2 - 0.06, 0.02, w / 2 + 0.05 > 0 ? z + 0.36 : z, '#8ac060');
-  m.box('stone', w / 2 - 0.5, 0, z - 0.2, w / 2 - 0.12, 0.028, z + 0.4, '#c8c4bc');
+  m.box('plain', w / 2 - 0.5, 0, z - 0.2, w / 2 - 0.12, 0.028, z + 0.4, '#c8c4bc');
   for (let i = 0; i < palms; i++) m.at(-w / 2 + 0.3 + i * 0.4, 0, z + 0.2, (mm) => (rnd() < 0.5 ? fanPalm : palm)(mm, { hi: true, seed: Math.floor(rnd() * 99) }), 0);
 }
 
@@ -93,7 +93,7 @@ export function bungalow(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, ['#7a9a8a', '#c8a878', '#8a9ab0', '#b0846a', '#d8c8a0']);
   const x0 = -0.7, x1 = 0.7, z0 = -0.65, z1 = 0.2;
-  m.box('stone', x0 - 0.03, -0.3, z0 - 0.03, x1 + 0.03, 0.08, z1 + 0.3, '#9a9282');
+  m.box('plaster', x0 - 0.03, -0.3, z0 - 0.03, x1 + 0.03, 0.08, z1 + 0.3, '#9a9282');
   m.box('siding', x0, 0.08, z0, x1, 0.6, z1, wall, { skip: ['bottom', 'top'] });
   m.gable('slate', x0, z0, x1, z1 + 0.3, 0.6, 0.92, '#5a5a5a', { over: 0.14, gable: 'siding', gableColor: wall });
   for (const x of [x0 + 0.08, x1 - 0.08]) m.box('plaster', x - 0.05, 0.08, z1 + 0.22, x + 0.05, 0.6, z1 + 0.3, '#f4efe6');
@@ -140,7 +140,7 @@ export function beachhouse(m, v) {
   panel(m, 'glow', G.front, 0.14, 0.08, 0.96, 0.4, 0.012, PALETTE.warm);
   for (let i = 0; i < 6; i++) m.box('metal', -0.75 + i * 0.3, 0.5, 0.17, -0.74 + i * 0.3, 0.64, 0.19, '#d0d4d8');
   m.box('metal', -0.75, 0.62, 0.17, 0.75, 0.64, 0.19, '#d0d4d8');
-  m.box('wood', -0.75, 0.98, -0.72, 0.55, 1.0, 0.0, '#b08a5a');
+  m.box('wood', -0.75, 0.98, -0.72, 0.55, 1.0, 0.0, '#b08a5a', { uvScale: 4 });
   frontYard(m, rnd, 1.6, 0.48);
   return { height: 1.2 };
 }
@@ -158,8 +158,18 @@ export function dingbat(m, v) {
   const F = slabBlock(m, x0, z0, x1, z1, 0.42, 1.22, wall);
   m.box('plain', x0 + 0.004, 0.418, z0 + 0.454, x1 - 0.004, 0.42, z1 - 0.004, '#e8e8e8', { skip: ['top', 'front', 'back', 'left', 'right'] });
   windowRows(m, F, 2, 0.4, { gap: 0.4 });
-  panel(m, 'plain', F.front, 0.25, 0.48, 0.85, 0.56, 0.012, '#ffffff');
-  panel(m, 'glow', F.front, 1.1, 0.45, 1.3, 0.65, 0.014, '#ffd88a');
+  // A band of a second color across the front, the building's name in script, and a starburst.
+  const band = pickFrom(rnd, ['#f4f4f0', '#2a4a6a', '#e0567a', '#f4c83a']);
+  panel(m, 'plain', F.front, 0, 0.76, F.front.w, 0.8, 0.012, band);
+  panel(m, 'plain', F.front, 0.25, 0.38, 0.85, 0.44, 0.014, '#ffffff');
+  const sx = 1.22, sy = 0.33;
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI;
+    const dx = Math.cos(a) * 0.12, dy = Math.sin(a) * 0.12;
+    m.beam('metal', [x0 + sx - dx, 0.42 + sy - dy, z1 + 0.03], [x0 + sx + dx, 0.42 + sy + dy, z1 + 0.03], 0.012, '#f0c040');
+  }
+  m.sphere('glow', x0 + sx, 0.42 + sy, z1 + 0.035, 0.03, 0.03, 0.01, '#ffd88a', { detail: 0 });
+  if (rnd() < 0.6) m.at(x1 - 0.12, 0, z1 + 0.28, (mm) => fanPalm(mm, { seed: Math.floor(rnd() * 9) }));
   return { height: 1.4 };
 }
 
@@ -181,15 +191,40 @@ export function aptblock(m, v) {
   return { height: floors * fh + 0.2 };
 }
 
-/** A condo tower: a stucco podium and a slim glass-and-white tower with stacked balconies. */
+/**
+ * A condo tower: a stucco podium of shops and parking, and over it a slim
+ * white tower, its floors glass between white slabs, with a balcony and a glass
+ * rail on every floor, and a pool and cabanas on the podium's roof.
+ */
 export function condotower(m, v) {
   const { rnd } = v;
   const H = 3.6 + rnd() * 1.6;
-  slabBlock(m, -0.9, -1.3, 0.9, 1.1, 0, 0.5, pickFrom(rnd, CAL.stucco), { parapet: 0.08 });
-  curtain(m, -0.6, -1.0, 0.6, 0.7, 0.5, H, 0.32, pickFrom(rnd, CAL.glass), '#f4f4f0');
-  for (let y = 0.82; y < H - 0.1; y += 0.32) m.box('plaster', -0.66, y, 0.7, 0.66, y + 0.03, 0.86, '#f8f8f6');
-  m.box('plaster', -0.4, H + 0.05, -0.7, 0.4, H + 0.3, 0.3, '#f0f0ec');
-  return { height: H + 0.3 };
+  const pod = pickFrom(rnd, CAL.stucco);
+  const P = slabBlock(m, -0.92, -1.32, 0.92, 1.12, 0, 0.62, pod, { parapet: 0.08 });
+  for (let i = 0; i < 3; i++) {
+    panel(m, 'glass', P.front, 0.15 + i * 0.55, 0.04, 0.6 + i * 0.55, 0.36, 0.006, CAL.glass[1]);
+    panel(m, 'glow', P.front, 0.17 + i * 0.55, 0.06, 0.58 + i * 0.55, 0.34, 0.011, PALETTE.warm);
+  }
+  // The pool deck on the podium.
+  m.box('plain', -0.5, 0.62, 0.55, 0.5, 0.64, 1.0, '#e8e2d4', { skip: ['bottom', 'front', 'back', 'left', 'right'] });
+  m.box('glass', -0.4, 0.64, 0.62, 0.4, 0.646, 0.92, '#3ab8d8', { skip: ['bottom', 'front', 'back', 'left', 'right'] });
+  for (const x of [-0.7, 0.7]) m.cone('cloth', x, 0.72, 0.8, 0.14, 0.86, 8, '#f4f4f0');
+  // The tower: glass floors between white slabs, a balcony on the front of every one.
+  const x0 = -0.56, x1 = 0.56, z0 = -1.08, z1 = 0.4;
+  m.box('glass', x0, 0.62, z0, x1, H, z1, pickFrom(rnd, CAL.glass), { skip: ['bottom', 'top'] });
+  const T = faces(x0, z0, x1, z1, 0.62, H);
+  for (let y = 0.62, k = 0; y < H - 0.05; y += 0.3, k++) {
+    m.box('plaster', x0 - 0.02, y, z0 - 0.02, x1 + 0.02, y + 0.04, z1 + 0.02, '#f8f8f6', { skip: ['bottom'] });
+    m.box('plaster', x0 + 0.06, y, z1, x1 - 0.06, y + 0.035, z1 + 0.18, '#f8f8f6');
+    m.box('glass', x0 + 0.06, y + 0.035, z1 + 0.17, x1 - 0.06, y + 0.13, z1 + 0.18, '#a8d8e8', { skip: ['bottom'] });
+    for (const f of [T.front, T.left, T.right]) if ((k * 3 + f.w * 10) % 4 < 2) panel(m, 'glow', f, 0.08, y - 0.62 + 0.07, f.w - 0.08, y - 0.62 + 0.26, 0.008, PALETTE.warm);
+  }
+  // Corner piers, and a penthouse on the roof.
+  for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) m.box('plaster', x - 0.05, 0.62, z - 0.05, x + 0.05, H + 0.06, z + 0.05, '#f8f8f6');
+  m.box('plaster', x0, H, z0, x1, H + 0.04, z1, '#f0f0ec');
+  m.box('glass', -0.3, H + 0.04, -0.7, 0.3, H + 0.3, 0.1, CAL.glass[4], { skip: ['bottom'] });
+  m.box('plaster', -0.36, H + 0.3, -0.76, 0.36, H + 0.34, 0.16, '#f8f8f6');
+  return { height: H + 0.4 };
 }
 
 // ---- Commerce ----
@@ -222,20 +257,79 @@ export function boutique(m, v) {
   awning(m, F.front, 0.05, 1.71, 0.46, pickFrom(rnd, ['#2a6a5a', '#8a2a3a', '#2a3a6a', '#d87a2a']));
   for (let i = 0; i < 4; i++) windowOn(m, F.front, 0.22 + i * 0.44, 0.6, 0.22, 0.26, { frame: '#ffffff', sill: false });
   for (const f of [F.left, F.right]) for (let i = 0; i < 3; i++) windowOn(m, f, 0.25 + i * 0.42, 0.6, 0.2, 0.26, { frame: '#ffffff', sill: false });
+  // Little balconies with iron rails over the awning, and a cornice along the top.
+  for (const u of [0.44, 1.32]) {
+    m.box('plaster', -0.88 + u - 0.2, 0.55, 0.5, -0.88 + u + 0.2, 0.57, 0.62, '#f4f4f0');
+    m.box('metal', -0.88 + u - 0.2, 0.57, 0.61, -0.88 + u + 0.2, 0.66, 0.62, '#2a2a2a', { skip: ['bottom'] });
+  }
+  m.box('plaster', -0.92, 1.0, 0.5, 0.92, 1.05, 0.56, '#f4f4f0');
+  // A café on the sidewalk: tables under umbrellas.
+  for (const x of [-0.55, 0.55]) {
+    m.cylinder('metal', x, 0, 0.82, 0.006, 0.006, 0.32, 4, '#d8d8d8');
+    m.cone('cloth', x, 0.26, 0.82, 0.17, 0.36, 8, pickFrom(rnd, ['#f4f4f0', '#e84a3a', '#2a8a9a', '#f4c83a']));
+    m.cylinder('plain', x, 0.1, 0.82, 0.07, 0.07, 0.012, 10, '#f0f0f0', { caps: true });
+  }
   return { height: 1.2 };
 }
 
-/** A glass office tower: a stone base and a tall faceted shaft, a crown and a mast. */
+/**
+ * A tech tower, in two designs by variant: a faceted glass slab in three
+ * setbacks with white fins up its faces and a sloped glass crown, or a round
+ * glass tower ringed at every floor with a lit crown and a mast. Both stand on
+ * a glass lobby under a white canopy, on a plaza with cypresses in planters.
+ */
 export function officetower(m, v) {
   const { rnd } = v;
-  const H = 5 + rnd() * 3;
-  m.box('stone', -0.92, 0, -1.35, 0.92, 0.6, 1.15, '#d8d2c4', { skip: ['bottom'] });
   const glass = pickFrom(rnd, CAL.glass);
-  curtain(m, -0.75, -1.15, 0.75, 0.95, 0.6, H * 0.7, 0.3, glass);
-  curtain(m, -0.6, -0.95, 0.6, 0.75, H * 0.7, H, 0.3, glass);
-  m.cylinder('metal', 0, H + 0.05, -0.1, 0.01, 0.03, 0.9, 5, '#d8d8d8');
-  m.sphere('glow', 0, H + 0.95, -0.1, 0.04, 0.04, 0.04, '#ff4a3a', { detail: 0 });
-  return { height: H + 1 };
+  m.box('plain', -0.98, 0, -1.4, 0.98, 0.012, 1.4, '#bdb8ac', { skip: ['bottom', 'front', 'back', 'left', 'right'] });
+  // The lobby: two storeys of glass set back under the tower, a canopy over the doors.
+  m.box('glass', -0.7, 0.012, -1.0, 0.7, 0.62, 0.8, '#6a9ab0', { skip: ['bottom', 'top'] });
+  const lobby = faces(-0.7, -1.0, 0.7, 0.8, 0.012, 0.62);
+  panel(m, 'glow', lobby.front, 0.08, 0.04, 1.32, 0.56, 0.008, PALETTE.warm);
+  m.box('plaster', -0.55, 0.5, 0.8, 0.55, 0.54, 1.12, '#f4f4f0');
+  let top;
+  if (v.variant % 2 === 0) {
+    const H = 5 + rnd() * 2.5;
+    let y = 0.62, x = 0.86, z0 = -1.2, z1 = 1.0;
+    for (const [share, inset] of [[0.55, 0], [0.3, 0.12], [0.15, 0.14]]) {
+      x -= inset; z0 += inset; z1 -= inset;
+      const h = (H - 0.62) * share;
+      curtain(m, -x, z0, x, z1, y, y + h, 0.3, glass, '#e8ecef');
+      // White fins up the long faces.
+      const n = Math.round((2 * x) / 0.34);
+      for (let i = 0; i <= n; i++) {
+        const fx = -x + (2 * x * i) / n;
+        m.box('plaster', fx - 0.018, y, z1, fx + 0.018, y + h, z1 + 0.05, '#f6f6f4', { skip: ['bottom'] });
+        m.box('plaster', fx - 0.018, y, z0 - 0.05, fx + 0.018, y + h, z0, '#f6f6f4', { skip: ['bottom'] });
+      }
+      y += h;
+    }
+    // A crown of glass sloping up to the back, and the plant room behind it.
+    m.quad('glass', [-x, y + 0.05, z1], [x, y + 0.05, z1], [x, y + 0.75, z0 + 0.3], [-x, y + 0.75, z0 + 0.3], glass);
+    m.quad('glass', [-x, y + 0.75, z0 + 0.3], [x, y + 0.75, z0 + 0.3], [x, y + 0.05, z1], [-x, y + 0.05, z1], glass);
+    m.box('plaster', -x * 0.7, y + 0.05, z0 + 0.06, x * 0.7, y + 0.5, z0 + 0.3, '#d8dce0');
+    top = y + 0.8;
+  } else {
+    const H = 5.5 + rnd() * 2.5, r = 0.82;
+    m.cylinder('glass', 0, 0.62, -0.1, r, r, H - 0.62, 24, glass, { caps: false });
+    for (let y = 0.62; y < H; y += 0.3) m.cylinder('metal', 0, y, -0.1, r + 0.012, r + 0.012, 0.03, 24, '#e8ecef', { caps: false });
+    // Lit floors, here and there round it.
+    for (let y = 0.7, k = 0; y < H - 0.3; y += 0.3, k++) {
+      const a = (k * 1.7) % (Math.PI * 2);
+      m.at(Math.cos(a) * (r + 0.004), y + 0.04, -0.1 + Math.sin(a) * (r + 0.004), (mm) => mm.box('glow', -0.18, 0, -0.001, 0.18, 0.2, 0.001, PALETTE.warm, { skip: [] }), -a + Math.PI / 2);
+    }
+    m.cylinder('plaster', 0, H, -0.1, r * 0.8, r, 0.25, 24, '#f4f4f2', { caps: true });
+    m.cylinder('glow', 0, H + 0.25, -0.1, r * 0.55, r * 0.75, 0.12, 24, '#cfe8ff', { caps: false });
+    top = H + 0.37;
+  }
+  m.cylinder('metal', 0, top, -0.1, 0.01, 0.03, 0.9, 5, '#d8d8d8');
+  m.sphere('glow', 0, top + 0.9, -0.1, 0.04, 0.04, 0.04, '#ff4a3a', { detail: 0 });
+  // Cypresses in planters at the front corners of the plaza.
+  for (const x of [-0.82, 0.82]) {
+    m.box('plaster', x - 0.1, 0.012, 1.14, x + 0.1, 0.1, 1.34, '#9a9890');
+    m.at(x, 0.1, 1.24, (mm) => cypress(mm, { seed: x > 0 ? 2 : 5 }));
+  }
+  return { height: top + 1 };
 }
 
 // ---- Industry ----
@@ -246,8 +340,14 @@ export function warehouse(m, v) {
   const F = slabBlock(m, -0.9, -1.35, 0.9, 0.9, 0, 0.75, pickFrom(rnd, ['#c8c4b8', '#b8b4aa', '#d4cdbc']), { parapet: 0.05 });
   for (let i = 0; i < 3; i++) panel(m, 'metal', F.front, 0.2 + i * 0.5, 0, 0.55 + i * 0.5, 0.45, 0.01, '#8a9098');
   panel(m, 'plain', F.front, 0, 0.6, 1.8, 0.66, 0.012, pickFrom(rnd, ['#2a5a9a', '#d84a2a', '#2a8a5a']));
-  m.box('stone', -0.9, 0, 0.9, 0.9, 0.12, 1.1, '#9a968c');
-  for (let i = 0; i < 3; i++) m.box('metal', -0.6 + i * 0.5, 0.75, -0.8 + i * 0.4, -0.4 + i * 0.5, 0.88, -0.6 + i * 0.4, '#b0b4b8');
+  // The loading dock along the front, a trailer backed up to it, and the yard.
+  m.box('plaster', -0.9, 0, 0.9, 0.9, 0.12, 1.08, '#9a968c');
+  m.box('plain', -0.95, 0, 1.08, 0.95, 0.006, 1.35, '#55565a', { skip: ['bottom', 'front', 'back', 'left', 'right'] });
+  m.box('plaster', 0.1, 0.06, 1.1, 0.6, 0.42, 1.34, '#f2f2ee', { skip: ['bottom'] });
+  for (const x of [0.16, 0.54]) m.cylinder('plain', x, 0.06, 1.3, 0.05, 0.05, 0.04, 8, '#1a1a1c', { caps: true });
+  // Skylights down the roof, and the rooftop units.
+  for (let i = 0; i < 4; i++) m.box('glass', -0.55, 0.75, -1.15 + i * 0.5, 0.55, 0.78, -0.95 + i * 0.5, '#8ab8d0');
+  for (let i = 0; i < 2; i++) m.box('metal', 0.62, 0.75, -0.8 + i * 0.7, 0.8, 0.88, -0.62 + i * 0.7, '#b0b4b8');
   return { height: 1 };
 }
 
@@ -262,7 +362,7 @@ export function factory(m, v) {
     m.quad('metal', [-0.9, 0.7, z], [-0.9, 1.0, z + 0.54], [0.9, 1.0, z + 0.54], [0.9, 0.7, z], '#7a7e82');
   }
   windowRows(m, { front: F.front, left: F.left, right: F.right }, 1, 0.7, { gap: 0.4, frame: '#3a3a3a' });
-  m.cylinder('stone', 0.6, 0, -1.1, 0.07, 0.11, 2.1, 10, '#8a4a3a');
+  m.cylinder('plaster', 0.6, 0, -1.1, 0.07, 0.11, 2.1, 10, '#8a4a3a');
   m.cylinder('metal', -0.55, 0, 1.0, 0.22, 0.22, 0.5, 12, '#d8d8d8', { caps: true });
   return { height: 2.1, smoke: [[0.6, 2.12, -1.1]] };
 }
@@ -273,7 +373,7 @@ export function techpark(m, v) {
   curtain(m, -0.88, -1.3, 0.88, 0.6, 0, 0.8, 0.4, pickFrom(rnd, CAL.glass), '#f0f0f0');
   m.box('hedge', -0.88, 0.85, -1.3, 0.88, 0.88, -0.4, '#7ab050');
   for (let i = 0; i < 3; i++) m.quad('glass', [-0.8 + i * 0.55, 0.92, -0.3], [-0.35 + i * 0.55, 0.92, -0.3], [-0.35 + i * 0.55, 1.0, 0.5], [-0.8 + i * 0.55, 1.0, 0.5], '#1a2a4a');
-  m.box('stone', -0.95, 0, 0.6, 0.95, 0.02, 1.1, '#d8d4cc');
+  m.box('plain', -0.95, 0, 0.6, 0.95, 0.02, 1.1, '#d8d4cc');
   m.at(-0.6, 0, 0.85, (mm) => palm(mm, { seed: 5 }));
   m.at(0.6, 0, 0.85, (mm) => palm(mm, { seed: 8 }));
   return { height: 1.2 };
@@ -332,9 +432,9 @@ export function park(m, v) {
   m.box('hedge', -1.45, 0, -1.45, 1.45, 0.014, 1.45, '#7cc058');
   m.box('stone', -1.44, 0.014, -0.08, 1.44, 0.02, 0.08, '#e0d8c4');
   m.box('stone', -0.08, 0.014, -1.44, 0.08, 0.026, 1.44, '#e0d8c4');
-  m.cylinder('stone', 0, 0, 0, 0.32, 0.34, 0.1, 16, '#d8d0bc', { caps: true });
+  m.cylinder('plaster', 0, 0, 0, 0.32, 0.34, 0.1, 16, '#d8d0bc', { caps: true });
   m.disc('glass', 0, 0.105, 0, 0.28, 16, '#5aa8c8');
-  m.cylinder('stone', 0, 0.1, 0, 0.04, 0.06, 0.25, 8, '#d8d0bc', { caps: true });
+  m.cylinder('plaster', 0, 0.1, 0, 0.04, 0.06, 0.25, 8, '#d8d0bc', { caps: true });
   for (const [x, z] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) m.at(x, 0, z, (mm) => (rnd() < 0.5 ? palm : fanPalm)(mm, { seed: Math.floor(rnd() * 99) }));
   for (const [x, z] of [[-1.1, 0.3], [1.1, -0.3]]) m.box('wood', x - 0.15, 0.06, z - 0.04, x + 0.15, 0.09, z + 0.04, '#8a6a4a');
   return { height: 1 };
@@ -345,11 +445,11 @@ export function plaza(m, v) {
   const { rnd } = v;
   m.box('stone', -1.45, 0, -1.45, 1.45, 0.02, 1.45, '#e4d4b8');
   for (let i = -1; i <= 1; i++) m.box('stone', -1.44, 0.02, i * 0.7 - 0.02, 1.44, 0.026, i * 0.7 + 0.02, '#c8b48e');
-  m.cylinder('stone', 0, 0, 0, 0.45, 0.48, 0.14, 20, '#e8dcc4', { caps: true });
+  m.cylinder('plaster', 0, 0, 0, 0.45, 0.48, 0.14, 20, '#e8dcc4', { caps: true });
   m.disc('glass', 0, 0.145, 0, 0.4, 20, '#4aa0c8');
-  m.cylinder('stone', 0, 0.14, 0, 0.12, 0.08, 0.3, 10, '#e8dcc4', { caps: true });
+  m.cylinder('plaster', 0, 0.14, 0, 0.12, 0.08, 0.3, 10, '#e8dcc4', { caps: true });
   for (const [x, z] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) {
-    m.box('stone', x - 0.14, 0, z - 0.14, x + 0.14, 0.14, z + 0.14, '#c0643f');
+    m.box('plaster', x - 0.14, 0, z - 0.14, x + 0.14, 0.14, z + 0.14, '#c0643f');
     m.at(x, 0.14, z, (mm) => cypress(mm, { seed: Math.floor(rnd() * 9) }));
   }
   for (const [x, z] of [[0.8, 0.2], [-0.8, -0.3], [0.2, 0.9]]) {
@@ -381,8 +481,8 @@ export function hospital(m) {
  */
 export function cityhall(m, v) {
   const L = Math.max(0, Math.min(3, v.level ?? 0));
-  m.box('stone', -2.8, 0, -2.8, 2.8, 0.03, 2.8, '#e4d6b8');
-  m.box('stone', -1.9, 0.03, -1.9, 1.9, 0.75, 1.9, '#f0ead8', { skip: ['bottom'] });
+  m.box('plain', -2.8, 0, -2.8, 2.8, 0.03, 2.8, '#e4d6b8');
+  m.box('plaster', -1.9, 0.03, -1.9, 1.9, 0.75, 1.9, '#f0ead8', { skip: ['bottom'] });
   const P = faces(-1.9, -1.9, 1.9, 1.9, 0.03, 0.75);
   for (const f of Object.values(P)) {
     for (let i = 0; i < 6; i++) panel(m, 'glass', f, 0.2 + i * 0.58, 0.04, 0.6 + i * 0.58, 0.55, 0.006, CAL.glass[3]);
@@ -396,7 +496,7 @@ export function cityhall(m, v) {
     const h = (H - 0.75) * (t === 0 ? 0.42 : 0.58 / (tiers - 1));
     curtain(m, -r, -r, r, r, y, y + h, 0.3, glass, '#f4efe2');
     // White stone piers up the corners, and a lit band at each setback.
-    for (const [x, z] of [[-r, -r], [r, -r], [-r, r], [r, r]]) m.box('stone', x - 0.09, y, z - 0.09, x + 0.09, y + h + 0.06, z + 0.09, '#f4efe2');
+    for (const [x, z] of [[-r, -r], [r, -r], [-r, r], [r, r]]) m.box('plaster', x - 0.09, y, z - 0.09, x + 0.09, y + h + 0.06, z + 0.09, '#f4efe2');
     m.box('glow', -r - 0.035, y + h - 0.02, -r - 0.035, r + 0.035, y + h + 0.04, r + 0.035, '#ffd88a', { skip: ['bottom', 'top'] });
     y += h;
     r *= 0.78;
