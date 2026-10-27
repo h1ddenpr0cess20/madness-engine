@@ -106,9 +106,10 @@ export function programSources(key, material) {
     }
     case 'depth': return [program(defines({ USE_INSTANCING: key.instanced }), depthVertex), program('', depthFragment)];
     // A hand-written ShaderMaterial: its own bodies, with the standard inputs declared.
+    // `OUTPUT_SRGB` says what the target stores, for the shader to encode for: sRGB for the canvas, linear for anything read back.
     case 'custom': return [
       program('', customVertex) + material.glsl.vertex + '\n',
-      program('', customFragment) + material.glsl.fragment + '\n',
+      program('', customFragment) + `const bool OUTPUT_SRGB = ${key.output === 'srgb'};\n` + material.glsl.fragment + '\n',
     ];
     default: throw new Error(`gfx: no GLSL for ${key.kind}`);
   }

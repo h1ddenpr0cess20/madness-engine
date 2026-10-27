@@ -97,7 +97,7 @@ export function moduleSource(key, material) {
     case 'basic': return assemble(basicModule, { ...fragmentDefines(key), USE_MAP: key.map, USE_COLOR: key.vertexColors, USE_INSTANCING: key.instanced });
     case 'sprite': return assemble(spriteModule, { ...fragmentDefines(key), USE_MAP: key.map });
     case 'shadow': return assemble(shadowModule, standardDefines({ ...key, envMap: false }));
-    case 'custom': return customSource(material);
+    case 'custom': return customSource(key, material);
     default: throw new Error(`gfx: no WGSL for ${key.kind}`);
   }
 }
@@ -113,9 +113,10 @@ export function customFields(material) {
   });
 }
 
-function customSource(material) {
+// `OUTPUT_SRGB` says what the target stores, for a hand-written shader to encode for: sRGB for the canvas, linear for anything read back.
+function customSource(key, material) {
   const fields = customFields(material).map(([name, type]) => `  ${name}: ${type},`).join('\n');
-  return assemble(customModule, { MATERIAL_FIELDS: fields }) + material.wgsl;
+  return assemble(customModule, { MATERIAL_FIELDS: fields }) + `const OUTPUT_SRGB = ${key.output === 'srgb'};\n` + material.wgsl;
 }
 
 // ---------------------------------------------------------------- PMREM, depth and mipmaps
