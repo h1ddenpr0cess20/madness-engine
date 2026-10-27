@@ -69,7 +69,8 @@ export function createRiver(GFX, scene, { width = 28, snake = 0.4, current = 0.6
     const edge = river.width / 2 - (body.r ?? 0), off = body.z - middle(body.x);
     if (Math.abs(off) > edge) {
       body.z = middle(body.x) + Math.sign(off) * edge;
-      body.vz *= -0.4;
+      // Bounced back off the bank, if it was going into it.
+      if (body.vz * off > 0) body.vz *= -0.4;
     }
   };
 

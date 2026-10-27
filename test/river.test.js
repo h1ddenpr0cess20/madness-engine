@@ -27,3 +27,16 @@ test('the banks laid again further on lie where they did, near and far', () => {
   // Away from the float, the rows are the ones that were there before.
   assert.ok(shared >= far * 0.95, `${shared} of ${far} rows stayed put`);
 });
+
+test('a float past the bank is put back, and bounced only if it was going into the bank', () => {
+  const river = createRiver(GFX, new GFX.Scene(), { width: 20, snake: 0 });
+  const out = { x: 0, z: 15, vx: 0, vz: 2, r: 1 };
+  river.keep(out);
+  assert.equal(out.z, 9);
+  assert.ok(Math.abs(out.vz + 0.8) < 1e-9, 'bounced back');
+  // The river narrowed under it: it is already coming back, and keeps coming.
+  const back = { x: 0, z: 15, vx: 0, vz: -2, r: 1 };
+  river.keep(back);
+  assert.equal(back.z, 9);
+  assert.equal(back.vz, -2);
+});
