@@ -5,8 +5,9 @@ import { cypress, fanPalm, palm } from '../flora.js';
  * A California beach city: craftsman bungalows, Spanish-revival houses and
  * modern beach houses; dingbat apartments, mid-rises and condo towers; strip
  * malls, shopfronts and glass office towers; warehouses, factories and a tech
- * campus; the city's police, fire, schools, parks, plazas and hospital; and
- * the tower on the island at its middle. The same frame as the rest of the library: front toward +z,
+ * campus; the city's police, fire, schools, parks, plazas and hospital; its
+ * clinics, libraries, university, port, airport, marina, stadium and data
+ * center; and the tower on the island at its middle. The same frame as the rest of the library: front toward +z,
  * middle at the origin, standing on y = 0.
  */
 
@@ -75,6 +76,12 @@ function frontYard(m, rnd, w, z, { palms = 1 } = {}) {
   m.box('hedge', -w / 2 + 0.06, 0, z, w / 2 - 0.06, 0.02, w / 2 + 0.05 > 0 ? z + 0.36 : z, '#8ac060');
   m.box('plain', w / 2 - 0.5, 0, z - 0.2, w / 2 - 0.12, 0.028, z + 0.4, '#c8c4bc');
   for (let i = 0; i < palms; i++) m.at(-w / 2 + 0.3 + i * 0.4, 0, z + 0.2, (mm) => (rnd() < 0.5 ? fanPalm : palm)(mm, { hi: true, seed: Math.floor(rnd() * 99) }), 0);
+}
+
+/** A quad seen from both sides: a roof's underside, a wing, a row of seats. */
+function sheet(m, mat, a, b, c, d, col) {
+  m.quad(mat, a, b, c, d, col);
+  m.quad(mat, d, c, b, a, col);
 }
 
 /** An awning over a shopfront: a sloped cloth on two arms. */
@@ -186,8 +193,15 @@ export function aptblock(m, v) {
     m.box('plaster', x - 0.18, k * fh, z1, x + 0.18, k * fh + 0.03, z1 + 0.14, '#f4f4f0');
     m.box('metal', x - 0.18, k * fh + 0.03, z1 + 0.13, x + 0.18, k * fh + 0.13, z1 + 0.14, '#3a3a3a');
   }
-  m.at(x1 - 0.3, floors * fh, z0 + 0.3, (mm) => cypress(mm, { seed: 2 }));
-  m.box('hedge', x0 + 0.1, floors * fh, z0 + 0.1, x0 + 0.7, floors * fh + 0.04, z0 + 0.8, '#7ab050');
+  // The roof garden: a lawn, low planters of shrubs, and a shade umbrella over a table.
+  const top = floors * fh;
+  m.box('hedge', x0 + 0.1, top, z0 + 0.1, x0 + 0.7, top + 0.04, z0 + 0.8, '#7ab050', { skip: ['bottom'] });
+  for (const [px, pz] of [[x1 - 0.45, z0 + 0.18], [x1 - 0.18, z0 + 0.18], [x1 - 0.18, z0 + 0.45]]) {
+    m.box('plaster', px - 0.09, top, pz - 0.09, px + 0.09, top + 0.08, pz + 0.09, '#c0643f', { skip: ['bottom'] });
+    m.sphere('hedge', px, top + 0.12, pz, 0.1, 0.07, 0.1, '#5a9a40', { detail: 1 });
+  }
+  m.cylinder('metal', x1 - 0.42, top, z0 + 0.5, 0.008, 0.008, 0.3, 4, '#d8d8d8');
+  m.cone('cloth', x1 - 0.42, top + 0.24, z0 + 0.5, 0.2, top + 0.34, 8, pickFrom(rnd, ['#f4f4f0', '#e84a3a', '#3a8ad8']));
   return { height: floors * fh + 0.2 };
 }
 
@@ -473,6 +487,271 @@ export function hospital(m) {
   return { height: 1.8 };
 }
 
+// ---- More of the city: clinics, libraries, the university, the port, the airport, the marina, the stadium and the cloud ----
+
+/** An urgent care clinic: a white stucco box, a blue-green band, a red cross and a canopy over the door. */
+export function clinic(m) {
+  const F = slabBlock(m, -0.8, -0.75, 0.8, 0.35, 0, 0.62, '#f4f2ee', { parapet: 0.06 });
+  panel(m, 'plain', F.front, 0, 0.44, 1.6, 0.54, 0.03, '#2a9a8a');
+  doorOn(m, F.front, 0.5, 0.28, 0.34, '#5a8aa8');
+  windowRows(m, { front: F.front, left: F.left, right: F.right }, 1, 0.6, { gap: 0.4, skipDoor: 0.5, frame: '#2a9a8a' });
+  m.box('plain', -0.5, 0.4, 0.35, -0.1, 0.43, 0.62, '#f4f4f4');
+  for (const x of [-0.48, -0.12]) m.cylinder('metal', x, 0, 0.6, 0.012, 0.012, 0.4, 5, '#d8d8d8');
+  panel(m, 'glow', F.front, 1.2, 0.36, 1.36, 0.4, 0.04, '#ff3030');
+  panel(m, 'glow', F.front, 1.26, 0.3, 1.3, 0.46, 0.045, '#ff3030');
+  m.box('plain', -0.95, 0, 0.62, 0.95, 0.006, 0.95, '#55565a', { skip: ['bottom', 'front', 'back', 'left', 'right'] });
+  for (const x of [-0.6, 0.1, 0.6]) m.box('plain', x - 0.01, 0.006, 0.66, x + 0.01, 0.008, 0.92, '#f0f0f0', { skip: ['bottom'] });
+  return { height: 0.8 };
+}
+
+/** A public library: a glass reading room under a butterfly roof, a book-return by the door, and a lawn with a jacaranda. */
+export function library(m, v) {
+  const { rnd } = v;
+  m.box('plaster', -0.85, 0, -0.75, 0.85, 0.08, 0.45, '#d8d0c0');
+  curtain(m, -0.78, -0.7, 0.78, 0.38, 0.08, 0.7, 0.62, CAL.glass[2], '#e8e4dc');
+  // The butterfly roof: two slabs tipped toward the middle.
+  m.quad('plain', [-0.92, 0.9, 0.48], [-0.92, 0.9, -0.82], [0, 0.74, -0.82], [0, 0.74, 0.48], '#a87a50');
+  m.quad('plain', [0, 0.74, 0.48], [0, 0.74, -0.82], [0.92, 0.9, -0.82], [0.92, 0.9, 0.48], '#a87a50');
+  m.quad('plain', [-0.92, 0.88, -0.82], [-0.92, 0.88, 0.48], [0, 0.72, 0.48], [0, 0.72, -0.82], '#e8e4dc');
+  m.quad('plain', [0, 0.72, -0.82], [0, 0.72, 0.48], [0.92, 0.88, 0.48], [0.92, 0.88, -0.82], '#e8e4dc');
+  // Shelves of books inside the glass.
+  for (let i = 0; i < 5; i++) m.box('wood', -0.65 + i * 0.3, 0.08, -0.5, -0.55 + i * 0.3, 0.4, 0.1, pickFrom(rnd, ['#8a3a2a', '#2a4a7a', '#3a6a4a', '#c8a040']));
+  m.box('plain', 0.45, 0.08, 0.38, 0.75, 0.6, 0.42, '#f4efe6');
+  panel(m, 'plain', faces(0.45, 0.38, 0.75, 0.42, 0.08, 0.6).front, 0.02, 0.42, 0.28, 0.48, 0.012, '#2a3a5a');
+  m.box('hedge', -0.95, 0, 0.45, 0.95, 0.014, 0.95, '#7cc058');
+  m.box('metal', 0.1, 0, 0.6, 0.22, 0.22, 0.7, '#3a5a8a');
+  m.at(-0.55, 0, 0.7, (mm) => fanPalm(mm, { seed: 3 }));
+  return { height: 1 };
+}
+
+/** A university: red-tile Spanish-revival halls round a lawn quad, a bell tower, and an arcade along the front. */
+export function university(m) {
+  const wall = '#f0dcb8';
+  for (const [x0, z0, x1, z1, top] of [[-1.85, -1.85, 1.85, -1.0, 1.12], [-1.85, -1.0, -1.05, 1.2, 1.24], [1.05, -1.0, 1.85, 1.2, 1.24]]) {
+    const F = slabBlock(m, x0, z0, x1, z1, 0, 0.85, wall, { parapet: 0 });
+    const main = z1 === -1.0;
+    // The wings' roofs start clear of the main hall's eaves.
+    m.hip('tile', x0, z0 === -1.0 ? -0.86 : z0, x1, z1, 0.85, top, CAL.tile[1], { over: main ? 0.04 : 0.08 });
+    // Windows on every face the other halls do not stand against: the main hall's front shows only on the quad, between the wings.
+    windowRows(m, main ? { back: F.back, left: F.left, right: F.right } : { front: F.front, left: F.left, right: F.right }, 2, 0.39, { gap: 0.36, frame: '#5a3a2a' });
+    if (main) for (let r = 0; r < 2; r++) for (let u = 1.0; u < 2.75; u += 0.35) windowOn(m, F.front, u, r * 0.39 + 0.12, 0.18, 0.2, { sill: false, frame: '#5a3a2a' });
+  }
+  // The bell tower at the head of the quad.
+  m.box('plaster', -0.28, 0.85, -1.62, 0.28, 2.3, -1.06, wall);
+  const T = faces(-0.28, -1.62, 0.28, -1.06, 0.85, 2.3);
+  for (const f of Object.values(T)) panel(m, 'plain', f, 0.14, 1.05, 0.42, 1.32, 0.006, '#3a2a1a');
+  m.hip('tile', -0.3, -1.64, 0.3, -1.04, 2.3, 2.62, CAL.tile[0], { over: 0.05 });
+  // The quad: a lawn crossed by paths, and palms.
+  m.box('hedge', -1.05, 0, -1.0, 1.05, 0.014, 1.85, '#7cc058');
+  m.box('stone', -0.08, 0.014, -1.0, 0.08, 0.022, 1.85, '#e0d4bc');
+  m.box('stone', -1.05, 0.014, 0.35, -0.08, 0.022, 0.5, '#e0d4bc');
+  m.box('stone', 0.08, 0.014, 0.35, 1.05, 0.022, 0.5, '#e0d4bc');
+  for (const [x, z] of [[-0.6, -0.4], [0.6, -0.4], [-0.6, 1.2], [0.6, 1.2]]) m.at(x, 0, z, (mm) => palm(mm, { seed: Math.round(x * 7 + z * 3) + 20 }));
+  // The arcade of arches along the front of the wings.
+  for (const x0 of [-1.85, 1.05]) {
+    m.box('plain', x0, 0.5, 1.2, x0 + 0.8, 0.56, 1.45, CAL.tile[2]);
+    for (let i = 0; i <= 3; i++) m.box('plaster', x0 + i * 0.26, 0, 1.4, x0 + i * 0.26 + 0.06, 0.5, 1.45, wall);
+  }
+  return { height: 2.6 };
+}
+
+/** A container port: a concrete quay, two gantry cranes over the water side, stacks of boxes in four colors and a gate house. The water is behind (-z). */
+export function seaport(m, v) {
+  const { rnd } = v;
+  m.box('stone', -1.95, -0.25, -1.95, 1.95, 0.05, 1.95, '#b8b4ac', { skip: ['bottom'] });
+  m.box('plain', -1.95, 0.05, -1.95, 1.95, 0.056, -1.85, '#e8c440');
+  // Bollards along the quay edge.
+  for (let x = -1.8; x <= 1.8; x += 0.45) m.cylinder('metal', x, 0.05, -1.9, 0.025, 0.03, 0.06, 6, '#2a2a2e', { caps: true });
+  // The cranes: four legs, a boom out over the water, and a cab.
+  for (const x of [-1.0, 0.9]) {
+    const col = x < 0 ? '#d8402a' : '#2a6ab0';
+    for (const [dx, dz] of [[-0.3, -1.6], [0.3, -1.6], [-0.3, -0.9], [0.3, -0.9]]) m.box('metal', x + dx - 0.035, 0.05, dz - 0.035, x + dx + 0.035, 1.5, dz + 0.035, col);
+    for (const dz of [-1.6, -0.9]) m.box('metal', x - 0.34, 1.4, dz - 0.04, x + 0.34, 1.5, dz + 0.04, col);
+    m.box('metal', x - 0.08, 1.5, -2.6, x + 0.08, 1.62, -0.5, col);
+    m.beam('metal', [x, 1.62, -0.6], [x, 2.0, -1.25], 0.025, col);
+    m.beam('metal', [x, 2.0, -1.25], [x, 1.62, -2.55], 0.02, col);
+    m.box('plain', x - 0.12, 1.36, -1.4, x + 0.12, 1.5, -1.2, '#f0f0ec');
+    m.box('metal', x - 0.003, 1.0, -2.3, x + 0.003, 1.5, -2.296, '#2a2a2e');
+  }
+  // The stacks of containers, two or three high.
+  const box = ['#d8402a', '#2a6ab0', '#e8a830', '#3a8a5a', '#8a8e94', '#f0f0ec'];
+  for (let row = 0; row < 3; row++) {
+    for (let k = 0; k < 4; k++) {
+      const x0 = -1.75 + k * 0.62, z0 = -0.55 + row * 0.42;
+      const h = 1 + Math.floor(rnd() * 3);
+      for (let j = 0; j < h; j++) m.box('metal', x0, 0.05 + j * 0.16, z0, x0 + 0.56, 0.05 + (j + 1) * 0.16 - 0.006, z0 + 0.3, pickFrom(rnd, box));
+    }
+  }
+  // The gate house and its barrier at the front.
+  m.box('plaster', 1.2, 0.05, 1.3, 1.7, 0.4, 1.75, '#f0f0ec');
+  m.box('plain', 1.15, 0.4, 1.25, 1.75, 0.44, 1.8, '#3a3a3e');
+  m.box('metal', -0.4, 0.28, 1.6, 1.1, 0.3, 1.62, '#e84a3a');
+  // A truck backed up to the stacks.
+  m.box('plaster', -1.5, 0.08, 1.05, -0.95, 0.32, 1.3, '#d8402a');
+  m.box('plain', -0.95, 0.08, 1.07, -0.75, 0.3, 1.28, '#f4f4f4');
+  return { height: 2 };
+}
+
+/**
+ * An airport: a runway down the long side, a taxiway, a glass terminal with
+ * a jet at its gate, and a control tower. Ten tiles long, six across: the
+ * runway along z, the terminal at the front.
+ */
+export function airport(m) {
+  const W = 3, D = 5;
+  m.box('hedge', -W, 0, -D, W, 0.01, D, '#a8b878');
+  // The runway, with its centerline, threshold stripes and edge lights.
+  const rx0 = -2.7, rx1 = -1.5;
+  m.box('plain', rx0, 0.01, -D + 0.1, rx1, 0.02, D - 0.1, '#3a3b3f', { skip: ['bottom'] });
+  for (let z = -D + 0.9; z < D - 0.9; z += 0.6) m.box('plain', (rx0 + rx1) / 2 - 0.02, 0.02, z, (rx0 + rx1) / 2 + 0.02, 0.026, z + 0.3, '#f4f4f0', { skip: ['bottom'] });
+  for (const z of [-D + 0.2, D - 0.6]) for (let i = 0; i < 6; i++) m.box('plain', rx0 + 0.1 + i * 0.18, 0.02, z, rx0 + 0.18 + i * 0.18, 0.026, z + 0.35, '#f4f4f0', { skip: ['bottom'] });
+  for (let z = -D + 0.3; z < D; z += 0.7) for (const x of [rx0 + 0.03, rx1 - 0.03]) m.box('glow', x - 0.015, 0.02, z - 0.015, x + 0.015, 0.05, z + 0.015, '#ffe08a');
+  // The taxiway, and the apron in front of the terminal.
+  m.box('plain', -1.3, 0.01, -D + 0.6, -0.9, 0.018, D - 0.6, '#55565a', { skip: ['bottom'] });
+  for (const z of [-D + 0.6, D - 1.0]) m.box('plain', rx1, 0.01, z, -1.3, 0.018, z + 0.4, '#55565a', { skip: ['bottom'] });
+  m.box('plain', -0.9, 0.01, -3.2, 2.9, 0.018, 1.6, '#6a6b6f', { skip: ['bottom'] });
+  m.box('plain', -1.11, 0.018, -D + 1.0, -1.09, 0.024, D - 1.0, '#e8c440', { skip: ['bottom'] });
+  // The terminal: a long glass hall under a wave of white roof, at the front.
+  curtain(m, -0.6, 1.6, 2.9, 3.2, 0, 0.7, 0.35, CAL.glass[4], '#f0f0f0');
+  for (let i = 0; i < 6; i++) {
+    const x0 = -0.75 + i * 0.62;
+    sheet(m, 'plain', [x0, 0.78 + (i % 2) * 0.12, 3.35], [x0, 0.78 + (i % 2) * 0.12, 1.45], [x0 + 0.62, 0.78 + ((i + 1) % 2) * 0.12, 1.45], [x0 + 0.62, 0.78 + ((i + 1) % 2) * 0.12, 3.35], '#f8f8f6');
+  }
+  // A jet bridge out to a jet on the apron.
+  m.box('metal', 0.9, 0.22, 0.6, 1.02, 0.32, 1.6, '#d8dce0');
+  airliner(m, 1.0, -0.5, 0);
+  airliner(m, -0.3, -2.4, Math.PI / 2);
+  // The control tower.
+  m.cylinder('plaster', 2.4, 0, -1.4, 0.16, 0.2, 1.9, 12, '#f0f0ec', { caps: false });
+  m.cylinder('glass', 2.4, 1.9, -1.4, 0.32, 0.26, 0.28, 12, '#2e5a78', { caps: false });
+  m.cylinder('plain', 2.4, 2.18, -1.4, 0.36, 0.36, 0.06, 12, '#f0f0ec', { caps: true });
+  m.cylinder('metal', 2.4, 2.24, -1.4, 0.008, 0.008, 0.3, 4, '#d8d8d8');
+  m.sphere('glow', 2.4, 2.56, -1.4, 0.03, 0.03, 0.03, '#ff3a2a', { detail: 0 });
+  // The car park out front.
+  m.box('plain', -0.6, 0.01, 3.3, 2.9, 0.016, 4.9, '#4a4b4f', { skip: ['bottom'] });
+  for (let x = -0.5; x < 2.9; x += 0.3) m.box('plain', x, 0.016, 3.4, x + 0.02, 0.022, 3.8, '#f0f0f0', { skip: ['bottom'] });
+  return { height: 2.6, lights: [] };
+}
+
+/** A jet airliner, nose toward +z, turned by `yaw`: fuselage, wings, tail and engines. */
+function airliner(m, x, z, yaw) {
+  m.at(x, 0, z, (mm) => {
+    mm.push().translate(0, 0.2, 0).rotateX(Math.PI / 2);
+    mm.cylinder('plain', 0, -0.75, 0, 0.09, 0.09, 1.5, 10, '#f4f4f2', { caps: true });
+    mm.cone('plain', 0, 0.75, 0, 0.09, 0.95, 10, '#f4f4f2');
+    mm.pop();
+    sheet(mm, 'plain', [-0.75, 0.17, -0.25], [0.75, 0.17, -0.25], [0.12, 0.2, 0.2], [-0.12, 0.2, 0.2], '#e0e2e4');
+    sheet(mm, 'plain', [-0.3, 0.24, -0.78], [0.3, 0.24, -0.78], [0.05, 0.25, -0.6], [-0.05, 0.25, -0.6], '#e0e2e4');
+    sheet(mm, 'plain', [0, 0.26, -0.8], [0, 0.55, -0.82], [0, 0.55, -0.7], [0, 0.26, -0.55], '#2a6ab0');
+    for (const s of [-1, 1]) {
+      mm.push().translate(s * 0.32, 0.12, 0.02).rotateX(Math.PI / 2);
+      mm.cylinder('metal', 0, -0.12, 0, 0.04, 0.04, 0.24, 8, '#c8ccd0', { caps: true });
+      mm.pop();
+    }
+    for (const [wx, wz] of [[0, 0.5], [-0.12, -0.05], [0.12, -0.05]]) mm.box('plain', wx - 0.015, 0, wz - 0.02, wx + 0.015, 0.11, wz + 0.02, '#2a2a2e');
+  }, yaw);
+}
+
+/** A marina: wooden docks out over the water (behind, -z), sailboats and motor yachts at their slips, and a yacht club. */
+export function marina(m, v) {
+  const { rnd } = v;
+  m.box('stone', -1.45, -0.2, 0.2, 1.45, 0.05, 1.45, '#d8d0c0', { skip: ['bottom'] });
+  // The yacht club: white, a flat roof deck and a flagpole.
+  const F = slabBlock(m, -1.3, 0.55, 0.1, 1.35, 0.05, 0.55, '#f8f8f6', { parapet: 0.05 });
+  windowRows(m, { front: F.front, back: F.back }, 1, 0.5, { gap: 0.3, frame: '#2a4a7a' });
+  m.box('cloth', -1.3, 0.6, 1.0, 0.1, 0.62, 1.35, '#2a4a7a');
+  m.cylinder('metal', 0.9, 0.05, 1.1, 0.01, 0.012, 1.0, 5, '#e8e8e8');
+  m.box('cloth', 0.91, 0.85, 1.1, 1.15, 0.98, 1.102, '#e84a3a', { skip: [] });
+  // The docks: a walk along the bank and fingers out over the water.
+  m.box('wood', -1.45, 0.02, 0.0, 1.45, 0.06, 0.2, '#a88a62');
+  for (const x of [-1.1, -0.2, 0.7]) m.box('wood', x - 0.06, 0.02, -1.45, x + 0.06, 0.06, 0.0, '#a88a62');
+  for (const x of [-1.1, -0.2, 0.7]) for (let z = -1.4; z < 0; z += 0.35) m.cylinder('wood', x + 0.08, -0.3, z, 0.02, 0.02, 0.4, 5, '#6a5a42', { caps: true });
+  // The boats, one each side of every finger.
+  for (const x of [-1.1, -0.2, 0.7]) {
+    for (const s of [-1, 1]) {
+      for (const z of [-1.1, -0.45]) {
+        if (rnd() < 0.2) continue;
+        const bx = x + s * 0.22;
+        const hull = pickFrom(rnd, ['#f8f8f6', '#f4f4f0', '#2a3a5a', '#f0e8d8']);
+        m.box('plain', bx - 0.08, -0.02, z - 0.24, bx + 0.08, 0.08, z + 0.2, hull);
+        m.cone('plain', bx, -0.02, z - 0.24, 0.08, 0.08, 4, hull);
+        if (rnd() < 0.55) {
+          m.cylinder('metal', bx, 0.08, z, 0.006, 0.008, 0.62, 4, '#e8e8e8');
+          m.tri('cloth', [bx, 0.12, z + 0.16], [bx, 0.68, z + 0.01], [bx, 0.12, z - 0.02], '#f8f8f4');
+        } else m.box('plain', bx - 0.06, 0.08, z - 0.08, bx + 0.06, 0.16, z + 0.1, '#f8f8f6');
+      }
+    }
+  }
+  m.at(-1.2, 0.05, 0.35, (mm) => palm(mm, { seed: 11 }));
+  m.at(1.2, 0.05, 0.4, (mm) => palm(mm, { seed: 12 }));
+  return { height: 1 };
+}
+
+/** A stadium: an oval bowl of seats round a green field, light towers at the corners and a scoreboard. */
+export function stadium(m) {
+  const R = 2.35, r = 1.45;
+  m.box('stone', -2.45, 0, -2.45, 2.45, 0.02, 2.45, '#c8c4bc');
+  // The bowl: rings of seats stepping up and out, an outer wall round them.
+  const n = 32;
+  const ell = (k, rad, y) => [Math.cos((k / n) * Math.PI * 2) * rad, y, Math.sin((k / n) * Math.PI * 2) * rad * 0.86];
+  for (let t = 0; t < 5; t++) {
+    const a = r + (t * (R - r)) / 5, b = r + ((t + 1) * (R - r)) / 5;
+    const y0 = 0.1 + t * 0.16, y1 = y0 + 0.16;
+    for (let k = 0; k < n; k++) {
+      const p = ell(k, a, y0), q = ell(k + 1, a, y0), pu = ell(k, a, y1), qu = ell(k + 1, a, y1);
+      const p2 = ell(k, b, y1), q2 = ell(k + 1, b, y1);
+      const seat = (k + t) % 2 ? '#2a5ab0' : '#3a6ac0';
+      sheet(m, 'plaster', p, pu, qu, q, '#d8d4cc');
+      sheet(m, 'plain', pu, p2, q2, qu, seat);
+    }
+  }
+  for (let k = 0; k < n; k++) {
+    const p = ell(k, R, 0), q = ell(k + 1, R, 0), pu = ell(k, R, 0.92), qu = ell(k + 1, R, 0.92);
+    sheet(m, 'plaster', q, qu, pu, p, '#e8e4dc');
+  }
+  // The field, its lines and the end zones.
+  m.disc('hedge', 0, 0.1, 0, r, n, '#5aa83a');
+  m.box('hedge', -1.0, 0.1, -0.55, 1.0, 0.106, 0.55, '#4a9a2a', { skip: ['bottom'] });
+  for (let i = -4; i <= 4; i++) m.box('plain', i * 0.22 - 0.008, 0.106, -0.55, i * 0.22 + 0.008, 0.112, 0.55, '#f4f4f0', { skip: ['bottom'] });
+  // Light towers.
+  for (const [x, z] of [[-2.1, -1.8], [2.1, -1.8], [-2.1, 1.8], [2.1, 1.8]]) {
+    m.cylinder('metal', x, 0, z, 0.03, 0.04, 1.8, 6, '#c8ccd0');
+    m.box('glow', x - 0.16, 1.8, z - 0.05, x + 0.16, 1.98, z + 0.05, '#fff4d8');
+  }
+  // The scoreboard over the north end.
+  m.box('plain', -0.6, 0.9, -2.15, 0.6, 1.4, -2.05, '#1a1a1e');
+  m.box('glow', -0.55, 0.95, -2.05, 0.55, 1.35, -2.045, '#3a8ad8');
+  return { height: 2 };
+}
+
+/** A data center: long windowless halls, a yard of chillers on the roof, generators and fuel tanks out back, behind a fence. */
+export function datacenter(m, v) {
+  const { rnd } = v;
+  const wall = pickFrom(rnd, ['#d8dade', '#c8ccd2', '#e0e0dc']);
+  const F = slabBlock(m, -1.3, -1.6, 1.3, 1.0, 0, 0.9, wall, { parapet: 0.05 });
+  // Vertical fins down the long walls, and a band of company color.
+  for (const f of [F.front, F.left, F.right, F.back]) {
+    for (let u = 0.15; u < f.w; u += 0.25) panel(m, 'metal', f, u - 0.02, 0.05, u + 0.02, 0.85, 0.02, '#9aa0a8');
+    panel(m, 'glow', f, 0.1, 0.82, f.w - 0.1, 0.85, 0.022, '#3ad0ff');
+  }
+  // The only way in: a glass lobby at the front, with a security booth.
+  m.box('glass', -0.3, 0, 1.0, 0.3, 0.5, 1.2, CAL.glass[3]);
+  m.box('plain', -0.36, 0.5, 0.98, 0.36, 0.54, 1.25, '#3a3a3e');
+  // The roof: rows of chillers, each with its fans.
+  for (let row = 0; row < 4; row++) {
+    for (let k = 0; k < 3; k++) {
+      const x0 = -1.1 + k * 0.78, z0 = -1.4 + row * 0.6;
+      m.box('metal', x0, 0.9, z0, x0 + 0.62, 1.08, z0 + 0.42, '#b8bcc2');
+      for (const fx of [0.16, 0.46]) m.disc('plain', x0 + fx, 1.088, z0 + 0.21, 0.12, 10, '#3a3e44');
+    }
+  }
+  // The generators and fuel tanks in the yard behind, and the fence round it all.
+  for (let i = 0; i < 3; i++) m.box('metal', -1.2 + i * 0.8, 0, -1.95, -0.7 + i * 0.8, 0.3, -1.7, '#e8e4dc');
+  m.cylinder('metal', 1.15, 0, -1.85, 0.12, 0.12, 0.24, 10, '#f0f0ec', { caps: true });
+  for (const [a, b] of [[[-1.48, -1.98], [1.48, -1.98]], [[-1.48, -1.98], [-1.48, 1.4]], [[1.48, -1.98], [1.48, 1.4]]]) m.beam('metal', [a[0], 0.2, a[1]], [b[0], 0.2, b[1]], 0.008, '#8a8e94');
+  return { height: 1.1 };
+}
+
 /**
  * The tower on the island, in four sizes as `level` goes 0 to 3 (as the
  * castle's does): a stepped
@@ -519,4 +798,5 @@ export const CALIFORNIA_FOOTPRINTS = Object.freeze({
   bungalow: [2, 2], ranchhouse: [2, 2], beachhouse: [2, 2], dingbat: [2, 2], aptblock: [2, 3], condotower: [2, 3],
   stripmall: [2, 2], boutique: [2, 2], officetower: [2, 3], warehouse: [2, 3], factory: [2, 3], techpark: [2, 3],
   police: [2, 2], firehouse: [2, 3], school: [3, 3], park: [3, 3], plaza: [3, 3], hospital: [3, 4], cityhall: [6, 6],
+  clinic: [2, 2], library: [2, 2], university: [4, 4], seaport: [4, 4], airport: [6, 10], marina: [3, 3], stadium: [5, 5], datacenter: [3, 4],
 });
