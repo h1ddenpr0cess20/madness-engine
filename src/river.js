@@ -69,7 +69,8 @@ export function createRiver(GFX, scene, { width = 28, snake = 0.4, current = 0.6
     const edge = river.width / 2 - (body.r ?? 0), off = body.z - middle(body.x);
     if (Math.abs(off) > edge) {
       body.z = middle(body.x) + Math.sign(off) * edge;
-      body.vz *= -0.4;
+      // Bounced back off the bank, if it was going into it.
+      if (body.vz * off > 0) body.vz *= -0.4;
     }
   };
 
@@ -106,12 +107,17 @@ export function createRiver(GFX, scene, { width = 28, snake = 0.4, current = 0.6
     for (const { side, geometry } of banks) {
       const pos = geometry.attributes.position.array, col = geometry.attributes.color.array;
       for (let i = 0; i <= ALONG; i++) {
-        // Close rows by the float, wider ones further off, out to the horizon.
+        // Close rows by the float, wider ones further off, out to the horizon;
+        // each on a grid as fine as the rows are there, fixed to the ground,
+        // so laying the banks again further on lays them where they were
+        // rather than over different bumps, and the far banks don't flicker.
         const u = (i / ALONG) * 2 - 1;
-        const x = start + Math.sign(u) * REACH * Math.abs(u) ** 3, a = Math.atan(slope(x));
+        const apart = Math.max(1 / 8, ((6 * REACH) / ALONG) * u * u);
+        const grid = 2 ** Math.ceil(Math.log2(apart));
+        const x = Math.round((start + Math.sign(u) * REACH * Math.abs(u) ** 3) / grid) * grid, a = Math.atan(slope(x));
         const nx = -Math.sin(a) * side, nz = Math.cos(a) * side;
         for (let j = 0; j <= ACROSS; j++) {
-                    const d = REACH * (j / ACROSS) ** 3 - 1.5;
+          const d = REACH * (j / ACROSS) ** 3 - 1.5;
           const px = x + nx * (river.width / 2 + d), pz = middle(x) + nz * (river.width / 2 + d);
           const rise = clamp01((d + 1.5) / 3);
           const y = -1.4 + 3.6 * rise * rise * (3 - 2 * rise) + lump(px, pz) * 0.5 * clamp01(d / 10);
