@@ -1,5 +1,6 @@
 import { Mesher } from '../mesher.js';
 import { PALETTE, barrel, crate, drawTimber, logPile, pickFrom, rngFor } from './common.js';
+import * as california from './california.js';
 import * as castle from './castle.js';
 import * as civic from './civic.js';
 import * as farm from './farm.js';
@@ -8,6 +9,7 @@ import * as industry from './industry.js';
 import * as works from './works.js';
 
 export { castleScaffold } from './castle.js';
+export { CALIFORNIA_FOOTPRINTS } from './california.js';
 
 /**
  * The buildings of a medieval town, drawn from boxes, beams and rocks: the
@@ -24,7 +26,8 @@ export { castleScaffold } from './castle.js';
  * from 0 to 1): a footing, walls that rise, scaffolding and stacked materials.
  */
 
-export const MODELS = { ...homes, ...farm, ...works, ...industry, ...civic, castle: castle.castle };
+const { CALIFORNIA_FOOTPRINTS: _cf, ...coast } = california;
+export const MODELS = { ...homes, ...farm, ...works, ...industry, ...civic, ...coast, castle: castle.castle };
 
 /** The footprint each model is drawn for: [width along the street, depth] in tiles. */
 export const FOOTPRINTS = Object.freeze({
@@ -34,6 +37,7 @@ export const FOOTPRINTS = Object.freeze({
   woodcutter: [2, 2], forester: [2, 2], quarry: [3, 3], ironmine: [3, 3], storehouse: [3, 3], smithy: [2, 3], weaver: [2, 3],
   well: [1, 1], green: [3, 3], tavern: [3, 3], chapel: [3, 4], healer: [2, 2], market: [3, 3],
   watchtower: [2, 2], barracks: [4, 3], gatehouse: [2, 2], cathedral: [5, 7], castle: [6, 6],
+  ...california.CALIFORNIA_FOOTPRINTS,
 });
 
 /** A frame of scaffolding round a rectangle: poles, ledgers and a plank platform. */
