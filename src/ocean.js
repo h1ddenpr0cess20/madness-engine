@@ -184,10 +184,12 @@ export function createOcean(GFX, { sea = 'breeze', sky = 'noon', reach = 1400, r
     const t = running.time;
     // The ripples, turned with the wind, and their phases under the camera.
     const ripples = [uniforms.uR1.value.elements, uniforms.uR2.value.elements, uniforms.uR3.value.elements];
+    // Water that runs carries them along: they are where they were, up the current.
+    const [ux, uz] = running.carried;
     RIPPLES.forEach(({ k, w: omega, off, phi }, i) => {
       const a = running.wind + off;
       const dx = Math.cos(a), dz = Math.sin(a);
-      const th = k * (dx * cx + dz * cz) - omega * t + phi;
+      const th = k * (dx * (cx - ux) + dz * (cz - uz)) - omega * running.run * t + phi;
       const m = ripples[i >> 2], o = (i & 3) * 4;
       m[o] = k;
       m[o + 1] = dx;
@@ -199,7 +201,8 @@ export function createOcean(GFX, { sea = 'breeze', sky = 'noon', reach = 1400, r
     const wx = Math.cos(running.wind), wz = Math.sin(running.wind);
     const along = cx * wx + cz * wz, across = -cx * wz + cz * wx;
     uniforms.uWind.value.set(wx, wz);
-    uniforms.uNoiseC.value.set(wrap((along - t * 1.2) * 0.16), wrap(across * 0.32));
+    const carried = ux * wx + uz * wz, aside = -ux * wz + uz * wx;
+    uniforms.uNoiseC.value.set(wrap((along - t * 1.2 * running.run - carried) * 0.16), wrap((across - aside) * 0.32));
     uniforms.uCloudShift.value.set(wrap(-t * 0.006 * wx), wrap(-t * 0.006 * wz));
 
     set3('uSun', light.sun);
