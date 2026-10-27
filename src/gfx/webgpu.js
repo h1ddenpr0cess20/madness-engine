@@ -34,8 +34,12 @@ const INSTANCE_LOCATIONS = { instancePlace: 5, instanceLook: 6 };
 const INSTANCE_BUFFERS = Object.values(INSTANCE_LOCATIONS).map((shaderLocation) => ({
   arrayStride: 16, stepMode: 'instance', attributes: [{ shaderLocation, offset: 0, format: 'float32x4' }],
 }));
-const U = GPUBufferUsage;
-const T = GPUTextureUsage;
+// The WebGPU flags, by the values the spec gives them: a browser without WebGPU (Firefox, for one) has no GPUBufferUsage
+// and the like, and reading them here would throw as the module loads, before the renderer could fall back to WebGL.
+const U = globalThis.GPUBufferUsage ?? { MAP_READ: 1, MAP_WRITE: 2, COPY_SRC: 4, COPY_DST: 8, INDEX: 16, VERTEX: 32, UNIFORM: 64, STORAGE: 128, INDIRECT: 256, QUERY_RESOLVE: 512 };
+const T = globalThis.GPUTextureUsage ?? { COPY_SRC: 1, COPY_DST: 2, TEXTURE_BINDING: 4, STORAGE_BINDING: 8, RENDER_ATTACHMENT: 16 };
+const STAGE = globalThis.GPUShaderStage ?? { VERTEX: 1, FRAGMENT: 2, COMPUTE: 4 };
+const COLOR_WRITE_ALL = globalThis.GPUColorWrite?.ALL ?? 15;
 
 /** OpenGL clip space (z in −1..1) to WebGPU's (z in 0..1), optionally upside down. */
 function toWebGPUProjection(m, flipY) {
@@ -133,7 +137,7 @@ export class WebGPUBackend {
 
   _layouts() {
     const d = this.device;
-    const F = GPUShaderStage.FRAGMENT, V = GPUShaderStage.VERTEX;
+    const F = STAGE.FRAGMENT, V = STAGE.VERTEX;
     this.frameLayout = d.createBindGroupLayout({
       entries: [
         { binding: 0, visibility: V | F, buffer: { type: 'uniform' } },
@@ -479,7 +483,7 @@ export class WebGPUBackend {
       fragment: {
         module,
         entryPoint: 'fs',
-        targets: [{ format: p.format, blend, writeMask: state.colorWrite ? GPUColorWrite.ALL : 0 }],
+        targets: [{ format: p.format, blend, writeMask: state.colorWrite ? COLOR_WRITE_ALL : 0 }],
       },
       primitive: {
         topology: topology === 'lines' ? 'line-list' : topology === 'line-strip' ? 'line-strip' : 'triangle-list',
