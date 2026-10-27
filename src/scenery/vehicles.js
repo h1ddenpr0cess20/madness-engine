@@ -114,7 +114,7 @@ function car(s, { L = 1.9, W = 0.95, roof = 0.8, belt = 0.55, front = 0.52, rear
   wheels(s, [[-hw + 0.05, hl * 0.62], [hw - 0.05, hl * 0.62], [-hw + 0.05, -hl * 0.6], [hw - 0.05, -hl * 0.6]]);
 }
 
-const vehicle = (name, sculpt, extra = {}) => ({ name, cell: 0.045, cells: { wheels: 0.03, glass: 0.03, detail: 0.022 }, materials: MATERIALS, sculpt, ...extra });
+const vehicle = (name, sculpt, extra = {}) => ({ name, bones: [['root', null, [0, 0, 0]]], cell: 0.045, cells: { wheels: 0.03, glass: 0.03, detail: 0.022 }, materials: MATERIALS, sculpt, ...extra });
 
 export const sedan = vehicle('sedan', (s) => car(s, {}));
 export const hatchback = vehicle('hatchback', (s) => car(s, { L: 1.7, roof: 0.84, front: 0.42, rake: 0.34, hatch: true }));
