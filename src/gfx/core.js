@@ -1204,7 +1204,9 @@ SpriteMaterial.prototype.isSpriteMaterial = true;
  *         declaration order, as the fields of `material`.
  *
  * Whatever comes out is written as it is: no colour-space conversion, as
- * with any hand-written shader.
+ * with any hand-written shader. The fragment stage is told what the target
+ * stores, as a constant `OUTPUT_SRGB` (a `bool`): true for the canvas, false
+ * for a target that is read back linear (what glass refracts).
  */
 export class ShaderMaterial extends Material {
   constructor(parameters) {

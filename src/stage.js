@@ -113,7 +113,7 @@ const canvasTexture = (canvas) => {
  *   - `pixelRatio`: the most device pixels a CSS pixel gets (2)
  *   - `ui`: elements shot on the same film as the picture where a film says so (film.js)
  *   - `label`: the game's name, for the console
- * @returns the stage: { GFX, renderer, scene, camera, view, target, key, hemi, fill,
+ * @returns the stage: { GFX, renderer, scene, camera, view, target, key, keyFrom, hemi, fill,
  *   film, lantern, fixtureLights, shake, look(), render(), setSky(canvas), setRoom(canvas), setMood(mood) }
  */
 export async function createStage(host, {
@@ -214,6 +214,8 @@ export async function createStage(host, {
     target: new GFX.Vector3(),
     /** How hard the camera is being shaken, in tiles. The game sets it and lets it die away. */
     shake: 0,
+    /** Where the key light comes from (a unit vector towards it, `lights.key.from`): move it to move the sun. */
+    keyFrom: new GFX.Vector3().copy(rig.key.from),
 
     /** Paints the sky round everything with `canvas` (or the backdrop colour if null). */
     setSky(canvas) {
@@ -293,7 +295,7 @@ export async function createStage(host, {
     }
     camera.lookAt(stage.target);
     camera.updateMatrixWorld();
-    key.position.copy(stage.target).addScaledVector(rig.key.from, 45 + span);
+    key.position.copy(stage.target).addScaledVector(stage.keyFrom, 45 + span);
     key.target.position.copy(stage.target);
     const texel = (2 * span) / key.shadow.mapSize.x;
     key.shadow.normalBias = Math.max(NORMAL_BIAS.least, texel * NORMAL_BIAS.texels);
