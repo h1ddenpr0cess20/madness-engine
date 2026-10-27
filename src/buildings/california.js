@@ -374,12 +374,13 @@ export function hospital(m, v) {
 }
 
 /**
- * The tower on the island, in four sizes as `level` goes 1 to 4: a stepped
+ * The tower on the island, in four sizes as `level` goes 0 to 3 (as the
+ * castle's does): a stepped
  * art-deco tower of glass and white stone on a palm plaza, taller and more
  * setbacks each tier, with a lit crown and a spire at the top.
  */
 export function cityhall(m, v) {
-  const L = Math.max(0, Math.min(3, (v.level ?? 1) - 1));
+  const L = Math.max(0, Math.min(3, v.level ?? 0));
   m.box('stone', -2.8, 0, -2.8, 2.8, 0.03, 2.8, '#e4d6b8');
   m.box('stone', -1.9, 0.03, -1.9, 1.9, 0.75, 1.9, '#f0ead8', { skip: ['bottom'] });
   const P = faces(-1.9, -1.9, 1.9, 1.9, 0.03, 0.75);
