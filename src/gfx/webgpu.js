@@ -270,9 +270,10 @@ export class WebGPUBackend {
       const objectOffset = this._alloc(OBJECT_SIZE);
       this._packObject(objectOffset, call);
       const fields = customFields(call.material);
-      const materialOffset = this._alloc(Math.max(16, structSize(fields)));
+      const size = Math.max(16, structSize(fields));
+      const materialOffset = this._alloc(size);
       this._packCustom(materialOffset, fields, call.material);
-      p.pass.setBindGroup(0, this._customGroup(), [objectOffset, materialOffset]);
+      p.pass.setBindGroup(0, this._customGroup(customWindow(size)), [objectOffset, materialOffset]);
     } else {
       const offset = this._alloc(DRAW_SIZE);
       this._packDraw(offset, call);
@@ -542,17 +543,21 @@ export class WebGPUBackend {
     return group;
   }
 
-  _customGroup() {
-    if (!this.customGroup) {
-      this.customGroup = this.device.createBindGroup({
+  /** The bind group for a hand-written material whose uniforms take up to `window` bytes: one for each size there is. */
+  _customGroup(window) {
+    this.customGroups ??= new Map();
+    let group = this.customGroups.get(window);
+    if (!group) {
+      group = this.device.createBindGroup({
         layout: this.customLayout,
         entries: [
           { binding: 0, resource: { buffer: this.arena, size: OBJECT_SIZE } },
-          { binding: 1, resource: { buffer: this.arena, size: 256 } },
+          { binding: 1, resource: { buffer: this.arena, size: window } },
         ],
       });
+      this.customGroups.set(window, group);
     }
-    return this.customGroup;
+    return group;
   }
 
   // ------------------------------------------------------------ resources
@@ -848,7 +853,16 @@ const IDENTITY3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const ALIGNMENT = { f32: 4, vec2f: 8, vec3f: 16, mat4x4f: 16 };
 const SIZE = { f32: 4, vec2f: 8, vec3f: 12, mat4x4f: 64 };
 
-function structSize(fields) {
+/**
+ * How much of the arena a hand-written material's uniforms are bound through:
+ * all of their struct, in whole blocks of ALIGN. `_alloc` reserves whole
+ * blocks, so the window never runs past what was reserved.
+ */
+export function customWindow(size) {
+  return Math.max(ALIGN, alignTo(size, ALIGN));
+}
+
+export function structSize(fields) {
   let o = 0, align = 4;
   for (const [, type] of fields) {
     o = alignTo(o, ALIGNMENT[type]) + SIZE[type];
