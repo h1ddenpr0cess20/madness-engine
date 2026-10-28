@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Asset Viewer</title>
+    <style>
+      :root { --bg: #0d0f14; --panel: #151922; --line: #262c3a; --text: #e8e6e1; --dim: #8b92a3; --accent: #7aa7ff; --flag: #ff6a5c; --ok: #6fd08c; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+      button, select, input, textarea { font: inherit; color: inherit; background: #1d2230; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; }
+      button { cursor: pointer; } button:hover { border-color: var(--accent); }
+      button.on { background: var(--accent); color: #0b1020; border-color: var(--accent); }
+      #app { display: grid; grid-template-columns: 280px 1fr 300px; height: 100%; }
+      aside { background: var(--panel); display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
+      aside.right { border-right: 0; border-left: 1px solid var(--line); overflow-y: auto; padding: 12px; gap: 12px; }
+      .tools { padding: 10px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); }
+      .tools input, .tools select { width: 100%; }
+      #list { overflow-y: auto; flex: 1; }
+      #list h4 { margin: 0; padding: 8px 10px 4px; color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; position: sticky; top: 0; background: var(--panel); }
+      #list .row { padding: 4px 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 6px; }
+      #list .row:hover { background: #1d2230; } #list .row.sel { background: #25304a; }
+      .row .flagmark { color: var(--flag); }
+      main { position: relative; min-width: 0; }
+      #host { position: absolute; inset: 0; } #host canvas { width: 100%; height: 100%; display: block; }
+      #title { position: absolute; left: 14px; top: 10px; pointer-events: none; text-shadow: 0 1px 3px #000; }
+      #title b { font-size: 18px; } #title span { color: var(--dim); }
+      #views { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 94%; }
+      #views button { background: #151922cc; backdrop-filter: blur(4px); }
+      #busy { position: absolute; inset: 0; display: none; place-items: center; background: #0d0f14aa; font-size: 16px; }
+      #sheet { position: absolute; inset: 0; display: none; background: #0d0f14f2; padding: 16px; overflow: auto; }
+      #sheet .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+      #sheet figure { margin: 0; cursor: pointer; } #sheet canvas { width: 100%; border-radius: 8px; border: 1px solid var(--line); display: block; }
+      #sheet figcaption { color: var(--dim); text-align: center; padding: 3px; }
+      .group { display: grid; gap: 6px; } .group > h3 { margin: 0; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+      .line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; } .line label { color: var(--dim); }
+      .stats { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; } .stats dt { color: var(--dim); } .stats dd { margin: 0; text-align: right; word-break: break-all; }
+      .warn { color: #ffb454; }
+      .chips { display: flex; flex-wrap: wrap; gap: 4px; } .chips button { padding: 3px 8px; border-radius: 99px; }
+      .chips button.on { background: var(--flag); border-color: var(--flag); color: #1a0a08; }
+      #flagbtn { width: 100%; padding: 9px; font-weight: 600; } #flagbtn.on { background: var(--flag); border-color: var(--flag); color: #1a0a08; }
+      textarea { width: 100%; min-height: 70px; resize: vertical; }
+      #err { color: var(--flag); white-space: pre-wrap; }
+      kbd { background: #1d2230; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
+      @media (max-width: 900px) { #app { grid-template-columns: 1fr; grid-template-rows: 200px 1fr 220px; } aside { border: 0; } aside.right { border-top: 1px solid var(--line); } }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <aside>
+        <div class="tools">
+          <input id="search" type="search" placeholder="Search…  ( / )" />
+          <select id="category"></select>
+          <div class="line" style="white-space:nowrap"><label><input id="onlyflagged" type="checkbox" /> flagged only</label> <span id="count" style="margin-left:auto;color:var(--dim)"></span></div>
+        </div>
+        <div id="list"></div>
+      </aside>
+      <main>
+        <div id="host"></div>
+        <div id="title"></div>
+        <div id="views"></div>
+        <div id="busy">Baking…</div>
+        <div id="sheet"></div>
+      </main>
+      <aside class="right">
+        <button id="flagbtn">⚑ Flag for fixing (F)</button>
+        <div class="group" id="flagform" style="display:none">
+          <div class="chips" id="reasons"></div>
+          <textarea id="note" placeholder="What's wrong with it?"></textarea>
+        </div>
+        <div class="group"><h3>View</h3>
+          <div class="line"><button id="turn">Turntable (T)</button><button id="sheetbtn">All angles (C)</button><button id="gridbtn">Grid (G)</button></div>
+          <div class="line"><label>Background</label><select id="bg"><option value="#0b0e1d">Dark</option><option value="#6b7280">Mid grey</option><option value="#d8d8d8">Light</option><option value="#12c24a">Green</option></select></div>
+          <div class="line"><label>Light</label><input id="light" type="range" min="0.3" max="2" step="0.05" value="1" /></div>
+        </div>
+        <div class="group" id="animgroup"><h3>Animation</h3>
+          <div class="line"><select id="clip"></select><button id="pause">Pause (Space)</button></div>
+          <div class="line"><label>Speed</label><input id="speed" type="range" min="0" max="2" step="0.05" value="1" /></div>
+          <div class="line"><label>Detail</label><select id="detail"><option value="1">1 (near)</option><option value="0.5">0.5 (far)</option><option value="1.5">1.5 (fine)</option></select></div>
+        </div>
+        <div class="group"><h3>Info</h3><dl class="stats" id="stats"></dl><div id="err"></div></div>
+        <div class="group"><h3>Flags</h3>
+          <div class="line"><button id="copyflags">Copy list</button><button id="dlflags">Download JSON</button></div>
+          <div id="flagsummary" style="color:var(--dim)"></div>
+        </div>
+        <div class="group"><h3>Keys</h3><div style="color:var(--dim)"><kbd>J</kbd>/<kbd>K</kbd> next / previous · <kbd>1</kbd>–<kbd>8</kbd> views · <kbd>F</kbd> flag · <kbd>T</kbd> turntable · <kbd>C</kbd> all angles · <kbd>/</kbd> search. Drag to orbit, wheel to zoom, right-drag to pan.</div></div>
+      </aside>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
