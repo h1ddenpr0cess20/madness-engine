@@ -51,7 +51,8 @@
         <div class="tools">
           <input id="search" type="search" placeholder="Search…  ( / )" />
           <select id="category"></select>
-          <div class="line" style="white-space:nowrap"><label><input id="onlyflagged" type="checkbox" /> flagged only</label> <span id="count" style="margin-left:auto;color:var(--dim)"></span></div>
+          <div class="line" style="white-space:nowrap"><label><input id="onlyflagged" type="checkbox" /> flagged only</label> </div>
+          <div id="count" style="color:var(--dim)"></div>
         </div>
         <div id="list"></div>
       </aside>
@@ -66,10 +67,13 @@
         <button id="flagbtn">⚑ Flag for fixing (F)</button>
         <div class="group" id="flagform" style="display:none">
           <div class="chips" id="reasons"></div>
+          <button id="pin">Pin this angle</button>
+          <div class="group"><h3>Marked areas</h3><div id="marks" style="display:grid;gap:4px"></div><div style="color:var(--dim)" id="markhint">Turn on Mark areas (M), then click the model.</div></div>
           <textarea id="note" placeholder="What's wrong with it?"></textarea>
         </div>
         <div class="group"><h3>View</h3>
           <div class="line"><button id="turn">Turntable (T)</button><button id="sheetbtn">All angles (C)</button><button id="gridbtn">Grid (G)</button></div>
+          <div class="line"><button id="markbtn">Mark areas (M)</button><label>Size</label><input id="marksize" type="range" min="0.02" max="0.5" step="0.01" value="0.12" style="width:90px" /></div>
           <div class="line"><label>Background</label><select id="bg"><option value="#0b0e1d">Dark</option><option value="#6b7280">Mid grey</option><option value="#d8d8d8">Light</option><option value="#12c24a">Green</option></select></div>
           <div class="line"><label>Light</label><input id="light" type="range" min="0.3" max="2" step="0.05" value="1" /></div>
         </div>
@@ -80,10 +84,10 @@
         </div>
         <div class="group"><h3>Info</h3><dl class="stats" id="stats"></dl><div id="err"></div></div>
         <div class="group"><h3>Flags</h3>
-          <div class="line"><button id="copyflags">Copy list</button><button id="dlflags">Download JSON</button></div>
+          <div class="line"><button id="copyflags">Copy for Claude</button><button id="dlflags">Download JSON</button></div>
           <div id="flagsummary" style="color:var(--dim)"></div>
         </div>
-        <div class="group"><h3>Keys</h3><div style="color:var(--dim)"><kbd>J</kbd>/<kbd>K</kbd> next / previous · <kbd>1</kbd>–<kbd>8</kbd> views · <kbd>F</kbd> flag · <kbd>T</kbd> turntable · <kbd>C</kbd> all angles · <kbd>/</kbd> search. Drag to orbit, wheel to zoom, right-drag to pan.</div></div>
+        <div class="group"><h3>Keys</h3><div style="color:var(--dim)"><kbd>J</kbd>/<kbd>K</kbd> next / previous · <kbd>1</kbd>–<kbd>8</kbd> views · <kbd>F</kbd> flag · <kbd>T</kbd> turntable · <kbd>C</kbd> all angles · <kbd>M</kbd> mark areas · <kbd>/</kbd> search. Drag to orbit, wheel to zoom, right-drag to pan.</div></div>
       </aside>
     </div>
     <script type="module" src="/src/main.js"></script>

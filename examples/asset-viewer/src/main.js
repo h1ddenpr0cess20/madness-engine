@@ -129,6 +129,7 @@ function sizeCamera() {
 function clearStage() {
   if (view.built) scene.remove(view.built.object);
   plate.visible = false;
+  markGroup.clear();
 }
 
 async function show(item) {
@@ -154,6 +155,7 @@ async function show(item) {
     const b = boundsOf(built.object);
     view.center.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
     view.radius = Math.max(0.2, Math.hypot(...b.size) / 2);
+    view.bounds = b;
     if (built.footprint) {
       plate.scale.set(built.footprint[0], 1, built.footprint[1]);
       plate.position.set(0, 0.01, 0);
@@ -173,6 +175,7 @@ async function show(item) {
     if (token === view.token) $('busy').style.display = 'none';
   }
   renderFlag();
+  drawMarks();
   markSelected();
 }
 
@@ -223,6 +226,89 @@ function animGroup(built) {
     $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, name), select));
   }
 }
+
+// ———————————————————————————————————————————————— marked areas
+
+const markGroup = new GFX.Group();
+const raycaster = new GFX.Raycaster();
+let marking = false;
+const MARK = '#ff3b30';
+
+/** The red balls over what is wrong, drawn on top so they show from every side. */
+function drawMarks() {
+  markGroup.clear();
+  const flag = flags[view.item?.id];
+  if (!flag?.marks || !view.built) return;
+  flag.marks.forEach((m, i) => {
+    const ball = new GFX.Mesh(new GFX.SphereGeometry(m.radius, 24, 16), new GFX.MeshBasicMaterial({ color: MARK, transparent: true, opacity: 0.42, depthTest: false, depthWrite: false }));
+    ball.position.fromArray(m.position);
+    ball.renderOrder = 10 + i;
+    markGroup.add(ball);
+  });
+  view.built.object.add(markGroup);
+}
+
+/** Where a mark is, in words: how high up it is, and which side. Models face +z, and their left is +x. */
+function describe(position) {
+  const b = view.bounds;
+  if (!b) return '';
+  const frac = (v, a) => (b.size[a] ? (v - b.min[a]) / b.size[a] : 0.5);
+  const h = Math.round(frac(position[1], 1) * 100);
+  const x = frac(position[0], 0), z = frac(position[2], 2);
+  const side = x > 0.62 ? 'left side' : x < 0.38 ? 'right side' : 'middle';
+  const depth = z > 0.62 ? 'front' : z < 0.38 ? 'back' : 'centre';
+  return `${h}% up, ${side}, ${depth}`;
+}
+
+function renderMarks() {
+  const flag = flags[view.item?.id];
+  const box = $('marks');
+  box.replaceChildren();
+  (flag?.marks ?? []).forEach((m, i) => {
+    const input = el('input', { value: m.label ?? '', placeholder: 'what is wrong here?' });
+    input.oninput = () => { m.label = input.value; saveFlags(); };
+    const remove = el('button', { title: 'Remove', onclick: () => { flag.marks.splice(i, 1); saveFlags(); drawMarks(); renderMarks(); } }, '✕');
+    box.append(el('div', { className: 'line' }, el('b', { style: `color:${MARK}` }, String(i + 1)), input, remove));
+  });
+  $('markhint').textContent = marking ? 'Click the model to mark a spot. Marks stay where they were put.' : 'Turn on Mark areas (M), then click the model.';
+}
+
+function setMarking(on) {
+  marking = on;
+  $('markbtn').classList.toggle('on', on);
+  renderer.domElement.style.cursor = on ? 'crosshair' : '';
+  // A moving model would slide out from under its marks.
+  if (on && view.built?.pose && !view.paused) $('pause').click();
+  renderMarks();
+}
+
+/** A click (not a drag) on the model drops a mark at the point it hit. */
+function addMark(event) {
+  if (!marking || !view.built || !view.item) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const at = new GFX.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+  camera.updateMatrixWorld();
+  raycaster.setFromCamera(at, camera);
+  const hit = raycaster.intersectObject(view.built.object, true).find((h) => h.object.visible && h.object.parent !== markGroup);
+  if (!hit) return;
+  if (!flags[view.item.id]) toggleFlag();
+  const flag = flags[view.item.id];
+  const radius = Math.round(Number($('marksize').value) * Math.max(0.3, view.radius) * 1000) / 1000;
+  const position = view.built.object.worldToLocal(hit.point.clone()).toArray().map((v) => Math.round(v * 1000) / 1000);
+  (flag.marks ??= []).push({ position, radius, where: describe(position), label: '', pose: view.built.pose ? { clip: view.clip, t: Math.round((view.clock - view.clipStart) * 100) / 100 } : undefined });
+  flag.context = contextOf();
+  saveFlags();
+  drawMarks();
+  renderMarks();
+  applyFilter();
+}
+
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (downAt && e.button === 0 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 4) addMark(e);
+  downAt = null;
+});
 
 // ———————————————————————————————————————————————— the loop
 
@@ -297,6 +383,8 @@ function renderFlag() {
   $('flagbtn').textContent = flag ? '⚑ Flagged — click to clear (F)' : '⚑ Flag for fixing (F)';
   $('flagform').style.display = flag ? '' : 'none';
   $('note').value = flag?.note ?? '';
+  renderMarks();
+  $('pin').textContent = flag?.angle ? `Pin this angle (now ${flag.angle.azimuth}°, ${flag.angle.elevation}°)` : 'Pin this angle';
   $('reasons').replaceChildren(...REASONS.map((r) => {
     const b = el('button', { className: flag?.reasons.includes(r) ? 'on' : '' }, r);
     b.onclick = () => {
@@ -311,15 +399,47 @@ function renderFlag() {
   $('flagsummary').textContent = n ? `${n} flagged${serverOk ? ' · saved to flags.json' : ' · saved in this browser'}` : serverOk ? 'None yet. Saved to flags.json.' : 'None yet. Saved in this browser.';
 }
 
+/** What the viewer was set to, so whoever fixes it can see what you saw. */
+function contextOf() {
+  const c = { detail: options.detail };
+  if (view.built?.clips) c.clip = view.clip;
+  if (view.item?.options) Object.assign(c, { level: options.level, variant: options.variant, construction: options.construction });
+  return c;
+}
+
+/** Where the camera is round the thing: degrees round from the front (+z), and up. */
+function angleOf() {
+  const d = camera.position.clone().sub(controls.target);
+  const round = (v) => Math.round(v * 10) / 10;
+  return { azimuth: round((Math.atan2(d.x, d.z) * 180) / Math.PI), elevation: round((Math.atan2(d.y, Math.hypot(d.x, d.z)) * 180) / Math.PI) };
+}
+
+/** The flags as a file to hand to Claude: what to do, then each asset, where its code is and what is wrong. */
+function exportFor() {
+  const file = (source) => {
+    const [path, name] = source.split('#');
+    return { file: `src/${path}`, ...(name ? { export: name } : {}) };
+  };
+  return {
+    for: 'Claude',
+    repo: 'h1ddenpr0cess20/madness-engine',
+    exportedAt: new Date().toISOString(),
+    instructions: 'These assets were flagged in the asset viewer (examples/asset-viewer) as needing fixes. For each: open its source file, read the note, and fix what it describes. `angle` is where the camera was when it was flagged (degrees round from the front, which is +z, and up); `context` is what the viewer was set to. `marks` are spots on the model the person circled: `position` is in the model’s own space (tiles, y up, the front toward +z, its left toward +x), `radius` how big an area, `where` the same in words, `label` what is wrong there, and `pose` the clip and time it was posed at. Models are sculpted with the kit in src/models; keep each asset in its own file and keep to its vertex budget. Re-open it in the viewer afterwards to check.',
+    count: Object.keys(flags).length,
+    flagged: Object.entries(flags).map(([id, f]) => ({ id, name: f.name, category: f.category, ...file(f.source), reasons: f.reasons, note: f.note, context: f.context, angle: f.angle, ...(f.marks?.length ? { marks: f.marks } : {}) })),
+  };
+}
+
 function toggleFlag() {
   const item = view.item;
   if (!item) return;
   if (flags[item.id]) delete flags[item.id];
-  else flags[item.id] = { name: item.name, category: item.category, source: item.source, reasons: [], note: '', at: new Date().toISOString() };
+  else flags[item.id] = { name: item.name, category: item.category, source: item.source, reasons: [], note: '', at: new Date().toISOString(), context: contextOf(), angle: angleOf() };
   saveFlags();
   renderFlag();
+  drawMarks();
   applyFilter();
-  if (flags[item.id]) $('note').focus();
+  if (flags[item.id] && !marking) $('note').focus();
 }
 
 // ———————————————————————————————————————————————— all angles
@@ -363,6 +483,8 @@ $('search').oninput = applyFilter;
 $('category').onchange = applyFilter;
 $('onlyflagged').onchange = applyFilter;
 $('flagbtn').onclick = toggleFlag;
+$('markbtn').onclick = () => setMarking(!marking);
+$('pin').onclick = () => { const f = flags[view.item?.id]; if (f) { f.angle = angleOf(); f.context = contextOf(); saveFlags(); renderFlag(); } };
 $('note').oninput = () => { const f = flags[view.item?.id]; if (f) { f.note = $('note').value; saveFlags(); } };
 $('turn').onclick = () => { controls.autoRotate = !controls.autoRotate; $('turn').classList.toggle('on', controls.autoRotate); };
 $('sheetbtn').onclick = contactSheet;
@@ -374,14 +496,12 @@ $('detail').onchange = () => { options.detail = Number($('detail').value); show(
 $('light').oninput = applyLight;
 $('bg').onchange = () => { if (view.item?.kind === 'object' || view.item?.kind === 'mood') stage.setSky(solid($('bg').value)); };
 
-const flagged = () => Object.entries(flags);
+const flash = (button, text) => { const was = button.dataset.was ?? button.textContent; button.dataset.was = was; button.textContent = text; setTimeout(() => { button.textContent = was; }, 1500); };
 $('copyflags').onclick = async () => {
-  const lines = flagged().map(([id, f]) => `- **${f.name}** (${f.category}, \`${f.source}\`)${f.reasons.length ? ` — ${f.reasons.join(', ')}` : ''}${f.note ? `: ${f.note}` : ''}`);
-  try { await navigator.clipboard.writeText(lines.join('\n') || 'Nothing flagged.'); $('copyflags').textContent = 'Copied'; } catch { $('copyflags').textContent = 'Copy failed'; }
-  setTimeout(() => { $('copyflags').textContent = 'Copy list'; }, 1500);
+  try { await navigator.clipboard.writeText(JSON.stringify(exportFor(), null, 2)); flash($('copyflags'), 'Copied'); } catch { flash($('copyflags'), 'Copy failed'); }
 };
 $('dlflags').onclick = () => {
-  const a = el('a', { href: URL.createObjectURL(new Blob([JSON.stringify(flags, null, 2)], { type: 'application/json' })), download: 'flags.json' });
+  const a = el('a', { href: URL.createObjectURL(new Blob([JSON.stringify(exportFor(), null, 2)], { type: 'application/json' })), download: 'asset-flags-for-claude.json' });
   a.click();
   URL.revokeObjectURL(a.href);
 };
@@ -395,6 +515,7 @@ addEventListener('keydown', (e) => {
   else if (k === 'k' || k === 'arrowup') { e.preventDefault(); step(-1); }
   else if (k === 'f') { e.preventDefault(); toggleFlag(); }
   else if (k === 't') $('turn').click();
+  else if (k === 'm') setMarking(!marking);
   else if (k === 'c') contactSheet();
   else if (k === 'g') $('gridbtn').click();
   else if (k === ' ') { e.preventDefault(); $('pause').click(); }
