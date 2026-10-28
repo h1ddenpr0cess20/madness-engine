@@ -91,6 +91,8 @@ gridTexture.repeat.set(24, 24);
 const floor = new GFX.Mesh(new GFX.PlaneGeometry(24, 24), new GFX.MeshStandardMaterial({ map: gridTexture, roughness: 0.9 }));
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
+// Off by default: models that dip below y = 0 are meant to be seen whole.
+floor.visible = false;
 scene.add(floor);
 const plate = new GFX.Mesh(new GFX.BoxGeometry(1, 0.02, 1), new GFX.MeshBasicMaterial({ color: '#7aa7ff', transparent: true, opacity: 0.25 }));
 plate.visible = false;
@@ -496,7 +498,7 @@ $('pin').onclick = () => { const f = flags[view.item?.id]; if (f) { f.angle = an
 $('note').oninput = () => { const f = flags[view.item?.id]; if (f) { f.note = $('note').value; saveFlags(); } };
 $('turn').onclick = () => { controls.autoRotate = !controls.autoRotate; $('turn').classList.toggle('on', controls.autoRotate); };
 $('sheetbtn').onclick = contactSheet;
-$('gridbtn').onclick = () => { floor.visible = !floor.visible; $('gridbtn').classList.toggle('on', !floor.visible); };
+$('gridbtn').onclick = () => { floor.visible = !floor.visible; $('gridbtn').classList.toggle('on', floor.visible); };
 $('pause').onclick = () => { view.paused = !view.paused; $('pause').classList.toggle('on', view.paused); };
 $('speed').oninput = () => { view.speed = Number($('speed').value); };
 $('clip').onchange = () => { view.clip = $('clip').value; view.clipStart = view.clock; };
@@ -531,7 +533,7 @@ addEventListener('keydown', (e) => {
   else if (/^[1-8]$/.test(k)) frame(VIEWS[k - 1][1], VIEWS[k - 1][2]);
 });
 
-window.assetViewer = { catalog, show, options };
+window.assetViewer = { catalog, show, options, frame, view, controls, camera };
 applyFilter();
 const start = catalog.find((i) => i.id === decodeURIComponent(location.hash.slice(1))) ?? filtered[0];
 if (start) show(start);
