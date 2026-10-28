@@ -152,7 +152,14 @@ async function show(item) {
     if (item.kind === 'room') stage.setRoom(built.canvas);
     if (item.kind === 'mood') stage.setMood(item.mood);
     // Models stand on y = 0; centre the thing over the origin and look at its middle.
-    const b = boundsOf(built.object);
+    let b = boundsOf(built.object);
+    // Flyers are sculpted about their middle, so half of them is under the floor: stand them on it.
+    built.object.position.y = 0;
+    if (item.kind === 'object' && item.category !== 'Buildings' && !built.flat && b.min[1] < -0.02) {
+      built.object.position.y = -b.min[1];
+      b = boundsOf(built.object);
+      built.info = { ...built.info, Lifted: `${built.object.position.y.toFixed(2)} tiles (origin is its middle)` };
+    }
     view.center.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
     view.radius = Math.max(0.2, Math.hypot(...b.size) / 2);
     view.bounds = b;
@@ -253,7 +260,8 @@ function describe(position) {
   const b = view.bounds;
   if (!b) return '';
   const frac = (v, a) => (b.size[a] ? (v - b.min[a]) / b.size[a] : 0.5);
-  const h = Math.round(frac(position[1], 1) * 100);
+  const lift = view.built?.object.position.y ?? 0;
+  const h = Math.round(frac(position[1] + lift, 1) * 100);
   const x = frac(position[0], 0), z = frac(position[2], 2);
   const side = x > 0.62 ? 'left side' : x < 0.38 ? 'right side' : 'middle';
   const depth = z > 0.62 ? 'front' : z < 0.38 ? 'back' : 'centre';
