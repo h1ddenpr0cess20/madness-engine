@@ -13,6 +13,7 @@ import { createBuildings, FOOTPRINTS } from '../../../src/buildings/index.js';
 import { CALIFORNIA_FOOTPRINTS } from '../../../src/buildings/california.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { tiled } from '../../../src/textures/painters.js';
+import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
 const textures = import.meta.glob('../../../src/textures/**/*.js');
@@ -89,6 +90,7 @@ const HEROES = [
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['boulder', () => import('../../../src/heroes/boulder.js').then((m) => m.createRock(GFX))],
   ['ball (mace player)', () => import('../../../src/heroes/ball.js').then((m) => m.createPlayer(GFX))],
+  ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
 ];
 
@@ -110,7 +112,7 @@ function buildingItems() {
   return buildings.types().map((type) => ({
     id: `buildings/${type}`, category: 'Buildings', group: 'buildings', name: type, source: 'buildings', kind: 'object',
     options: { level: [1, 2, 3], variant: [0, 1, 2, 3, 4, 5, 6, 7], construction: [0, 0.25, 0.5, 0.75] },
-    build({ level = 1, variant = 0, construction = 0 }) {
+    build({ level = 1, variant = 0, construction = 0, lights = [] }) {
       const model = buildings.modelFor(type, construction ? { level, variant, building: true, progress: construction } : { level, variant });
       const group = new GFX.Group();
       for (const [mat, p] of Object.entries(model.parts)) {
@@ -125,6 +127,7 @@ function buildingItems() {
       const [w, d] = sizes[type] ?? [1, 1];
       return {
         object: group,
+        pose: dress(model, group, lights),
         info: { Source: 'buildings', Footprint: `${w} × ${d} tiles`, Materials: Object.keys(model.parts).join(', '), ...countOf(group), Lights: model.lights.length, 'Moving parts': model.anim.length, Smokes: model.smoke.length },
         footprint: [w, d],
       };
@@ -252,8 +255,8 @@ export async function loadCatalog(onProgress = () => {}) {
     }
   }
 
-  items.push(...FIXTURES.map(fixtureItem));
+  items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
 }

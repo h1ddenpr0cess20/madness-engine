@@ -150,7 +150,7 @@ async function show(item) {
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
   try {
-    const built = await item.build({ ...options, lights: stage.fixtureLights });
+    const built = await item.build({ ...options, lights: stage.fixtureLights, stage });
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
@@ -166,7 +166,8 @@ async function show(item) {
     if (item.kind === 'mood') { stage.setMood(item.mood); syncLights(); }
     $('moodrow').style.display = item.kind === 'object' ? '' : 'none';
     // Models stand on y = 0; centre the thing over the origin and look at its middle.
-    const b = boundsOf(built.object);
+    const b = built.frame ? { min: built.frame.center.map((c) => c - built.frame.radius), max: built.frame.center.map((c) => c + built.frame.radius), size: [2, 2, 2].map((v) => v * built.frame.radius) } : boundsOf(built.object);
+    floor.visible = !built.noFloor && !$('gridbtn').classList.contains('on');
     view.center.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
     view.radius = Math.max(0.2, Math.hypot(...b.size) / 2);
     view.bounds = b;
