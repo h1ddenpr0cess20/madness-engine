@@ -129,6 +129,7 @@ function sizeCamera() {
 function clearStage() {
   if (view.built) scene.remove(view.built.object);
   plate.visible = false;
+  handle.visible = false;
   markGroup.clear();
 }
 
@@ -174,6 +175,7 @@ async function show(item) {
   } finally {
     if (token === view.token) $('busy').style.display = 'none';
   }
+  applyEdits();
   renderFlag();
   drawMarks();
   markSelected();
@@ -303,6 +305,123 @@ function addMark(event) {
   applyFilter();
 }
 
+// ———————————————————————————————————————————————— vertex editing
+
+let editing = false;
+const handle = new GFX.Mesh(new GFX.SphereGeometry(1, 12, 8), new GFX.MeshBasicMaterial({ color: '#ffd23f', depthTest: false, depthWrite: false, transparent: true }));
+handle.renderOrder = 100;
+handle.visible = false;
+scene.add(handle);
+const originals = new Map();
+
+const meshesOf = () => { const out = []; view.built?.object.traverse((o) => { if (o.isMesh && o !== handle && o.parent !== markGroup) out.push(o); }); return out; };
+
+/** The vertex of the triangle under the pointer that is nearest to where it hit. */
+function pickVertex(event) {
+  if (!view.built) return null;
+  const rect = renderer.domElement.getBoundingClientRect();
+  camera.updateMatrixWorld();
+  raycaster.setFromCamera(new GFX.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1), camera);
+  const hit = raycaster.intersectObject(view.built.object, true).find((h) => h.object.isMesh && h.object.visible && h.object.parent !== markGroup && h.object !== handle);
+  if (!hit) return null;
+  const pos = hit.object.geometry.attributes.position;
+  const world = new GFX.Vector3();
+  let best = null;
+  for (const i of [hit.face.a, hit.face.b, hit.face.c]) {
+    world.fromBufferAttribute(pos, i).applyMatrix4(hit.object.matrixWorld);
+    const d = world.distanceTo(hit.point);
+    if (!best || d < best.d) best = { mesh: hit.object, i, d, world: world.clone() };
+  }
+  return best;
+}
+
+/** Move every vertex of a mesh that sits where vertex `i` does, so seams stay closed. */
+function moveVertex(mesh, i, local) {
+  const geo = mesh.geometry, pos = geo.attributes.position;
+  if (!originals.has(geo)) originals.set(geo, pos.array.slice());
+  const a = pos.array, x = a[i * 3], y = a[i * 3 + 1], z = a[i * 3 + 2];
+  const moved = [];
+  for (let j = 0; j < pos.count; j++) {
+    if (a[j * 3] === x && a[j * 3 + 1] === y && a[j * 3 + 2] === z) { pos.setXYZ(j, local.x, local.y, local.z); moved.push(j); }
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  geo.computeBoundingSphere();
+  geo.boundingBox = null;
+  return moved;
+}
+
+function setEditing(on) {
+  editing = on;
+  $('editbtn').classList.toggle('on', on);
+  renderer.domElement.style.cursor = on ? 'grab' : '';
+  if (on) { setMarking(false); if (view.built?.pose && !view.paused) $('pause').click(); }
+  else handle.visible = false;
+}
+
+function applyEdits() {
+  originals.clear();
+  const flag = flags[view.item?.id];
+  if (!flag?.edits?.length) return;
+  const meshes = meshesOf();
+  for (const e of flag.edits) if (meshes[e.mesh]) moveVertex(meshes[e.mesh], e.vertex, new GFX.Vector3(...e.to));
+}
+
+let drag = null;
+host.addEventListener('pointerdown', (e) => {
+  if (!editing || e.button !== 0) return;
+  const v = pickVertex(e);
+  if (!v) return;
+  e.stopPropagation();
+  const normal = camera.getWorldDirection(new GFX.Vector3());
+  drag = { ...v, plane: new GFX.Plane().setFromNormalAndCoplanarPoint(normal, v.world), lastLocal: null };
+  controls.enabled = false;
+  renderer.domElement.setPointerCapture?.(e.pointerId);
+  renderer.domElement.style.cursor = 'grabbing';
+}, true);
+addEventListener('pointermove', (e) => {
+  if (!editing) return;
+  if (!drag) {
+    const v = pickVertex(e);
+    handle.visible = Boolean(v);
+    if (v) { handle.position.copy(v.world); handle.scale.setScalar(Math.max(0.005, camera.position.distanceTo(v.world) * 0.012)); }
+    return;
+  }
+  const rect = renderer.domElement.getBoundingClientRect();
+  raycaster.setFromCamera(new GFX.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1), camera);
+  const at = raycaster.ray.intersectPlane(drag.plane, new GFX.Vector3());
+  if (!at) return;
+  drag.mesh.updateMatrixWorld();
+  drag.lastLocal = drag.mesh.worldToLocal(at.clone());
+  moveVertex(drag.mesh, drag.i, drag.lastLocal);
+  handle.visible = true;
+  handle.position.copy(at);
+});
+addEventListener('pointerup', () => {
+  if (!drag) return;
+  const { mesh, i, lastLocal } = drag;
+  drag = null;
+  controls.enabled = true;
+  renderer.domElement.style.cursor = editing ? 'grab' : '';
+  if (!lastLocal || !view.item) return;
+  if (!flags[view.item.id]) toggleFlag();
+  const flag = flags[view.item.id];
+  const to = lastLocal.toArray().map((v) => Math.round(v * 1000) / 1000);
+  const m = meshesOf().indexOf(mesh);
+  const origin = originals.get(mesh.geometry);
+  const from = origin ? [origin[i * 3], origin[i * 3 + 1], origin[i * 3 + 2]].map((v) => Math.round(v * 1000) / 1000) : to;
+  const edits = (flag.edits ??= []);
+  const prior = edits.find((e) => e.mesh === m && e.vertex === i);
+  if (prior) prior.to = to; else edits.push({ mesh: m, vertex: i, from, to });
+  saveFlags();
+  renderEdits();
+});
+
+function renderEdits() {
+  const n = flags[view.item?.id]?.edits?.length ?? 0;
+  $('editcount').textContent = n ? `${n} vertex edit${n === 1 ? '' : 's'}` : 'Turn on Edit vertices (V), then drag a vertex.';
+}
+
 let downAt = null;
 renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', (e) => {
@@ -384,6 +503,7 @@ function renderFlag() {
   $('flagform').style.display = flag ? '' : 'none';
   $('note').value = flag?.note ?? '';
   renderMarks();
+  renderEdits();
   $('pin').textContent = flag?.angle ? `Pin this angle (now ${flag.angle.azimuth}°, ${flag.angle.elevation}°)` : 'Pin this angle';
   $('reasons').replaceChildren(...REASONS.map((r) => {
     const b = el('button', { className: flag?.reasons.includes(r) ? 'on' : '' }, r);
@@ -424,9 +544,9 @@ function exportFor() {
     for: 'Claude',
     repo: 'h1ddenpr0cess20/madness-engine',
     exportedAt: new Date().toISOString(),
-    instructions: 'These assets were flagged in the asset viewer (examples/asset-viewer) as needing fixes. For each: open its source file, read the note, and fix what it describes. `angle` is where the camera was when it was flagged (degrees round from the front, which is +z, and up); `context` is what the viewer was set to. `marks` are spots on the model the person circled: `position` is in the model’s own space (tiles, y up, the front toward +z, its left toward +x), `radius` how big an area, `where` the same in words, `label` what is wrong there, and `pose` the clip and time it was posed at. Models are sculpted with the kit in src/models; keep each asset in its own file and keep to its vertex budget. Re-open it in the viewer afterwards to check.',
+    instructions: 'These assets were flagged in the asset viewer (examples/asset-viewer) as needing fixes. For each: open its source file, read the note, and fix what it describes. `angle` is where the camera was when it was flagged (degrees round from the front, which is +z, and up); `context` is what the viewer was set to. `marks` are spots on the model the person circled: `position` is in the model’s own space (tiles, y up, the front toward +z, its left toward +x), `radius` how big an area, `where` the same in words, `label` what is wrong there, and `pose` the clip and time it was posed at. `edits` are vertices the person dragged by hand: `mesh` is the index of the mesh in a depth-first walk of the model, `vertex` its index in that mesh’s position attribute (every vertex at the same spot moved with it), `from` and `to` in the model’s own space; bake the `to` positions into the sculpt. Models are sculpted with the kit in src/models; keep each asset in its own file and keep to its vertex budget. Re-open it in the viewer afterwards to check.',
     count: Object.keys(flags).length,
-    flagged: Object.entries(flags).map(([id, f]) => ({ id, name: f.name, category: f.category, ...file(f.source), reasons: f.reasons, note: f.note, context: f.context, angle: f.angle, ...(f.marks?.length ? { marks: f.marks } : {}) })),
+    flagged: Object.entries(flags).map(([id, f]) => ({ id, name: f.name, category: f.category, ...file(f.source), reasons: f.reasons, note: f.note, context: f.context, angle: f.angle, ...(f.marks?.length ? { marks: f.marks } : {}), ...(f.edits?.length ? { edits: f.edits } : {}) })),
   };
 }
 
@@ -483,7 +603,13 @@ $('search').oninput = applyFilter;
 $('category').onchange = applyFilter;
 $('onlyflagged').onchange = applyFilter;
 $('flagbtn').onclick = toggleFlag;
-$('markbtn').onclick = () => setMarking(!marking);
+$('markbtn').onclick = () => { setMarking(!marking); if (marking) setEditing(false); };
+$('editbtn').onclick = () => setEditing(!editing);
+$('editreset').onclick = () => {
+  const f = flags[view.item?.id];
+  if (f) { delete f.edits; saveFlags(); }
+  show(view.item);
+};
 $('pin').onclick = () => { const f = flags[view.item?.id]; if (f) { f.angle = angleOf(); f.context = contextOf(); saveFlags(); renderFlag(); } };
 $('note').oninput = () => { const f = flags[view.item?.id]; if (f) { f.note = $('note').value; saveFlags(); } };
 $('turn').onclick = () => { controls.autoRotate = !controls.autoRotate; $('turn').classList.toggle('on', controls.autoRotate); };
@@ -515,7 +641,8 @@ addEventListener('keydown', (e) => {
   else if (k === 'k' || k === 'arrowup') { e.preventDefault(); step(-1); }
   else if (k === 'f') { e.preventDefault(); toggleFlag(); }
   else if (k === 't') $('turn').click();
-  else if (k === 'm') setMarking(!marking);
+  else if (k === 'm') $('markbtn').click();
+  else if (k === 'v') $('editbtn').click();
   else if (k === 'c') contactSheet();
   else if (k === 'g') $('gridbtn').click();
   else if (k === ' ') { e.preventDefault(); $('pause').click(); }
