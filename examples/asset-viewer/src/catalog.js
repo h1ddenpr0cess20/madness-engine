@@ -171,6 +171,9 @@ const FIXTURES = [
   ['blinds', 'Venetian blind light'], ['marquee', 'Marquee'], ['streetlamp', 'Street lamp'],
 ];
 
+/** Lights that would point straight down are turned to throw across the floor, as the house lights in a set are. */
+const AIM = { par: { aim: [2.4, 1.2] }, spot: { aim: [2.4, 1.2] } };
+
 function fixtureItem([kind, name]) {
   return {
     id: `lights/${kind}`, category: 'Lights', group: 'lights', name, source: 'scenery/lightshow.js', kind: 'object',
@@ -181,7 +184,7 @@ function fixtureItem([kind, name]) {
         name: 'viewer', tempo, lowest: 0, palette: {}, look: {}, lamps: [],
         heightAt: () => 0,
         cell: () => ({ kind: 'floor', h: [0, 0, 0, 0] }),
-        fixtures: [{ kind, x: 0, z: 0 }],
+        fixtures: [{ kind, x: 0, z: 0, ...AIM[kind] }],
       };
       const show = createLightshow(GFX, venue);
       const pose = ({ time }) => show.update({ time, beat: (time * tempo) / 60, troll: [0, 0, 0], lights, flashing: true });
