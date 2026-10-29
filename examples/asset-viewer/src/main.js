@@ -127,8 +127,12 @@ function sizeCamera() {
 }
 
 function clearStage() {
+  for (const [geo, array] of originals) { geo.attributes.position.array.set(array); geo.attributes.position.needsUpdate = true; geo.computeVertexNormals(); }
+  originals.clear();
   if (view.built) scene.remove(view.built.object);
   plate.visible = false;
+  if (handleCloud) { scene.remove(handleCloud); handleCloud = null; }
+  handles = [];
   markGroup.clear();
 }
 
@@ -141,6 +145,7 @@ async function show(item) {
   if (token !== view.token) return;
   clearStage();
   resetDress();
+  undoStack.length = redoStack.length = 0;
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
   try {
@@ -161,6 +166,7 @@ async function show(item) {
       plate.position.set(0, 0.01, 0);
       plate.visible = true;
     }
+    fillSections();
     stats(item, built, b);
     view.clock = 0;
     view.clipStart = 0;
@@ -174,6 +180,7 @@ async function show(item) {
   } finally {
     if (token === view.token) $('busy').style.display = 'none';
   }
+  applyEdits();
   renderFlag();
   drawMarks();
   markSelected();
@@ -303,6 +310,225 @@ function addMark(event) {
   applyFilter();
 }
 
+// ———————————————————————————————————————————————— vertex editing
+
+let editing = false;
+let handles = [];   // { mesh, i, world } — one per distinct vertex position of each mesh
+let handleCloud = null;
+let hot = -1, grabbed = -1;
+const originals = new Map();
+
+const meshesOf = () => { const out = []; view.built?.object.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && o.parent !== markGroup) out.push(o); }); return out; };
+
+// Which vertices count: all of them, or one named part, material or bone of a sculpted model.
+let section = '';
+
+/** The set of vertex numbers in the chosen section, or null for all. */
+function sectionVertices() {
+  const sec = view.built?.sections;
+  if (!section || !sec) return null;
+  const { data, def } = sec;
+  const [kind, name] = [section.slice(0, section.indexOf(':')), section.slice(section.indexOf(':') + 1)];
+  const out = new Set();
+  if (kind === 'part') {
+    for (const p of data.parts) if (p.name === name) for (let i = 0; i < p.count; i++) out.add(p.start + i);
+  } else if (kind === 'mat') {
+    const m = Object.keys(def.materials).indexOf(name);
+    for (const g of data.groups) if (g.materialIndex === m) for (let t = g.start; t < g.start + g.count; t++) out.add(data.index[t]);
+  } else {
+    const b = def.bones.findIndex(([n]) => n === name);
+    for (let i = 0; i < data.count; i++) {
+      let top = 0;
+      for (let k = 1; k < 4; k++) if (data.skinWeight[i * 4 + k] > data.skinWeight[i * 4 + top]) top = k;
+      if (data.skinIndex[i * 4 + top] === b) out.add(i);
+    }
+  }
+  return out;
+}
+
+function fillSections() {
+  const sec = view.built?.sections;
+  const box = $('section');
+  section = '';
+  box.parentElement.style.display = sec ? '' : 'none';
+  if (!sec) return;
+  const group = (label, kind, names) => el('optgroup', { label }, ...names.map((n) => el('option', { value: `${kind}:${n}` }, n)));
+  box.replaceChildren(el('option', { value: '' }, 'Everything'), group('Parts', 'part', [...new Set(sec.data.parts.map((p) => p.name))]), group('Materials', 'mat', Object.keys(sec.def.materials)), group('Bones', 'bone', sec.def.bones.map(([n]) => n)));
+}
+
+/** A dot on every vertex of every part, drawn over the model; yellow under the pointer, red when grabbed. */
+function buildHandles() {
+  if (handleCloud) { scene.remove(handleCloud); handleCloud = null; }
+  handles = [];
+  if (!editing || !view.built) return;
+  view.built.object.updateMatrixWorld(true);
+  for (const mesh of meshesOf()) {
+    const pos = mesh.geometry.attributes.position;
+    const seen = new Set();
+    const only = mesh === meshesOf()[0] ? sectionVertices() : null;
+    for (let i = 0; i < pos.count; i++) {
+      if (only && !only.has(i)) continue;
+      const key = `${pos.getX(i)},${pos.getY(i)},${pos.getZ(i)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      handles.push({ mesh, i, world: new GFX.Vector3().fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld) });
+    }
+  }
+  handleCloud = new GFX.InstancedMesh(new GFX.SphereGeometry(1, 8, 6), new GFX.MeshBasicMaterial({ color: '#ffffff', depthTest: false, depthWrite: false, transparent: true, opacity: 0.75 }), Math.max(1, handles.length));
+  handleCloud.renderOrder = 100;
+  handleCloud.frustumCulled = false;
+  paintHandles();
+  scene.add(handleCloud);
+}
+
+function paintHandles() {
+  if (!handleCloud) return;
+  const size = Math.max(0.0005, view.radius * 0.0016);
+  handleCloud.count = 0;
+  handles.forEach((h, n) => handleCloud.add(h.world.x, h.world.y, h.world.z, 0, n === grabbed ? size * 3.5 : n === hot ? size * 3 : size, n === grabbed ? [1, 0.2, 0.2] : n === hot ? [1, 0.85, 0.2] : [0.3, 0.8, 1]));
+  handleCloud.update();
+}
+
+/** The handle nearest the pointer on screen, if one is within reach. */
+function nearestHandle(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  camera.updateMatrixWorld();
+  const p = new GFX.Vector3();
+  let best = -1, bestD = 14 * 14;
+  handles.forEach((h, n) => {
+    p.copy(h.world).project(camera);
+    if (p.z > 1) return;
+    const dx = (p.x * 0.5 + 0.5) * rect.width + rect.left - event.clientX, dy = (-p.y * 0.5 + 0.5) * rect.height + rect.top - event.clientY;
+    const d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = n; }
+  });
+  return best;
+}
+
+/** Move every vertex of a mesh that sits where vertex `i` does, so seams stay closed. */
+function moveVertex(mesh, i, local) {
+  const geo = mesh.geometry, pos = geo.attributes.position;
+  if (!originals.has(geo)) originals.set(geo, pos.array.slice());
+  const a = pos.array, x = a[i * 3], y = a[i * 3 + 1], z = a[i * 3 + 2];
+  const moved = [];
+  for (let j = 0; j < pos.count; j++) {
+    if (a[j * 3] === x && a[j * 3 + 1] === y && a[j * 3 + 2] === z) { pos.setXYZ(j, local.x, local.y, local.z); moved.push(j); }
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  geo.computeBoundingSphere();
+  geo.boundingBox = null;
+  return moved;
+}
+
+function setEditing(on) {
+  editing = on;
+  $('editbtn').classList.toggle('on', on);
+  renderer.domElement.style.cursor = on ? 'grab' : '';
+  if (on) { setMarking(false); if (view.built?.pose && !view.paused) $('pause').click(); }
+  buildHandles();
+}
+
+function applyEdits() {
+  originals.clear();
+  const flag = flags[view.item?.id];
+  if (!flag?.edits?.length) return;
+  const meshes = meshesOf();
+  for (const e of flag.edits) if (meshes[e.mesh]) moveVertex(meshes[e.mesh], e.vertex, new GFX.Vector3(...e.to));
+  buildHandles();
+}
+
+let drag = null;
+host.addEventListener('pointerdown', (e) => {
+  if (!editing || e.button !== 0) return;
+  const n = nearestHandle(e);
+  if (n < 0) return;
+  e.stopPropagation();
+  const h = handles[n];
+  grabbed = n;
+  drag = { n, mesh: h.mesh, i: h.i, plane: new GFX.Plane().setFromNormalAndCoplanarPoint(camera.getWorldDirection(new GFX.Vector3()), h.world), lastLocal: null, start: new GFX.Vector3().fromBufferAttribute(h.mesh.geometry.attributes.position, h.i) };
+  controls.enabled = false;
+  renderer.domElement.style.cursor = 'grabbing';
+  paintHandles();
+}, true);
+addEventListener('pointermove', (e) => {
+  if (!editing) return;
+  if (!drag) {
+    const n = nearestHandle(e);
+    if (n !== hot) { hot = n; renderer.domElement.style.cursor = n >= 0 ? 'grab' : ''; paintHandles(); }
+    return;
+  }
+  const rect = renderer.domElement.getBoundingClientRect();
+  raycaster.setFromCamera(new GFX.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1), camera);
+  const at = raycaster.ray.intersectPlane(drag.plane, new GFX.Vector3());
+  if (!at) return;
+  drag.mesh.updateMatrixWorld();
+  drag.lastLocal = drag.mesh.worldToLocal(at.clone());
+  moveVertex(drag.mesh, drag.i, drag.lastLocal);
+  handles[drag.n].world.copy(at);
+  paintHandles();
+});
+addEventListener('pointerup', () => {
+  if (!drag) return;
+  const { mesh, i, lastLocal } = drag;
+  const drag0 = drag;
+  drag = null;
+  grabbed = -1;
+  controls.enabled = true;
+  renderer.domElement.style.cursor = editing ? 'grab' : '';
+  paintHandles();
+  if (!lastLocal || !view.item) return;
+  const to = lastLocal.toArray();
+  const rec = { mesh: meshesOf().indexOf(mesh), vertex: i, from: drag0.start.toArray(), to };
+  undoStack.push(rec);
+  redoStack.length = 0;
+  recordEdit(rec.mesh, i, to);
+});
+
+const round3 = (a) => a.map((v) => Math.round(v * 1000) / 1000);
+const undoStack = [], redoStack = [];
+
+/** Keep the flag's list of edits in step with where a vertex now sits. */
+function recordEdit(m, vertex, to) {
+  if (!view.item) return;
+  if (!flags[view.item.id]) toggleFlag();
+  const flag = flags[view.item.id];
+  const edits = (flag.edits ??= []);
+  const mesh = meshesOf()[m];
+  const origin = originals.get(mesh.geometry);
+  const from = origin ? round3([origin[vertex * 3], origin[vertex * 3 + 1], origin[vertex * 3 + 2]]) : round3(to);
+  const prior = edits.find((e) => e.mesh === m && e.vertex === vertex);
+  const back = round3(to).every((v, k) => v === from[k]);
+  if (prior && back) edits.splice(edits.indexOf(prior), 1);
+  else if (prior) prior.to = round3(to);
+  else if (!back) edits.push({ mesh: m, vertex, from, to: round3(to) });
+  if (!edits.length) delete flag.edits;
+  saveFlags();
+  renderEdits();
+}
+
+/** Step back (or forward) through the drags, one drag at a time. */
+function stepEdit(from, into, key) {
+  const rec = from.pop();
+  if (!rec) return;
+  const mesh = meshesOf()[rec.mesh];
+  const at = rec[key];
+  moveVertex(mesh, rec.vertex, new GFX.Vector3(...at));
+  const h = handles.find((x) => x.mesh === mesh && x.i === rec.vertex);
+  if (h) { h.world.set(...at).applyMatrix4(mesh.matrixWorld); paintHandles(); }
+  into.push(rec);
+  recordEdit(rec.mesh, rec.vertex, at);
+}
+const undo = () => stepEdit(undoStack, redoStack, 'from');
+const redo = () => stepEdit(redoStack, undoStack, 'to');
+
+function renderEdits() {
+  const n = flags[view.item?.id]?.edits?.length ?? 0;
+  $('undo').disabled = !undoStack.length;
+  $('redo').disabled = !redoStack.length;
+  $('editcount').textContent = n ? `${n} vertex edit${n === 1 ? '' : 's'}` : 'Turn on Edit vertices (V), then drag a vertex.';
+}
+
 let downAt = null;
 renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', (e) => {
@@ -384,6 +610,7 @@ function renderFlag() {
   $('flagform').style.display = flag ? '' : 'none';
   $('note').value = flag?.note ?? '';
   renderMarks();
+  renderEdits();
   $('pin').textContent = flag?.angle ? `Pin this angle (now ${flag.angle.azimuth}°, ${flag.angle.elevation}°)` : 'Pin this angle';
   $('reasons').replaceChildren(...REASONS.map((r) => {
     const b = el('button', { className: flag?.reasons.includes(r) ? 'on' : '' }, r);
@@ -424,9 +651,9 @@ function exportFor() {
     for: 'Claude',
     repo: 'h1ddenpr0cess20/madness-engine',
     exportedAt: new Date().toISOString(),
-    instructions: 'These assets were flagged in the asset viewer (examples/asset-viewer) as needing fixes. For each: open its source file, read the note, and fix what it describes. `angle` is where the camera was when it was flagged (degrees round from the front, which is +z, and up); `context` is what the viewer was set to. `marks` are spots on the model the person circled: `position` is in the model’s own space (tiles, y up, the front toward +z, its left toward +x), `radius` how big an area, `where` the same in words, `label` what is wrong there, and `pose` the clip and time it was posed at. Models are sculpted with the kit in src/models; keep each asset in its own file and keep to its vertex budget. Re-open it in the viewer afterwards to check.',
+    instructions: 'These assets were flagged in the asset viewer (examples/asset-viewer) as needing fixes. For each: open its source file, read the note, and fix what it describes. `angle` is where the camera was when it was flagged (degrees round from the front, which is +z, and up); `context` is what the viewer was set to. `marks` are spots on the model the person circled: `position` is in the model’s own space (tiles, y up, the front toward +z, its left toward +x), `radius` how big an area, `where` the same in words, `label` what is wrong there, and `pose` the clip and time it was posed at. `edits` are vertices the person dragged by hand: `mesh` is the index of the mesh in a depth-first walk of the model, `vertex` its index in that mesh’s position attribute (every vertex at the same spot moved with it), `from` and `to` in the model’s own space; bake the `to` positions into the sculpt. Models are sculpted with the kit in src/models; keep each asset in its own file and keep to its vertex budget. Re-open it in the viewer afterwards to check.',
     count: Object.keys(flags).length,
-    flagged: Object.entries(flags).map(([id, f]) => ({ id, name: f.name, category: f.category, ...file(f.source), reasons: f.reasons, note: f.note, context: f.context, angle: f.angle, ...(f.marks?.length ? { marks: f.marks } : {}) })),
+    flagged: Object.entries(flags).map(([id, f]) => ({ id, name: f.name, category: f.category, ...file(f.source), reasons: f.reasons, note: f.note, context: f.context, angle: f.angle, ...(f.marks?.length ? { marks: f.marks } : {}), ...(f.edits?.length ? { edits: f.edits } : {}) })),
   };
 }
 
@@ -483,7 +710,16 @@ $('search').oninput = applyFilter;
 $('category').onchange = applyFilter;
 $('onlyflagged').onchange = applyFilter;
 $('flagbtn').onclick = toggleFlag;
-$('markbtn').onclick = () => setMarking(!marking);
+$('markbtn').onclick = () => { setMarking(!marking); if (marking) setEditing(false); };
+$('section').onchange = () => { section = $('section').value; buildHandles(); };
+$('undo').onclick = undo;
+$('redo').onclick = redo;
+$('editbtn').onclick = () => setEditing(!editing);
+$('editreset').onclick = () => {
+  const f = flags[view.item?.id];
+  if (f) { delete f.edits; saveFlags(); }
+  show(view.item);
+};
 $('pin').onclick = () => { const f = flags[view.item?.id]; if (f) { f.angle = angleOf(); f.context = contextOf(); saveFlags(); renderFlag(); } };
 $('note').oninput = () => { const f = flags[view.item?.id]; if (f) { f.note = $('note').value; saveFlags(); } };
 $('turn').onclick = () => { controls.autoRotate = !controls.autoRotate; $('turn').classList.toggle('on', controls.autoRotate); };
@@ -508,6 +744,11 @@ $('dlflags').onclick = () => {
 
 addEventListener('keydown', (e) => {
   if (e.target.matches?.('input, textarea, select') && e.key !== 'Escape') return;
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && editing && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+    e.preventDefault();
+    if (e.key.toLowerCase() === 'y' || e.shiftKey) redo(); else undo();
+    return;
+  }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();
   if (k === 'escape') { closeSheet(); document.activeElement?.blur?.(); }
@@ -515,7 +756,8 @@ addEventListener('keydown', (e) => {
   else if (k === 'k' || k === 'arrowup') { e.preventDefault(); step(-1); }
   else if (k === 'f') { e.preventDefault(); toggleFlag(); }
   else if (k === 't') $('turn').click();
-  else if (k === 'm') setMarking(!marking);
+  else if (k === 'm') $('markbtn').click();
+  else if (k === 'v') $('editbtn').click();
   else if (k === 'c') contactSheet();
   else if (k === 'g') $('gridbtn').click();
   else if (k === ' ') { e.preventDefault(); $('pause').click(); }

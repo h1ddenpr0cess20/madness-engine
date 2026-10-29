@@ -51,6 +51,7 @@ export function bake(def, { detail = 1 } = {}) {
   const matNames = Object.keys(def.materials);
   const buckets = matNames.map(() => []);
   const chunks = [];
+  const parts = [];
   let base = 0;
   for (const [name, part] of sculpt.split()) {
     // Far off (detail under 1) the fine parts needn't be much finer than the rest: they're a few pixels. But the
@@ -58,6 +59,7 @@ export function bake(def, { detail = 1 } = {}) {
     const fine = def.cells?.[name] ? Math.max(def.cells[name] / detail, detail < 1 ? Math.min(cell * 0.35, largest(part) / 8) : 0) : cell;
     const m = build(part, { cell: fine, bones, ambient: def.ambient ?? 0.3, shade: def.shade, refine: def.refine, shadow: sculpt });
     chunks.push(m);
+    parts.push({ name, start: base, count: m.count });
     // Each triangle takes the material most of its corners have.
     for (let t = 0; t < m.index.length; t += 3) {
       const a = m.mats[m.index[t]], b = m.mats[m.index[t + 1]], c = m.mats[m.index[t + 2]];
@@ -91,6 +93,7 @@ export function bake(def, { detail = 1 } = {}) {
     skinWeight: join('skinWeight', 4, Float32Array),
     index: base > 65535 ? index : Uint16Array.from(index),
     groups,
+    parts,
     count: base,
   };
   cache.set(key, baked);
