@@ -70,9 +70,9 @@ function sculptedItem(def, category, group, name, source) {
         const m = createModel(GFX, def, { detail });
         const pose = (s) => m.pose(s);
         pose({ clip: 'idle', t: 0, time: 0, seed: 1, speed: 1 });
-        return { object: m.group, pose, clips: CLIPS, info };
+        return { object: m.group, pose, clips: CLIPS, info, sections: { data, def } };
       }
-      return { object: createStatic(GFX, def, { detail }), info };
+      return { object: createStatic(GFX, def, { detail }), info, sections: { data, def } };
     },
   };
 }

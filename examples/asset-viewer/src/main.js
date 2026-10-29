@@ -127,6 +127,8 @@ function sizeCamera() {
 }
 
 function clearStage() {
+  for (const [geo, array] of originals) { geo.attributes.position.array.set(array); geo.attributes.position.needsUpdate = true; geo.computeVertexNormals(); }
+  originals.clear();
   if (view.built) scene.remove(view.built.object);
   plate.visible = false;
   if (handleCloud) { scene.remove(handleCloud); handleCloud = null; }
@@ -164,6 +166,7 @@ async function show(item) {
       plate.position.set(0, 0.01, 0);
       plate.visible = true;
     }
+    fillSections();
     stats(item, built, b);
     view.clock = 0;
     view.clipStart = 0;
@@ -317,6 +320,42 @@ const originals = new Map();
 
 const meshesOf = () => { const out = []; view.built?.object.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && o.parent !== markGroup) out.push(o); }); return out; };
 
+// Which vertices count: all of them, or one named part, material or bone of a sculpted model.
+let section = '';
+
+/** The set of vertex numbers in the chosen section, or null for all. */
+function sectionVertices() {
+  const sec = view.built?.sections;
+  if (!section || !sec) return null;
+  const { data, def } = sec;
+  const [kind, name] = [section.slice(0, section.indexOf(':')), section.slice(section.indexOf(':') + 1)];
+  const out = new Set();
+  if (kind === 'part') {
+    for (const p of data.parts) if (p.name === name) for (let i = 0; i < p.count; i++) out.add(p.start + i);
+  } else if (kind === 'mat') {
+    const m = Object.keys(def.materials).indexOf(name);
+    for (const g of data.groups) if (g.materialIndex === m) for (let t = g.start; t < g.start + g.count; t++) out.add(data.index[t]);
+  } else {
+    const b = def.bones.findIndex(([n]) => n === name);
+    for (let i = 0; i < data.count; i++) {
+      let top = 0;
+      for (let k = 1; k < 4; k++) if (data.skinWeight[i * 4 + k] > data.skinWeight[i * 4 + top]) top = k;
+      if (data.skinIndex[i * 4 + top] === b) out.add(i);
+    }
+  }
+  return out;
+}
+
+function fillSections() {
+  const sec = view.built?.sections;
+  const box = $('section');
+  section = '';
+  box.parentElement.style.display = sec ? '' : 'none';
+  if (!sec) return;
+  const group = (label, kind, names) => el('optgroup', { label }, ...names.map((n) => el('option', { value: `${kind}:${n}` }, n)));
+  box.replaceChildren(el('option', { value: '' }, 'Everything'), group('Parts', 'part', [...new Set(sec.data.parts.map((p) => p.name))]), group('Materials', 'mat', Object.keys(sec.def.materials)), group('Bones', 'bone', sec.def.bones.map(([n]) => n)));
+}
+
 /** A dot on every vertex of every part, drawn over the model; yellow under the pointer, red when grabbed. */
 function buildHandles() {
   if (handleCloud) { scene.remove(handleCloud); handleCloud = null; }
@@ -326,7 +365,9 @@ function buildHandles() {
   for (const mesh of meshesOf()) {
     const pos = mesh.geometry.attributes.position;
     const seen = new Set();
+    const only = mesh === meshesOf()[0] ? sectionVertices() : null;
     for (let i = 0; i < pos.count; i++) {
+      if (only && !only.has(i)) continue;
       const key = `${pos.getX(i)},${pos.getY(i)},${pos.getZ(i)}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -670,6 +711,7 @@ $('category').onchange = applyFilter;
 $('onlyflagged').onchange = applyFilter;
 $('flagbtn').onclick = toggleFlag;
 $('markbtn').onclick = () => { setMarking(!marking); if (marking) setEditing(false); };
+$('section').onchange = () => { section = $('section').value; buildHandles(); };
 $('undo').onclick = undo;
 $('redo').onclick = redo;
 $('editbtn').onclick = () => setEditing(!editing);
