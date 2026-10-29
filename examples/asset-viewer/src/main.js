@@ -342,9 +342,9 @@ function buildHandles() {
 
 function paintHandles() {
   if (!handleCloud) return;
-  const size = Math.max(0.0015, view.radius * 0.0045);
+  const size = Math.max(0.0005, view.radius * 0.0016);
   handleCloud.count = 0;
-  handles.forEach((h, n) => handleCloud.add(h.world.x, h.world.y, h.world.z, 0, n === grabbed ? size * 2.5 : n === hot ? size * 2.2 : size, n === grabbed ? [1, 0.2, 0.2] : n === hot ? [1, 0.85, 0.2] : [0.3, 0.8, 1]));
+  handles.forEach((h, n) => handleCloud.add(h.world.x, h.world.y, h.world.z, 0, n === grabbed ? size * 3.5 : n === hot ? size * 3 : size, n === grabbed ? [1, 0.2, 0.2] : n === hot ? [1, 0.85, 0.2] : [0.3, 0.8, 1]));
   handleCloud.update();
 }
 
