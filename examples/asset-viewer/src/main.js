@@ -333,7 +333,7 @@ function buildHandles() {
       handles.push({ mesh, i, world: new GFX.Vector3().fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld) });
     }
   }
-  handleCloud = new GFX.InstancedMesh(new GFX.SphereGeometry(1, 8, 6), new GFX.MeshBasicMaterial({ color: '#ffffff', depthTest: false, depthWrite: false, transparent: true }), Math.max(1, handles.length));
+  handleCloud = new GFX.InstancedMesh(new GFX.SphereGeometry(1, 8, 6), new GFX.MeshBasicMaterial({ color: '#ffffff', depthTest: false, depthWrite: false, transparent: true, opacity: 0.75 }), Math.max(1, handles.length));
   handleCloud.renderOrder = 100;
   handleCloud.frustumCulled = false;
   paintHandles();
@@ -342,9 +342,9 @@ function buildHandles() {
 
 function paintHandles() {
   if (!handleCloud) return;
-  const size = Math.max(0.004, view.radius * 0.014);
+  const size = Math.max(0.0015, view.radius * 0.0045);
   handleCloud.count = 0;
-  handles.forEach((h, n) => handleCloud.add(h.world.x, h.world.y, h.world.z, 0, n === grabbed ? size * 1.8 : n === hot ? size * 1.5 : size, n === grabbed ? [1, 0.2, 0.2] : n === hot ? [1, 0.85, 0.2] : [0.3, 0.8, 1]));
+  handles.forEach((h, n) => handleCloud.add(h.world.x, h.world.y, h.world.z, 0, n === grabbed ? size * 2.5 : n === hot ? size * 2.2 : size, n === grabbed ? [1, 0.2, 0.2] : n === hot ? [1, 0.85, 0.2] : [0.3, 0.8, 1]));
   handleCloud.update();
 }
 
