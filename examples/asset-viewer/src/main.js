@@ -129,7 +129,8 @@ function sizeCamera() {
 function clearStage() {
   if (view.built) scene.remove(view.built.object);
   plate.visible = false;
-  handle.visible = false;
+  if (handleCloud) { scene.remove(handleCloud); handleCloud = null; }
+  handles = [];
   markGroup.clear();
 }
 
@@ -142,6 +143,7 @@ async function show(item) {
   if (token !== view.token) return;
   clearStage();
   resetDress();
+  undoStack.length = redoStack.length = 0;
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
   try {
@@ -308,30 +310,57 @@ function addMark(event) {
 // ———————————————————————————————————————————————— vertex editing
 
 let editing = false;
-const handle = new GFX.Mesh(new GFX.SphereGeometry(1, 12, 8), new GFX.MeshBasicMaterial({ color: '#ffd23f', depthTest: false, depthWrite: false, transparent: true }));
-handle.renderOrder = 100;
-handle.visible = false;
-scene.add(handle);
+let handles = [];   // { mesh, i, world } — one per distinct vertex position of each mesh
+let handleCloud = null;
+let hot = -1, grabbed = -1;
 const originals = new Map();
 
-const meshesOf = () => { const out = []; view.built?.object.traverse((o) => { if (o.isMesh && o !== handle && o.parent !== markGroup) out.push(o); }); return out; };
+const meshesOf = () => { const out = []; view.built?.object.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && o.parent !== markGroup) out.push(o); }); return out; };
 
-/** The vertex of the triangle under the pointer that is nearest to where it hit. */
-function pickVertex(event) {
-  if (!view.built) return null;
+/** A dot on every vertex of every part, drawn over the model; yellow under the pointer, red when grabbed. */
+function buildHandles() {
+  if (handleCloud) { scene.remove(handleCloud); handleCloud = null; }
+  handles = [];
+  if (!editing || !view.built) return;
+  view.built.object.updateMatrixWorld(true);
+  for (const mesh of meshesOf()) {
+    const pos = mesh.geometry.attributes.position;
+    const seen = new Set();
+    for (let i = 0; i < pos.count; i++) {
+      const key = `${pos.getX(i)},${pos.getY(i)},${pos.getZ(i)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      handles.push({ mesh, i, world: new GFX.Vector3().fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld) });
+    }
+  }
+  handleCloud = new GFX.InstancedMesh(new GFX.SphereGeometry(1, 8, 6), new GFX.MeshBasicMaterial({ color: '#ffffff', depthTest: false, depthWrite: false, transparent: true }), Math.max(1, handles.length));
+  handleCloud.renderOrder = 100;
+  handleCloud.frustumCulled = false;
+  paintHandles();
+  scene.add(handleCloud);
+}
+
+function paintHandles() {
+  if (!handleCloud) return;
+  const size = Math.max(0.004, view.radius * 0.014);
+  handleCloud.count = 0;
+  handles.forEach((h, n) => handleCloud.add(h.world.x, h.world.y, h.world.z, 0, n === grabbed ? size * 1.8 : n === hot ? size * 1.5 : size, n === grabbed ? [1, 0.2, 0.2] : n === hot ? [1, 0.85, 0.2] : [0.3, 0.8, 1]));
+  handleCloud.update();
+}
+
+/** The handle nearest the pointer on screen, if one is within reach. */
+function nearestHandle(event) {
   const rect = renderer.domElement.getBoundingClientRect();
   camera.updateMatrixWorld();
-  raycaster.setFromCamera(new GFX.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1), camera);
-  const hit = raycaster.intersectObject(view.built.object, true).find((h) => h.object.isMesh && h.object.visible && h.object.parent !== markGroup && h.object !== handle);
-  if (!hit) return null;
-  const pos = hit.object.geometry.attributes.position;
-  const world = new GFX.Vector3();
-  let best = null;
-  for (const i of [hit.face.a, hit.face.b, hit.face.c]) {
-    world.fromBufferAttribute(pos, i).applyMatrix4(hit.object.matrixWorld);
-    const d = world.distanceTo(hit.point);
-    if (!best || d < best.d) best = { mesh: hit.object, i, d, world: world.clone() };
-  }
+  const p = new GFX.Vector3();
+  let best = -1, bestD = 14 * 14;
+  handles.forEach((h, n) => {
+    p.copy(h.world).project(camera);
+    if (p.z > 1) return;
+    const dx = (p.x * 0.5 + 0.5) * rect.width + rect.left - event.clientX, dy = (-p.y * 0.5 + 0.5) * rect.height + rect.top - event.clientY;
+    const d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = n; }
+  });
   return best;
 }
 
@@ -356,7 +385,7 @@ function setEditing(on) {
   $('editbtn').classList.toggle('on', on);
   renderer.domElement.style.cursor = on ? 'grab' : '';
   if (on) { setMarking(false); if (view.built?.pose && !view.paused) $('pause').click(); }
-  else handle.visible = false;
+  buildHandles();
 }
 
 function applyEdits() {
@@ -365,26 +394,27 @@ function applyEdits() {
   if (!flag?.edits?.length) return;
   const meshes = meshesOf();
   for (const e of flag.edits) if (meshes[e.mesh]) moveVertex(meshes[e.mesh], e.vertex, new GFX.Vector3(...e.to));
+  buildHandles();
 }
 
 let drag = null;
 host.addEventListener('pointerdown', (e) => {
   if (!editing || e.button !== 0) return;
-  const v = pickVertex(e);
-  if (!v) return;
+  const n = nearestHandle(e);
+  if (n < 0) return;
   e.stopPropagation();
-  const normal = camera.getWorldDirection(new GFX.Vector3());
-  drag = { ...v, plane: new GFX.Plane().setFromNormalAndCoplanarPoint(normal, v.world), lastLocal: null };
+  const h = handles[n];
+  grabbed = n;
+  drag = { n, mesh: h.mesh, i: h.i, plane: new GFX.Plane().setFromNormalAndCoplanarPoint(camera.getWorldDirection(new GFX.Vector3()), h.world), lastLocal: null, start: new GFX.Vector3().fromBufferAttribute(h.mesh.geometry.attributes.position, h.i) };
   controls.enabled = false;
-  renderer.domElement.setPointerCapture?.(e.pointerId);
   renderer.domElement.style.cursor = 'grabbing';
+  paintHandles();
 }, true);
 addEventListener('pointermove', (e) => {
   if (!editing) return;
   if (!drag) {
-    const v = pickVertex(e);
-    handle.visible = Boolean(v);
-    if (v) { handle.position.copy(v.world); handle.scale.setScalar(Math.max(0.005, camera.position.distanceTo(v.world) * 0.012)); }
+    const n = nearestHandle(e);
+    if (n !== hot) { hot = n; renderer.domElement.style.cursor = n >= 0 ? 'grab' : ''; paintHandles(); }
     return;
   }
   const rect = renderer.domElement.getBoundingClientRect();
@@ -394,31 +424,67 @@ addEventListener('pointermove', (e) => {
   drag.mesh.updateMatrixWorld();
   drag.lastLocal = drag.mesh.worldToLocal(at.clone());
   moveVertex(drag.mesh, drag.i, drag.lastLocal);
-  handle.visible = true;
-  handle.position.copy(at);
+  handles[drag.n].world.copy(at);
+  paintHandles();
 });
 addEventListener('pointerup', () => {
   if (!drag) return;
   const { mesh, i, lastLocal } = drag;
+  const drag0 = drag;
   drag = null;
+  grabbed = -1;
   controls.enabled = true;
   renderer.domElement.style.cursor = editing ? 'grab' : '';
+  paintHandles();
   if (!lastLocal || !view.item) return;
+  const to = lastLocal.toArray();
+  const rec = { mesh: meshesOf().indexOf(mesh), vertex: i, from: drag0.start.toArray(), to };
+  undoStack.push(rec);
+  redoStack.length = 0;
+  recordEdit(rec.mesh, i, to);
+});
+
+const round3 = (a) => a.map((v) => Math.round(v * 1000) / 1000);
+const undoStack = [], redoStack = [];
+
+/** Keep the flag's list of edits in step with where a vertex now sits. */
+function recordEdit(m, vertex, to) {
+  if (!view.item) return;
   if (!flags[view.item.id]) toggleFlag();
   const flag = flags[view.item.id];
-  const to = lastLocal.toArray().map((v) => Math.round(v * 1000) / 1000);
-  const m = meshesOf().indexOf(mesh);
-  const origin = originals.get(mesh.geometry);
-  const from = origin ? [origin[i * 3], origin[i * 3 + 1], origin[i * 3 + 2]].map((v) => Math.round(v * 1000) / 1000) : to;
   const edits = (flag.edits ??= []);
-  const prior = edits.find((e) => e.mesh === m && e.vertex === i);
-  if (prior) prior.to = to; else edits.push({ mesh: m, vertex: i, from, to });
+  const mesh = meshesOf()[m];
+  const origin = originals.get(mesh.geometry);
+  const from = origin ? round3([origin[vertex * 3], origin[vertex * 3 + 1], origin[vertex * 3 + 2]]) : round3(to);
+  const prior = edits.find((e) => e.mesh === m && e.vertex === vertex);
+  const back = round3(to).every((v, k) => v === from[k]);
+  if (prior && back) edits.splice(edits.indexOf(prior), 1);
+  else if (prior) prior.to = round3(to);
+  else if (!back) edits.push({ mesh: m, vertex, from, to: round3(to) });
+  if (!edits.length) delete flag.edits;
   saveFlags();
   renderEdits();
-});
+}
+
+/** Step back (or forward) through the drags, one drag at a time. */
+function stepEdit(from, into, key) {
+  const rec = from.pop();
+  if (!rec) return;
+  const mesh = meshesOf()[rec.mesh];
+  const at = rec[key];
+  moveVertex(mesh, rec.vertex, new GFX.Vector3(...at));
+  const h = handles.find((x) => x.mesh === mesh && x.i === rec.vertex);
+  if (h) { h.world.set(...at).applyMatrix4(mesh.matrixWorld); paintHandles(); }
+  into.push(rec);
+  recordEdit(rec.mesh, rec.vertex, at);
+}
+const undo = () => stepEdit(undoStack, redoStack, 'from');
+const redo = () => stepEdit(redoStack, undoStack, 'to');
 
 function renderEdits() {
   const n = flags[view.item?.id]?.edits?.length ?? 0;
+  $('undo').disabled = !undoStack.length;
+  $('redo').disabled = !redoStack.length;
   $('editcount').textContent = n ? `${n} vertex edit${n === 1 ? '' : 's'}` : 'Turn on Edit vertices (V), then drag a vertex.';
 }
 
@@ -604,6 +670,8 @@ $('category').onchange = applyFilter;
 $('onlyflagged').onchange = applyFilter;
 $('flagbtn').onclick = toggleFlag;
 $('markbtn').onclick = () => { setMarking(!marking); if (marking) setEditing(false); };
+$('undo').onclick = undo;
+$('redo').onclick = redo;
 $('editbtn').onclick = () => setEditing(!editing);
 $('editreset').onclick = () => {
   const f = flags[view.item?.id];
@@ -634,6 +702,11 @@ $('dlflags').onclick = () => {
 
 addEventListener('keydown', (e) => {
   if (e.target.matches?.('input, textarea, select') && e.key !== 'Escape') return;
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && editing && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+    e.preventDefault();
+    if (e.key.toLowerCase() === 'y' || e.shiftKey) redo(); else undo();
+    return;
+  }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();
   if (k === 'escape') { closeSheet(); document.activeElement?.blur?.(); }
