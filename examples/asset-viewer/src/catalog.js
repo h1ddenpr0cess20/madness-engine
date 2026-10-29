@@ -18,7 +18,9 @@ import { dress, extraItems } from './extras.js';
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
 const textures = import.meta.glob('../../../src/textures/**/*.js');
 
-const isDef = (v) => v && typeof v === 'object' && typeof v.sculpt === 'function' && Array.isArray(v.bones);
+// Street furniture (trees, lamps, benches) has no skeleton: it stands on one root bone.
+const isDef = (v) => v && typeof v === 'object' && typeof v.sculpt === 'function' && (Array.isArray(v.bones) || v.bones === undefined);
+const rooted = (def) => (def.bones ? def : { ...def, bones: [['root', null, [0, 0, 0]]] });
 const where = (path) => path.replace('../../../src/', '');
 const stem = (path) => where(path).split('/').pop().replace(/\.js$/, '');
 const CLIPS = ['idle', 'walk', 'attack', 'cast', 'hit', 'ko', 'win'];
@@ -232,7 +234,7 @@ export async function loadCatalog(onProgress = () => {}) {
         const direct = value === def;
         const label = direct && key === 'default' ? file : direct ? (file.startsWith(key) || key === def.name ? file : `${file} · ${key}`) : `${file} · ${k}`;
         const source = `${where(path)}${direct && key === 'default' ? '' : `#${direct ? key : `${key}.${k}`}`}`;
-        items.push(sculptedItem(def, CATEGORY[folder], group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
+        items.push(sculptedItem(rooted(def), CATEGORY[folder], group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
       }
     }
   }
