@@ -53,7 +53,7 @@ function saveFlags() {
 // ———————————————————————————————————————————————— the stage
 
 const host = $('host');
-const stage = await createStage(host, { room: paintRoom(), shadowSize: 2048, label: 'asset-viewer', lights: { key: { from: new GFX.Vector3(-0.4, 1, 0.8).normalize() } } });
+const stage = await createStage(host, { room: paintRoom(), shadowSize: 2048, fixtures: 4, label: 'asset-viewer', lights: { key: { from: new GFX.Vector3(-0.4, 1, 0.8).normalize() } } });
 const { scene, camera, renderer, key, hemi, fill } = stage;
 Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 120 });
 key.shadow.camera.updateProjectionMatrix();
@@ -132,6 +132,7 @@ function sizeCamera() {
 }
 
 function clearStage() {
+  for (const l of stage.fixtureLights) l.intensity = 0;
   if (view.built) scene.remove(view.built.object);
   plate.visible = false;
   markGroup.clear();
@@ -149,10 +150,17 @@ async function show(item) {
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
   try {
-    const built = await item.build(options);
+    const built = await item.build({ ...options, lights: stage.fixtureLights });
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
+    if (built.dark) {
+      // A light wants a dark room to show in; the Lighting panel can bring it back.
+      key.intensity = rest.key * 0.06;
+      hemi.intensity = rest.hemi * 0.15;
+      if (fill) fill.intensity = 0;
+      syncLights();
+    }
     if (item.kind === 'sky') { stage.setSky(built.canvas); stage.setRoom(built.canvas); }
     if (item.kind === 'room') stage.setRoom(built.canvas);
     if (item.kind === 'mood') { stage.setMood(item.mood); syncLights(); }

@@ -164,6 +164,33 @@ function paintedItem(category, id, name, source, paint) {
   };
 }
 
+/** The light fixtures of scenery/lightshow.js: each alone over a flat floor, lit and moving on the beat like in a set. */
+const FIXTURES = [
+  ['bulb', 'Caged bulb'], ['par', 'PAR can'], ['spot', 'Moving head spotlight'], ['strobe', 'Strobe'], ['ball', 'Mirror ball'],
+  ['laser', 'Laser'], ['chandelier', 'Chandelier'], ['festoon', 'Festoon lights'], ['neon', 'Neon sign'], ['klieg', 'Searchlight'],
+  ['blinds', 'Venetian blind light'], ['marquee', 'Marquee'], ['streetlamp', 'Street lamp'],
+];
+
+function fixtureItem([kind, name]) {
+  return {
+    id: `lights/${kind}`, category: 'Lights', group: 'lights', name, source: 'scenery/lightshow.js', kind: 'object',
+    async build({ lights = [] } = {}) {
+      const { createLightshow } = await import('../../../src/scenery/lightshow.js');
+      const tempo = 120;
+      const venue = {
+        name: 'viewer', tempo, lowest: 0, palette: {}, look: {}, lamps: [],
+        heightAt: () => 0,
+        cell: () => ({ kind: 'floor', h: [0, 0, 0, 0] }),
+        fixtures: [{ kind, x: 0, z: 0 }],
+      };
+      const show = createLightshow(GFX, venue);
+      const pose = ({ time }) => show.update({ time, beat: (time * tempo) / 60, troll: [0, 0, 0], lights, flashing: true });
+      pose({ time: 0 });
+      return { object: show.group, pose, dark: true, info: { Source: 'scenery/lightshow.js', Kind: kind, 'Real lights': lights.length, Tempo: `${tempo} bpm` } };
+    },
+  };
+}
+
 function moodItem([name, mood]) {
   return {
     id: `moods/${name}`, category: 'Moods', group: mood.game ?? 'moods', name: `${name} — ${mood.name ?? ''}`, source: 'moods', kind: 'mood', mood,
@@ -222,7 +249,8 @@ export async function loadCatalog(onProgress = () => {}) {
     }
   }
 
+  items.push(...FIXTURES.map(fixtureItem));
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
 }
