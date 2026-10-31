@@ -4,6 +4,18 @@ import { torsoFabric, limbFabric, skirtFabric, shoeFabric } from './base.js';
 export default standingCharacter({
   name:'nonna-standing-remake',
   scale:1.24,skin:'#b8795e',eyeColor:'#49372c',brow:'#858079',mood:1,girth:1.17,shoulders:0.92,
+  faceDetails:s=>s.part('face',()=>{
+    // Age is expressed through cheek volume, lower-lid folds and fine smile lines.
+    for(const side of [-1,1]){
+      s.ellipsoid([side*0.057,0.646,0.075],[0.011,0.012,0.009],{color:'#bd866c',mat:'skin',bone:'head',k:0.001});
+      s.limb([side*0.019,0.656,0.087],[side*0.047,0.652,0.083],0.0019,0.0012,{color:'#805847',mat:'detail',bone:'head',k:0.0002});
+      s.limb([side*0.05,0.658,0.081],[side*0.068,0.649,0.073],0.0015,0.0008,{color:'#805847',mat:'detail',bone:'head',k:0.0002});
+      s.limb([side*0.026,0.628,0.094],[side*0.057,0.616,0.084],0.002,0.001,{color:'#805847',mat:'detail',bone:'head',k:0.0002});
+      s.limb([side*0.025,0.606,0.091],[side*0.048,0.608,0.085],0.0015,0.001,{color:'#805847',mat:'detail',bone:'head',k:0.0002});
+    }
+    s.ellipsoid([0,0.604,0.092],[0.016,0.005,0.004],{color:'#a96e5f',mat:'skin',bone:'head',k:0.001});
+    s.limb([-0.014,0.614,0.094],[0.014,0.614,0.094],0.0016,0.0016,{color:'#85594b',mat:'detail',bone:'head',k:0.0002});
+  }),
   hair:s=>s.part('hair',()=>{
     // Silver-grey soft bob, gently curled under at the jaw.
     s.ellipsoid([0,0.748,-0.004],[0.095,0.055,0.098],{color:'#aaa69e',mat:'hair',bone:'head',k:0.006});
