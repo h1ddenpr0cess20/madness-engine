@@ -3,8 +3,8 @@
  *
  * Build order is deliberate:
  *   1. sculpt the full anatomical body in skin;
- *   2. lay separate garment volumes over that skin;
- *   3. add hair, footwear, and hand-held accessories.
+ *   2. draft textile panels around the anatomical fit surface;
+ *   3. add hair and fitted footwear.
  *
  * This module does not import a character, old person factory, wardrobe,
  * or materials palette. It shares only Madness Engine's generic humanoid
@@ -373,11 +373,13 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.move('hips', 0, breathe * 0.002 - 0.004, 0);
     k.turn('thighL', 0.04, 0, 0.02); k.turn('shinL', 0.08, 0, 0);
     k.turn('thighR', 0.04, 0, -0.02); k.turn('shinR', 0.08, 0, 0);
-    // The weapon held ready.
-    k.turn('armR', -0.35, 0, -0.1);
-    k.turn('foreR', -0.75, 0, 0);
-    // Twisted so a blade shows its face, not its edge.
-    k.turn('handR', 0, 0, style.twist ?? -0.9);
+    // Relaxed, balanced hands: no imaginary weapon grip or inherited ready stance.
+    k.turn('armL', 0.08 + breathe * 0.012, 0, 0.075);
+    k.turn('armR', 0.08 + breathe * 0.012, 0, -0.075);
+    k.turn('foreL', -0.08, 0, 0.025);
+    k.turn('foreR', -0.08, 0, -0.025);
+    k.turn('handL', 0, 0, 0);
+    k.turn('handR', 0, 0, 0);
   } else if (clip === 'walk') {
     const ph = T * (9 - heavy * 2) * Math.max(0.5, speed), g = Math.sin(ph);
     k.move('hips', 0, Math.abs(Math.cos(ph)) * 0.012 - 0.004, 0);
@@ -385,9 +387,11 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('chest', 0.06, -g * 0.16, 0);
     k.turn('thighL', -g * 0.55, 0, 0); k.turn('shinL', Math.max(0, g) * 0.8, 0, 0); k.turn('footL', -g * 0.2, 0, 0);
     k.turn('thighR', g * 0.55, 0, 0); k.turn('shinR', Math.max(0, -g) * 0.8, 0, 0); k.turn('footR', g * 0.2, 0, 0);
-    k.turn('armL', g * 0.45, 0, 0);
-    k.turn('armR', -0.35 - g * 0.2, 0, -0.1);
-    k.turn('foreR', -0.6, 0, 0);
+    // Symmetric counter-swing with softly flexed, empty hands.
+    k.turn('armL', -g * 0.38, 0, 0.02);
+    k.turn('armR', g * 0.38, 0, -0.02);
+    k.turn('foreL', -0.08, 0, 0);
+    k.turn('foreR', -0.08, 0, 0);
   } else if (clip === 'attack') {
     attack(k, t, style);
   } else if (clip === 'cast') {
