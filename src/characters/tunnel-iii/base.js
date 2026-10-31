@@ -420,15 +420,17 @@ export function shoeFabric(s,{ankle,color,material='softHide',bone='footL',clear
 export function standingCharacter({
   name, scale = 1.4, skin = '#c88f70', eyeColor = '#536b82', brow = '#30251f',
   mood = 0, girth = 1, shoulders = 1, cell = 0.0085, budget = 42000,
-  hair = null, clothes = null, accessories = null, style = {},
+  hair = null, clothes = null, faceDetails = null, accessories = null, style = {},
 }) {
   const rig = makeRig(1);
   return {
     name, scale, cell, budget, bones: rig.bones, materials: MATERIALS,
-    cells: { face: 0.0019, eyes: 0.00085, hands: 0.0018, accessories: 0.0022, hair: 0.003, clothes: 0.0035, fine: 0.002 },
+    cells: { face: 0.0026, eyes: 0.0010, hands: 0.0028, accessories: 0.0022, hair: 0.0035, clothes: 0.008, fine: 0.0025 },
     ambient: 0.24,
     sculpt(s) {
       buildSkin(s, { skin, eyeColor, brow, mood, girth, shoulders }, rig.J);
+      // Fine, character-specific facial planes and expression landmarks.
+      faceDetails?.(s, rig.J);
       // Distinct overlays, added after the bare body is complete.
       hair?.(s, rig.J);
       clothes?.(s, rig.J);
