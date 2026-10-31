@@ -4,6 +4,16 @@ import { torsoFabric, limbFabric, shoeFabric } from './base.js';
 export default standingCharacter({
   name:'agent-standing-remake',
   scale:1.45,skin:'#bd8e73',eyeColor:'#536b70',brow:'#45352d',mood:0,shoulders:1.02,
+  faceDetails:s=>s.part('face',()=>{
+    // Slightly longer chin and firm cheek transitions; clean-shaven, with fine
+    // nasolabial planes rather than painted facial markings.
+    for(const side of [-1,1]){
+      s.limb([side*0.052,0.649,0.079],[side*0.064,0.626,0.083],0.0018,0.0012,{color:'#986f5d',mat:'detail',bone:'head',k:0.0004});
+      s.limb([side*0.021,0.603,0.092],[side*0.033,0.601,0.091],0.0012,0.0012,{color:'#986f5d',mat:'detail',bone:'head',k:0.0003});
+      s.ellipsoid([side*0.061,0.644,0.078],[0.008,0.009,0.006],{color:'#c18e76',mat:'skin',bone:'head',k:0.001});
+    }
+    s.ellipsoid([0,0.597,0.088],[0.012,0.006,0.005],{color:'#c18e76',mat:'skin',bone:'head',k:0.001});
+  }),
   hair:s=>s.part('hair',()=>{
     // Loose, side-swept chestnut crop with a broken fringe.
     s.ellipsoid([0,0.75,-0.004],[0.091,0.047,0.09],{color:'#302822',mat:'hair',bone:'head',k:0.006});
