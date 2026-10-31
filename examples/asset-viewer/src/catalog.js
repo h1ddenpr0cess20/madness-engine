@@ -190,7 +190,7 @@ export async function loadCatalog(onProgress = () => {}) {
     let mod;
     try { mod = await load(); } catch (err) { console.warn(`${where(path)}: ${err.message}`); continue; }
     const folder = where(path).split('/')[0];
-    const group = folder === 'scenery' ? file.split('.')[0] : folder;
+    const relative = where(path).split('/').slice(1, -1);\n    const group = folder === 'scenery' ? file.split('.')[0] : (relative.length ? relative.join('/') : folder);
     for (const [key, value] of Object.entries(mod)) {
       const defs = isDef(value) ? [[key, value]] : value && typeof value === 'object' && !Array.isArray(value) ? Object.entries(value).filter(([, v]) => isDef(v)) : [];
       for (const [k, def] of defs) {
