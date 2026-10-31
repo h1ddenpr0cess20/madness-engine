@@ -242,7 +242,7 @@ function triangleDistanceSq(p,a,b,c){
 }
 
 /** Draft a 2-D textile pattern into a fine, closed fabric sheet. */
-export function sewFabric(s,{point,color,material='cotton',bone='chest',across=16,down=9,thickness=0.0025}){
+export function sewFabric(s,{point,color,material='woven',bone='chest',across=16,down=9,thickness=0.0025}){
   const grid=[];
   for(let j=0;j<=down;j++){
     const row=[];
@@ -307,7 +307,7 @@ export function skirtFabric(s,{y0=0.075,y1=0.405,topX=0.09,topZ=0.065,hemX=0.15,
 }
 
 /** Footwear upper drafted as a closed cross-section over the foot, with a real sole allowance. */
-export function shoeFabric(s,{ankle,color,material='leather',bone='footL',clearance=0.006}){
+export function shoeFabric(s,{ankle,color,material='softHide',bone='footL',clearance=0.006}){
   const cx=ankle[0],cz=ankle[2];
   sewFabric(s,{color,material,bone,across:20,down:12,thickness:0.003,point:(u,v)=>{
     const angle=u*Math.PI*2;
