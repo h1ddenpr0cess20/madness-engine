@@ -158,6 +158,10 @@ import yokozuna from './yokozuna.js';
 import zinekid from './zinekid.js';
 import zombie from './zombie.js';
 import { CAT_DEFS } from './cat.js';
+import nonnaTunnelIII from './tunnel-iii/nonna.js';
+import lifeguardTunnelIII from './tunnel-iii/lifeguard.js';
+import punkTunnelIII from './tunnel-iii/punk.js';
+import agentTunnelIII from './tunnel-iii/agent.js';
 
 /**
  * Every sculpted character in the library, by name: the default version of
@@ -179,4 +183,5 @@ export const CHARACTERS = {
   streetteam, stuntman, suit, sumo, superfan, surfer, tapetrader, toughguy, tourist, troll, usher,
   vendor, viking, waiter, welder, wizard, wolf, wraith, yeti, yodeler, yokozuna, zinekid, zombie,
   ...CAT_DEFS,
+  agentTunnelIII, lifeguardTunnelIII, nonnaTunnelIII, punkTunnelIII,
 };
