@@ -259,11 +259,14 @@ export function sewFabric(s,{point,color,material='cotton',bone='chest',across=1
       color,mat:material,bone,k:0,
     });
   };
-  for(let j=0;j<down;j++)for(let i=0;i<across;i++){
-    const a=grid[j][i],b=grid[j][i+1],c=grid[j+1][i+1],d=grid[j+1][i];
-    addTriangle(a,b,c);
-    addTriangle(a,c,d);
-  }
+  // Keep textile in its own mesh part; never union the cloth field with skin.
+  s.part('clothes',()=>{
+    for(let j=0;j<down;j++)for(let i=0;i<across;i++){
+      const a=grid[j][i],b=grid[j][i+1],c=grid[j+1][i+1],d=grid[j+1][i];
+      addTriangle(a,b,c);
+      addTriangle(a,c,d);
+    }
+  });
 }
 
 /** Torso cloth panel sampled around the anatomical section profile. */
