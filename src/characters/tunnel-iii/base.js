@@ -215,6 +215,17 @@ export function jacket(s, J, { torso, sleeve = torso, material = 'cotton', girth
   }
 }
 
+/** Flared skirt shell fitted over the completed hips and legs. */
+export function skirtShape(s, { top = 0.39, bottom = 0.075, upper = 0.09, hem = 0.145, color, mat = 'wool' }) {
+  const mid = bottom + (top - bottom) * 0.18;
+  loft(s, 'clothes', bottom, top, [
+    [bottom, hem * 0.96, hem * 0.72, 0],
+    [mid, hem * 0.88, hem * 0.68, 0],
+    [top - 0.025, upper, upper * 0.72, 0],
+    [top, upper * 0.96, upper * 0.7, 0],
+  ], { color, mat, bone: 'hips', k: 0.014 });
+}
+
 export function trousers(s, J, { color, material = 'denim', short = false, shoeColor = null, boots = false }) {
   for (const side of [1, -1]) {
     const S = side > 0 ? 'L' : 'R';
