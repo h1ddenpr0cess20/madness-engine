@@ -212,7 +212,7 @@ export function jacket(s, J, { torso, sleeve = torso, material = 'cotton', girth
   if (collar) s.part('clothes', () => {
     s.limb([-0.038, 0.535, 0.047], [0, 0.493, 0.085], 0.012, 0.009, { color: collar, mat: 'cotton', bone: 'chest', k: 0.003 });
     s.limb([0.038, 0.535, 0.047], [0, 0.493, 0.085], 0.012, 0.009, { color: collar, mat: 'cotton', bone: 'chest', k: 0.003 });
-  }
+  });
 }
 
 /** Flared skirt shell fitted over the completed hips and legs. */
