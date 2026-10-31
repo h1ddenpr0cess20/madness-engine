@@ -13,11 +13,14 @@ import { createBuildings, FOOTPRINTS } from '../../../src/buildings/index.js';
 import { CALIFORNIA_FOOTPRINTS } from '../../../src/buildings/california.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { tiled } from '../../../src/textures/painters.js';
+import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
 const textures = import.meta.glob('../../../src/textures/**/*.js');
 
-const isDef = (v) => v && typeof v === 'object' && typeof v.sculpt === 'function' && Array.isArray(v.bones);
+// Street furniture (trees, lamps, benches) has no skeleton: it stands on one root bone.
+const isDef = (v) => v && typeof v === 'object' && typeof v.sculpt === 'function' && (Array.isArray(v.bones) || v.bones === undefined);
+const rooted = (def) => (def.bones ? def : { ...def, bones: [['root', null, [0, 0, 0]]] });
 const where = (path) => path.replace('../../../src/', '');
 const stem = (path) => where(path).split('/').pop().replace(/\.js$/, '');
 const CLIPS = ['idle', 'walk', 'attack', 'cast', 'hit', 'ko', 'win'];
@@ -89,6 +92,7 @@ const HEROES = [
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['boulder', () => import('../../../src/heroes/boulder.js').then((m) => m.createRock(GFX))],
   ['ball (mace player)', () => import('../../../src/heroes/ball.js').then((m) => m.createPlayer(GFX))],
+  ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
 ];
 
@@ -110,7 +114,7 @@ function buildingItems() {
   return buildings.types().map((type) => ({
     id: `buildings/${type}`, category: 'Buildings', group: 'buildings', name: type, source: 'buildings', kind: 'object',
     options: { level: [1, 2, 3], variant: [0, 1, 2, 3, 4, 5, 6, 7], construction: [0, 0.25, 0.5, 0.75] },
-    build({ level = 1, variant = 0, construction = 0 }) {
+    build({ level = 1, variant = 0, construction = 0, lights = [] }) {
       const model = buildings.modelFor(type, construction ? { level, variant, building: true, progress: construction } : { level, variant });
       const group = new GFX.Group();
       for (const [mat, p] of Object.entries(model.parts)) {
@@ -125,6 +129,7 @@ function buildingItems() {
       const [w, d] = sizes[type] ?? [1, 1];
       return {
         object: group,
+        pose: dress(model, group, lights),
         info: { Source: 'buildings', Footprint: `${w} × ${d} tiles`, Materials: Object.keys(model.parts).join(', '), ...countOf(group), Lights: model.lights.length, 'Moving parts': model.anim.length, Smokes: model.smoke.length },
         footprint: [w, d],
       };
@@ -164,6 +169,36 @@ function paintedItem(category, id, name, source, paint) {
   };
 }
 
+/** The light fixtures of scenery/lightshow.js: each alone over a flat floor, lit and moving on the beat like in a set. */
+const FIXTURES = [
+  ['bulb', 'Caged bulb'], ['par', 'PAR can'], ['spot', 'Moving head spotlight'], ['strobe', 'Strobe'], ['ball', 'Mirror ball'],
+  ['laser', 'Laser'], ['chandelier', 'Chandelier'], ['festoon', 'Festoon lights'], ['neon', 'Neon sign'], ['klieg', 'Searchlight'],
+  ['blinds', 'Venetian blind light'], ['marquee', 'Marquee'], ['streetlamp', 'Street lamp'],
+];
+
+/** Lights that would point straight down are turned to throw across the floor, as the house lights in a set are. */
+const AIM = { par: { aim: [2.4, 1.2] }, spot: { aim: [2.4, 1.2] } };
+
+function fixtureItem([kind, name]) {
+  return {
+    id: `lights/${kind}`, category: 'Lights', group: 'lights', name, source: 'scenery/lightshow.js', kind: 'object',
+    async build({ lights = [] } = {}) {
+      const { createLightshow } = await import('../../../src/scenery/lightshow.js');
+      const tempo = 120;
+      const venue = {
+        name: 'viewer', tempo, lowest: 0, palette: {}, look: {}, lamps: [],
+        heightAt: () => 0,
+        cell: () => ({ kind: 'floor', h: [0, 0, 0, 0] }),
+        fixtures: [{ kind, x: 0, z: 0, ...AIM[kind] }],
+      };
+      const show = createLightshow(GFX, venue);
+      const pose = ({ time }) => show.update({ time, beat: (time * tempo) / 60, troll: [0, 0, 0], lights, flashing: true });
+      pose({ time: 0 });
+      return { object: show.group, pose, dark: true, info: { Source: 'scenery/lightshow.js', Kind: kind, 'Real lights': lights.length, Tempo: `${tempo} bpm` } };
+    },
+  };
+}
+
 function moodItem([name, mood]) {
   return {
     id: `moods/${name}`, category: 'Moods', group: mood.game ?? 'moods', name: `${name} — ${mood.name ?? ''}`, source: 'moods', kind: 'mood', mood,
@@ -199,7 +234,7 @@ export async function loadCatalog(onProgress = () => {}) {
         const direct = value === def;
         const label = direct && key === 'default' ? file : direct ? (file.startsWith(key) || key === def.name ? file : `${file} · ${key}`) : `${file} · ${k}`;
         const source = `${where(path)}${direct && key === 'default' ? '' : `#${direct ? key : `${key}.${k}`}`}`;
-        items.push(sculptedItem(def, CATEGORY[folder], group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
+        items.push(sculptedItem(rooted(def), CATEGORY[folder], group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
       }
     }
   }
@@ -222,7 +257,8 @@ export async function loadCatalog(onProgress = () => {}) {
     }
   }
 
+  items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
 }

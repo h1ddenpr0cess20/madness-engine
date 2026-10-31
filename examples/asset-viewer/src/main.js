@@ -13,6 +13,7 @@ import { OrbitControls } from '../../../src/gfx/controls.js';
 import { createStage } from '../../../src/stage.js';
 import { texture } from '../../../src/textures/painters.js';
 import { paintRoom } from '../../../src/textures/rooms/studio.js';
+import { MOODS } from '../../../src/moods/index.js';
 import { boundsOf, loadCatalog } from './catalog.js';
 
 const $ = (id) => document.getElementById(id);
@@ -52,11 +53,15 @@ function saveFlags() {
 // ———————————————————————————————————————————————— the stage
 
 const host = $('host');
-const stage = await createStage(host, { room: paintRoom(), shadowSize: 2048, label: 'asset-viewer', lights: { key: { from: new GFX.Vector3(-0.4, 1, 0.8).normalize() } } });
-const { scene, camera, renderer, key, hemi } = stage;
+const stage = await createStage(host, { room: paintRoom(), shadowSize: 2048, fixtures: 4, label: 'asset-viewer', lights: { key: { from: new GFX.Vector3(-0.4, 1, 0.8).normalize() } } });
+const { scene, camera, renderer, key, hemi, fill } = stage;
 Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 120 });
 key.shadow.camera.updateProjectionMatrix();
-const baseLight = { key: key.intensity, hemi: hemi.intensity };
+const rest = {
+  key: key.intensity, keyColor: `#${key.color.getHexString()}`, keyFrom: stage.keyFrom.clone(),
+  hemi: hemi.intensity, sky: `#${hemi.color.getHexString()}`, ground: `#${hemi.groundColor.getHexString()}`,
+  fill: fill ? fill.intensity : 0, fillOffset: fill ? new GFX.Vector3(6, 3, -5) : null,
+};
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -127,6 +132,7 @@ function sizeCamera() {
 }
 
 function clearStage() {
+  for (const l of stage.fixtureLights) l.intensity = 0;
   if (view.built) scene.remove(view.built.object);
   plate.visible = false;
   markGroup.clear();
@@ -144,15 +150,24 @@ async function show(item) {
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
   try {
-    const built = await item.build(options);
+    const built = await item.build({ ...options, lights: stage.fixtureLights, stage });
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
+    if (built.dark) {
+      // A light wants a dark room to show in; the Lighting panel can bring it back.
+      key.intensity = rest.key * 0.06;
+      hemi.intensity = rest.hemi * 0.15;
+      if (fill) fill.intensity = 0;
+      syncLights();
+    }
     if (item.kind === 'sky') { stage.setSky(built.canvas); stage.setRoom(built.canvas); }
     if (item.kind === 'room') stage.setRoom(built.canvas);
-    if (item.kind === 'mood') stage.setMood(item.mood);
+    if (item.kind === 'mood') { stage.setMood(item.mood); syncLights(); }
+    $('moodrow').style.display = item.kind === 'object' ? '' : 'none';
     // Models stand on y = 0; centre the thing over the origin and look at its middle.
-    const b = boundsOf(built.object);
+    const b = built.frame ? { min: built.frame.center.map((c) => c - built.frame.radius), max: built.frame.center.map((c) => c + built.frame.radius), size: [2, 2, 2].map((v) => v * built.frame.radius) } : boundsOf(built.object);
+    floor.visible = !built.noFloor && !$('gridbtn').classList.contains('on');
     view.center.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
     view.radius = Math.max(0.2, Math.hypot(...b.size) / 2);
     view.bounds = b;
@@ -181,20 +196,42 @@ async function show(item) {
 
 /** The stage back to its plain light, sky and room, before an item dresses it. */
 function resetDress() {
-  hemi.color.set('#cfd8ff');
-  hemi.groundColor.set('#40382f');
-  key.color.set('#ffffff');
+  hemi.color.set(rest.sky);
+  hemi.groundColor.set(rest.ground);
+  key.color.set(rest.keyColor);
+  key.intensity = rest.key;
+  hemi.intensity = rest.hemi;
+  stage.keyFrom.copy(rest.keyFrom);
+  if (fill) { fill.visible = true; fill.intensity = rest.fill; }
   stage.setSky(solid($('bg').value));
   stage.setRoom(paintRoom());
   if (stage.lantern) stage.lantern.visible = false;
   stage.film.set(null);
-  applyLight();
+  $('mood').value = '';
+  syncLights();
 }
 
-function applyLight() {
-  const k = Number($('light').value);
-  key.intensity = baseLight.key * k;
-  hemi.intensity = baseLight.hemi * k;
+/** The lighting controls, set to what the stage is lit by now. */
+function syncLights() {
+  $('keyi').value = key.intensity;
+  $('keyc').value = `#${key.color.getHexString()}`;
+  $('ambi').value = hemi.intensity;
+  $('filli').value = fill?.visible ? fill.intensity : 0;
+  const d = stage.keyFrom;
+  $('keyaz').value = Math.round((Math.atan2(d.x, d.z) * 180) / Math.PI);
+  $('keyel').value = Math.round((Math.asin(d.y / d.length()) * 180) / Math.PI);
+  $('shadows').checked = key.castShadow;
+}
+
+/** The stage lit as the controls say. */
+function applyLights() {
+  key.intensity = Number($('keyi').value);
+  key.color.set($('keyc').value);
+  hemi.intensity = Number($('ambi').value);
+  if (fill) { fill.visible = true; fill.intensity = Number($('filli').value); }
+  const az = (Number($('keyaz').value) * Math.PI) / 180, el_ = (Number($('keyel').value) * Math.PI) / 180;
+  stage.keyFrom.set(Math.sin(az) * Math.cos(el_), Math.sin(el_), Math.cos(az) * Math.cos(el_));
+  key.castShadow = $('shadows').checked;
 }
 
 function stats(item, built, b) {
@@ -327,6 +364,11 @@ renderer.setAnimationLoop((now) => {
   key.position.copy(controls.target).addScaledVector(stage.keyFrom, 40);
   key.target.position.copy(controls.target);
   key.target.updateMatrixWorld();
+  if (fill) {
+    fill.position.copy(controls.target).add(rest.fillOffset);
+    fill.target.position.copy(controls.target);
+    fill.target.updateMatrixWorld();
+  }
   stage.render();
 });
 
@@ -493,7 +535,15 @@ $('pause').onclick = () => { view.paused = !view.paused; $('pause').classList.to
 $('speed').oninput = () => { view.speed = Number($('speed').value); };
 $('clip').onchange = () => { view.clip = $('clip').value; view.clipStart = view.clock; };
 $('detail').onchange = () => { options.detail = Number($('detail').value); show(view.item); };
-$('light').oninput = applyLight;
+for (const id of ['keyi', 'keyc', 'ambi', 'filli', 'keyaz', 'keyel', 'shadows']) $(id).oninput = applyLights;
+$('mood').replaceChildren(el('option', { value: '' }, 'None'), ...Object.keys(MOODS).map((n) => el('option', { value: n }, n)));
+$('mood').onchange = () => {
+  const name = $('mood').value;
+  resetDress();
+  $('mood').value = name;
+  if (name) { stage.setMood(MOODS[name]); syncLights(); }
+};
+$('lightreset').onclick = resetDress;
 $('bg').onchange = () => { if (view.item?.kind === 'object' || view.item?.kind === 'mood') stage.setSky(solid($('bg').value)); };
 
 const flash = (button, text) => { const was = button.dataset.was ?? button.textContent; button.dataset.was = was; button.textContent = text; setTimeout(() => { button.textContent = was; }, 1500); };
