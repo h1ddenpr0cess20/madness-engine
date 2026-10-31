@@ -16,18 +16,18 @@ export default standingCharacter({
   }),
   clothes:(s,J)=>{
     // Cropped asymmetrical sweatshirt: one angled colour-blocked front panel.
-    torsoFabric(s,{y0:0.365,y1:0.545,clearance:0.016,color:'#37364a',material:'cotton',bone:'spine',across:28,down:16});
-    torsoFabric(s,{y0:0.365,y1:0.445,angle0:-0.92,angle1:0.72,clearance:0.02,color:'#715b80',material:'cotton',bone:'spine',across:16,down:12});
-    torsoFabric(s,{y0:0.445,y1:0.545,angle0:-0.92,angle1:0.72,clearance:0.02,color:'#715b80',material:'cotton',bone:'chest',across:16,down:12});
+    torsoFabric(s,{y0:0.365,y1:0.545,clearance:0.016,color:'#37364a',material:'woven',bone:'spine',across:28,down:16});
+    torsoFabric(s,{y0:0.365,y1:0.445,angle0:-0.92,angle1:0.72,clearance:0.02,color:'#715b80',material:'woven',bone:'spine',across:16,down:12});
+    torsoFabric(s,{y0:0.445,y1:0.545,angle0:-0.92,angle1:0.72,clearance:0.02,color:'#715b80',material:'woven',bone:'chest',across:16,down:12});
     for(const side of [-1,1]){
       const S=side>0?'L':'R';
-      limbFabric(s,{a:J['shoulder'+S],b:J['elbow'+S],radiusA:0.039,radiusB:0.029,color:'#37364a',material:'cotton',bone:'arm'+S,clearance:0.012});
-      limbFabric(s,{a:J['elbow'+S],b:J['wrist'+S],radiusA:0.029,radiusB:0.021,color:'#37364a',material:'cotton',bone:'fore'+S,clearance:0.01});
-      limbFabric(s,{a:J['hip'+S],b:J['knee'+S],radiusA:0.052,radiusB:0.038,color:'#25262d',material:'denim',bone:'thigh'+S,clearance:0.013});
-      limbFabric(s,{a:J['knee'+S],b:J['ankle'+S],radiusA:0.036,radiusB:0.025,color:'#25262d',material:'denim',bone:'shin'+S,clearance:0.011});
+      limbFabric(s,{a:J['shoulder'+S],b:J['elbow'+S],radiusA:0.039,radiusB:0.029,color:'#37364a',material:'woven',bone:'arm'+S,clearance:0.012});
+      limbFabric(s,{a:J['elbow'+S],b:J['wrist'+S],radiusA:0.029,radiusB:0.021,color:'#37364a',material:'woven',bone:'fore'+S,clearance:0.01});
+      limbFabric(s,{a:J['hip'+S],b:J['knee'+S],radiusA:0.052,radiusB:0.038,color:'#25262d',material:'canvas',bone:'thigh'+S,clearance:0.013});
+      limbFabric(s,{a:J['knee'+S],b:J['ankle'+S],radiusA:0.036,radiusB:0.025,color:'#25262d',material:'canvas',bone:'shin'+S,clearance:0.011});
       shoeFabric(s,{ankle:J['ankle'+S],color:'#9d645c',bone:'foot'+S,clearance:0.012});
     }
     // Two irregular seam bands are cut into the sweatshirt body, not added as props.
-    torsoFabric(s,{y0:0.425,y1:0.434,angle0:-0.92,angle1:0.72,clearance:0.023,color:'#c2a36d',material:'cotton',bone:'spine',across:12,down:2});
+    torsoFabric(s,{y0:0.425,y1:0.434,angle0:-0.92,angle1:0.72,clearance:0.023,color:'#c2a36d',material:'woven',bone:'spine',across:12,down:2});
   },
 });
