@@ -4,6 +4,19 @@ import { torsoFabric, limbFabric, shoeFabric } from './base.js';
 export default standingCharacter({
   name:'lifeguard-standing-remake',
   scale:1.46,skin:'#bd805e',eyeColor:'#466d87',brow:'#65452e',mood:1,shoulders:1.06,
+  faceDetails:s=>s.part('face',()=>{
+    // Fine sun freckles and a slightly stronger lower-eyelid plane.
+    for(const side of [-1,1]){
+      s.ellipsoid([side*0.047,0.659,0.079],[0.012,0.005,0.004],{color:'#c58a68',mat:'skin',bone:'head',k:0.001});
+      for(let i=0;i<5;i++){
+        const x=side*(0.021+i*0.009),y=0.637+(i%2)*0.006;
+        s.sphere([x,y,0.088-Math.abs(x)*0.09],0.0015+(i%2)*0.0004,{color:'#925c43',mat:'detail',bone:'head',k:0});
+      }
+      s.limb([side*0.017,0.657,0.088],[side*0.05,0.653,0.081],0.0016,0.0011,{color:'#895c4a',mat:'detail',bone:'head',k:0.0002});
+    }
+    s.sphere([0.008,0.647,0.111],0.0017,{color:'#985f49',mat:'detail',bone:'head',k:0});
+    s.sphere([-0.008,0.647,0.111],0.0017,{color:'#985f49',mat:'detail',bone:'head',k:0});
+  }),
   hair:s=>s.part('hair',()=>{
     // Sun-lightened, tightly waved crop; irregular clumps form a natural hairline.
     s.ellipsoid([0,0.75,-0.004],[0.091,0.043,0.09],{color:'#916c49',mat:'hair',bone:'head',k:0.006});
