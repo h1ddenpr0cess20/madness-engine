@@ -4,6 +4,16 @@ import { torsoFabric, limbFabric, shoeFabric } from './base.js';
 export default standingCharacter({
   name:'punk-standing-remake',
   scale:1.44,skin:'#dfad91',eyeColor:'#527c80',brow:'#32252a',mood:1,shoulders:1.03,
+  faceDetails:s=>s.part('face',()=>{
+    // Deliberately graphic brow and eye framing, balanced by natural cheek planes.
+    for(const side of [-1,1]){
+      s.flake([side*0.014,0.706,0.076],[side*0.061,0.701,0.063],[0,0,1],0.0065,0.004,0.32,{color:'#342a31',mat:'hair',bone:'head',k:0.001});
+      s.limb([side*0.022,0.659,0.089],[side*0.054,0.655,0.08],0.002,0.0012,{color:'#30252d',mat:'detail',bone:'head',k:0.0002});
+      s.limb([side*0.047,0.634,0.086],[side*0.066,0.627,0.078],0.0014,0.0007,{color:'#895e55',mat:'detail',bone:'head',k:0.0002});
+    }
+    s.ellipsoid([0,0.607,0.092],[0.014,0.0045,0.004],{color:'#9c665c',mat:'skin',bone:'head',k:0.0008});
+    s.sphere([-0.062,0.646,0.078],0.002,{color:'#a06a60',mat:'skin',bone:'head',k:0.0002});
+  }),
   hair:s=>s.part('hair',()=>{
     // Asymmetric, choppy indigo shag with one longer side fringe.
     s.ellipsoid([0,0.746,-0.004],[0.086,0.043,0.088],{color:'#343047',mat:'hair',bone:'head',k:0.006});
