@@ -13,19 +13,16 @@
 // Standalone copy of the engine's standard clip animator; no body or wardrobe imports.
 
 const MATERIALS = {
-  skin: { roughness: 0.78, sheen: 0.10, sheenColor: '#d5b5a0', sheenRoughness: 0.82 },
-  cotton: { roughness: 0.91, sheen: 0.06 },
-  wool: { roughness: 0.94, sheen: 0.04 },
-  denim: { roughness: 0.96, sheen: 0.03 },
-  leather: { roughness: 0.52, clearcoat: 0.16, clearcoatRoughness: 0.68 },
-  hair: { roughness: 0.78, sheen: 0.16, sheenColor: '#93816f' },
-  eye: { roughness: 0.12, clearcoat: 0.72 },
-  metal: { roughness: 0.34, metalness: 0.84 },
-  plastic: { roughness: 0.42, clearcoat: 0.28 },
-  rubber: { roughness: 0.88 },
-  shoe: { roughness: 0.66, clearcoat: 0.08 },
-  wood: { roughness: 0.74 },
-  glass: { roughness: 0.08, clearcoat: 0.8 },
+  skin: { roughness: 0.76, sheen: 0.13, sheenColor: '#e1c1aa', sheenRoughness: 0.88 },
+  woven: { roughness: 0.87, sheen: 0.11, sheenColor: '#c6b99f', sheenRoughness: 0.92 },
+  performance: { roughness: 0.69, sheen: 0.24, sheenColor: '#a8c6c5', sheenRoughness: 0.72 },
+  knit: { roughness: 0.97, sheen: 0.08, sheenColor: '#c8b1a4', sheenRoughness: 0.96 },
+  canvas: { roughness: 0.92, sheen: 0.07, sheenColor: '#a5a7a1', sheenRoughness: 0.94 },
+  softHide: { roughness: 0.63, clearcoat: 0.09, clearcoatRoughness: 0.78 },
+  hair: { roughness: 0.73, sheen: 0.22, sheenColor: '#b49b80', sheenRoughness: 0.74 },
+  eye: { roughness: 0.075, clearcoat: 0.94 },
+  metal: { roughness: 0.27, metalness: 0.91 },
+  sole: { roughness: 0.95 },
 };
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
