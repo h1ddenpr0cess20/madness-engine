@@ -29,8 +29,8 @@ export default standingCharacter({
       limbFabric(s,{a:J['knee'+S],b:J['ankle'+S],radiusA:0.034,radiusB:0.024,color:'#74685b',material:'cotton',bone:'shin'+S,clearance:0.01});
       shoeFabric(s,{ankle:J['ankle'+S],color:'#403b36',bone:'foot'+S,clearance:0.01});
     }
-    // Drafted patch pockets and a contrast yoke, kept as actual textile pieces.
-    s.box([-0.058,0.444,0.09],[0.035,0.031,0.004],0.002,{color:'#a99a82',mat:'cotton',bone:'spine',k:0.001});
-    s.box([0.058,0.444,0.09],[0.035,0.031,0.004],0.002,{color:'#a99a82',mat:'cotton',bone:'spine',k:0.001});
+    // Chest patch pockets are independent surface-drafted cloth panels.
+    torsoFabric(s,{y0:0.421,y1:0.461,angle0:-0.83,angle1:-0.48,clearance:0.027,color:'#b6a68d',material:'cotton',bone:'spine',across:7,down:4});
+    torsoFabric(s,{y0:0.421,y1:0.461,angle0:0.48,angle1:0.83,clearance:0.027,color:'#b6a68d',material:'cotton',bone:'spine',across:7,down:4});
   },
 });
