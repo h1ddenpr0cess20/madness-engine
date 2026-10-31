@@ -15,16 +15,16 @@ export default standingCharacter({
   }),
   clothes:(s,J)=>{
     // Soft plum knit top; the neckline and body are continuous fitted cloth.
-    torsoFabric(s,{y0:0.365,y1:0.545,clearance:0.015,color:'#6c475e',material:'wool',bone:'spine',across:28,down:16});
+    torsoFabric(s,{y0:0.365,y1:0.545,clearance:0.015,color:'#6c475e',material:'knit',bone:'spine',across:28,down:16});
     for(const side of [-1,1]){
       const S=side>0?'L':'R';
-      limbFabric(s,{a:J['shoulder'+S],b:J['elbow'+S],radiusA:0.038,radiusB:0.028,color:'#6c475e',material:'wool',bone:'arm'+S,clearance:0.012});
-      limbFabric(s,{a:J['elbow'+S],b:J['wrist'+S],radiusA:0.028,radiusB:0.021,color:'#6c475e',material:'wool',bone:'fore'+S,clearance:0.01});
+      limbFabric(s,{a:J['shoulder'+S],b:J['elbow'+S],radiusA:0.038,radiusB:0.028,color:'#6c475e',material:'knit',bone:'arm'+S,clearance:0.012});
+      limbFabric(s,{a:J['elbow'+S],b:J['wrist'+S],radiusA:0.028,radiusB:0.021,color:'#6c475e',material:'knit',bone:'fore'+S,clearance:0.01});
       shoeFabric(s,{ankle:J['ankle'+S],color:'#574a46',bone:'foot'+S,clearance:0.01});
     }
     // Warm ochre full skirt with a gentle flare, pleated from the natural waist.
-    skirtFabric(s,{y0:0.075,y1:0.405,topX:0.093,topZ:0.071,hemX:0.158,hemZ:0.112,clearance:0.018,pleat:0.0035,color:'#9a8359',material:'wool',bone:'hips'});
+    skirtFabric(s,{y0:0.075,y1:0.405,topX:0.093,topZ:0.071,hemX:0.158,hemZ:0.112,clearance:0.018,pleat:0.0035,color:'#9a8359',material:'knit',bone:'hips'});
     // Narrow woven waist facing and a small collar insert are separate sewn bands.
-    torsoFabric(s,{y0:0.385,y1:0.405,clearance:0.02,color:'#d3c4a5',material:'cotton',bone:'hips',across:24,down:3});
+    torsoFabric(s,{y0:0.385,y1:0.405,clearance:0.02,color:'#d3c4a5',material:'woven',bone:'hips',across:24,down:3});
   },
 });
