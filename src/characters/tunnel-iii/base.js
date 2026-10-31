@@ -140,9 +140,22 @@ function buildSkin(s, { skin, eyeColor = '#536b82', brow = '#30251f', mood = 0, 
       s.ellipsoid(sh, [0.038 * shoulders, 0.043, 0.039], SO('arm' + S, { k: 0.018 }));
       s.limb(sh, el, 0.033 * shoulders, 0.024, SO('arm' + S, { k: 0.014 }));
       s.limb(el, wr, 0.024, 0.017, SO('fore' + S, { k: 0.01 }));
-      s.ellipsoid([wr[0], wr[1] - 0.015, wr[2] + 0.01], [0.019, 0.023, 0.021], SO('hand' + S, { k: 0.01 }));
-      s.limb([wr[0], wr[1] - 0.012, wr[2] + 0.014],
-        [wr[0], wr[1] - 0.048, wr[2] + 0.043], 0.014, 0.010, SO('hand' + S, { k: 0.008 }));
+      // Palm, thumb and four independently shaped fingers, all weighted to the hand joint.
+      const palm = [wr[0], wr[1] - 0.021, wr[2] + 0.021];
+      s.ellipsoid(palm, [0.019, 0.025, 0.012], SO('hand' + S, { k: 0.006 }));
+      for (let finger = 0; finger < 4; finger++) {
+        const spread = finger - 1.5;
+        const x0 = palm[0] + side * spread * 0.008;
+        const x1 = x0 + side * spread * 0.0015;
+        const start = [x0, palm[1] - 0.014, palm[2] + 0.004];
+        const end = [x1, palm[1] - 0.044 + Math.abs(spread) * 0.004, palm[2] + 0.009];
+        s.limb(start, end, 0.0041, 0.0028, SO('hand' + S, { k: 0.001 }));
+        s.sphere(end, 0.0028, SO('hand' + S, { k: 0.001 }));
+      }
+      const thumbRoot = [palm[0] + side * 0.015, palm[1] - 0.004, palm[2] + 0.003];
+      const thumbTip = [palm[0] + side * 0.033, palm[1] - 0.027, palm[2] + 0.014];
+      s.limb(thumbRoot, thumbTip, 0.006, 0.0038, SO('hand' + S, { k: 0.001 }));
+      s.sphere(thumbTip, 0.0038, SO('hand' + S, { k: 0.001 }));
 
       // Thighs and calves articulate at the actual knee and ankle pivots.
       s.limb(hip, kn, 0.046 * girth, 0.032 * girth, SO('thigh' + S, { k: 0.014 }));
@@ -173,97 +186,136 @@ function buildSkin(s, { skin, eyeColor = '#536b82', brow = '#30251f', mood = 0, 
     s.ellipsoid([0, 0.61, 0.091], [0.016, 0.004, 0.004], SO('head', { k: 0.003 }));
     for (const side of [1, -1]) {
       const eye = [side * 0.035, 0.682, 0.077];
-      s.ellipsoid(eye, [0.019, 0.021, 0.012], { color: '#f0ece4', mat: 'eye', bone: 'head', k: 0.004 });
-      s.ellipsoid([eye[0], eye[1], 0.087], [0.009, 0.012, 0.005], { color: eyeColor, mat: 'eye', bone: 'head', k: 0.002 });
-      s.ellipsoid([eye[0], eye[1], 0.091], [0.0043, 0.007, 0.0025], { color: '#101014', mat: 'eye', bone: 'head', k: 0.001 });
-      s.sphere([eye[0] - 0.003, eye[1] + 0.005, 0.094], 0.002, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 });
+      // Eye forms are meshed separately at a sub-millimetre grid; keep the brow in skin.
       const by = mood ? 0.709 : 0.713;
       s.limb([side * 0.017, by, 0.076], [side * 0.055, by + (mood ? -0.005 : 0.002), 0.068],
         0.005, 0.004, { color: brow, mat: 'hair', bone: 'head', k: 0.002 });
     }
+    // High-resolution eye geometry is kept out of the coarse skin mesh.
+    s.part('eyes', () => {
+      for (const side of [1, -1]) {
+        const c = [side * 0.035, 0.682, 0.082];
+        s.ellipsoid(c, [0.018, 0.013, 0.007], { color: '#f0ece4', mat: 'eye', bone: 'head', k: 0.001 });
+        s.ellipsoid([c[0], c[1], 0.088], [0.0082, 0.0105, 0.004], { color: eyeColor, mat: 'eye', bone: 'head', k: 0.0007 });
+        s.ellipsoid([c[0], c[1], 0.0915], [0.0037, 0.0065, 0.002], { color: '#101014', mat: 'eye', bone: 'head', k: 0.0004 });
+        s.sphere([c[0] - 0.0026, c[1] + 0.004, 0.0933], 0.0017, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 });
+      }
+    });
     s.limb([-0.018, 0.615, 0.092], [0.018, 0.615, 0.092], 0.0016, 0.0016, { op: 'sub', k: 0.001 });
     s.ellipsoid([0, 0.608, 0.09], [0.014, 0.004, 0.004], SO('head', { k: 0.003 }));
   });
 }
 
-/** Outer garment forms. All of these are separate meshes over the skin. */
-export function jacket(s, J, { torso, sleeve = torso, material = 'cotton', girth = 1, collar = null }) {
-  loft(s, 'clothes', 0.35, 0.56, [
-    [0.35, 0.082 * girth, 0.065 * girth, 0.003],
-    [0.39, 0.084 * girth, 0.065 * girth, 0.004],
-    [0.445, 0.098 * girth, 0.073 * girth, 0.004],
-    [0.49, 0.116 * girth, 0.084 * girth, 0.002],
-    [0.53, 0.105 * girth, 0.076 * girth, 0],
-    [0.56, 0.058, 0.045, 0],
-  ], { color: torso, mat: material, bone: 'chest', k: 0.012 });
-  loft(s, 'clothes', 0.345, 0.445, [
-    [0.345, 0.083 * girth, 0.066 * girth, 0.003],
-    [0.39, 0.084 * girth, 0.066 * girth, 0.004],
-    [0.445, 0.098 * girth, 0.073 * girth, 0.004],
-  ], { color: torso, mat: material, bone: 'spine', k: 0.012 });
-  for (const side of [1, -1]) {
-    const S = side > 0 ? 'L' : 'R';
-    const sh = J['shoulder' + S], el = J['elbow' + S], wr = J['wrist' + S];
-    s.part('clothes', () => {
-      s.limb([sh[0] * 0.9, sh[1] + 0.004, sh[2]], el, 0.039, 0.028, { color: sleeve, mat: material, bone: 'arm' + S, k: 0.012 });
-      s.limb(el, wr, 0.029, 0.021, { color: sleeve, mat: material, bone: 'fore' + S, k: 0.01 });
-    });
+/**
+ * Sewn fabric surface system.
+ *
+ * A garment is drafted as a triangulated cloth panel, not assembled from body
+ * primitives. Each triangle is offset into a thin two-sided textile shell.
+ * Panel coordinates can be sampled along a torso, limb, or garment pattern.
+ */
+const vSub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const vAdd=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+const vMul=(a,k)=>[a[0]*k,a[1]*k,a[2]*k];
+const vDot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const vLen=a=>Math.hypot(a[0],a[1],a[2]);
+const vUnit=a=>vMul(a,1/(vLen(a)||1));
+const vMix=(a,b,t)=>a+(b-a)*t;
+const vSmooth=t=>{const x=clamp(t,0,1);return x*x*(3-2*x);};
+
+function triangleDistanceSq(p,a,b,c){
+  const ab=vSub(b,a),ac=vSub(c,a),ap=vSub(p,a);
+  const d1=vDot(ab,ap),d2=vDot(ac,ap);
+  if(d1<=0&&d2<=0)return vDot(ap,ap);
+  const bp=vSub(p,b),d3=vDot(ab,bp),d4=vDot(ac,bp);
+  if(d3>=0&&d4<=d3)return vDot(bp,bp);
+  const vc=d1*d4-d3*d2;
+  if(vc<=0&&d1>=0&&d3<=0){const t=d1/(d1-d3),q=vAdd(a,vMul(ab,t)),r=vSub(p,q);return vDot(r,r);}
+  const cp=vSub(p,c),d5=vDot(ab,cp),d6=vDot(ac,cp);
+  if(d6>=0&&d5<=d6)return vDot(cp,cp);
+  const vb=d5*d2-d1*d6;
+  if(vb<=0&&d2>=0&&d6<=0){const t=d2/(d2-d6),q=vAdd(a,vMul(ac,t)),r=vSub(p,q);return vDot(r,r);}
+  const va=d3*d6-d5*d4;
+  if(va<=0&&(d4-d3)>=0&&(d5-d6)>=0){
+    const t=(d4-d3)/((d4-d3)+(d5-d6)),q=vAdd(b,vMul(vSub(c,b),t)),r=vSub(p,q);
+    return vDot(r,r);
   }
-  if (collar) s.part('clothes', () => {
-    s.limb([-0.038, 0.535, 0.047], [0, 0.493, 0.085], 0.012, 0.009, { color: collar, mat: 'cotton', bone: 'chest', k: 0.003 });
-    s.limb([0.038, 0.535, 0.047], [0, 0.493, 0.085], 0.012, 0.009, { color: collar, mat: 'cotton', bone: 'chest', k: 0.003 });
-  });
+  const inv=1/(va+vb+vc),v=vb*inv,w=vc*inv;
+  const q=vAdd(a,vAdd(vMul(ab,v),vMul(ac,w))),r=vSub(p,q);
+  return vDot(r,r);
 }
 
-/** Flared skirt shell fitted over the completed hips and legs. */
-export function skirtShape(s, { top = 0.39, bottom = 0.075, upper = 0.09, hem = 0.145, color, mat = 'wool' }) {
-  const mid = bottom + (top - bottom) * 0.18;
-  loft(s, 'clothes', bottom, top, [
-    [bottom, hem * 0.96, hem * 0.72, 0],
-    [mid, hem * 0.88, hem * 0.68, 0],
-    [top - 0.025, upper, upper * 0.72, 0],
-    [top, upper * 0.96, upper * 0.7, 0],
-  ], { color, mat, bone: 'hips', k: 0.014 });
-}
-
-export function trousers(s, J, { color, material = 'denim', short = false, shoeColor = null, boots = false }) {
-  for (const side of [1, -1]) {
-    const S = side > 0 ? 'L' : 'R';
-    const hip = J['hip' + S], knee = J['knee' + S], ankle = J['ankle' + S];
-    s.part('clothes', () => {
-      if (short) {
-        s.limb(hip, [knee[0], knee[1] + 0.025, knee[2]], 0.054, 0.043, { color, mat: material, bone: 'thigh' + S, k: 0.012 });
-      } else {
-        s.limb(hip, knee, 0.052, 0.039, { color, mat: material, bone: 'thigh' + S, k: 0.012 });
-        s.limb(knee, ankle, 0.038, 0.026, { color, mat: material, bone: 'shin' + S, k: 0.01 });
-      }
-      if (shoeColor) {
-        s.ellipsoid([ankle[0], 0.031, 0.052], [boots ? 0.038 : 0.032, 0.024, boots ? 0.075 : 0.065], { color: shoeColor, mat: 'shoe', bone: 'foot' + S, k: 0.01 });
-        s.ellipsoid([ankle[0], 0.009, 0.052], [boots ? 0.039 : 0.033, 0.007, boots ? 0.077 : 0.067], { color: '#19191d', mat: 'rubber', bone: 'foot' + S, k: 0.004 });
-      }
+/** Draft a 2-D textile pattern into a fine, closed fabric sheet. */
+export function sewFabric(s,{point,color,material='cotton',bone='chest',across=16,down=9,thickness=0.0025}){
+  const grid=[];
+  for(let j=0;j<=down;j++){
+    const row=[];
+    for(let i=0;i<=across;i++)row.push(point(i/across,j/down));
+    grid.push(row);
+  }
+  const addTriangle=(a,b,c)=>{
+    const lo=[0,1,2].map(i=>Math.min(a[i],b[i],c[i])-thickness*1.4);
+    const hi=[0,1,2].map(i=>Math.max(a[i],b[i],c[i])+thickness*1.4);
+    s.shape(p=>Math.sqrt(triangleDistanceSq(p,a,b,c))-thickness,[lo,hi],{
+      color,mat:material,bone,k:0,
     });
+  };
+  for(let j=0;j<down;j++)for(let i=0;i<across;i++){
+    const a=grid[j][i],b=grid[j][i+1],c=grid[j+1][i+1],d=grid[j+1][i];
+    addTriangle(a,b,c);
+    addTriangle(a,c,d);
   }
 }
 
-export function addHair(s, { color = '#392b23', cap = [0.09, 0.052, 0.092], locks = [] } = {}) {
-  s.part('hair', () => {
-    if (cap) s.ellipsoid([0, 0.748, -0.006], cap, { color, mat: 'hair', bone: 'head', k: 0.014 });
-    for (const [a, b, radius] of locks) {
-      s.limb(a, b, radius, radius * 0.7, { color, mat: 'hair', bone: 'head', k: 0.006 });
-    }
-  });
+/** Torso cloth panel sampled around the anatomical section profile. */
+export function torsoFabric(s,{y0=0.36,y1=0.55,clearance=0.01,color,material='cotton',bone='chest',angle0=-Math.PI,angle1=Math.PI,across=24,down=12}){
+  const profile=[
+    [0.285,0.061,0.049,0],[0.32,0.075,0.056,0],[0.365,0.075,0.056,0.002],
+    [0.395,0.078,0.058,0.003],[0.445,0.091,0.065,0.004],[0.49,0.108,0.076,0.002],
+    [0.525,0.099,0.068,0],[0.55,0.072,0.05,0],
+  ];
+  const section=y=>{
+    let i=0;while(i<profile.length-2&&y>profile[i+1][0])i++;
+    const a=profile[i],b=profile[i+1],t=vSmooth((y-a[0])/(b[0]-a[0]));
+    return [vMix(a[1],b[1],t),vMix(a[2],b[2],t),vMix(a[3],b[3],t)];
+  };
+  sewFabric(s,{color,material,bone,across,down,point:(u,v)=>{
+    const y=vMix(y0,y1,v),theta=vMix(angle0,angle1,u),[rx,rz,zc]=section(y);
+    return [Math.sin(theta)*(rx+clearance),y,zc+Math.cos(theta)*(rz+clearance)];
+  }});
 }
 
-export function glasses(s, { rim = '#574638', dark = false, size = 0.021 } = {}) {
-  s.part('accessories', () => {
-    for (const side of [1, -1]) {
-      const c = [side * 0.039, 0.681, 0.093];
-      if (dark) s.ellipsoid(c, [size * 1.2, size, 0.006], { color: '#090a0c', mat: 'glass', bone: 'head', k: 0.002 });
-      s.torus(c, size, 0.003, { color: rim, mat: 'metal', bone: 'head', k: 0.001, rot: [Math.PI / 2, 0, 0] });
-      s.limb([side * 0.06, 0.683, 0.087], [side * 0.10, 0.674, 0.006], 0.0025, 0.0025, { color: rim, mat: 'metal', bone: 'head', k: 0.001 });
-    }
-    s.limb([-0.018, 0.683, 0.096], [0.018, 0.683, 0.096], 0.0025, 0.0025, { color: rim, mat: 'metal', bone: 'head', k: 0.001 });
-  });
+/** Sleeve or trouser fabric laid around a limb's anatomical centreline. */
+export function limbFabric(s,{a,b,radiusA,radiusB,color,material='cotton',bone='armL',clearance=0.008,across=16,down=9}){
+  const axis=vUnit(vSub(b,a));
+  const reference=Math.abs(axis[2])<0.85?[0,0,1]:[0,1,0];
+  const side=vUnit([axis[1]*reference[2]-axis[2]*reference[1],axis[2]*reference[0]-axis[0]*reference[2],axis[0]*reference[1]-axis[1]*reference[0]]);
+  const other=vUnit([axis[1]*side[2]-axis[2]*side[1],axis[2]*side[0]-axis[0]*side[2],axis[0]*side[1]-axis[1]*side[0]]);
+  sewFabric(s,{color,material,bone,across,down,point:(u,v)=>{
+    const angle=u*Math.PI*2,t=v,center=[vMix(a[0],b[0],t),vMix(a[1],b[1],t),vMix(a[2],b[2],t)];
+    const radius=vMix(radiusA,radiusB,vSmooth(t))+clearance;
+    return vAdd(center,vAdd(vMul(side,Math.cos(angle)*radius),vMul(other,Math.sin(angle)*radius)));
+  }});
+}
+
+/** Shaped skirt panel with a controlled flare and fabric pleat displacement. */
+export function skirtFabric(s,{y0=0.075,y1=0.405,topX=0.09,topZ=0.065,hemX=0.15,hemZ=0.105,clearance=0.01,pleat=0.0025,color,material='cotton',bone='hips'}){
+  sewFabric(s,{color,material,bone,across:32,down:16,point:(u,v)=>{
+    const theta=u*Math.PI*2,t=v,flare=vSmooth(t),fold=pleat*Math.cos(theta*12)*(0.2+0.8*t);
+    const rx=vMix(hemX,topX,flare)+clearance+fold,rz=vMix(hemZ,topZ,flare)+clearance+fold;
+    return [Math.sin(theta)*rx,vMix(y0,y1,t),Math.cos(theta)*rz];
+  }});
+}
+
+/** Footwear upper drafted as a closed cross-section over the foot, with a real sole allowance. */
+export function shoeFabric(s,{ankle,color,material='leather',bone='footL',clearance=0.006}){
+  const cx=ankle[0],cz=ankle[2];
+  sewFabric(s,{color,material,bone,across:20,down:12,thickness:0.003,point:(u,v)=>{
+    const angle=u*Math.PI*2;
+    const width=0.019+0.005*Math.sin(v*Math.PI);
+    const height=0.021+0.003*Math.sin(v*Math.PI);
+    const z=cz-0.012+v*0.083;
+    return [cx+Math.sin(angle)*(width+clearance),0.024+Math.cos(angle)*(height+clearance*0.6),z];
+  }});
 }
 
 /**
@@ -278,7 +330,7 @@ export function standingCharacter({
   const rig = makeRig(1);
   return {
     name, scale, cell, budget, bones: rig.bones, materials: MATERIALS,
-    cells: { face: 0.004, eyes: 0.0025, accessories: 0.003, hair: 0.004, clothes: 0.004, fine: 0.003 },
+    cells: { face: 0.0035, eyes: 0.0012, accessories: 0.0025, hair: 0.0035, clothes: 0.0035, fine: 0.0025 },
     ambient: 0.24,
     sculpt(s) {
       buildSkin(s, { skin, eyeColor, brow, mood, girth, shoulders }, rig.J);
