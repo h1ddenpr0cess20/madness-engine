@@ -1,3 +1,5 @@
+import { fbm, rgb } from '../../models/sdf.js';
+
 /**
  * Independent, upright Tunnel-III character base.
  *
@@ -14,6 +16,8 @@
 
 const MATERIALS = {
   skin: { roughness: 0.76, sheen: 0.13, sheenColor: '#e1c1aa', sheenRoughness: 0.88 },
+  nail: { roughness: 0.38, sheen: 0.2, sheenColor: '#e1c9bb', sheenRoughness: 0.42 },
+  detail: { roughness: 0.68, sheen: 0.1 },
   woven: { roughness: 0.87, sheen: 0.11, sheenColor: '#c6b99f', sheenRoughness: 0.92 },
   performance: { roughness: 0.69, sheen: 0.24, sheenColor: '#a8c6c5', sheenRoughness: 0.72 },
   knit: { roughness: 0.97, sheen: 0.08, sheenColor: '#c8b1a4', sheenRoughness: 0.96 },
@@ -137,22 +141,42 @@ function buildSkin(s, { skin, eyeColor = '#536b82', brow = '#30251f', mood = 0, 
       s.ellipsoid(sh, [0.038 * shoulders, 0.043, 0.039], SO('arm' + S, { k: 0.018 }));
       s.limb(sh, el, 0.033 * shoulders, 0.024, SO('arm' + S, { k: 0.014 }));
       s.limb(el, wr, 0.024, 0.017, SO('fore' + S, { k: 0.01 }));
-      // Palm, thumb and four independently shaped fingers, all weighted to the hand joint.
-      const palm = [wr[0], wr[1] - 0.021, wr[2] + 0.021];
-      s.ellipsoid(palm, [0.019, 0.025, 0.012], SO('hand' + S, { k: 0.006 }));
-      for (let finger = 0; finger < 4; finger++) {
-        const spread = finger - 1.5;
-        const x0 = palm[0] + side * spread * 0.008;
-        const x1 = x0 + side * spread * 0.0015;
-        const start = [x0, palm[1] - 0.014, palm[2] + 0.004];
-        const end = [x1, palm[1] - 0.044 + Math.abs(spread) * 0.004, palm[2] + 0.009];
-        s.limb(start, end, 0.0041, 0.0028, SO('hand' + S, { k: 0.001 }));
-        s.sphere(end, 0.0028, SO('hand' + S, { k: 0.001 }));
-      }
-      const thumbRoot = [palm[0] + side * 0.015, palm[1] - 0.004, palm[2] + 0.003];
-      const thumbTip = [palm[0] + side * 0.033, palm[1] - 0.027, palm[2] + 0.014];
-      s.limb(thumbRoot, thumbTip, 0.006, 0.0038, SO('hand' + S, { k: 0.001 }));
-      s.sphere(thumbTip, 0.0038, SO('hand' + S, { k: 0.001 }));
+      // A separate fine hand sculpt: palm, then the segmented digits and nail beds.
+      s.part('hands', () => {
+        const palm = [wr[0], wr[1] - 0.019, wr[2] + 0.018];
+        s.ellipsoid(palm, [0.0185, 0.025, 0.014], SO('hand' + S, { k: 0.003 }));
+        // Four fingers have individually stepped proximal, middle and distal phalanges.
+        const lengths = [0.044, 0.052, 0.049, 0.042];
+        const spread = [-1.55, -0.52, 0.52, 1.55];
+        for (let finger = 0; finger < 4; finger++) {
+          const offset = side * spread[finger] * 0.0072;
+          const x = palm[0] + offset;
+          const root = [x, palm[1] - 0.012, palm[2] + 0.002];
+          const endY = root[1] - lengths[finger];
+          const jointA = [x + side * spread[finger] * 0.0004, root[1] - lengths[finger] * 0.37, root[2] + 0.002];
+          const jointB = [x + side * spread[finger] * 0.0008, root[1] - lengths[finger] * 0.70, root[2] + 0.004];
+          const tip = [x + side * spread[finger] * 0.001, endY, root[2] + 0.005];
+          const radii = [0.0043, 0.0037, 0.0029];
+          const joints = [root, jointA, jointB, tip];
+          for (let segment = 0; segment < 3; segment++) {
+            s.limb(joints[segment], joints[segment + 1], radii[segment], radii[segment + 1], SO('hand' + S, { k: 0.0007 }));
+          }
+          s.sphere(jointA, 0.0032, SO('hand' + S, { k: 0.0005 }));
+          s.sphere(jointB, 0.0028, SO('hand' + S, { k: 0.0005 }));
+          s.ellipsoid([tip[0], tip[1] + 0.0028, tip[2] + 0.0032], [0.0025, 0.0042, 0.0011],
+            { color: '#d6b9aa', mat: 'nail', bone: 'hand' + S, k: 0.0002 });
+        }
+        // The thumb leaves the palm diagonally, with a broad basal joint and a rounded tip.
+        const thumbBase = [palm[0] + side * 0.015, palm[1] - 0.004, palm[2] + 0.004];
+        const thumbJoint = [palm[0] + side * 0.026, palm[1] - 0.016, palm[2] + 0.008];
+        const thumbTip = [palm[0] + side * 0.032, palm[1] - 0.03, palm[2] + 0.012];
+        s.ellipsoid(thumbBase, [0.007, 0.009, 0.006], SO('hand' + S, { k: 0.001 }));
+        s.limb(thumbBase, thumbJoint, 0.0065, 0.005, SO('hand' + S, { k: 0.0008 }));
+        s.limb(thumbJoint, thumbTip, 0.005, 0.0034, SO('hand' + S, { k: 0.0006 }));
+        s.sphere(thumbTip, 0.0034, SO('hand' + S, { k: 0.0005 }));
+        s.ellipsoid([thumbTip[0], thumbTip[1] + 0.0018, thumbTip[2] + 0.003], [0.0024, 0.0035, 0.001],
+          { color: '#d6b9aa', mat: 'nail', bone: 'hand' + S, k: 0.0002 });
+      });
 
       // Thighs and calves articulate at the actual knee and ankle pivots.
       s.limb(hip, kn, 0.046 * girth, 0.032 * girth, SO('thigh' + S, { k: 0.014 }));
@@ -169,37 +193,42 @@ function buildSkin(s, { skin, eyeColor = '#536b82', brow = '#30251f', mood = 0, 
     });
   }
 
-  // Skull, jaw, ears, cheek planes, nose, eyes, brows and mouth are all part
-  // of the skin pass, before hair or any headwear is fitted.
-  s.part('skin', () => {
-    s.ellipsoid([0, 0.674, 0.004], [0.087, 0.101, 0.083], SO('head', { k: 0.024 }));
-    s.ellipsoid([0, 0.629, 0.03], [0.071, 0.058, 0.068], SO('head', { k: 0.02 }));
+  // Neck stays in the torso mesh; the skull and facial planes get their own
+  // higher-resolution sculpt, with landmarks modeled as real anatomy.
+  s.part('face', () => {
+    s.ellipsoid([0, 0.674, 0.004], [0.087, 0.101, 0.083], SO('head', { k: 0.014 }));
+    s.ellipsoid([0, 0.629, 0.03], [0.071, 0.058, 0.068], SO('head', { k: 0.012 }));
     for (const side of [1, -1]) {
-      s.ellipsoid([side * 0.087, 0.661, -0.003], [0.014, 0.027, 0.021], SO('head', { k: 0.012 }));
-      s.ellipsoid([side * 0.048, 0.644, 0.064], [0.027, 0.018, 0.02], SO('head', { k: 0.012 }));
-    }
-    s.limb([0, 0.681, 0.078], [0, 0.65, 0.105], 0.0075, 0.009, SO('head', { k: 0.01 }));
-    s.sphere([0, 0.646, 0.104], 0.010, SO('head', { k: 0.008 }));
-    s.ellipsoid([0, 0.61, 0.091], [0.016, 0.004, 0.004], SO('head', { k: 0.003 }));
-    for (const side of [1, -1]) {
-      const eye = [side * 0.035, 0.682, 0.077];
-      // Eye forms are meshed separately at a sub-millimetre grid; keep the brow in skin.
+      // Auricles and cheek arches merge softly into the skull, not into a flat face mask.
+      s.ellipsoid([side * 0.087, 0.661, -0.003], [0.014, 0.027, 0.021], SO('head', { k: 0.006 }));
+      s.ellipsoid([side * 0.048, 0.644, 0.064], [0.027, 0.018, 0.02], SO('head', { k: 0.006 }));
+      s.ellipsoid([side * 0.054, 0.658, 0.058], [0.023, 0.012, 0.018], SO('head', { k: 0.004 }));
+      // Sculpted orbital ridge and the natural transition from brow to temple.
       const by = mood ? 0.709 : 0.713;
-      s.limb([side * 0.017, by, 0.076], [side * 0.055, by + (mood ? -0.005 : 0.002), 0.068],
-        0.005, 0.004, { color: brow, mat: 'hair', bone: 'head', k: 0.002 });
+      s.limb([side * 0.014, by, 0.073], [side * 0.056, by + (mood ? -0.005 : 0.002), 0.064],
+        0.0052, 0.004, SO('head', { k: 0.003 }));
     }
-    // High-resolution eye geometry is kept out of the coarse skin mesh.
-    s.part('eyes', () => {
-      for (const side of [1, -1]) {
-        const c = [side * 0.035, 0.682, 0.082];
-        s.ellipsoid(c, [0.018, 0.013, 0.007], { color: '#f0ece4', mat: 'eye', bone: 'head', k: 0.001 });
-        s.ellipsoid([c[0], c[1], 0.088], [0.0082, 0.0105, 0.004], { color: eyeColor, mat: 'eye', bone: 'head', k: 0.0007 });
-        s.ellipsoid([c[0], c[1], 0.0915], [0.0037, 0.0065, 0.002], { color: '#101014', mat: 'eye', bone: 'head', k: 0.0004 });
-        s.sphere([c[0] - 0.0026, c[1] + 0.004, 0.0933], 0.0017, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 });
-      }
-    });
-    s.limb([-0.018, 0.615, 0.092], [0.018, 0.615, 0.092], 0.0016, 0.0016, { op: 'sub', k: 0.001 });
-    s.ellipsoid([0, 0.608, 0.09], [0.014, 0.004, 0.004], SO('head', { k: 0.003 }));
+    // Nose bridge, alar base, and subtle philtrum are separate landmarks.
+    s.limb([0, 0.686, 0.077], [0, 0.65, 0.102], 0.0075, 0.009, SO('head', { k: 0.005 }));
+    s.sphere([0, 0.646, 0.104], 0.010, SO('head', { k: 0.004 }));
+    s.ellipsoid([0, 0.61, 0.091], [0.016, 0.004, 0.004], SO('head', { k: 0.002 }));
+    for(const side of [-1,1]){
+      s.sphere([side*0.006,0.643,0.111],0.0022,SO('head',{k:0.001}));
+      s.limb([side*0.003,0.634,0.102],[side*0.002,0.622,0.098],0.0015,0.0012,SO('head',{k:0.0005}));
+    }
+    // A fine mouth seam, lower lip plane, and chin pad.
+    s.limb([-0.018,0.615,0.092],[0.018,0.615,0.092],0.0015,0.0015,{color:'#81584e',mat:'detail',bone:'head',k:0.0005});
+    s.ellipsoid([0,0.608,0.09],[0.014,0.004,0.004],SO('head',{k:0.002}));
+  });
+  // Eye whites, irises and pupils use their own finer mesh and their own glint material.
+  s.part('eyes', () => {
+    for (const side of [1, -1]) {
+      const c = [side * 0.035, 0.682, 0.082];
+      s.ellipsoid(c, [0.018, 0.013, 0.007], { color: '#f0ece4', mat: 'eye', bone: 'head', k: 0.0007 });
+      s.ellipsoid([c[0], c[1], 0.088], [0.0082, 0.0105, 0.004], { color: eyeColor, mat: 'eye', bone: 'head', k: 0.0004 });
+      s.ellipsoid([c[0], c[1], 0.0915], [0.0037, 0.0065, 0.002], { color: '#101014', mat: 'eye', bone: 'head', k: 0.0002 });
+      s.sphere([c[0] - 0.0026, c[1] + 0.004, 0.0933], 0.0017, { color: '#ffffff', mat: 'eye', bone: 'head', k: 0 });
+    }
   });
 }
 
@@ -218,7 +247,9 @@ const vLen=a=>Math.hypot(a[0],a[1],a[2]);
 const vUnit=a=>vMul(a,1/(vLen(a)||1));
 const vMix=(a,b,t)=>a+(b-a)*t;
 const vSmooth=t=>{const x=clamp(t,0,1);return x*x*(3-2*x);};
+const gridKey=(i,j,k)=>i+':'+j+':'+k;
 
+/** A triangle's true closest-point distance, including edge and vertex regions. */
 function triangleDistanceSq(p,a,b,c){
   const ab=vSub(b,a),ac=vSub(c,a),ap=vSub(p,a);
   const d1=vDot(ab,ap),d2=vDot(ac,ap);
@@ -241,7 +272,48 @@ function triangleDistanceSq(p,a,b,c){
   return vDot(r,r);
 }
 
-/** Draft a 2-D textile pattern into a fine, closed fabric sheet. */
+/** Subtle yarn grain and directional weave, evaluated per mesh vertex. */
+function textileColor(hex,amount=0.024){
+  if(typeof hex==='function')return hex;
+  const base=rgb(hex);
+  return (p,n)=>{
+    const warp=Math.sin((p[0]*0.82+p[2]*0.57)*510)*0.009;
+    const weft=Math.sin((p[1]*0.91-p[2]*0.41)*470)*0.007;
+    const grain=(fbm(p[0]*92,p[1]*92,p[2]*92,2)-0.5)*amount;
+    const fold=(1-Math.max(0,n[1]))*0.006;
+    const gain=1+warp+weft+grain-fold;
+    return base.map(c=>clamp(c*gain,0,1));
+  };
+}
+
+/**
+ * Project a pattern sample onto the finished skin SDF, then lift it by a
+ * measured fabric clearance. The temporary field is restricted to skin only,
+ * so one garment panel can never fit itself to a previously sewn panel.
+ */
+const skinFieldCache=new WeakMap();
+function fitOnSkin(s,p,clearance=0.01){
+  let skinShapes=skinFieldCache.get(s);
+  if(!skinShapes){skinShapes=s.shapes.filter(shape=>shape.part==='skin');skinFieldCache.set(s,skinShapes);}
+  const allShapes=s.shapes,oldGrid=s.grid;
+  s.shapes=skinShapes;s.grid=null;
+  let q=[...p],n=[0,0,1];
+  try{
+    for(let i=0;i<4;i++){
+      const d=s.field(q);
+      n=s.gradient(q,0.0017);
+      if(Math.abs(d)<0.00035)break;
+      const step=clamp(d,-0.024,0.024);
+      q=[q[0]-n[0]*step,q[1]-n[1]*step,q[2]-n[2]*step];
+    }
+    n=s.gradient(q,0.0017);
+  }finally{
+    s.shapes=allShapes;s.grid=oldGrid;
+  }
+  return vAdd(q,vMul(n,clearance));
+}
+
+/** Draft a two-dimensional pattern as a thin textile sheet, accelerated by spatially-binned triangles. */
 export function sewFabric(s,{point,color,material='woven',bone='chest',across=16,down=9,thickness=0.0025}){
   const grid=[];
   for(let j=0;j<=down;j++){
@@ -249,23 +321,46 @@ export function sewFabric(s,{point,color,material='woven',bone='chest',across=16
     for(let i=0;i<=across;i++)row.push(point(i/across,j/down));
     grid.push(row);
   }
-  const addTriangle=(a,b,c)=>{
-    const lo=[0,1,2].map(i=>Math.min(a[i],b[i],c[i])-thickness*1.4);
-    const hi=[0,1,2].map(i=>Math.max(a[i],b[i],c[i])+thickness*1.4);
-    s.shape(p=>Math.sqrt(triangleDistanceSq(p,a,b,c))-thickness,[lo,hi],{
-      color,mat:material,bone,k:0,
-    });
-  };
-  // Keep textile in its own mesh part; never union the cloth field with skin.
-  s.part('clothes',()=>{
-    for(let j=0;j<down;j++)for(let i=0;i<across;i++){
-      const a=grid[j][i],b=grid[j][i+1],c=grid[j+1][i+1],d=grid[j+1][i];
-      addTriangle(a,b,c);
-      addTriangle(a,c,d);
-    }
+  const triangles=[],lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
+  for(let j=0;j<down;j++)for(let i=0;i<across;i++){
+    const a=grid[j][i],b=grid[j][i+1],c=grid[j+1][i+1],d=grid[j+1][i];
+    triangles.push([a,b,c],[a,c,d]);
+  }
+  for(const tri of triangles)for(let axis=0;axis<3;axis++){
+    lo[axis]=Math.min(lo[axis],tri[0][axis],tri[1][axis],tri[2][axis]);
+    hi[axis]=Math.max(hi[axis],tri[0][axis],tri[1][axis],tri[2][axis]);
+  }
+  const bucketSize=0.024,padding=bucketSize*1.05,bins=new Map();
+  const cell=(x)=>Math.floor(x/bucketSize);
+  triangles.forEach((tri,index)=>{
+    const a=[0,1,2].map(k=>Math.min(tri[0][k],tri[1][k],tri[2][k])-padding);
+    const b=[0,1,2].map(k=>Math.max(tri[0][k],tri[1][k],tri[2][k])+padding);
+    for(let x=cell(a[0]);x<=cell(b[0]);x++)
+      for(let y=cell(a[1]);y<=cell(b[1]);y++)
+        for(let z=cell(a[2]);z<=cell(b[2]);z++){
+          const key=gridKey(x,y,z),bucket=bins.get(key);
+          if(bucket)bucket.push(index);else bins.set(key,[index]);
+        }
   });
+  const colorField=textileColor(color);
+  const distance=p=>{
+    const bucket=bins.get(gridKey(cell(p[0]),cell(p[1]),cell(p[2])));
+    if(!bucket)return 0.12;
+    let nearest=Infinity;
+    for(const index of bucket){
+      const tri=triangles[index];
+      nearest=Math.min(nearest,triangleDistanceSq(p,tri[0],tri[1],tri[2]));
+    }
+    return Math.sqrt(nearest)-thickness;
+  };
+  // One spatially indexed fabric shell per pattern panel: no thousands of
+  // disconnected overlapping SDF primitives and no volume hidden in the body.
+  s.part('clothes',()=>s.shape(distance,
+    [lo.map(v=>v-thickness*2),hi.map(v=>v+thickness*2)],
+    {color:colorField,mat:material,bone,k:0}));
 }
 
+/** A panel's initial coordinates are approximate; the actual fit is projected onto the sculpted anatomy. */
 /** Torso cloth panel sampled around the anatomical section profile. */
 export function torsoFabric(s,{y0=0.36,y1=0.55,clearance=0.01,color,material='cotton',bone='chest',angle0=-Math.PI,angle1=Math.PI,across=24,down=12}){
   const profile=[
@@ -330,7 +425,7 @@ export function standingCharacter({
   const rig = makeRig(1);
   return {
     name, scale, cell, budget, bones: rig.bones, materials: MATERIALS,
-    cells: { face: 0.0035, eyes: 0.0012, accessories: 0.0025, hair: 0.0035, clothes: 0.0035, fine: 0.0025 },
+    cells: { face: 0.0019, eyes: 0.00085, hands: 0.0018, accessories: 0.0022, hair: 0.003, clothes: 0.0035, fine: 0.002 },
     ambient: 0.24,
     sculpt(s) {
       buildSkin(s, { skin, eyeColor, brow, mood, girth, shoulders }, rig.J);
