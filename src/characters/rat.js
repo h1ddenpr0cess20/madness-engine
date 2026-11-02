@@ -10,6 +10,14 @@ import { quadruped } from './quadruped.js';
  */
 
 const FUR = coat({ over: '#6a6058', under: '#a89a8c', vary: 0.12, freq: 30, grain: 0.1, gfreq: 140 });
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+/** A brown rat: agouti brown above, darker along the spine, grey-white underneath, the change between them soft. */
+const COAT = (p, n) => {
+  let c = FUR(p, n);
+  c = blend(c, [0.3, 0.24, 0.2], smooth(0.5, 0.95, n[1]) * 0.45);
+  return c;
+};
 const PINK = coat({ over: '#e8a0a0', under: '#d08a8a', vary: 0.08, freq: 30 });
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 
@@ -26,7 +34,7 @@ export default quadruped({
   tail: { len: 0.26, rise: 0.05, r: 0.009, tip: 0.003, curl: 0.35 },
   ears: { kind: 'round', size: 1.15 },
   feet: 'claw',
-  paint: { body: FUR, tail: PINK, ears: PINK, feet: PINK, nose: '#e07a8a', eye: '#0a0606' },
+  paint: { body: COAT, head: COAT, snout: COAT, legs: COAT, under: '#cfc6bc', countershade: 0.75, tail: PINK, ears: PINK, feet: PINK, nose: '#e07a8a', eye: '#0a0606' },
   mats: { tail: 'hide', ears: 'hide', feet: 'hide' },
   style: { rate: 20, wag: 0.6, lift: 1.1, after(k, { clip }, T) {
     // Sniffing: the nose going, the head up.

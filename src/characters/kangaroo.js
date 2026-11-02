@@ -9,7 +9,28 @@ import { bands, coat } from '../models/skins.js';
  * 0.95 tiles tall.
  */
 
-const FUR = coat({ over: '#b0603a', under: '#e8cfa8', vary: 0.12, freq: 14, edge: [-0.2, 0.3] });
+const BASE = coat({ over: '#b0603a', under: '#e8cfa8', vary: 0.12, freq: 14, edge: [-0.2, 0.3] });
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+/**
+ * A red kangaroo's coat: rust over the back, cream underneath and down the
+ * insides of the arms and legs, a fine grain along it; on the face the
+ * pale stripe from the corner of the mouth back under the eye, the dark
+ * patch beside it, the muzzle darker toward the nose, the backs of the
+ * ears dark and their rims pale.
+ */
+const FUR = (p, n) => {
+  let c = BASE(p, n).map((v) => v * (0.94 + 0.12 * Math.sin(p[1] * 900 + p[0] * 300) ** 2));
+  if (p[1] > 0.54) {
+    const stripe = smooth(0.012, 0.004, Math.abs(p[1] - 0.578 + (p[2] - 0.1) * 0.25)) * smooth(0.06, 0.08, p[2]) * smooth(0.13, 0.11, p[2]) * smooth(0.4, 0.8, Math.abs(n[0]));
+    const patch = smooth(0.012, 0.004, Math.abs(p[1] - 0.592 + (p[2] - 0.1) * 0.2)) * smooth(0.07, 0.09, p[2]) * smooth(0.12, 0.1, p[2]) * smooth(0.4, 0.8, Math.abs(n[0]));
+    c = blend(c, [0.42, 0.22, 0.14], patch * 0.6);
+    c = blend(c, [0.94, 0.88, 0.78], stripe);
+    c = blend(c, [0.36, 0.22, 0.16], smooth(0.13, 0.155, p[2]) * 0.6);
+    c = blend(c, [0.3, 0.18, 0.12], smooth(0.6, 0.66, p[1]) * smooth(0.0, -0.6, n[2]) * 0.6);
+  }
+  return c;
+};
 const PALE = coat({ over: '#ecdcc0', under: '#d8c4a0', vary: 0.08, freq: 18 });
 const SHORTS = bands(1, 0.05, '#1a8a3a', '#f0c020', 0.18, 0.1);
 const GLOVE = { color: '#c81c24', mat: 'leather', k: 0.004 };

@@ -11,6 +11,19 @@ import { quadruped } from './quadruped.js';
  */
 
 const BLACK = coat({ over: '#1e1a1a', under: '#100c0c', vary: 0.1, freq: 12, grain: 0.06 });
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+/**
+ * The fighting bull's black: a brown sheen down the spine and over the
+ * hump of the neck, grey on the muzzle and round the eyes, duller under
+ * the belly, the curly poll a shade lighter.
+ */
+const COAT = (p, n) => {
+  let c = BLACK(p, n);
+  c = blend(c, [0.2, 0.11, 0.07], smooth(0.6, 0.98, n[1]) * smooth(0.38, 0.43, p[1]) * 0.35);
+  if (p[2] > 0.3) c = blend(c, [0.3, 0.28, 0.27], smooth(0.355, 0.385, p[2]) * smooth(-0.2, 0.4, n[2]) * 0.6);
+  return c;
+};
 const HORN = (p) => {
   // Pale at the root, darker to the point.
   const t = Math.min(1, Math.abs(p[0]) / 0.14);
@@ -31,8 +44,8 @@ export default quadruped({
   tail: { len: 0.22, rise: -1.3, r: 0.012, tip: 0.008 },
   ears: { kind: 'small', size: 0.9 },
   feet: 'hoof',
-  paint: { body: BLACK, feet: '#1a1410', nose: '#2a2424', eye: '#2a0a08' },
-  materials: { fur: { roughness: 0.55, sheen: 0.6, sheenColor: '#6a5040' } },
+  paint: { body: COAT, head: COAT, snout: COAT, legs: COAT, tail: BLACK, ears: BLACK, inner: '#3a2a26', feet: '#1a1410', nose: '#2a2424', eye: '#2a0a08', countershade: 0 },
+  materials: { fur: { roughness: 0.55, sheen: 0.4, sheenColor: '#40342e' } },
   style: { rate: 8, wag: 0.25, attack: 'charge', after(k, { clip }, T) {
     // Pawing the ground, the head low, swinging.
     if (clip === 'idle') {

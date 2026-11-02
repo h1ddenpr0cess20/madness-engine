@@ -294,6 +294,17 @@ function footOn(s, at, n, kind, r, o) {
 function noseOn(s, P, Hd, o) {
   const r = Hd.sr * 0.38, tip = add(add(P.S1, P.fwd, Hd.sr * 0.62), [0, Hd.sr * 0.22, 0]);
   const rot = [Math.asin(P.fwd[1]) * -1, 0, 0];
+  if (Hd.pad === false) {
+    // No pad (a camel's, a horse's): two slits of nostrils in the end of the muzzle, dark inside, and a split lip.
+    const end = add(P.S1, P.fwd, Hd.sr * 0.7);
+    for (const m of [1, -1]) {
+      const c = add(end, [m * Hd.sr * 0.42, Hd.sr * 0.2, -Hd.sr * 0.1]);
+      s.ellipsoid(c, [Hd.sr * 0.09, Hd.sr * 0.26, Hd.sr * 0.2], { op: 'sub', k: Hd.sr * 0.06, rot: [rot[0], 0, m * 0.5] });
+      s.paint((p) => Math.hypot((p[0] - c[0]) / 0.5, (p[1] - c[1]) / 1.3, p[2] - c[2]) - Hd.sr * 0.18, o.color, Hd.sr * 0.05);
+    }
+    s.box(add(end, [0, -Hd.sr * 0.45, 0]), [Hd.sr * 0.04, Hd.sr * 0.3, Hd.sr * 0.3], 0, { op: 'sub', k: Hd.sr * 0.04, rot });
+    return;
+  }
   s.part('nose', () => {
     s.ellipsoid(tip, [r * 1.25, r * 0.82, r * 0.78], { ...o, k: 0, rot });
     s.ellipsoid(add(tip, [0, r * 0.35, -r * 0.35]), [r * 1.05, r * 0.5, r * 0.7], { ...o, k: r * 0.3, rot });
