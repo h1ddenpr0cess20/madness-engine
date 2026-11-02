@@ -9,7 +9,28 @@ import { bands, coat } from '../models/skins.js';
  * 0.95 tiles tall.
  */
 
-const FUR = coat({ over: '#b0603a', under: '#e8cfa8', vary: 0.12, freq: 14, edge: [-0.2, 0.3] });
+const BASE = coat({ over: '#b0603a', under: '#e8cfa8', vary: 0.12, freq: 14, edge: [-0.2, 0.3] });
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+/**
+ * A red kangaroo's coat: rust over the back, cream underneath and down the
+ * insides of the arms and legs, a fine grain along it; on the face the
+ * pale stripe from the corner of the mouth back under the eye, the dark
+ * patch beside it, the muzzle darker toward the nose, the backs of the
+ * ears dark and their rims pale.
+ */
+const FUR = (p, n) => {
+  let c = BASE(p, n).map((v) => v * (0.94 + 0.12 * Math.sin(p[1] * 900 + p[0] * 300) ** 2));
+  if (p[1] > 0.54) {
+    const stripe = smooth(0.012, 0.004, Math.abs(p[1] - 0.578 + (p[2] - 0.1) * 0.25)) * smooth(0.06, 0.08, p[2]) * smooth(0.13, 0.11, p[2]) * smooth(0.4, 0.8, Math.abs(n[0]));
+    const patch = smooth(0.012, 0.004, Math.abs(p[1] - 0.592 + (p[2] - 0.1) * 0.2)) * smooth(0.07, 0.09, p[2]) * smooth(0.12, 0.1, p[2]) * smooth(0.4, 0.8, Math.abs(n[0]));
+    c = blend(c, [0.42, 0.22, 0.14], patch * 0.6);
+    c = blend(c, [0.94, 0.88, 0.78], stripe);
+    c = blend(c, [0.36, 0.22, 0.16], smooth(0.13, 0.155, p[2]) * 0.6);
+    c = blend(c, [0.3, 0.18, 0.12], smooth(0.6, 0.66, p[1]) * smooth(0.0, -0.6, n[2]) * 0.6);
+  }
+  return c;
+};
 const PALE = coat({ over: '#ecdcc0', under: '#d8c4a0', vary: 0.08, freq: 18 });
 const SHORTS = bands(1, 0.05, '#1a8a3a', '#f0c020', 0.18, 0.1);
 const GLOVE = { color: '#c81c24', mat: 'leather', k: 0.004 };
@@ -19,7 +40,7 @@ export default {
   scale: 1.5,
   cell: 0.0075,
   cells: { kit: 0.0042, eyes: 0.0024, fine: 0.0025, ears: 0.0024, nose: 0.0016 },
-  budget: 18000,
+  budget: 45000,
   bones: [
     ['root', null, [0, 0, 0]],
     ['hips', 'root', [0, 0.24, -0.02]],
@@ -72,17 +93,29 @@ export default {
       // The haunch, the shin forward to the knee, the heel back, and the long foot along the ground.
       s.ellipsoid([m * 0.065, 0.19, 0.02], [0.045, 0.075, 0.07], { ...F, bone: `thigh${S}`, k: 0.035, rot: [0.5, 0, 0] });
       s.limb([m * 0.07, 0.13, 0.08], [m * 0.07, 0.03, -0.05], 0.03, 0.018, { ...F, bone: `shin${S}`, k: 0.02 });
-      s.limb([m * 0.07, 0.02, -0.05], [m * 0.072, 0.014, 0.12], 0.018, 0.013, { ...F, bone: `foot${S}`, k: 0.012 });
+      // The foot: long and narrow, flat along the ground from the heel, the big toe with its claw out in front and a
+      // smaller toe beside it.
+      const x = m * 0.07, CLAW = { color: '#2a2018', mat: 'nose', bone: `foot${S}`, k: 0.002 };
+      s.flake([x, 0.02, -0.055], [x + m * 0.002, 0.013, 0.095], [0, 1, 0], 0.02, 0.017, 0.62, { ...F, bone: `foot${S}`, k: 0.012 });
+      s.limb([x + m * 0.002, 0.012, 0.09], [x + m * 0.003, 0.009, 0.142], 0.0115, 0.0085, { ...F, bone: `foot${S}`, k: 0.006 });
+      s.cone([x + m * 0.003, 0.004, 0.165], 0.006, 0.02, { ...CLAW, rot: [Math.PI / 2 + 0.3, 0, 0] });
+      s.limb([x + m * 0.015, 0.011, 0.085], [x + m * 0.02, 0.008, 0.118], 0.0075, 0.0058, { ...F, bone: `foot${S}`, k: 0.005 });
+      s.cone([x + m * 0.021, 0.004, 0.132], 0.0042, 0.014, { ...CLAW, rot: [Math.PI / 2 + 0.3, 0, 0] });
       // The short arms.
       s.limb([m * 0.055, 0.45, 0.06], [m * 0.065, 0.39, 0.1], 0.02, 0.016, { ...F, bone: `arm${S}`, k: 0.015 });
       s.limb([m * 0.065, 0.39, 0.1], [m * 0.065, 0.355, 0.145], 0.016, 0.014, { ...F, bone: `fore${S}`, k: 0.01 });
     }
     s.part('kit', () => {
-      // Boxing shorts, green and gold, a gold waistband.
-      s.ellipsoid([0, 0.235, -0.005], [0.092, 0.078, 0.092], { color: SHORTS, mat: 'cloth', bone: 'hips', k: 0.01 });
-      s.torus([0, 0.29, 0.0], 0.074, 0.01, { color: '#f0c020', mat: 'cloth', bone: 'hips', k: 0.004 });
-      for (const m of [1, -1]) s.limb([m * 0.065, 0.215, 0.0], [m * 0.068, 0.165, 0.035], 0.054, 0.05, { color: SHORTS, mat: 'cloth', bone: `thigh${m > 0 ? 'L' : 'R'}`, k: 0.01 });
-      s.box([0, 0.12, 0.0], [0.2, 0.05, 0.2], 0.01, { op: 'sub', k: 0.004 });
+      // Boxing shorts, green and gold: over the hips, the haunches and the seat, round the root of the tail (which comes
+      // out through a hole in the back), cut off at the legs, a gold waistband at the top.
+      const SH = { color: SHORTS, mat: 'cloth', k: 0.012 };
+      s.ellipsoid([0, 0.24, 0.0], [0.09, 0.11, 0.09], { ...SH, bone: 'hips' });
+      for (const m of [1, -1]) s.ellipsoid([m * 0.065, 0.19, 0.02], [0.054, 0.084, 0.079], { ...SH, bone: `thigh${m > 0 ? 'L' : 'R'}`, rot: [0.5, 0, 0] });
+      s.limb([0, 0.21, -0.06], [0, 0.17, -0.13], 0.06, 0.054, { ...SH, bone: 'tail' });
+      s.limb([0, 0.175, -0.12], [0, 0.1, -0.3], 0.047, 0.047, { op: 'sub', k: 0.004 });
+      s.box([0, 0.08, 0.0], [0.2, 0.07, 0.2], 0.01, { op: 'sub', k: 0.004, rot: [-0.35, 0, 0] });
+      s.box([0, 0.38, 0.0], [0.2, 0.075, 0.2], 0.01, { op: 'sub', k: 0.003 });
+      s.torus([0, 0.297, 0.0], 0.082, 0.01, { color: '#f0c020', mat: 'cloth', bone: 'hips', k: 0.004 });
       // The gloves: big and red, a white cuff, laced.
       for (const m of [1, -1]) {
         const S = m > 0 ? 'L' : 'R';

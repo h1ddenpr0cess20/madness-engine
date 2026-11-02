@@ -1,4 +1,6 @@
+import { rgb } from '../models/sdf.js';
 import { grainy } from '../models/skins.js';
+import { letters } from '../models/lettering.js';
 
 /**
  * The traffic, sculpted: a sedan, a hatchback, a pickup, a box truck, a
@@ -25,8 +27,9 @@ const MATERIALS = {
   lamp: { roughness: 0.15, clearcoat: 1, emissive: '#fff1c8', emissiveIntensity: 2.2 },
   tail: { roughness: 0.2, clearcoat: 1, emissive: '#ff2a14', emissiveIntensity: 1.6 },
 };
-const WHITE = '#f4f4f4', GLASS = '#141b26', TYRE = '#1c1c1f', CHROME = '#d8dce2', TRIM = '#202125', SHUT = '#3c3d42', BLACKOUT = '#121316';
+const WHITE = '#f4f4f4', GLASS = '#141b26', CHROME = '#d8dce2', TRIM = '#202125', SHUT = '#3c3d42', BLACKOUT = '#121316';
 
+const TREAD = rgb('#1a1a1d'), WALL = rgb('#26262a'), BEAD = rgb('#121214');
 const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
 
 // ——————————————————————————————————————— shapes
@@ -92,40 +95,90 @@ const slab = (s, a, b, r, o) => s.box([0, 1, 2].map((i) => (a[i] + b[i]) / 2), [
 // ——————————————————————————————————————— wheels
 
 /**
- * A wheel round the x axis at c, its face to `side` (+1: +x): the tyre with
- * its shoulders rounded, and in it a car's alloy (five spokes, the brake
- * dark behind them, a cap and nuts) or a truck's steel wheel (a dished disc
- * with its hand holes, a big hub, a ring of nuts).
+ * A wheel round the x axis at c, its face to `side` (+1: +x): the tyre
+ * turned from its profile — the tread with its grooves and blocks, the
+ * shoulders rounded, the sidewalls bulged, a raised ring round each — and
+ * in it a car's alloy (five twin spokes, the brake disc dark behind them,
+ * the lip polished, a cap and five nuts) or a truck's steel wheel (a dished
+ * disc with its hand holes, a big hub, a ring of nuts). From behind: the
+ * tyre's other sidewall and the back of the rim, its barrel and hub.
  */
 function tyre(s, c, r, w, side, { steel = false } = {}) {
-  const [cx, cy, cz] = c, face = cx + side * w / 2;
+  const [cx, cy, cz] = c, face = cx + side * w / 2, hw = w / 2;
   const turn = { rot: [0, 0, Math.PI / 2] };
-  s.cylinder(c, r, w / 2, { color: TYRE, mat: 'rubber', k: 0.004, round: w * 0.38, ...turn });
-  // The sidewall, and the rim dished into it.
-  s.torus([face - side * w * 0.12, cy, cz], r * 0.8, w * 0.1, { color: '#26262a', mat: 'rubber', k: 0.006, rot: [0, 0, Math.PI / 2] });
-  s.cylinder([face, cy, cz], r * 0.67, w * 0.32, { op: 'sub', k: 0.006, ...turn });
-  const at = (a, rr, x) => [x, cy + Math.cos(a) * rr, cz + Math.sin(a) * rr];
-  if (steel) {
-    const disc = face - side * w * 0.2;
-    s.torus([face - side * w * 0.14, cy, cz], r * 0.64, r * 0.045, { color: '#c4c8cc', mat: 'alloy', k: 0.004, rot: [0, 0, Math.PI / 2] });
-    s.cylinder([disc, cy, cz], r * 0.64, w * 0.06, { color: '#b8bcc2', mat: 'alloy', k: 0.006, ...turn });
-    for (let i = 0; i < 6; i++) s.cylinder(at((i / 6) * Math.PI * 2, r * 0.44, disc), r * 0.08, w * 0.12, { op: 'sub', k: 0.004, ...turn });
-    s.cylinder([disc + side * w * 0.06, cy, cz], r * 0.26, w * 0.1, { color: '#9aa0a8', mat: 'alloy', k: 0.006, round: 0.01, ...turn });
-    for (let i = 0; i < 8; i++) s.sphere(at((i / 8) * Math.PI * 2, r * 0.19, disc + side * w * 0.16), r * 0.035, { color: CHROME, mat: 'chrome', k: 0.002 });
-    s.cylinder([disc + side * w * 0.2, cy, cz], r * 0.1, w * 0.06, { color: CHROME, mat: 'chrome', k: 0.004, round: 0.008, ...turn });
-    return;
-  }
-  const back = face - side * w * 0.3;
-  // The brake behind the spokes, dark; the rim's lip; five spokes; the hub, its cap and nuts.
-  s.cylinder([back, cy, cz], r * 0.62, w * 0.05, { color: BLACKOUT, mat: 'trim', k: 0.004, ...turn });
-  s.torus([face - side * w * 0.1, cy, cz], r * 0.63, r * 0.05, { color: CHROME, mat: 'chrome', k: 0.004, rot: [0, 0, Math.PI / 2] });
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    s.box(at(a, r * 0.36, face - side * w * 0.17), [w * 0.1, r * 0.27, r * 0.075], 0.006, { color: '#c8ccd2', mat: 'alloy', k: 0.006, rot: [a, 0, 0] });
-  }
-  s.cylinder([face - side * w * 0.16, cy, cz], r * 0.2, w * 0.13, { color: '#b8bcc4', mat: 'alloy', k: 0.006, round: 0.008, ...turn });
-  for (let i = 0; i < 5; i++) s.sphere(at((i / 5) * Math.PI * 2 + 0.63, r * 0.12, face - side * w * 0.04), r * 0.028, { color: CHROME, mat: 'chrome', k: 0.002 });
-  s.sphere([face - side * w * 0.06, cy, cz], r * 0.07, { color: CHROME, mat: 'chrome', k: 0.004 });
+  const bead = r * (steel ? 0.66 : 0.68);
+  const blocks = steel ? 28 : 36;
+  // The tyre: in (across, out) it is a rounded slab from the bead to the tread, the sidewalls bulging, the tread cut.
+  s.shape((p) => {
+    const x = p[0] - cx, y = p[1] - cy, z = p[2] - cz, rho = Math.hypot(y, z), u = Math.abs(x);
+    const t = Math.min(1, Math.max(0, (rho - bead) / (r - bead)));
+    const bulge = hw * (0.96 + 0.1 * Math.sin(t * Math.PI));
+    const round = hw * 0.42;
+    const du = u - bulge + round, dr = Math.max(rho - r, bead - rho) + round;
+    let d = Math.min(Math.max(du, dr), 0) + Math.hypot(Math.max(du, 0), Math.max(dr, 0)) - round;
+    // The tread: two grooves round it, and the blocks between cut across.
+    if (rho > r - 0.02) {
+      const groove = Math.abs(u - hw * 0.34) - hw * 0.07;
+      const a = Math.atan2(z, y) * blocks / (Math.PI * 2) + (u > hw * 0.34 ? 0.5 : 0);
+      const sipe = (Math.abs(((a % 1) + 1) % 1 - 0.5) - 0.42) * (Math.PI * 2 * r / blocks);
+      const cut = Math.max(Math.min(groove, u < hw * 0.8 ? sipe : 1), r - 0.006 * (steel ? 1.4 : 1) - rho);
+      d = Math.max(d, -cut);
+    }
+    // A raised ring round each sidewall.
+    const ring = Math.max(Math.abs(rho - (bead + (r - bead) * 0.35)) - 0.0025, u - bulge - 0.0016);
+    return Math.min(d, ring);
+  }, [[cx - hw * 1.2, cy - r, cz - r], [cx + hw * 1.2, cy + r, cz + r]], { color: (p) => {
+    const rho = Math.hypot(p[1] - cy, p[2] - cz);
+    return rho > r - 0.004 ? TREAD : rho < bead + 0.006 ? BEAD : WALL;
+  }, mat: 'rubber', k: 0 });
+  // The rim in a part of its own, so where the metal meets the rubber is a clean edge.
+  s.part(`${s.current ?? 'body'}-rim`, () => {
+    const at = (a, rr, x) => [x, cy + Math.cos(a) * rr, cz + Math.sin(a) * rr];
+    const back = cx - side * hw * 0.55;
+    // The barrel of the rim, through from back to face, and its back lip.
+    s.shape((p) => {
+      const x = p[0] - cx, rho = Math.hypot(p[1] - cy, p[2] - cz);
+      return Math.max(Math.abs(rho - bead + 0.004) - 0.004, Math.abs(x) - hw * 0.92);
+    }, [[cx - hw, cy - bead, cz - bead], [cx + hw, cy + bead, cz + bead]], { color: '#8a8e96', mat: 'alloy', k: 0 });
+    s.torus([back, cy, cz], bead - 0.002, 0.0055, { color: '#9aa0a8', mat: 'alloy', k: 0.002, ...turn });
+    if (steel) {
+      const disc = face - side * hw * 0.38;
+      s.torus([face - side * hw * 0.16, cy, cz], bead - 0.004, r * 0.04, { color: '#c4c8cc', mat: 'alloy', k: 0.003, ...turn });
+      // The disc, dished in toward the hub, its hand holes, the hub standing proud, the nuts round it.
+      s.shape((p) => {
+        const x = (p[0] - disc) * side, rho = Math.hypot(p[1] - cy, p[2] - cz);
+        const dish = 0.012 * (1 - Math.min(1, rho / bead));
+        return Math.max(Math.abs(x - dish) - 0.006, rho - bead + 0.002);
+      }, [[cx - hw, cy - bead, cz - bead], [cx + hw, cy + bead, cz + bead]], { color: '#b8bcc2', mat: 'alloy', k: 0.004 });
+      for (let i = 0; i < 6; i++) s.ellipsoid(at((i / 6) * Math.PI * 2, r * 0.45, disc), [0.04, r * 0.085, r * 0.085], { op: 'sub', k: 0.003, rot: [(i / 6) * Math.PI * 2, 0, 0] });
+      s.cylinder([disc + side * 0.012, cy, cz], r * 0.27, 0.014, { color: '#9aa0a8', mat: 'alloy', k: 0.004, round: 0.006, ...turn });
+      for (let i = 0; i < 10; i++) {
+        const q = at((i / 10) * Math.PI * 2, r * 0.2, disc + side * 0.024);
+        s.cylinder(q, r * 0.03, 0.007, { color: CHROME, mat: 'chrome', k: 0.001, round: 0.002, ...turn });
+      }
+      s.cylinder([disc + side * 0.03, cy, cz], r * 0.11, 0.01, { color: CHROME, mat: 'chrome', k: 0.003, round: 0.006, ...turn });
+      // The hub's back, through the middle of the disc.
+      s.cylinder([back, cy, cz], r * 0.22, 0.01, { color: '#4a4e56', mat: 'alloy', k: 0.003, round: 0.004, ...turn });
+      return;
+    }
+    // The brake disc behind the spokes, drilled; the polished lip; five twin spokes; the hub, its cap and nuts.
+    s.cylinder([cx - side * hw * 0.1, cy, cz], bead * 0.86, 0.006, { color: '#4a4c52', mat: 'alloy', k: 0.002, ...turn });
+    s.cylinder([cx - side * hw * 0.1, cy, cz], bead * 0.42, 0.012, { color: BLACKOUT, mat: 'trim', k: 0.002, ...turn });
+    s.torus([face - side * hw * 0.2, cy, cz], bead + 0.002, r * 0.04, { color: CHROME, mat: 'chrome', k: 0.002, ...turn });
+    const sx = face - side * hw * 0.34;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      for (const off of [-0.11, 0.11]) {
+        const b = a + off;
+        // Each spoke from the hub out to the lip, a little dished, wider at the rim.
+        const p0 = at(a, r * 0.17, sx - side * 0.01), p1 = at(b, bead - 0.008, sx + side * 0.004);
+        s.flake(p0, p1, [side, 0, 0], r * 0.035, r * 0.05, 0.42, { color: '#c8ccd2', mat: 'alloy', k: 0.006 });
+      }
+    }
+    s.cylinder([sx, cy, cz], r * 0.22, hw * 0.28, { color: '#b8bcc4', mat: 'alloy', k: 0.006, round: 0.008, ...turn });
+    for (let i = 0; i < 5; i++) s.cylinder(at((i / 5) * Math.PI * 2 + 0.63, r * 0.13, sx + side * hw * 0.27), r * 0.022, 0.006, { color: CHROME, mat: 'chrome', k: 0.001, round: 0.002, ...turn });
+    s.sphere([sx + side * hw * 0.24, cy, cz], r * 0.065, { color: '#2a2c32', mat: 'chrome', k: 0.003 });
+  });
 }
 
 /** The wheels where `wheels` says, in their own part. */
@@ -137,7 +190,7 @@ function fitWheels(s, wheels, steel) {
 
 /** A wheel by itself, its hub at the origin, its face to +x: for `mountWheels`. */
 const wheelDef = (name, r, width, steel) => ({
-  name, r, width, bones: [['root', null, [0, 0, 0]]], cell: 0.022, materials: MATERIALS,
+  name, r, width, bones: [['root', null, [0, 0, 0]]], cell: 0.0068, cells: { 'body-rim': 0.0055 }, refine: 0.3, materials: MATERIALS,
   sculpt: (s) => tyre(s, [0, 0, 0], r, width, 1, { steel }),
 });
 export const wheel = wheelDef('wheel', 0.17, 0.085, false);
@@ -279,8 +332,6 @@ function car(s, spec, { withWheels = true, rust = null } = {}) {
       if (!bed) slab(s, [m * (hw - 0.02), ty - th + 0.005, tail + 0.04], [m * (hw + 0.004), ty + th - 0.005, tail + 0.11], 0.012, { color: '#d8241a', mat: 'tail', k: 0.006 });
       slab(s, [m * hw * (tw - 0.12), ty - th + 0.005, tail - 0.003], [m * hw * (tw - 0.02), ty - th + 0.035, tail + 0.03], 0.006, { color: '#f4f2ee', mat: 'trim', k: 0.003 });
     });
-    // Number plates.
-    for (const [z, out] of [[nose, 1], [tail, -1]]) slab(s, [-0.1, ly - 0.1 + (out < 0 ? 0.04 : 0), z - 0.004], [0.1, ly - 0.05 + (out < 0 ? 0.04 : 0), z + out * 0.012], 0.004, { color: '#ecebe2', mat: 'trim', k: 0.002 });
     // The exhaust, out under the back.
     s.cylinder([hw * 0.55, spec.sill + 0.04, tail + 0.02], 0.022, 0.05, { color: CHROME, mat: 'chrome', k: 0.004, round: 0.008, rot: [Math.PI / 2, 0, 0] });
     // Black sills between the arches.
@@ -302,7 +353,20 @@ function car(s, spec, { withWheels = true, rust = null } = {}) {
       slab(s, [-0.09, belt - 0.07, tail - 0.01], [0.09, belt - 0.04, tail + 0.01], 0.008, { color: TRIM, mat: 'trim', k: 0.003 });
     }
   });
+  plates(s, ly - 0.075, hl + 0.005, -hl - 0.005, spec.plate ?? 'MDN 26');
   if (withWheels) fitWheels(s, wheels, false);
+}
+
+/** Number plates, front and back, `y` their middle, with their letters on: in a part of their own, fine enough to read. */
+function plates(s, y, nose, tail, text, { back = 0.04, w = 0.1 } = {}) {
+  s.part('plates', () => {
+    for (const [z, out] of [[nose, 1], [tail, -1]]) {
+      const yc = y + (out < 0 ? back : 0), face = z + out * 0.012;
+      slab(s, [-w, yc - 0.025, z - 0.004], [w, yc + 0.025, face], 0.004, { color: '#ecebe2', mat: 'trim', k: 0.002 });
+      s.paint((p) => Math.max(Math.abs(Math.abs(p[0]) - w + 0.004) - 0.0025, Math.abs(p[1] - yc) - 0.024, (face - p[2]) * out - 0.003), '#16161a', 0.001);
+      letters(s, text, { at: [0, yc - 0.014, face - out * 0.002], right: [out, 0, 0], size: 0.028, width: 0.0032, color: '#16161a', depth: 0.006, spacing: 0.26, aspect: 0.55 });
+    }
+  });
 }
 
 const SEDAN = {
@@ -329,7 +393,7 @@ const PICKUP = {
 /** The full vehicle and its `body` without the wheels. */
 function vehicle(name, sculpt, spec, extra = {}) {
   const def = {
-    name, bones: [['root', null, [0, 0, 0]]], cell: 0.045, cells: { wheels: 0.026, glass: 0.024, detail: 0.022, wells: 0.04, fittings: 0.032 }, materials: MATERIALS,
+    name, bones: [['root', null, [0, 0, 0]]], cell: 0.032, cells: { wheels: 0.012, 'wheels-rim': 0.01, glass: 0.02, detail: 0.013, wells: 0.032, fittings: 0.02, plates: 0.0042 }, refine: 0.4, materials: MATERIALS,
     wheels: wheelsOf(spec), wheel: spec.wheel ?? 'wheel',
     sculpt: (s) => sculpt(s, { withWheels: true }), ...extra,
   };
@@ -483,9 +547,9 @@ function truckDef(name, spec, extra) {
   def.wheels = def.body.wheels = truckWheels(spec);
   return def;
 }
-const TRUCK_CELLS = { wheels: 0.03, glass: 0.03, detail: 0.024, wells: 0.04, fittings: 0.034 };
-export const boxtruck = truckDef('boxtruck', BOXTRUCK, { cell: 0.05, cells: TRUCK_CELLS });
-export const tanker = truckDef('tanker', TANKER, { cell: 0.055, cells: TRUCK_CELLS });
+const TRUCK_CELLS = { wheels: 0.014, 'wheels-rim': 0.012, glass: 0.022, detail: 0.018, wells: 0.034, fittings: 0.024, plates: 0.0042 };
+export const boxtruck = truckDef('boxtruck', BOXTRUCK, { cell: 0.04, cells: TRUCK_CELLS, refine: 0.4 });
+export const tanker = truckDef('tanker', TANKER, { cell: 0.042, cells: TRUCK_CELLS, refine: 0.4 });
 
 /** Which model each kind of traffic is drawn with. */
 export const VEHICLES = { sedan, hatchback, pickup, junker, boxtruck, tanker };

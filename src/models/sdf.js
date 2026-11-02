@@ -678,7 +678,10 @@ function onto(sculpt, p, reach, e) {
  * the parts round it.
  */
 export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, shade = null, refine = 0.3, shadow = sculpt } = {}) {
-  const [lo, hi] = sculpt.bounds(cell * 3);
+  // The grid starts a fraction of a step off the bounds: else a flat face at the edge of a shape's box (the foot
+  // of a box, the face of a disc) lies exactly on a plane of samples, where the field is zero and its side a toss-up.
+  const [lo0, hi] = sculpt.bounds(cell * 3);
+  const lo = lo0.map((v) => v - cell * 0.37);
   const C = 4;
   sculpt.prepare(lo, hi, Math.max(cell * C * 2, 0.035));
   const nx = Math.ceil((hi[0] - lo[0]) / cell), ny = Math.ceil((hi[1] - lo[1]) / cell), nz = Math.ceil((hi[2] - lo[2]) / cell);

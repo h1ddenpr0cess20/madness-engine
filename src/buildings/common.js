@@ -276,7 +276,8 @@ export function logPile(m, x, y, z, { len = 0.34, rows = 3, r = 0.035, yaw = 0 }
       for (let k = 0; k < rows - row; k++) {
         const zz = (k - (rows - row - 1) / 2) * r * 2.05;
         m.push().rotateZ(Math.PI / 2);
-        m.cylinder('bark', row * r * 1.8 + r, -len / 2, zz, r, r, len, 7, '#6a4a2c', { smooth: true, capCol: '#c9a26a' });
+        // Both ends cut: lying down, the 'bottom' is the near end, and must be closed as well as the top.
+        m.cylinder('bark', row * r * 1.8 + r, -len / 2, zz, r, r, len, 7, '#6a4a2c', { smooth: true, capCol: '#c9a26a', bottom: true });
         m.pop();
       }
     }
@@ -289,14 +290,27 @@ export function haystack(m, x, y, z, r = 0.16) {
   m.sphere('thatch', x, y + r * 0.95, z, r * 0.6, r * 0.2, r * 0.6, PALETTE.hay, { detail: 0 });
 }
 
-/** A hanging sign on a bracket from a face: an arm out from the wall and a board hung from it. */
+/**
+ * A hanging sign on a bracket from a face: an iron arm out from the wall with
+ * a brace under it, and a board hung from the arm on two rods, a darker panel
+ * on each side of it. The bracket is kept under the eaves, so it is fixed to
+ * the wall and not to the roof.
+ */
 export function sign(m, f, u, v, col = '#c9a227') {
-  m.beam('metal', at(f, u, v, 0.01), at(f, u, v, 0.24), 0.016, '#2a2a2a');
-  const c = at(f, u, v - 0.12, 0.17);
-  const half = (a) => [Math.abs(a[0]), Math.abs(a[1]), Math.abs(a[2])];
-  const n = half(f.N), up = half(f.V), side = half(f.U);
-  const ext = [0, 1, 2].map((i) => n[i] * 0.075 + up[i] * 0.065 + side[i] * 0.012);
-  m.box('wood', c[0] - ext[0], c[1] - ext[1], c[2] - ext[2], c[0] + ext[0], c[1] + ext[1], c[2] + ext[2], col, { skip: [] });
+  v = Math.min(v, (f.h ?? Infinity) - EAVES - 0.05);
+  const iron = '#2a2a2a';
+  m.beam('metal', at(f, u, v, 0), at(f, u, v, 0.27), 0.016, iron);
+  m.beam('metal', at(f, u, v - 0.08, 0), at(f, u, v, 0.12), 0.012, iron);
+  m.box('metal', ...bounds(f, u - 0.03, u + 0.03, v - 0.1, v + 0.02, 0, 0.012), iron, { skip: [] });
+  for (const o of [0.1, 0.24]) m.beam('metal', at(f, u, v, o), at(f, u, v - 0.05, o), 0.006, iron);
+  // The board, its long side out from the wall; on each face a panel of another colour.
+  const box = (o0, o1, v0, v1, half, c) => {
+    const lo = at(f, u, v0, o0), hi = at(f, u, v1, o1);
+    const s = [Math.abs(f.U[0]) * half, Math.abs(f.U[1]) * half, Math.abs(f.U[2]) * half];
+    m.box('wood', Math.min(lo[0], hi[0]) - s[0], Math.min(lo[1], hi[1]), Math.min(lo[2], hi[2]) - s[2], Math.max(lo[0], hi[0]) + s[0], Math.max(lo[1], hi[1]), Math.max(lo[2], hi[2]) + s[2], c, { skip: [] });
+  };
+  box(0.085, 0.255, v - 0.19, v - 0.05, 0.012, col);
+  box(0.105, 0.235, v - 0.17, v - 0.07, 0.016, '#3a2614');
 }
 
 /** A flagstaff with a flag, which flies from the top. Returns the top. */

@@ -1,5 +1,5 @@
-import { cloth, person } from './person.rocknroller.js';
-import { beret, glasses } from './wardrobe.rocknroller-ii.js';
+import { axisRot, bag, cloth, person, rigid, shell, strap, tube } from './person.js';
+import { beret, glasses, suitFront } from './wardrobe.js';
 
 /**
  * The Director: a big man of the old school, in a beret, round dark
@@ -12,7 +12,8 @@ import { beret, glasses } from './wardrobe.rocknroller-ii.js';
 
 const silk = cloth('#f4ead0', '#c8b890', { vary: 0.08 });
 const twill = cloth('#c8a878', '#8a7048');
-const BOOT = { color: '#1a100a', mat: 'leather' };
+/** The megaphone's mouthpiece, at his lips (carried by the head). */
+const HORN = [0, 0.612, 0.122];
 
 export default person({
   name: 'director',
@@ -21,54 +22,43 @@ export default person({
   skin: '#e2aa88',
   shape: { legs: 0.98, torso: 1.04, head: 1.04, girth: 1.22, hips: 1.1 },
   belly: 1.5,
-  look: { torso: silk, sleeve: silk, cuff: silk, legs: twill, boot: '#1a100a', belt: '#2a1a10', buckle: '#d8b850', sole: '#08060a' },
+  look: { torso: silk, sleeve: silk, cuff: silk, legs: twill, boot: '#1a100a', belt: '#2a1a10', buckle: '#d8b850', sole: '#08060a', boots: true },
   mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'cloth', legs: 'cloth', boot: 'leather' },
   face: { eyeColor: '#2a1a10', brow: '#3a2a20', mood: 1, jaw: 1.18, blush: 0.6 },
   hair: { color: cloth('#4a3a2e', '#2a2018'), locks: [[[0.08, 0.7, -0.02], [0.11, 0.64, -0.06], 0.028], [[-0.08, 0.7, -0.02], [-0.11, 0.64, -0.06], 0.028], [[0, 0.72, -0.09], [0, 0.64, -0.11], 0.04]] },
   style: {
     attack: 'smite', heavy: 0.7, twist: 0,
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, reach }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
-      // The megaphone up to his mouth; the other hand framing the shot, thumb and finger, squinting through it.
-      k.turn('armR', -1.25, 0, -0.1);
-      k.turn('foreR', -1.35, 0, 0);
-      k.turn('armL', -1.6 + Math.sin(T * 0.8) * 0.15, 0, 0.35);
+      // The megaphone at his mouth, the hand under it on its grip; the other hand up framing the shot.
+      k.turn('armR', -0.9, 0, -0.3); k.turn('foreR', -1.6, 0, 0);
+      reach?.(k, 'R', 'head', [HORN[0], HORN[1] - 0.05, HORN[2] + 0.035]);
+      k.turn('armL', -1.5 + Math.sin(T * 0.8) * 0.12, 0, 0.55);
       k.turn('foreL', -0.4, 0, 0);
       k.turn('handL', 0, 0, 0.9);
       k.turn('chest', -0.05, Math.sin(T * 0.6) * 0.15, 0);
       k.turn('head', -0.06, Math.sin(T * 0.6) * 0.2, 0);
     },
   },
-  extras(s, J) {
+  extras(s) {
     beret(s, { color: '#14141a' });
     glasses(s, { rim: '#1a1208', round: true, dark: true, size: 0.026 });
-    s.part('kit', () => {
-      // The shirt open at the neck, and the cravat: paisley red.
-      s.ellipsoid([0, 0.52, 0.06], [0.035, 0.025, 0.02], { color: '#e2aa88', mat: 'skin', bone: 'chest', k: 0.008 });
-      s.limb([0, 0.53, 0.062], [0.006, 0.47, 0.085], 0.016, 0.022, { color: '#b8202c', mat: 'cloth', bone: 'chest', k: 0.006 });
-      // Jodhpurs: the thighs flared out like wings.
-      for (const m of [1, -1]) {
-        const S = m > 0 ? 'L' : 'R';
-        s.ellipsoid([m * 0.09, 0.25, 0.0], [0.05, 0.06, 0.05], { color: twill, mat: 'cloth', bone: `thigh${S}`, k: 0.03 });
-        // Riding boots to the knee.
-        const kn = J[`knee${S}`], a = J[`ankle${S}`];
-        s.limb([kn[0], kn[1] - 0.005, kn[2]], [a[0], a[1] + 0.02, a[2]], 0.038, 0.032, { ...BOOT, bone: `shin${S}`, k: 0.008 });
-      }
-      // The megaphone: from the mouth end in his fist to the bell, sculpted up and back so that
-      // with the arm up at his mouth it points out ahead of him; a red rim round the bell.
-      const r = J.handR, tip = [r[0], r[1] + 0.02, r[2] + 0.01];
-      const along = (d) => [tip[0], tip[1] + d * 0.515, tip[2] - d * 0.857];
-      s.limb(tip, along(0.17), 0.016, 0.06, { color: '#e8e4d8', mat: 'plastic', bone: 'handR', k: 0.006 });
-      s.limb(along(0.166), along(0.172), 0.064, 0.064, { color: '#c82030', mat: 'plastic', bone: 'handR', k: 0.003 });
-      s.limb(along(0.174), along(0.176), 0.056, 0.056, { color: '#2a2a2e', mat: 'plastic', bone: 'handR', k: 0.002 });
-      // The viewfinder on its cord.
-      s.torus([0, 0.5, 0.02], 0.07, 0.003, { color: '#101014', mat: 'cloth', bone: 'chest', k: 0.001, rot: [0.9, 0, 0] });
-      s.box([0.0, 0.42, 0.115], [0.014, 0.014, 0.025], 0.005, { color: '#16161a', mat: 'metal', bone: 'spine', k: 0.002 });
-    });
-    s.part('fine', () => {
-      // The boots' shine, a pale stripe; the viewfinder's glass.
-      s.cylinder([0, 0.42, 0.14], 0.009, 0.002, { color: '#8ab0e0', mat: 'glass', bone: 'spine', k: 0, rot: [Math.PI / 2, 0, 0] });
-    });
+    // The silk shirt open at the neck, the red cravat knotted in it.
+    suitFront(s, { shirt: '#e2aa88', tie: null, low: 0.47, belly: 1.5, b: 1.38 });
+    shell(s, (p) => Math.max(Math.abs(p[0]) - 0.022 - Math.max(0, 0.5 - p[1]) * 0.15, Math.abs(p[1] - 0.505) - 0.04, 0.03 - p[2]), { color: '#b8202c', mat: 'cloth', part: 'outer2', thick: 0.006, lift: 0.001, over: ['outer', 'top'], bone: 'chest', k: 0.003 });
+    s.part('kit', () => s.ellipsoid([0, 0.535, 0.07], [0.018, 0.012, 0.012], { color: '#b8202c', mat: 'cloth', bone: 'chest', k: 0.004 }));
+    // The viewfinder on its cord round the neck, on his belly.
+    strap(s, [[0, 0.552, -0.06], [0.05, 0.545, -0.03], [0.06, 0.53, 0.03], [0.03, 0.46, 0.11], [0.0, 0.43, 0.13], [-0.03, 0.46, 0.11], [-0.06, 0.53, 0.03], [-0.05, 0.545, -0.03], [0, 0.552, -0.06]], { width: 0.004, thick: 0.002, round: true, color: '#101014', over: ['top', 'outer', 'head'], bone: 'chest' });
+    const vf = bag(s, [0, 0.41, 0.14], { size: [0.014, 0.022, 0.014], color: '#16161a', flap: false, over: ['top', 'straps'], bone: 'spine' });
+    s.part('fine', () => s.cylinder(vf.c.map((v, i) => v + vf.n[i] * 0.015), 0.009, 0.002, { color: '#8ab0e0', mat: 'glass', bone: 'spine', k: 0, rot: axisRot(vf.n) }));
+    // The megaphone: its mouthpiece at his lips, its cream cone out ahead, a red rim round the bell, the pistol grip
+    // under it in his fist.
+    const [x, y, z] = HORN;
+    rigid(s, HORN, () => s.part('kit', () => {
+      tube(s, [x, y, z], [x, y + 0.008, z + 0.17], 0.017, 0.06, { color: '#e8e4d8', mat: 'plastic', bone: 'head', k: 0.004 });
+      tube(s, [x, y + 0.0075, z + 0.165], [x, y + 0.008, z + 0.175], 0.063, 0.063, { color: '#c82030', mat: 'plastic', bone: 'head', k: 0.002 });
+      s.limb([x, y - 0.012, z + 0.04], [x, y - 0.06, z + 0.035], 0.009, 0.009, { color: '#2a2a2e', mat: 'plastic', bone: 'head', k: 0.003 });
+    }));
   },
 });

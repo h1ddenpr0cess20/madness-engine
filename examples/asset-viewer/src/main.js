@@ -154,6 +154,12 @@ async function show(item) {
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
+    // A flyer's origin is its middle: lift it clear of the floor rather than half under it. Only characters fly: a
+    // building's footings, a tree's roots and a river's bed go below the ground on purpose, and stay there.
+    if (!built.noFloor && !built.frame && item.kind === 'object' && item.category === 'Characters') {
+      const lo = boundsOf(built.object).min[1];
+      if (lo < -0.005) built.object.position.y += -lo + 0.08;
+    }
     if (built.dark) {
       // A light wants a dark room to show in; the Lighting panel can bring it back.
       key.intensity = rest.key * 0.06;
@@ -161,6 +167,9 @@ async function show(item) {
       if (fill) fill.intensity = 0;
       syncLights();
     }
+    // An avatar is shown in its own world: its sky behind it and what it reflects round it, not the studio's.
+    if (built.sky) stage.setSky(built.sky);
+    if (built.environment) scene.environment = built.environment;
     if (item.kind === 'sky') { stage.setSky(built.canvas); stage.setRoom(built.canvas); }
     if (item.kind === 'room') stage.setRoom(built.canvas);
     if (item.kind === 'mood') { stage.setMood(item.mood); syncLights(); }
@@ -382,20 +391,33 @@ const catalog = await (async () => {
 })();
 await loadServerFlags();
 
-const categories = ['All', ...new Set(catalog.map((i) => i.category))];
-$('category').replaceChildren(...categories.map((c) => el('option', { value: c }, c === 'All' ? `All (${catalog.length})` : `${c} (${catalog.filter((i) => i.category === c).length})`)));
+// Every category, and under it each of its shelves (when it has more than one), to pick from.
+const categories = [...new Set(catalog.map((i) => i.category))];
+const shelfOf = (i) => (i.group === i.category.toLowerCase() ? '' : i.group);
+$('category').replaceChildren(
+  el('option', { value: 'All' }, `All (${catalog.length})`),
+  ...categories.flatMap((c) => {
+    const items = catalog.filter((i) => i.category === c);
+    const shelves = [...new Set(items.map(shelfOf))].filter(Boolean);
+    return [
+      el('option', { value: c }, `${c} (${items.length})`),
+      ...(shelves.length > 1 ? shelves.map((g) => el('option', { value: `${c}\u203a${g}` }, `\u00a0\u00a0\u203a ${g} (${items.filter((i) => shelfOf(i) === g).length})`)) : []),
+    ];
+  }),
+);
 
 let filtered = [];
 function applyFilter() {
   const q = $('search').value.trim().toLowerCase();
   const cat = $('category').value;
   const only = $('onlyflagged').checked;
-  filtered = catalog.filter((i) => (cat === 'All' || i.category === cat) && (!only || flags[i.id]) && (!q || `${i.name} ${i.source} ${i.group}`.toLowerCase().includes(q)));
+  const [catName, shelfName] = cat.split('\u203a');
+  filtered = catalog.filter((i) => (cat === 'All' || (i.category === catName && (shelfName === undefined || shelfOf(i) === shelfName))) && (!only || flags[i.id]) && (!q || `${i.name} ${i.source} ${i.group}`.toLowerCase().includes(q)));
   const list = $('list');
   list.replaceChildren();
   let group = null;
   for (const item of filtered) {
-    const g = item.group === item.category.toLowerCase() ? item.category : `${item.category} › ${item.group}`;
+    const g = shelfOf(item) ? `${item.category} › ${item.group}` : item.category;
     if (g !== group) { group = g; list.append(el('h4', {}, g)); }
     const row = el('div', { className: 'row', title: item.source }, el('span', {}, item.name), el('span', { className: 'flagmark' }, flags[item.id] ? '⚑' : ''));
     row.dataset.id = item.id;
@@ -573,7 +595,7 @@ addEventListener('keydown', (e) => {
   else if (/^[1-8]$/.test(k)) frame(VIEWS[k - 1][1], VIEWS[k - 1][2]);
 });
 
-window.assetViewer = { catalog, show, options };
+window.assetViewer = { catalog, show, options, renderer, scene, camera, controls };
 applyFilter();
 const start = catalog.find((i) => i.id === decodeURIComponent(location.hash.slice(1))) ?? filtered[0];
 if (start) show(start);

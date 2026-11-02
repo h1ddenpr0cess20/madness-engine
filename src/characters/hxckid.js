@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person } from './person.js';
 import { chestPrint } from './metalwear.js';
 
 /**
@@ -14,9 +14,10 @@ export default person({
   b: 1.0,
   shape: { legs: 0.98, girth: 0.96, head: 1.02 },
   skin: '#e2b494',
-  look: { torso: cloth('#f4f2ee', '#c8c4bc'), sleeve: cloth('#f4f2ee', '#c8c4bc'), cuff: '#e2b494', legs: cloth('#6a6a70', '#44444a'), boot: '#f4f2ee', sole: '#16161a' },
+  look: { torso: cloth('#f4f2ee', '#c8c4bc'), sleeve: cloth('#f4f2ee', '#c8c4bc'), cuff: '#e2b494', legs: cloth('#2a2a30', '#141418'), boot: '#f4f2ee', sole: '#16161a', belt: '#16161a', tuck: false },
   mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'skin', legs: 'cloth', boot: 'leather' },
   face: { eyeColor: '#3a2a1e', brow: '#3a2a1e', mood: 1, blush: 0.4 },
+  hair: { color: cloth('#3a2a1e', '#22180e'), cap: [0.106, 0.088, 0.106], locks: [] },
   style: {
     attack: 'punch',
     after(k, { clip, time, seed }) {
@@ -26,8 +27,8 @@ export default person({
       const step = Math.sin(T * 6);
       k.turn('hips', 0, step * 0.25, step * 0.05);
       k.turn('chest', 0.1, -step * 0.3, 0);
-      hold(k, 'armR', -1.2 + step * 0.2, 0, -0.4); hold(k, 'foreR', -1.7, 0, 0);
-      hold(k, 'armL', -1.2 - step * 0.2, 0, 0.4); hold(k, 'foreL', -1.7, 0, 0);
+      hold(k, 'armR', -0.55 + step * 0.2, 0, -0.35); hold(k, 'foreR', -1.65, 0, 0);
+      hold(k, 'armL', -0.55 - step * 0.2, 0, 0.35); hold(k, 'foreL', -1.65, 0, 0);
       k.move('root', 0, Math.abs(step) * 0.01, 0);
     },
   },

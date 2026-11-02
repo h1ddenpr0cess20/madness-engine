@@ -1,5 +1,5 @@
-import { cloth, hold, person } from './person.metroll.js';
-import { moustache } from './wardrobe.js';
+import { cloth, hold, person, plate, shell } from './person.js';
+import { cap, moustache } from './wardrobe.js';
 
 /**
  * The Foreman: a flat cap, a brown warehouse coat down to the knee, a
@@ -32,20 +32,28 @@ export default person({
       k.turn('head', 0.1, Math.sin(T * 0.5) * 0.25, 0);
     },
   },
-  extras(s) {
-    moustache(s, { color: '#5a5a5a', wide: 1.1 });
-    s.part('kit', () => {
-      // The flat cap: a soft wide crown and a short stiff peak.
-      s.ellipsoid([0, 0.752, 0.005], [0.115, 0.04, 0.12], { color: '#4a4034', mat: 'cloth', bone: 'head', k: 0.01 });
-      s.flake([0, 0.74, 0.08], [0, 0.735, 0.14], [0, 1, 0], 0.075, 0.06, 0.12, { color: '#3a3228', mat: 'cloth', bone: 'head', k: 0.005 });
-      // The pencil behind his ear.
-      s.limb([0.1, 0.69, 0.0], [0.108, 0.74, 0.02], 0.004, 0.004, { color: '#e8c030', mat: 'plastic', bone: 'head', k: 0.001 });
-      // Big pockets on the coat, and the clipboard.
-      for (const m of [1, -1]) s.box([m * 0.06, 0.35, 0.068], [0.025, 0.028, 0.008], 0.004, { color: '#6a563a', mat: 'cloth', bone: 'spine', k: 0.002 });
-      // The clipboard, held up in front of him in the left hand, tipped back to write on.
-      s.box([0.04, 0.43, 0.165], [0.045, 0.06, 0.005], 0.003, { color: '#8a6a3a', mat: 'leather', bone: 'chest', k: 0.002, rot: [-0.5, 0, 0] });
-      s.box([0.04, 0.432, 0.171], [0.038, 0.05, 0.002], 0.002, { color: '#f4f0e6', mat: 'paper', bone: 'chest', k: 0.001, rot: [-0.5, 0, 0] });
-      s.box([0.04, 0.483, 0.198], [0.014, 0.005, 0.004], 0.002, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.001, rot: [-0.5, 0, 0] });
-    });
+  extras(s, J, { pose }) {
+    moustache(s, { color: '#5a5a5a', wide: 1.2, droop: 0.4 });
+    // The flat cap.
+    cap(s, { color: '#4a4034', peak: '#3a3228', flat: true });
+    // Big patch pockets on the coat, each with its flap.
+    for (const m of [1, -1]) {
+      shell(s, (p) => Math.max(Math.abs(p[0] - m * 0.06) - 0.026, Math.abs(p[1] - 0.35) - 0.03, 0.02 - p[2]), { color: coat, mat: 'cloth', part: 'outer', thick: 0.004, lift: 0.0005, over: ['top'], bone: 'spine' });
+      shell(s, (p) => Math.max(Math.abs(p[0] - m * 0.06) - 0.028, Math.abs(p[1] - 0.373) - 0.009, 0.02 - p[2]), { color: '#5a4a32', mat: 'cloth', part: 'outer2', thick: 0.003, lift: 0.0, over: ['outer'], bone: 'spine' });
+    }
+    // The clipboard held up in front of him in the left hand, tipped back to write on; the pencil in the right.
+    const L = pose.grip('L'), R = pose.grip('R');
+    const across = L.along, length = L.up.map((v) => -v);
+    const face = [across[1] * length[2] - across[2] * length[1], across[2] * length[0] - across[0] * length[2], across[0] * length[1] - across[1] * length[0]];
+    const board = L.at(0, 0, 0).map((v, i) => v + length[i] * 0.058 - L.out[i] * 0.004);
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      plate(s, board, across, length, [0.042, 0.058, 0.0028], 0.002, { color: '#8a6a3a', mat: 'leather', k: 0.001 });
+      plate(s, board.map((v, i) => v + face[i] * 0.0032), across, length, [0.036, 0.05, 0.0009], 0.0006, { color: '#f4f0e6', mat: 'paper', k: 0.0005 });
+      plate(s, board.map((v, i) => v + face[i] * 0.004 - length[i] * 0.052), across, length, [0.015, 0.006, 0.0025], 0.0015, { color: '#c8ccd4', mat: 'metal', k: 0.0005 });
+    }));
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(R.at(-0.045), R.at(0.05), 0.0038, 0.0038, { color: '#e8c030', mat: 'plastic', k: 0.001 });
+      s.limb(R.at(-0.045), R.at(-0.056), 0.0038, 0.0008, { color: '#3a2a1a', mat: 'leather', k: 0.0008 });
+    }));
   },
 });

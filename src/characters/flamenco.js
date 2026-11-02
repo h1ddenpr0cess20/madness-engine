@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.js';
+import { cloth, hold, onBody, person, skirt, strap, trunk } from './person.js';
 
 /**
  * The Flamenco Dancer: out of a tablao in Seville, in the traje de
@@ -22,10 +22,10 @@ export default person({
   b: 0.92,
   shape: { legs: 1.06, girth: 0.86, hips: 1.0 },
   skin: '#e0a880',
-  look: { torso: SPOTS, sleeve: SPOTS, cuff: '#e0a880', legs: SPOTS, boot: '#14100a', sole: '#0a0806' },
+  look: { torso: SPOTS, sleeve: SPOTS, cuff: '#e0a880', legs: SPOTS, shin: '#e0a880', skirt: { top: 0.38, hem: 0.03, flare: 1.42 }, boot: '#14100a', sole: '#0a0806' },
   mats: { cuff: 'skin', boot: 'leather' },
   face: { eyeColor: '#2a1a0a', brow: '#14100a', mood: 1, jaw: 0.9 },
-  hair: { color: cloth('#14100a', '#0a0806'), cap: [0.106, 0.09, 0.106] },
+  hair: { color: cloth('#14100a', '#0a0806'), cap: [0.104, 0.092, 0.104], front: 0.06 },
   style: {
     attack: 'smite', twist: 0,
     after(k, { clip, time, seed }) {
@@ -45,26 +45,32 @@ export default person({
       }
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
+    const at = trunk(0.92, 0);
+    // The skirt's ruffles: two tiers of them over its lower half, each wider than the one above, flouncing.
+    skirt(s, at, { top: 0.2, hem: 0.1, flare: 1.42, color: SPOTS, part: 'outer', b: 0.92, bump: [0.004, 42] });
+    skirt(s, at, { top: 0.11, hem: 0.022, flare: 1.62, color: SPOTS, part: 'outer2', b: 0.92, bump: [0.005, 36] });
+    // The shawl: black, round the shoulders and knotted at the breast, its fringe hanging from its edge.
+    const shawl = strap(s, [[0, 0.552, -0.07], [0.07, 0.555, -0.045], [0.105, 0.52, 0.0], [0.07, 0.49, 0.06], [0, 0.465, 0.08], [-0.07, 0.49, 0.06], [-0.105, 0.52, 0.0], [-0.07, 0.555, -0.045]],
+      { closed: true, width: 0.042, thick: 0.005, color: '#14100a', mat: 'cloth', over: ['top', 'sleeves', 'head'] });
     s.part('kit', () => {
-      // The skirt: tight over the hips, then three tiers of ruffles flaring to the floor.
-      s.cone([0, 0.52, 0.0], 0.13, 0.4, { color: SPOTS, mat: 'cloth', bone: 'hips', k: 0.02 });
-      for (const [y, r] of [[0.2, 0.1], [0.12, 0.135], [0.04, 0.17]]) s.torus([0, y, 0], r, 0.026, { color: SPOTS, mat: 'cloth', bone: 'hips', k: 0.02, bump: [0.004, 40] });
-      // The shawl: black, round the shoulders, the fringe down.
-      s.torus([0, 0.5, 0.0], 0.09, 0.024, { color: '#14100a', mat: 'cloth', bone: 'chest', k: 0.01, rot: [0.15, 0, 0] });
-      for (let i = 0; i < 12; i++) {
-        const a = -1.4 + (i / 11) * 2.8;
-        s.limb([Math.sin(a) * 0.1, 0.48, Math.cos(a) * 0.08], [Math.sin(a) * 0.11, 0.42, Math.cos(a) * 0.09], 0.003, 0.002, { color: '#14100a', mat: 'cloth', bone: 'chest', k: 0 });
-      }
-      // The bun, the comb up behind it, and the rose.
-      s.sphere([0, 0.7, -0.1], 0.038, { color: '#14100a', mat: 'hair', bone: 'head', k: 0.01 });
-      s.flake([0, 0.72, -0.12], [0, 0.82, -0.11], [0, 0, 1], 0.05, 0.03, 0.15, { color: '#3a2010', mat: 'plastic', bone: 'head', k: 0.004 });
-      s.sphere([0.08, 0.74, -0.03], 0.03, { color: '#e8141e', mat: 'cloth', bone: 'head', k: 0.006, bump: [0.004, 90] });
-      // Castanets on the thumbs.
-      for (const S of ['L', 'R']) {
-        const h = J[`hand${S}`];
-        s.ellipsoid([h[0], h[1] - 0.012, h[2] + 0.02], [0.016, 0.02, 0.008], { color: '#3a1a0a', mat: 'plastic', bone: `hand${S}`, k: 0.002 });
+      for (let i = 0; i < shawl.length; i += 2) {
+        const { p, n } = shawl[i];
+        if (p[1] > 0.51) continue;
+        s.limb(p.map((v, j) => v - [0, 0.018, 0][j] + n[j] * 0.003), p.map((v, j) => v - [0, 0.055, 0][j] + n[j] * 0.006), 0.0022, 0.0015, { color: '#14100a', mat: 'cloth', bone: 'chest', k: 0.0008 });
       }
     });
+    // The hair slicked back into a bun, the comb standing up behind it, a red rose at the side.
+    s.part('hair', () => s.sphere([0, 0.69, -0.105], 0.038, { color: cloth('#14100a', '#0a0806'), mat: 'hair', bone: 'head', k: 0.02 }));
+    s.part('kit', () => s.flake([0, 0.705, -0.135], [0, 0.82, -0.125], [0, 0, 1], 0.048, 0.03, 0.14, { color: '#3a2010', mat: 'plastic', bone: 'head', k: 0.004 }));
+    const rose = onBody(s, [0.085, 0.73, -0.02], ['hair', 'head']);
+    s.part('kit', () => s.sphere(rose.p.map((v, i) => v + rose.n[i] * 0.016), 0.022, { color: '#e8141e', mat: 'cloth', bone: 'head', k: 0.006, bump: [0.004, 90] }));
+    // Castanets: a pair of shells in each hand, clacking.
+    for (const S of ['L', 'R']) {
+      const G = pose.grip(S);
+      pose.hold(s, `hand${S}`, () => s.part('kit', () => {
+        for (const o of [-0.004, 0.004]) s.ellipsoid(G.at(0.008, 0, -0.016 + o), [0.016, 0.016, 0.0055], { color: '#3a1a0a', mat: 'plastic', k: 0.001 });
+      }));
+    }
   },
 });

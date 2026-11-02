@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person, shell } from './person.js';
 import { beard } from './wardrobe.js';
 import { guitar, longHair } from './metalwear.js';
 
@@ -32,12 +32,15 @@ export default person({
       k.turn('head', 0.05, 0.1, 0.18 + Math.sin(T * 0.7) * 0.03);
     },
   },
-  extras(s) {
+  extras(s, J, { pose }) {
     beard(s, { color: '#8a6a40' });
-    guitar(s, { style: 'acoustic' });
-    s.part('kit', () => {
-      // Sandals' straps over white socks.
-      for (const m of [1, -1]) for (const z of [0.035, 0.075]) s.box([m * 0.06, 0.043 - (z - 0.035) * 0.3, z], [0.032, 0.006, 0.008], 0.004, { color: '#8a5a32', mat: 'leather', bone: m > 0 ? 'footL' : 'footR', k: 0.002 });
-    });
+    guitar(s, { style: 'acoustic', body: '#b0702e', neck: '#8a5a2a', pose });
+    // Sandals over the white socks: two brown straps across each foot, on the sole.
+    for (const m of [1, -1]) {
+      const a = J[m > 0 ? 'ankleL' : 'ankleR'];
+      for (const z of [0.022, 0.06]) {
+        shell(s, (p) => Math.max(Math.abs(p[2] - a[2] - z) - 0.0065, 0.012 - p[1], Math.abs(p[0] - a[0]) - 0.04), { color: '#8a5a32', mat: 'leather', part: 'outer', thick: 0.003, lift: 0.0004, over: ['shoes'], bone: m > 0 ? 'footL' : 'footR' });
+      }
+    }
   },
 });

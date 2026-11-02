@@ -18,6 +18,11 @@ import suitcase from './suitcase.js';
 import tape from './tape.js';
 import vinyl from './vinyl.js';
 import whetstone from './whetstone.js';
+import { bones, cauldron, coffin, cross, deadtree, haybale, mushrooms, obelisk, scarecrow, tombstone } from './halloween.js';
+import { barrel, cornshock, gourd, haystack, table, whitepumpkin } from './harvest.js';
+import { bigpumpkin, jack, pumpkin, pumpkinpile } from './pumpkin.js';
+import { candycane, candycorn, caramelapple, gumdrop, lollipop, peppermint, sweet } from './sweets.js';
+import { crystals, pine, snowball, snowheap, snowlantern, snowrock } from './winter.js';
 
 /**
  * Every sculpted prop in the library, by name: the default version of each.
@@ -25,4 +30,9 @@ import whetstone from './whetstone.js';
 export const PROPS = {
   bucket, case: caseModel, chest, clapper, demo, globe, gold, key, lighter, pass, pick, popcorn,
   potion, record, reel, revive, suitcase, tape, vinyl, whetstone,
+  // Blubber's: the pumpkins, the harvest, the sweets, the graveyard and the winter.
+  pumpkin, jack, bigpumpkin, pumpkinpile, whitepumpkin, gourd, cornshock, barrel, haystack, table,
+  sweet, candycorn, lollipop, caramelapple, peppermint, gumdrop, candycane,
+  haybale, deadtree, scarecrow, tombstone, cross, obelisk, coffin, bones, mushrooms, cauldron,
+  snowheap, snowlantern, snowball, pine, snowrock, crystals,
 };

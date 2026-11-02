@@ -3,7 +3,7 @@
  * ceiling, the venue's colours in a ring of lights round the walls, and a
  * bright rig overhead. Only ever seen in reflections.
  */
-export function paintRoom({ colors = ['#ff9a3a'], ceiling = '#2a2a38', width = 1024 } = {}) {
+export function paintRoom({ colors = ['#ff9a3a'], ceiling = '#2a2a38', strips = false, width = 1024 } = {}) {
   const height = width / 2;
   const c = document.createElement('canvas');
   c.width = width; c.height = height;
@@ -25,7 +25,9 @@ export function paintRoom({ colors = ['#ff9a3a'], ceiling = '#2a2a38', width = 1
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   };
   glow(width * 0.25, height * 0.12, height * 0.2, 'rgba(210, 220, 255, 0.55)');
-  for (let k = 0; k < 8; k++) glow(width * (0.06 + k * 0.125), height * (0.3 + (k % 2) * 0.1), height * 0.07, withAlpha(colors[k % colors.length], 0.75));
+  // With `strips`, strip lights overhead too, and the ring of colours fuller: what a stop's chrome catches (the moods').
+  if (strips) for (let k = 0; k < 6; k++) glow(width * (0.08 + k * 0.17), height * (0.2 + (k % 2) * 0.05), height * 0.13, 'rgba(235, 240, 255, 0.5)');
+  for (let k = 0; k < 8; k++) glow(width * (0.06 + k * 0.125), height * (0.3 + (k % 2) * 0.1), height * (strips ? 0.1 : 0.07), withAlpha(colors[k % colors.length], strips ? 0.9 : 0.75));
   ctx.globalCompositeOperation = 'source-over';
   return c;
 }

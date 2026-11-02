@@ -21,10 +21,18 @@ import { Skeleton, skin } from './rig.js';
  *   budget     how many vertices its board mesh may have (the tests hold it to this; 9000 if not given)
  *   sculpt(s)  adds its shapes to the Sculpt s (sdf.js)
  *   animate(skeleton, state)  poses it; state is { clip, t, time, seed, speed }
- *   settle(skeleton, state)   after the clip and any blend into it, puts it right: its feet on the floor
+ *   settle(skeleton, state, baked)   after the clip and any blend into it, puts it right: its feet on the floor,
+ *              a person's arms out of their head; `baked` is the bake, with what `measure` made
+ *   measure(sculpt)   what `settle` needs to know of the sculpt, worked out as it is baked (kept as `baked.measure`)
  */
 
-const cache = new Map();
+/**
+ * Bakes, by definition and detail. By the definition itself, not its name: versions of a thing share a name
+ * (`rat` and `rat.dungeon-roller` were both 'rat'), and keyed by name the second was drawn with the first's mesh on its
+ * own skeleton — half of it missing, a leg off.
+ */
+const cache = new WeakMap();
+const bakesOf = (def) => { let m = cache.get(def); if (!m) cache.set(def, (m = new Map())); return m; };
 
 /** How big the biggest shape in a sculpt is, across. */
 function largest(sculpt) {
@@ -39,8 +47,7 @@ function largest(sculpt) {
  * 0.5 a quarter of the triangles (for far away).
  */
 export function bake(def, { detail = 1 } = {}) {
-  const key = `${def.name}@${detail}`;
-  if (cache.has(key)) return cache.get(key);
+  if (bakesOf(def).has(detail)) return bakesOf(def).get(detail);
   const cell = (def.cell ?? 0.012) / detail;
   const sculpt = new Sculpt();
   def.sculpt(sculpt);
@@ -93,7 +100,8 @@ export function bake(def, { detail = 1 } = {}) {
     groups,
     count: base,
   };
-  cache.set(key, baked);
+  if (def.measure) baked.measure = def.measure(sculpt);
+  bakesOf(def).set(detail, baked);
   return baked;
 }
 
@@ -101,9 +109,9 @@ const materialCache = new WeakMap();
 
 export function materialsOf(GFX, def) {
   let byDef = materialCache.get(GFX);
-  if (!byDef) materialCache.set(GFX, (byDef = new Map()));
-  if (!byDef.has(def.name)) {
-    byDef.set(def.name, Object.entries(def.materials).map(([name, m]) => {
+  if (!byDef) materialCache.set(GFX, (byDef = new WeakMap()));
+  if (!byDef.has(def)) {
+    byDef.set(def, Object.entries(def.materials).map(([name, m]) => {
       const { emissive, sheenColor, attenuationColor, side, ...rest } = m;
       const material = new GFX.MeshPhysicalMaterial({ name: `${def.name}-${name}`, vertexColors: true, roughness: 0.6, ...rest });
       if (emissive) material.emissive.set(emissive);
@@ -114,12 +122,15 @@ export function materialsOf(GFX, def) {
       return material;
     }));
   }
-  return byDef.get(def.name);
+  return byDef.get(def);
 }
+
+/** Whether `def` is baked at `detail` already (here, or adopted from a worker). */
+export const hasBake = (def, detail = 1) => bakesOf(def).has(detail);
 
 /** A mesh baked elsewhere (a worker: see library.js), to be used as if baked here. */
 export function adopt(def, detail, data) {
-  cache.set(`${def.name}@${detail}`, data);
+  bakesOf(def).set(detail, data);
 }
 
 /**
@@ -179,7 +190,7 @@ export function createModel(GFX, def, { detail = 1 } = {}) {
           });
         }
       }
-      def.settle?.(skeleton, state);
+      def.settle?.(skeleton, state, data);
       skeleton.compute();
       skin(data, skeleton.matrices, position.array, normal.array);
       position.needsUpdate = true;

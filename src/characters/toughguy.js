@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { bag, cloth, hold, person, strap } from './person.js';
 import { bandana } from './wardrobe.js';
 
 /**
@@ -42,5 +42,8 @@ export default person({
   },
   extras(s) {
     bandana(s, { color: '#16161a' });
+    // Dog tags on a ball chain round the neck, lying on the vest.
+    strap(s, [[0, 0.552, -0.06], [0.05, 0.545, -0.03], [0.058, 0.53, 0.03], [0.03, 0.48, 0.08], [0.006, 0.455, 0.09], [-0.006, 0.455, 0.09], [-0.03, 0.48, 0.08], [-0.058, 0.53, 0.03], [-0.05, 0.545, -0.03], [0, 0.552, -0.06]], { width: 0.004, thick: 0.004, round: true, color: '#c8ccd4', mat: 'metal', over: ['top', 'head'], bone: 'chest' });
+    for (const [dx, dy] of [[-0.006, 0.44], [0.008, 0.436]]) bag(s, [dx, dy, 0.09], { size: [0.012, 0.018, 0.0015], color: '#d6d9e0', flap: false, over: ['top', 'straps'], bone: 'chest' });
   },
 });

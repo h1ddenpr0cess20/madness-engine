@@ -3,14 +3,17 @@
  * texture painted for it (`paint.js`), tinted `top`; `wtex` and `wall` for
  * the sides where it stands above its neighbour — and how it rolls.
  *
- * - `drag`: rolling resistance, per second. Grass and dirt hold the bubble
+ * - `drag`: rolling resistance, per second. Grass and dirt hold the ball
  *   back; an oil slick hardly does.
- * - `grip`: how much of the push the hamster gets on it. On oil it is
+ * - `grip`: how much of the push the ball gets on it. On oil it is
  *   running in place.
- * - `sinks`: tar. Roll in and the bubble goes under.
+ * - `sinks`: tar, and the sea. Roll in and the ball goes under.
  * - `shine`: how it reflects (`wet`, `oil`, `tar`), if it does.
- * - `bounce`: a trampoline. Land on it and it throws the bubble up again,
+ * - `bounce`: a trampoline. Land on it and it throws the ball up again,
  *   this fast, and the landing doesn't hurt.
+ *
+ * One table for both towns: Petroll's lots and trampolines and Metrlol's
+ * marble, terracotta and sea are all here, and each town uses what it lays.
  * - `map`: its colour on the map in the corner.
  */
 export const SURFACES = Object.freeze({
@@ -37,6 +40,9 @@ export const SURFACES = Object.freeze({
   lot: { tex: 'asphalt', top: '#55575e', wtex: 'block', wall: '#8a8a8e', drag: 0.5, grip: 1, map: '#3a3c42' },
   trampoline: { tex: 'grate', top: '#2a4a9a', wtex: 'hull', wall: '#3a4a6a', drag: 0.5, grip: 1, bounce: 12, map: '#3a6ad8' },
   plank: { tex: 'planks', top: '#9a7448', wtex: 'timber', wall: '#6a4a2c', drag: 0.6, grip: 1, map: '#8a6440' },
+  marble: { tex: 'marble', top: '#e2ddd2', wtex: 'stone', wall: '#c8c2b4', drag: 0.5, grip: 1, map: '#cfcac0' },
+  terracotta: { tex: 'terracotta', top: '#c8885a', wtex: 'stucco', wall: '#d8c4a8', drag: 0.55, grip: 1, map: '#b07850' },
+  water: { tex: 'asphalt', top: '#1c4a5c', wtex: 'cliff', wall: '#3a3428', drag: 6, grip: 0.1, sinks: true, shine: 'wet', map: '#1e4e66' },
 });
 
 export const surfaceOf = (cell) => SURFACES[cell?.surface] ?? SURFACES.road;

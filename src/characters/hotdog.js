@@ -28,7 +28,7 @@ export default person({
   hair: { color: cloth('#2a1a10', '#140a06'), cap: [0.104, 0.07, 0.104] },
   style: {
     attack: 'smite', twist: 0,
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, aim }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
       // The hot dog held out in the tongs; the mustard up, squeezing.
@@ -37,25 +37,34 @@ export default person({
       hold(k, 'handR', 0, 0, 0);
       hold(k, 'armL', -0.9, 0, 0.3);
       hold(k, 'foreL', -0.9 + Math.sin(T * 3) * 0.1, 0, 0);
+      // The mustard upright, its nozzle up.
+      aim?.(k, 'L', 'chest', [0.2, 2.5, 0.25]);
       k.turn('head', 0.05, Math.sin(T * 0.6) * 0.2, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     moustache(s, { color: '#2a1a10', wide: 1.2 });
     s.part('kit', () => {
       // The paper hat: a white band, a red stripe round it.
       s.cylinder([0, 0.775, -0.004], 0.106, 0.035, { color: '#fbfaf8', mat: 'paper', bone: 'head', k: 0.008, round: 0.01 });
       s.torus([0, 0.765, -0.004], 0.107, 0.006, { color: '#c8141e', mat: 'paper', bone: 'head', k: 0.002 });
-      // The tongs and the hot dog in them.
-      const r = J.handR;
-      for (const dx of [-0.008, 0.008]) s.limb([r[0] + dx, r[1] - 0.02, r[2] + 0.02], [r[0] + dx * 0.4, r[1] - 0.12, r[2] + 0.04], 0.003, 0.003, { color: '#c8ccd4', mat: 'metal', bone: 'handR', k: 0.001 });
-      s.limb([r[0] - 0.045, r[1] - 0.13, r[2] + 0.04], [r[0] + 0.045, r[1] - 0.13, r[2] + 0.04], 0.014, 0.014, { color: '#e8c070', mat: 'paper', bone: 'handR', k: 0.004 });
-      s.limb([r[0] - 0.055, r[1] - 0.122, r[2] + 0.04], [r[0] + 0.055, r[1] - 0.122, r[2] + 0.04], 0.008, 0.008, { color: '#a8401a', mat: 'paper', bone: 'handR', k: 0.003 });
-      s.limb([r[0] - 0.04, r[1] - 0.114, r[2] + 0.04], [r[0] + 0.04, r[1] - 0.114, r[2] + 0.04], 0.003, 0.003, { color: '#f0c020', mat: 'paper', bone: 'handR', k: 0.001 });
-      // The mustard.
-      const l = J.handL;
-      s.limb([l[0], l[1] - 0.04, l[2] + 0.02], [l[0], l[1] + 0.06, l[2] + 0.02], 0.02, 0.018, { color: '#f0c020', mat: 'plastic', bone: 'handL', k: 0.003 });
-      s.cone([l[0], l[1] + 0.1, l[2] + 0.02], 0.012, 0.04, { color: '#c8141e', mat: 'plastic', bone: 'handL', k: 0.002 });
     });
+    // The tongs, out of the right fist, and the hot dog held in their jaws: the bun, the sausage, a line of mustard.
+    const R = pose.grip('R'), fwd = R.up.map((v) => -v);
+    const end = R.at(0, 0, 0).map((v, i) => v + fwd[i] * 0.11);
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.part('fine', () => { for (const o of [-0.009, 0.009]) s.limb(R.at(o, 0, 0), end.map((v, i) => v + R.along[i] * o * 0.4), 0.0028, 0.0028, { color: '#c8ccd4', mat: 'metal', k: 0.001 }); });
+      const a = end.map((v, i) => v + fwd[i] * 0.012 - R.out[i] * 0.05), b = end.map((v, i) => v + fwd[i] * 0.012 + R.out[i] * 0.05);
+      s.limb(a, b, 0.015, 0.015, { color: '#e8c070', mat: 'paper', k: 0.004 });
+      s.limb(a.map((v, i) => v - R.out[i] * 0.01 + R.along[i] * 0.008), b.map((v, i) => v + R.out[i] * 0.01 + R.along[i] * 0.008), 0.0085, 0.0085, { color: '#a8401a', mat: 'paper', k: 0.003 });
+      s.limb(a.map((v, i) => v + R.along[i] * 0.017), b.map((v, i) => v + R.along[i] * 0.017), 0.0032, 0.0032, { color: '#f0c020', mat: 'paper', k: 0.001 });
+    }));
+    // The mustard: a yellow squeeze bottle upright in the left fist, its red nozzle up.
+    const L = pose.grip('L');
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      s.limb(L.at(-0.04), L.at(0.06), 0.02, 0.019, { color: '#f0c020', mat: 'plastic', k: 0.003 });
+      s.limb(L.at(0.06), L.at(0.07), 0.016, 0.012, { color: '#c8141e', mat: 'plastic', k: 0.002 });
+      s.limb(L.at(0.07), L.at(0.1), 0.007, 0.002, { color: '#c8141e', mat: 'plastic', k: 0.002 });
+    }));
   },
 });

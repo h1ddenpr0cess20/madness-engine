@@ -1,4 +1,6 @@
-import { cloth, person } from './person.metroll.js';
+import { axisRot, cloth, person } from './person.js';
+import { glasses, moustache, satchel } from './wardrobe.js';
+import { beanie } from './metalwear.js';
 
 /**
  * The Hipster: an orange beanie, round glasses, a waxed moustache, a maroon
@@ -27,19 +29,14 @@ export default person({
     },
   },
   extras(s) {
-    s.part('kit', () => {
-      // The beanie, with a bobble.
-      s.ellipsoid([0, 0.73, -0.005], [0.114, 0.065, 0.114], { color: '#ff7a1a', mat: 'cloth', bone: 'head', k: 0.012 });
-      s.sphere([0, 0.8, -0.005], 0.02, { color: '#ff7a1a', mat: 'cloth', bone: 'head', k: 0.008 });
-      // Round glasses, thick black frames.
-      for (const m of [1, -1]) s.torus([m * 0.042, 0.668, 0.1], 0.026, 0.0045, { color: '#101014', mat: 'plastic', bone: 'head', k: 0.002, rot: [Math.PI / 2, 0, 0] });
-      s.limb([-0.02, 0.668, 0.1], [0.02, 0.668, 0.1], 0.004, 0.004, { color: '#101014', mat: 'plastic', bone: 'head', k: 0.002 });
-      // The moustache, with curled ends.
-      for (const m of [1, -1]) s.limb([m * 0.012, 0.628, 0.105], [m * 0.05, 0.64, 0.1], 0.009, 0.005, { color: '#5a3a1e', mat: 'hair', bone: 'head', k: 0.004 });
-      // Tote bag on the shoulder, a record sticking out.
-      s.box([0.06, 0.3, -0.07], [0.05, 0.065, 0.016], 0.008, { color: '#e8e0c8', mat: 'cloth', bone: 'spine', k: 0.006 });
-      s.cylinder([0.06, 0.4, -0.075], 0.052, 0.003, { color: '#16161a', mat: 'plastic', bone: 'spine', k: 0.002, rot: [Math.PI / 2, 0.2, 0] });
-      s.limb([0.05, 0.36, -0.06], [-0.04, 0.52, -0.02], 0.007, 0.007, { color: '#e8e0c8', mat: 'cloth', bone: 'chest', k: 0.003 });
-    });
+    // The beanie, with a bobble.
+    beanie(s, { color: '#ff7a1a' });
+    s.part('kit', () => s.sphere([0, 0.808, -0.006], 0.021, { color: '#ff7a1a', mat: 'cloth', bone: 'head', k: 0.008, bump: [0.002, 140] }));
+    // Round glasses, thick black frames; the moustache waxed into curls.
+    glasses(s, { rim: '#101014', round: true, size: 0.026 });
+    moustache(s, { color: '#5a3a1e', wide: 1.4 });
+    // The tote bag on the right shoulder, its strap across to the left hip, a record sticking out of it.
+    const tote = satchel(s, { side: -1, color: '#e8e0c8', strap: '#e0d8c0', size: [0.05, 0.058, 0.012], width: 0.016, flap: false });
+    s.part('kit', () => s.cylinder(tote.c.map((v, i) => v + tote.up[i] * 0.06), 0.05, 0.0025, { color: '#16161a', mat: 'plastic', bone: 'hips', k: 0.001, rot: axisRot(tote.n) }));
   },
 });

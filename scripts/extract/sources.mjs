@@ -52,7 +52,7 @@ const rocker = [
   ...sculpted,
   room('src/stage.js', 'paintRoom', 'venue.js'),
   sky('src/stage.js', 'paintBackdrop', 'skyline.js'),
-  { from: 'src', kind: 'heroes', only: ['rock.js', 'boulder.js'] },
+  { from: 'src', kind: 'heroes', only: ['rock.js'] },
   { from: 'src', kind: 'scenery', only: ['lightshow.js'] },
   { from: 'src', kind: 'textures', only: ['textures.js'], as: 'venue.js' },
   { from: 'src', kind: 'music', only: ['music.js'], as: 'band.js' },
@@ -88,7 +88,7 @@ export const SOURCES = {
   'rocknroller-iii': rocker,
   metroll: [
     ...sculpted,
-    { from: 'src', kind: 'heroes', only: ['mace.js', 'morningstar.js', 'boulder.js'] },
+    { from: 'src', kind: 'heroes', only: ['mace.js', 'morningstar.js'] },
     { from: 'src', kind: 'scenery', only: ['lightshow.js'] },
     { from: 'src', kind: 'textures', only: ['textures.js'], as: 'venue.js' },
     { from: 'src', kind: 'music', only: ['music.js'], as: 'band.js' },
@@ -97,7 +97,7 @@ export const SOURCES = {
   ],
   metrlol: [
     ...town,
-    { from: 'src', kind: 'heroes', only: ['ball.js', 'mace.js', 'morningstar.js'] },
+    { from: 'src', kind: 'heroes', only: ['mace.js', 'morningstar.js'] },
     { from: 'src', kind: 'music', only: ['music.js'], as: 'band.js' },
   ],
   petroll: [

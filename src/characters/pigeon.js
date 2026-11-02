@@ -1,91 +1,50 @@
-import { coat } from '../models/skins.js';
+import { mix, smooth } from '../models/skins.js';
+import { rgb } from '../models/sdf.js';
+import { bird, hue, iridescent, plumed } from './bird.js';
 
 /**
- * The Pigeon: a city pigeon, the same one in every square in Europe, plump
- * and grey, two dark bars across each wing, the neck shot through with
- * green and purple, an orange eye, a white blob over the beak, and pink
- * feet. Has seen every statue on the tour. Has been on all of them. Flies
- * at your face for no reason. About 0.5 tiles across the wings; a flyer,
- * so its origin is its middle.
+ * The Pigeon: a city pigeon, the same one in every square in Europe. Plump
+ * and blue-grey, a small round head, the neck shot through with green and
+ * purple, two black bars across each wing, dark tips to the wings and a
+ * black band across the end of the tail, an orange eye, a white blob over
+ * a little dark beak, and coral-pink feet. Has seen every statue on the
+ * tour. Has been on all of them. Flies at your face for no reason. About
+ * 0.7 tiles across the wings; a flyer, so its origin is its middle.
  */
 
-const GREY = coat({ over: '#8a8e98', under: '#6a6e78', vary: 0.1, freq: 30 });
-const DARK = coat({ over: '#4a4e58', under: '#3a3e48', vary: 0.1, freq: 30 });
-/** The neck: green where it faces one way, purple the other, as it catches the light. */
-const SHEEN = (p, n) => {
-  const t = 0.5 + 0.5 * Math.sin(n[0] * 3 + n[2] * 2 + p[1] * 40);
-  return [0.12 + t * 0.2, 0.32 - t * 0.2, 0.22 + t * 0.12];
-};
+const HEAD = rgb('#6c7586'), BODY = rgb('#8b95a6'), PALE = rgb('#9ba4b3'), DARK = rgb('#22242a');
+const SHOT = iridescent('#3c8a5a', '#7a3a7a');
+const NECK = [0, 0.036, 0.06];
 
-export default {
+const COAT = plumed((p, n) => {
+  // The head darker, the neck and the top of the breast shot with colour, the rest blue-grey.
+  const neck = smooth(0.034, 0.018, Math.hypot(p[0] * 0.9, (p[1] - NECK[1]) * 1.1, p[2] - NECK[2]));
+  const head = smooth(0.062, 0.072, p[2] + p[1] * 0.3);
+  let c = mix(BODY, HEAD, head);
+  c = mix(c, hue(SHOT, p, n), neck * (1 - head * 0.8) * 0.85);
+  return mix(c, PALE, smooth(-0.2, -0.7, n[1]) * 0.25);
+}, { size: 0.009, edge: 0.14 });
+
+/** The two black bars across the inner wing: over the ends of the coverts, and across the secondaries behind them. */
+const BARS = (c, p, n, [out, back]) => {
+  if (n[1] < -0.3) return c;
+  const bar = Math.max(smooth(0.021, 0.024, back) * smooth(0.031, 0.028, back), smooth(0.039, 0.042, back) * smooth(0.05, 0.047, back));
+  return mix(c, DARK, bar * smooth(0.72, 0.6, out));
+};
+const FLIGHT = (p, n, t) => mix(BODY, rgb('#3a3e48'), smooth(0.25, 0.8, t));
+const TAIL = (p, n, t) => mix(BODY, rgb('#1e2026'), smooth(0.74, 0.8, t));
+
+export default bird({
   name: 'pigeon',
   scale: 1.5,
-  cell: 0.0055,
-  cells: { kit: 0.003, fine: 0.0025, eyes: 0.0025 },
-  budget: 18000,
-  bones: [
-    ['root', null, [0, 0, 0]],
-    ['body', 'root', [0, 0, 0]],
-    ['head', 'body', [0, 0.06, 0.06]],
-    ['wingL', 'body', [0.045, 0.025, 0.02]],
-    ['wingR', 'body', [-0.045, 0.025, 0.02]],
-    ['tail', 'body', [0, -0.005, -0.07]],
-  ],
-  materials: {
-    feather: { roughness: 0.7, sheen: 0.5, sheenColor: '#d0d8ff' },
-    sheen: { roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.2 },
-    beak: { roughness: 0.4 },
-    eye: { roughness: 0.1, clearcoat: 1 },
-    skin: { roughness: 0.6 },
-  },
-  sculpt(s) {
-    const F = { color: GREY, mat: 'feather' };
-    // A plump body, the chest out; the neck and its sheen; a small round head.
-    s.ellipsoid([0, 0, 0], [0.055, 0.055, 0.08], { ...F, bone: 'body', k: 0.03 });
-    s.ellipsoid([0, 0.015, 0.045], [0.048, 0.05, 0.04], { color: SHEEN, mat: 'sheen', bone: 'body', k: 0.03 });
-    s.sphere([0, 0.07, 0.07], 0.033, { ...F, bone: 'head', k: 0.025 });
-    s.limb([0, 0.068, 0.1], [0, 0.06, 0.125], 0.008, 0.004, { color: '#2a2a2e', mat: 'beak', bone: 'head', k: 0.004 });
-    s.ellipsoid([0, 0.073, 0.103], [0.008, 0.006, 0.006], { color: '#f0eee8', mat: 'skin', bone: 'head', k: 0.003 });
-    s.part('kit', () => {
-      for (const m of [1, -1]) {
-        const S = m > 0 ? 'L' : 'R';
-        // A wing: grey, the two dark bars, the dark flight feathers at the end.
-        s.flake([m * 0.045, 0.025, 0.02], [m * 0.14, 0.035, -0.02], [0, 1, 0], 0.035, 0.03, 0.25, { ...F, bone: `wing${S}`, k: 0.01 });
-        for (const z of [-0.005, -0.025]) s.flake([m * 0.06, 0.04, z], [m * 0.12, 0.045, z - 0.01], [0, 1, 0], 0.008, 0.008, 0.25, { color: DARK, mat: 'feather', bone: `wing${S}`, k: 0.002 });
-        for (let i = 0; i < 4; i += 0.5) s.flake([m * (0.12 + i * 0.01), 0.035 + i * 0.003, -0.01 - i * 0.008], [m * (0.24 - i * 0.025), 0.04 + i * 0.003, -0.03 - i * 0.03], [0, 1, 0], 0.014, 0.0075, 0.3, { color: DARK, mat: 'feather', bone: `wing${S}`, k: 0.0006 });
-      }
-      // The tail fanned, with a dark band on the end.
-      for (const x of [-0.02, 0, 0.02]) {
-        s.flake([x, -0.005, -0.06], [x * 2.2, -0.015, -0.15], [0, 1, 0], 0.018, 0.016, 0.25, { ...F, bone: 'tail', k: 0.005 });
-        s.flake([x * 2.1, -0.014, -0.14], [x * 2.3, -0.016, -0.165], [0, 1, 0], 0.017, 0.016, 0.26, { color: DARK, mat: 'feather', bone: 'tail', k: 0.002 });
-      }
-      // Pink feet, tucked up.
-      for (const m of [1, -1]) s.limb([m * 0.02, -0.05, 0.0], [m * 0.022, -0.068, 0.02], 0.006, 0.005, { color: '#d87a7a', mat: 'skin', bone: 'body', k: 0.004 });
-    });
-    s.part('eyes', () => {
-      for (const m of [1, -1]) s.sphere([m * 0.026, 0.078, 0.088], 0.008, { color: '#e8701a', mat: 'eye', bone: 'head', k: 0 });
-    });
-    s.part('fine', () => {
-      for (const m of [1, -1]) s.sphere([m * 0.03, 0.078, 0.092], 0.004, { color: '#0a0a0c', mat: 'eye', bone: 'head', k: 0 });
-    });
-  },
-  animate(k, { clip, t = 0, time, seed = 0 }) {
-    const T = time + seed;
-    if (clip === 'ko') {
-      // Feathers everywhere: wings out, tipped over.
-      k.turn('body', 0.4, 0, 1.4 * Math.min(1, t / 0.5));
-      k.turn('head', 0.6, 0, 0);
-      return;
-    }
-    const rate = clip === 'attack' ? 16 : 12;
-    const f = Math.sin(T * rate);
-    k.turn('wingL', 0, 0, f * 0.85);
-    k.turn('wingR', 0, 0, -f * 0.85);
-    k.turn('tail', Math.sin(T * rate * 0.5) * 0.1, 0, 0);
-    k.move('root', 0, -f * 0.01, 0);
-    k.turn('body', clip === 'walk' || clip === 'attack' ? 0.3 : 0.05, 0, Math.sin(T * 1.1) * 0.08);
-    // The head: forward and back, forward and back.
-    k.move('head', 0, 0, Math.max(0, Math.sin(T * 6)) * 0.012);
-    k.turn('head', clip === 'attack' ? 0.4 : 0, Math.sin(T * 0.7) * 0.4, 0);
-  },
-};
+  budget: 46000,
+  body: { r: [0.046, 0.047, 0.074] },
+  head: { r: 0.022, at: [0, 0.058, 0.086], crown: 0.88 },
+  beak: { len: 0.021, depth: 0.0075, width: 0.0058, tilt: 0.18, curve: 0.25, power: 2, y: -0.12, upper: '#3a3436', cere: { color: '#ece8e2', size: 1.5, at: 3 }, nostrils: false },
+  eye: { r: 0.0058, iris: '#ea6a12', pupil: 0.38, ring: '#9a8c96', ringW: 0.2, look: [0.82, 0.12, 0.56] },
+  wing: { arm: 0.15, chord: 0.064, primary: 0.12, nP: 9, nS: 9, fingers: 0, round: 0.15, colors: { leading: COAT, lesser: PALE, median: PALE, greater: PALE, tertials: BODY, secondaries: BODY, coverts: PALE, primaries: FLIGHT }, pattern: BARS },
+  tail: { len: 0.076, width: 0.012, count: 12, spread: 0.5, shape: (f) => 1 - 0.05 * f * f, color: TAIL },
+  feet: { color: '#d8606a', claw: '#3a2a2a' },
+  plumage: COAT,
+  style: { rate: 11, amp: 0.8 },
+});

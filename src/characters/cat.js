@@ -489,8 +489,10 @@ function sitting(k) {
  * clip: 'sit', 'sleep' (a loaf, eyes shut), 'walk', 'run' (a gallop),
  * 'stalk' (low and slow), 'crouch' (low, still, all eyes), 'alert' (up
  * tall, tail up), 'swat' (a paw up and down, over 0.45 s), 'play' (batting,
- * both paws), 'look' (standing, looking about), 'idle' (standing). `pace`
- * is how fast it really goes, tiles a second.
+ * both paws), 'look' (standing, looking about), 'idle' (standing); and the
+ * clips every foe has: 'attack' (a pounce), 'cast' (a hiss, back arched),
+ * 'hit', 'ko' (over on its side) and 'win'. `pace` is how fast it really
+ * goes, tiles a second.
  */
 function pose(k, { clip = 'sit', t = 0, time = 0, seed = 0, pace = 0 }) {
   const T = time + seed;
@@ -618,6 +620,71 @@ function pose(k, { clip = 'sit', t = 0, time = 0, seed = 0, pace = 0 }) {
     k.turn('neck', -0.25, 0, 0);
     k.turn('head', 0.1, sway(0.25, 3), 0);
     tail(k, 0.75, [0.1, 0, 0, 0], [0, 0, 0, 0, 0], (i) => sway(0.18 * i, 5, -i * 0.5));
+  } else if (clip === 'attack') {
+    // A pounce: down and gathered, the rump wiggling; a spring forward, both forepaws reaching out claws first;
+    // down on them, a swat, and back.
+    const crouch = smooth(0, 0.18, t) * (1 - smooth(0.24, 0.32, t)), leap = smooth(0.22, 0.36, t) * (1 - smooth(0.4, 0.52, t));
+    const land = smooth(0.42, 0.52, t) * (1 - smooth(0.75, 1, t)), swat = Math.max(0, Math.sin(Math.min(1, Math.max(0, (t - 0.5) / 0.25)) * Math.PI));
+    k.move('root', crouch * sway(0.01, 18), -0.07 * crouch + 0.05 * leap - 0.02 * land, 0.12 * leap + 0.1 * land);
+    k.turn('body', 0.08 * crouch - 0.22 * leap + 0.12 * land, 0, 0);
+    for (const s of ['L', 'R']) {
+      const reach = s === 'R' ? swat : 0;
+      foreleg(k, s, -0.2 * crouch - 1.25 * leap - (0.5 + reach * 0.9) * land, 0, { bend: 0.9 * crouch + 0.2 * land - reach * 0.4 });
+      hindleg(k, s, -0.25 * crouch + 0.85 * leap + 0.1 * land, 0, { bend: 0.7 * crouch + 0.1 * land });
+    }
+    k.turn('neck', 0.35 * crouch - 0.1 * leap + 0.25 * land, 0, 0);
+    k.turn('head', -0.35 * crouch + 0.1 * leap - 0.2 * land, 0, 0);
+    tail(k, -0.1 * crouch + 0.4 * leap + 0.3 * land, [0.05, 0.02, 0.05, 0.1], [0, 0, 0, sway(0.4 * crouch, 12), sway(0.6 * crouch, 12, -0.7)]);
+    k.turn('earL', -0.3, 0, -0.15); k.turn('earR', -0.3, 0, 0.15);
+  } else if (clip === 'cast') {
+    // A hiss: up on straight legs, the back arched high, every hair of the tail on end, ears flat back.
+    const up = smooth(0, 0.2, t) * (1 - smooth(0.8, 1, t));
+    k.move('root', 0, 0.018 * up, 0);
+    k.turn('body', 0.26 * up, 0, 0);
+    k.turn('chest', -0.42 * up, 0, 0);
+    for (const s of ['L', 'R']) { foreleg(k, s, -0.12 * up, 0); hindleg(k, s, 0.12 * up, 0); }
+    k.turn('neck', 0.3 * up, 0, 0);
+    k.turn('head', 0.05 * up, sway(0.06, 3), 0);
+    tail(k, 0.9 * up, [0.35 * up, 0.25 * up, 0.15 * up, -0.2 * up], [0, 0, 0, 0, 0]);
+    // Puffed: fatter all the way along (the tail runs down its bones' z, which stays as long).
+    k.scale('tail1', 1 + 0.45 * up, 1 + 0.45 * up, 1);
+    k.turn('earL', 0.6 * up, 0, -0.5 * up); k.turn('earR', 0.6 * up, 0, 0.5 * up);
+  } else if (clip === 'hit') {
+    // Struck: thrown back on its haunches, eyes screwed shut, ears flat, the tail bottle-brushed.
+    const h = Math.sin(Math.min(1, t / 0.4) * Math.PI);
+    k.move('root', 0, -0.03 * h, -0.06 * h);
+    k.turn('body', -0.22 * h, 0, 0.08 * h);
+    for (const s of ['L', 'R']) { foreleg(k, s, 0.35 * h, 0.4 * h); hindleg(k, s, -0.2 * h, 0, { bend: 0.5 * h }); }
+    k.turn('neck', -0.25 * h, 0, 0);
+    k.turn('head', 0.2 * h, 0.3 * h, 0);
+    tail(k, 0.2, [0.1, 0.05, 0, 0], [0, 0, 0, 0, 0]);
+    k.scale('tail1', 1 + 0.35 * h, 1 + 0.35 * h, 1);
+    k.turn('earL', 0.6 * h, 0, -0.4 * h); k.turn('earR', 0.6 * h, 0, 0.4 * h);
+    lids(k, h);
+  } else if (clip === 'ko') {
+    // Down: over onto its side, legs out loose, eyes shut, the tail along the floor.
+    const fall = smooth(0, 0.5, t), side = 1.42 * fall, h = 0.17;
+    k.move('root', h * Math.sin(side), Math.max(0, 0.066 - h * Math.cos(side)), 0);
+    k.turn('root', 0, 0, side);
+    for (const s of ['L', 'R']) {
+      foreleg(k, s, -0.35 * fall + (s === 'L' ? 0.25 : -0.1) * fall, 0, { bend: 0.15 * fall });
+      hindleg(k, s, 0.3 * fall + (s === 'L' ? -0.2 : 0.15) * fall, 0, { bend: 0.15 * fall });
+    }
+    k.turn('neck', 0.1 * fall, 0, 0);
+    k.turn('head', 0.15 * fall, 0, -0.2 * fall);
+    tail(k, -0.2 * fall, [0, 0.05, 0.05, 0.05], [0.2 * fall, 0.2 * fall, 0.15 * fall, 0.1 * fall, 0.05 * fall]);
+    k.turn('earL', 0.3 * fall, 0, 0); k.turn('earR', 0.3 * fall, 0, 0);
+    lids(k, fall);
+  } else if (clip === 'win') {
+    // Pleased with itself: sat up straight, chin up, the tail straight up with its tip curled, a slow blink.
+    const up = smooth(0, 0.3, t);
+    sitting(k);
+    k.turn('neck', 0.18, 0, 0);
+    k.turn('head', 0.18 - 0.15 * up, sway(0.1, 0.8), 0);
+    k.turn('tail0', 0.68, 0, 0);
+    tail(k, 0.2 + 1.25 * up, [0.05, 0.0, -0.35 * up, -0.6 * up], [0, 0, 0, 0, 0], (i) => (i >= 4 ? sway(0.12, 2.4, -i * 0.5) : 0));
+    k.turn('earL', -0.15, 0, 0.1); k.turn('earR', -0.15, 0, -0.1);
+    lids(k, Math.max(blink, Math.max(0, Math.sin(T * 0.9) - 0.6) * 2));
   }
 }
 

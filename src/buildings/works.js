@@ -144,7 +144,8 @@ export function quarry(m, v) {
   block(m, rnd, hx, 0.35, hz, 0.22);
   // The mason's lodge: an open-fronted shed with a banker in it, a sledge and chips by the door.
   const lx0 = 0.7, lx1 = 1.4, lz0 = 0.55, lz1 = 1.2;
-  for (const [x, z] of [[lx0, lz1], [lx1, lz1]]) m.box('wood', x - 0.025, 0, z - 0.025, x + 0.025, 0.44, z + 0.025, PALETTE.wood[1], { skip: ['bottom'] });
+  // The posts stop under the roof slab (0.43 to 0.57 from front to back, 0.035 thick).
+  for (const [x, z] of [[lx0, lz1], [lx1, lz1]]) m.box('wood', x - 0.025, 0, z - 0.025, x + 0.025, 0.415, z + 0.025, PALETTE.wood[1], { skip: ['bottom'] });
   m.box('siding', lx0, 0, lz0, lx1, 0.52, lz0 + 0.04, '#8a7454', { skip: ['bottom'] });
   m.box('siding', lx1 - 0.04, 0, lz0 + 0.04, lx1, 0.47, lz1 - 0.03, '#8a7454', { skip: ['bottom'] });
   m.slab('slate', [lx0 - 0.06, 0.43, lz1 + 0.08], [lx1 + 0.06, 0.43, lz1 + 0.08], [lx1 + 0.06, 0.57, lz0 - 0.05], [lx0 - 0.06, 0.57, lz0 - 0.05], '#6a5a46', 0.035, [0, 1, 2, 3]);
@@ -225,7 +226,7 @@ export function ironmine(m, v) {
 export function storehouse(m, v) {
   const { rnd } = v;
   const x0 = -1.3, x1 = 1.3, z0 = -1.3, z1 = 0.8;
-  gabled(m, rnd, { x0, x1, z0, z1, h0: 0.1, h1: 0.95, wallMat: 'plaster', wall: pickFrom(rnd, PALETTE.plaster), roofMat: 'tile', roof: pickFrom(rnd, PALETTE.tile), ridgeH: 0.8, over: 0.16, axis: 'x', baseCol: PALETTE.stone[0], doors: [], windows: [{ face: 'right', u: 1.0 }, { face: 'left', u: 1.0 }, { face: 'front', u: 0.4, v: 0.55, w: 0.18, h: 0.2, glow: true }, { face: 'front', u: 2.2, v: 0.55, w: 0.18, h: 0.2 }] });
+  gabled(m, rnd, { x0, x1, z0, z1, h0: 0.1, h1: 0.95, wallMat: 'plaster', wall: pickFrom(rnd, PALETTE.plaster), roofMat: 'tile', roof: pickFrom(rnd, PALETTE.tile), ridgeH: 0.8, over: 0.16, axis: 'x', baseCol: PALETTE.stone[0], doors: [], windows: [{ face: 'right', u: 1.0 }, { face: 'left', u: 1.0 }, { face: 'front', u: 1.3, v: 0.42, w: 0.2, h: 0.22, glow: true }, { face: 'front', u: 0.2, v: 0.42, w: 0.16, h: 0.2 }, { face: 'front', u: 2.4, v: 0.42, w: 0.16, h: 0.2 }] });
   // Two wide cart doors with crossed timbers.
   for (const u of [0.7, 1.9]) {
     m.box('wood', x0 + u - 0.3, 0.1, z1 - 0.01, x0 + u + 0.3, 0.75, z1 + 0.04, '#5a3a20', { skip: ['bottom', 'back'] });
@@ -236,7 +237,7 @@ export function storehouse(m, v) {
   crate(m, -0.8, 0.15, 1.0, 0.13);
   for (let i = 0; i < 3; i++) barrel(m, 0.7 + i * 0.22, 0.0, 1.1);
   for (let i = 0; i < 3; i++) sack(m, 1.3 + (i % 2) * 0.1, 0.0, 0.4 + i * 0.15);
-  cart(m, -0.2, 0, 1.15, 1.2);
+  cart(m, -0.2, 0, 1.25, 1.2 + Math.PI);
   return { height: 1.9 };
 }
 
@@ -248,6 +249,18 @@ function flameAt(m, x, y, z, s = 1) {
       m.quad('flame', [-0.03 * s, 0.02 * s, 0.002], [0.03 * s, 0.02 * s, 0.002], [0.0, 0.1 * s, 0.002], [0.0, 0.02 * s, 0.002], '#ffd45a');
     }, a);
   }
+}
+
+/** An anvil standing on `y`: a waisted foot, the body, the flat face and the horn out to +x, the heel to −x. */
+function anvil(m, x, y, z) {
+  const IRON = '#3e3e44', FACE = '#6a6a72';
+  m.box('metal', x - 0.07, y, z - 0.05, x + 0.07, y + 0.025, z + 0.05, IRON, { skip: [] });
+  m.box('metal', x - 0.04, y + 0.025, z - 0.03, x + 0.04, y + 0.07, z + 0.03, IRON, { skip: [] });
+  m.box('metal', x - 0.09, y + 0.07, z - 0.04, x + 0.07, y + 0.11, z + 0.04, IRON, { skip: [] });
+  m.box('metal', x - 0.088, y + 0.11, z - 0.038, x + 0.068, y + 0.114, z + 0.038, FACE, { skip: ['bottom'] });
+  m.push().translate(x + 0.07, y + 0.095, z).rotateZ(-Math.PI / 2);
+  m.cylinder('metal', 0, 0, 0, 0.002, 0.034, 0.1, 8, IRON, { smooth: true, bottom: true });
+  m.pop();
 }
 
 export function smithy(m, v) {
@@ -269,11 +282,37 @@ export function smithy(m, v) {
   flameAt(m, 0, 0.4, z0 + 0.3, 1.4);
   const top = chimney(m, 0.0, z0 + 0.3, 0.55, 1.7, { w: 0.32 });
   // An anvil on a stump, a quench barrel, tools on the wall.
-  m.cylinder('bark', -0.1, 0.08, -0.45, 0.1, 0.11, 0.26, 8, '#6a4a2c', { smooth: true });
-  m.box('metal', -0.2, 0.34, -0.5, 0.0, 0.4, -0.4, '#44444a');
-  m.box('metal', -0.17, 0.4, -0.49, -0.03, 0.46, -0.41, '#55555c');
+  m.cylinder('bark', -0.1, 0.08, -0.45, 0.1, 0.11, 0.26, 8, '#6a4a2c', { smooth: true, capCol: '#a88458' });
+  anvil(m, -0.1, 0.34, -0.45);
+  // Hammers and tongs on the anvil and the block.
+  m.beam('wood', [-0.02, 0.43, -0.42], [0.12, 0.43, -0.36], 0.008, '#8a5a30');
+  m.box('metal', -0.045, 0.415, -0.445, -0.005, 0.445, -0.405, '#3a3a40', { skip: [] });
+  m.beam('metal', [-0.22, 0.345, -0.38], [-0.02, 0.345, -0.3], 0.005, '#3a3a40');
+  m.beam('metal', [-0.22, 0.345, -0.36], [-0.02, 0.345, -0.33], 0.005, '#3a3a40');
   barrel(m, 0.55, 0.08, -0.5, { r: 0.1, h: 0.2 });
-  for (let i = 0; i < 4; i++) m.beam('metal', [-0.6, 0.4 + i * 0.05, z0 + 0.13], [-0.4, 0.5 + i * 0.05, z0 + 0.13], 0.014, '#6a6a70');
+  // The bellows by the hearth: two boards and the leather between, the nozzle into the fire.
+  m.at(0.48, 0.3, z0 + 0.3, () => {
+    m.box('wood', -0.12, 0.0, -0.08, 0.12, 0.012, 0.08, PALETTE.wood[0], { skip: [] });
+    m.box('wood', -0.12, 0.09, -0.08, 0.12, 0.102, 0.08, PALETTE.wood[0], { skip: [] });
+    m.sphere('cloth', 0, 0.05, 0, 0.11, 0.045, 0.075, '#5a3a24', { detail: 1 });
+    m.beam('metal', [-0.12, 0.05, 0], [-0.2, 0.06, 0], 0.012, '#3a3a40');
+    m.beam('wood', [0.12, 0.1, 0], [0.24, 0.16, 0], 0.01, PALETTE.wood[1]);
+  });
+  // Tools hung on the side wall: tongs, hammers, a rasp; horseshoes over them.
+  const wx = x0 + 0.125;
+  for (let i = 0; i < 4; i++) {
+    const z = z0 + 0.65 + i * 0.12;
+    m.beam('metal', [wx, 0.62, z], [wx + 0.006, 0.36, z + (i % 2 ? 0.02 : -0.02)], 0.006, '#3a3a40');
+    if (i % 2) m.box('metal', wx, 0.36, z - 0.02, wx + 0.03, 0.39, z + 0.04, '#3a3a40', { skip: [] });
+  }
+  for (let i = 0; i < 5; i++) {
+    const z = z0 + 0.6 + i * 0.1;
+    m.push().translate(wx + 0.004, 0.69, z).rotateZ(Math.PI / 2);
+    m.cylinder('metal', 0, 0, 0, 0.028, 0.028, 0.008, 9, '#55555c', { caps: false });
+    m.pop();
+  }
+  // A heap of coal by the hearth.
+  for (let i = 0; i < 9; i++) m.rock('rock', -0.5 + (i % 3) * 0.06, 0.1 + Math.floor(i / 3) * 0.03, z0 + 0.25 + (i % 2) * 0.05, 0.04, 0.03, 0.035, '#1e1e22', { detail: 0, rough: 0.3, seed: i });
   // Iron bars stacked outside, a grindstone.
   for (let i = 0; i < 6; i++) m.box('metal', 0.9, (i % 3) * 0.04, 0.0 + Math.floor(i / 3) * 0.06, 1.2, (i % 3) * 0.04 + 0.035, 0.05 + Math.floor(i / 3) * 0.06, '#5a5a62');
   m.push().translate(-1.0, 0.18, 0.2).rotateZ(Math.PI / 2);
@@ -282,6 +321,12 @@ export function smithy(m, v) {
   m.beam('wood', [-1.0, 0.18, 0.15], [-1.0, 0.0, 0.1], 0.03, PALETTE.wood[1]);
   m.beam('wood', [-1.0, 0.18, 0.25], [-1.0, 0.0, 0.3], 0.03, PALETTE.wood[1]);
   logPile(m, 1.0, 0.0, 0.35, { len: 0.3, rows: 2, r: 0.03, yaw: Math.PI / 2 });
+  // A hitching rail out front, and over the opening a horseshoe for luck.
+  for (const x of [0.35, 0.95]) m.box('wood', x - 0.025, 0, 0.82 - 0.025, x + 0.025, 0.3, 0.82 + 0.025, PALETTE.wood[1], { skip: ['bottom'] });
+  m.beam('wood', [0.3, 0.27, 0.82], [1.0, 0.27, 0.82], 0.025, PALETTE.wood[0]);
+  m.push().translate(0, 0.62, z1 + 0.01).rotateX(Math.PI / 2);
+  m.cylinder('metal', 0, -0.006, 0, 0.05, 0.05, 0.012, 11, '#5a5a62', { caps: false });
+  m.pop();
   return { smoke: [top], height: 1.7, lights: [{ at: [0, 0.5, z0 + 0.4], color: '#ff8a3a', reach: 5 }] };
 }
 
@@ -292,18 +337,19 @@ export function weaver(m, v) {
   // A drying rack hung with dyed cloth.
   m.beam('wood', [-1.0, 0.7, 0.55], [1.0, 0.7, 0.55], 0.03, PALETTE.wood[1]);
   for (const x of [-1.0, 1.0]) m.beam('wood', [x, 0, 0.55], [x, 0.685, 0.55], 0.03, PALETTE.wood[1]);
-  const cols = ['#b32a2a', '#2a4a9a', '#c9a227', '#2a7a4a', '#7a3a8a', '#e0d0a0', '#b32a2a'];
+  const cols = ['#b32a2a', '#2a4a9a', '#c9a227', '#2a7a4a', '#7a3a8a', '#e0d0a0'];
   cols.forEach((c, i) => {
-    const x = -0.85 + i * 0.28;
-    m.quad('cloth', [x, 0.68, 0.56], [x + 0.22, 0.68, 0.56], [x + 0.22, 0.2, 0.56], [x, 0.2, 0.56], c);
+    const x = -0.92 + i * 0.31, w = 0.25, low = 0.2 + (i % 3) * 0.04;
+    m.quad('cloth', [x, 0.685, 0.565], [x + w, 0.685, 0.565], [x + w, low, 0.565], [x, low, 0.565], c);
+    m.quad('cloth', [x, low, 0.555], [x + w, low, 0.555], [x + w, 0.685, 0.555], [x, 0.685, 0.555], c);
   });
   // A loom frame and a pair of dye vats.
   m.box('wood', 0.55, 0.0, 0.2, 0.62, 0.55, 0.28, PALETTE.wood[1]);
   m.box('wood', 0.95, 0.0, 0.2, 1.02, 0.55, 0.28, PALETTE.wood[1]);
   m.box('wood', 0.54, 0.5, 0.19, 1.03, 0.56, 0.29, PALETTE.wood[1]);
   for (let i = 0; i < 6; i++) m.box('cloth', 0.64 + i * 0.05, 0.1, 0.235, 0.66 + i * 0.05, 0.5, 0.245, '#e8e0c8');
-  for (const [x, c] of [[-0.9, '#2a4a9a'], [-0.6, '#b32a2a']]) {
-    m.cylinder('wood', x, 0, 0.1, 0.12, 0.13, 0.22, 10, PALETTE.wood[1], { smooth: true, bottom: false, capCol: c });
+  for (const [x, c] of [[-0.95, '#2a4a9a'], [-0.62, '#b32a2a']]) {
+    m.cylinder('wood', x, 0, 0.3, 0.12, 0.13, 0.22, 10, PALETTE.wood[1], { smooth: true, bottom: false, capCol: c });
   }
   sack(m, 0.8, 0, -0.5, '#e8e0c8');
   sack(m, 0.9, 0, -0.35, '#efe8d0');

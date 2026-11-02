@@ -1,6 +1,6 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person } from './person.js';
 import { robe } from './metalwear.js';
-import { beard } from './wardrobe.js';
+import { beard, sunHat } from './wardrobe.js';
 
 /**
  * The Wizard: a pointed hat that has seen weather, a beard to the belt,
@@ -34,39 +34,40 @@ export default person({
       k.turn('head', 0.05 + Math.sin(T * 0.5) * 0.04, Math.sin(T * 0.35) * 0.18, 0);
     },
   },
-  extras(s) {
+  extras(s, J, { pose }) {
     robe(s, { color: '#3a2a8a', trim: '#f0c840', flare: 1.1 });
     beard(s, { color: '#e8e8ee', long: 1.4 });
-    s.part('kit', () => {
-      // The hat: a wide soft brim down to the brows, its edge rolled; a crown as wide as the head, rising and
-      // tapering, then bending back and over at the top where it has given up; a gold band, and gold stars.
-      const HAT = { color: cloth('#3a2a8a', '#22185a'), mat: 'cloth', bone: 'head' }, GOLD = { color: '#ffd84a', mat: 'plastic', bone: 'head' };
-      s.cylinder([0, 0.738, 0.004], 0.168, 0.0048, { ...HAT, k: 0.006, round: 0.0045, rot: [0.1, 0, 0] });
-      s.torus([0, 0.738, 0.004], 0.166, 0.0058, { ...HAT, k: 0.003, rot: [0.1, 0, 0] });
+    // The hat: a wide soft brim down to the brows, a gold band, and the crown as wide as the head, rising and
+    // tapering, then bending back and over at the top where it has given up; gold stars on it.
+    const HAT = cloth('#3a2a8a', '#22185a');
+    sunHat(s, { color: HAT, band: '#ffd84a', brim: 0.17, droop: 0.15, edge: 0.715 });
+    s.part('outer2', () => {
       const crown = [[0, 0.73, -0.004], [0, 0.81, -0.01], [0.006, 0.89, -0.022], [0.02, 0.955, -0.045], [0.045, 0.993, -0.085], [0.077, 0.99, -0.126], [0.102, 0.962, -0.152]];
-      const thick = [0.092, 0.074, 0.055, 0.038, 0.025, 0.015, 0.0065];
-      for (let i = 0; i < crown.length - 1; i++) s.limb(crown[i], crown[i + 1], thick[i], thick[i + 1], { ...HAT, k: 0.006 });
-      s.torus([0, 0.758, -0.005], 0.088, 0.0085, { ...GOLD, k: 0.003, rot: [0.04, 0, 0] });
-      // A five-pointed star on the front of the crown, and a smaller one higher up the side.
-      const star = (c, n, r) => {
-        const up = [0, 1, 0], side = [n[2], 0, -n[0]];
-        for (let i = 0; i < 5; i++) {
-          const a = (i / 5) * Math.PI * 2;
-          const d = [0, 1, 2].map((j) => up[j] * Math.cos(a) + side[j] * Math.sin(a));
-          s.flake(c, c.map((v, j) => v + d[j] * r), n, r * 0.36, r * 0.07, 0.4, { ...GOLD, k: 0.002 });
-        }
-      };
-      star([0, 0.815, 0.083], [0, 0.15, 1], 0.026);
-      star([0.05, 0.89, 0.016], [0.85, 0.2, 0.5], 0.016);
-      // The staff: a gnarled shaft and a glowing blue stone in a claw at the top.
-      // Planted upright by the posed right fist, on the chest so it stands straight.
-      const x = -0.152, z = 0.13;
-      s.limb([x, 0.02, z], [x - 0.004, 0.8, z + 0.006], 0.012, 0.016, { color: '#4a3220', mat: 'leather', bone: 'chest', k: 0.006, bump: [0.003, 70] });
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2;
-        s.limb([x - 0.004, 0.79, z + 0.006], [x - 0.004 + Math.cos(a) * 0.022, 0.86, z + 0.006 + Math.sin(a) * 0.022], 0.006, 0.003, { color: '#4a3220', mat: 'leather', bone: 'chest', k: 0.004 });
+      const thick = [0.088, 0.072, 0.055, 0.038, 0.025, 0.015, 0.0065];
+      for (let i = 0; i < crown.length - 1; i++) s.limb(crown[i], crown[i + 1], thick[i], thick[i + 1], { color: HAT, mat: 'cloth', bone: 'head', k: 0.006 });
+    });
+    const GOLD = { color: '#ffd84a', mat: 'plastic', bone: 'head' };
+    const star = (c, n, r) => {
+      const up = [0, 1, 0], side = [n[2], 0, -n[0]];
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2, d = [0, 1, 2].map((j) => up[j] * Math.cos(a) + side[j] * Math.sin(a));
+        s.flake(c, c.map((v, j) => v + d[j] * r), n, r * 0.36, r * 0.07, 0.4, { ...GOLD, k: 0.002 });
       }
-      s.sphere([x - 0.004, 0.84, z + 0.006], 0.024, { color: '#6ad0ff', mat: 'glow', bone: 'chest', k: 0.004 });
+    };
+    s.part('kit', () => { star([0, 0.815, 0.083], [0, 0.15, 1], 0.026); star([0.05, 0.89, 0.016], [0.85, 0.2, 0.5], 0.016); });
+    // The staff, planted by the right foot and gripped in the fist: a gnarled shaft up past his head, the claw at
+    // its top round a glowing blue stone.
+    const G = pose.grip('R'), foot = [G.c[0] - 0.01, 0.004, G.c[2] + 0.02], d0 = G.c.map((v, i) => v - foot[i]), L = Math.hypot(...d0), u = d0.map((v) => v / L);
+    const at = (t) => foot.map((v, i) => v + u[i] * t), top = L + 0.42;
+    pose.hold(s, 'handR', () => {
+      s.part('kit', () => {
+        s.limb(at(0), at(top), 0.011, 0.016, { color: '#4a3220', mat: 'leather', k: 0.006, bump: [0.003, 70] });
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * Math.PI * 2, o = [Math.cos(a) * 0.022, 0.06, Math.sin(a) * 0.022];
+          s.limb(at(top - 0.01), at(top - 0.01).map((v, j) => v + o[j]), 0.006, 0.003, { color: '#4a3220', mat: 'leather', k: 0.004 });
+        }
+      });
+      s.part('fine', () => s.sphere(at(top + 0.04), 0.024, { color: '#6ad0ff', mat: 'glow', k: 0.004 }));
     });
   },
 });

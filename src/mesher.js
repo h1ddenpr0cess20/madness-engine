@@ -313,7 +313,7 @@ export class Mesher {
       }
       if (o.caps !== false) {
         if (rTop > 1e-6) this.tri(o.capMat ?? mat, [cx, y0 + h, cz], p(a1, rTop, y0 + h), p(a0, rTop, y0 + h), o.capCol ?? col, { ...o, normals: [[0, 1, 0], [0, 1, 0], [0, 1, 0]] });
-        if (o.bottom) this.tri(mat, [cx, y0, cz], p(a0, rBot, y0), p(a1, rBot, y0), col, { ...o, normals: [[0, -1, 0], [0, -1, 0], [0, -1, 0]] });
+        if (o.bottom) this.tri(o.capMat ?? mat, [cx, y0, cz], p(a0, rBot, y0), p(a1, rBot, y0), o.capCol ?? col, { ...o, normals: [[0, -1, 0], [0, -1, 0], [0, -1, 0]] });
       }
     }
     return this;

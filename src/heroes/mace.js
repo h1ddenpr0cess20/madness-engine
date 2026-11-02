@@ -59,3 +59,17 @@ export function createMace(GFX, { radius = 0.45 } = {}) {
     },
   };
 }
+
+/** The player's ball in the town games (Metrlol): in tiles, a little under three-quarters of a tile across. */
+export const RADIUS = 0.36;
+
+/**
+ * The player in the town games: the spiked ball with no morning star
+ * attached, turned as the physics rolls it and squashed on landing; its
+ * spikes snap off as it is knocked about (`mace.hurtTo(spikes / 100)`) and
+ * come back on a whetstone. `player` goes in the scene; `mace.update(dt, { q, position })` turns and places it.
+ */
+export function createPlayer(GFX, { radius = RADIUS } = {}) {
+  const mace = createMace(GFX, { radius });
+  return { player: mace.group, mace };
+}

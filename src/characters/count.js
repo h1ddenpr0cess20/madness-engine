@@ -1,4 +1,5 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { buttons, cloth, hold, onBody, person, strap } from './person.js';
+import { suitFront } from './wardrobe.js';
 import { cape, fangs } from './metalwear.js';
 
 /**
@@ -32,20 +33,31 @@ export default person({
       k.move('root', 0, Math.sin(T * 0.9) * 0.012, 0);
     },
   },
-  extras(s) {
+  extras(s, J) {
     cape(s, { color: '#12101a', lining: '#a0102a', collar: true });
     fangs(s);
+    // The white shirt front in the V of the tailcoat, a ruffle down it, a red bow at the throat.
+    suitFront(s, { shirt: '#f4f0e8', tie: '#a0102a', bow: true, lapel: cloth('#2a2030', '#14101a'), low: 0.39 });
+    buttons(s, [[0, 0.5, 0.09], [0, 0.475, 0.092], [0, 0.45, 0.092], [0, 0.425, 0.09]], { r: 0.014, dome: 0.45, color: '#f8f4ec', mat: 'cloth', over: ['outer'] });
+    // The medallion on its chain, round the neck and down over the shirt, a red stone in it.
+    strap(s, [[0.03, 0.553, -0.03], [0.052, 0.52, 0.04], [0.02, 0.43, 0.09], [-0.02, 0.43, 0.09], [-0.052, 0.52, 0.04], [-0.03, 0.553, -0.03], [0, 0.556, -0.04]], { round: true, closed: true, thick: 0.004, color: '#c8a050', mat: 'metal', over: ['head', 'top', 'outer', 'outer2'] });
+    const med = onBody(s, [0, 0.415, 0.1], ['outer', 'outer2', 'top']);
     s.part('kit', () => {
-      // The medallion on its chain, a red stone in it. A white shirt front with a ruffle, studs.
-      s.limb([-0.03, 0.54, 0.05], [0, 0.4, 0.086], 0.003, 0.003, { color: '#c8a050', mat: 'metal', bone: 'chest', k: 0.001 });
-      s.cylinder([0, 0.4, 0.09], 0.02, 0.003, { color: '#c8a050', mat: 'metal', bone: 'chest', k: 0.001, rot: [Math.PI / 2, 0, 0] });
-      s.sphere([0, 0.4, 0.094], 0.008, { color: '#c8102e', mat: 'glass', bone: 'chest', k: 0.001 });
-      for (let i = 0; i < 4; i++) s.ellipsoid([0, 0.5 - i * 0.03, 0.076], [0.02, 0.012, 0.008], { color: '#f4f0e8', mat: 'cloth', bone: 'chest', k: 0.004 });
-      // Long nails on both hands.
-      for (const m of [1, -1]) {
-        const w = m > 0 ? 'handL' : 'handR';
-        for (let i = 0; i < 3; i++) s.limb([m * (0.15 + i * 0.004), 0.25, 0.04 + i * 0.008], [m * (0.15 + i * 0.004), 0.2, 0.07 + i * 0.01], 0.003, 0.0008, { color: '#f0e8e0', mat: 'bone', bone: w, k: 0.001 });
-      }
+      const c = med.p.map((v, i) => v + med.n[i] * 0.004);
+      s.cylinder(c, 0.019, 0.003, { color: '#c8a050', mat: 'metal', bone: 'chest', k: 0.001, round: 0.002, rot: [Math.PI / 2, 0, 0] });
+      s.sphere(c.map((v, i) => v + med.n[i] * 0.004), 0.008, { color: '#c8102e', mat: 'glass', bone: 'chest', k: 0.001 });
     });
+    // Long pale nails, out from the ends of the fingers.
+    for (const S of ['L', 'R']) {
+      const m = S === 'L' ? 1 : -1, h = J[`hand${S}`];
+      const at = (x, y, z) => [h[0] + m * x, h[1] + y, h[2] + z];
+      s.part('hands', () => {
+        [[0.0135, 0.84], [0.0046, 1], [-0.0044, 0.96], [-0.0132, 0.8]].forEach(([z, l]) => {
+          const tip = at(-0.011, -0.016 - 0.021 * l, z * 0.9), from = at(-0.0075, -0.012 - 0.018 * l, z * 0.92);
+          const d = tip.map((v, i) => v - from[i]), dl = Math.hypot(...d);
+          s.limb(tip.map((v, i) => v - (d[i] / dl) * 0.002), tip.map((v, i) => v + (d[i] / dl) * 0.016), 0.003, 0.0008, { color: '#e8e0d4', mat: 'bone', bone: `hand${S}`, k: 0.0012 });
+        });
+      });
+    }
   },
 });

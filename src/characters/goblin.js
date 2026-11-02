@@ -1,3 +1,5 @@
+import { shell } from './humanoid.js';
+import { band } from './quadruped.js';
 import { coat, grainy, ramp } from '../models/skins.js';
 
 /**
@@ -32,7 +34,7 @@ export default {
   name: 'goblin',
   scale: 1,
   cell: 0.0074,
-  budget: 13500,
+  budget: 60000,
   cells: { eyes: 0.0022, irises: 0.0013, pupils: 0.001, teeth: 0.0018, ears: 0.0032, claws: 0.0022, hands: 0.0042, gear: 0.0035, blade: 0.0022, cloth: 0.0045 },
   bones: [
     ['root', null, [0, 0, 0]],
@@ -69,13 +71,12 @@ export default {
   },
   sculpt(s) {
     const S = { color: skin, mat: 'skin' };
-    const L = { color: leather, mat: 'leather' };
 
     // ——— Body: a pot belly, a narrow chest pitched forward, a hunched back.
     s.ellipsoid([0, 0.215, -0.01], [0.068, 0.05, 0.058], { ...S, bone: 'hips', k: 0.03 });
-    s.ellipsoid([0, 0.27, 0.02], [0.068, 0.068, 0.064], { ...L, bone: 'hips', k: 0.04 });
-    s.ellipsoid([0, 0.335, 0.025], [0.078, 0.06, 0.06], { ...L, bone: 'chest', k: 0.04, rot: [0.45, 0, 0] });
-    s.ellipsoid([0, 0.35, -0.02], [0.066, 0.06, 0.052], { ...L, bone: 'chest', k: 0.04, rot: [0.3, 0, 0] });
+    s.ellipsoid([0, 0.27, 0.02], [0.068, 0.068, 0.064], { ...S, bone: 'hips', k: 0.04 });
+    s.ellipsoid([0, 0.335, 0.025], [0.078, 0.06, 0.06], { ...S, bone: 'chest', k: 0.04, rot: [0.45, 0, 0] });
+    s.ellipsoid([0, 0.35, -0.02], [0.066, 0.06, 0.052], { ...S, bone: 'chest', k: 0.04, rot: [0.3, 0, 0] });
     // Neck, thrust forward.
     s.limb([0, 0.36, 0.035], [0, 0.425, 0.085], 0.034, 0.03, { ...S, bone: 'head', k: 0.03 });
 
@@ -130,6 +131,12 @@ export default {
       s.limb([m * 0.128, 0.225, 0.054], [m * 0.13, 0.205, 0.064], 0.016, 0.016, { ...S, bone: `el${side(m)}`, k: 0.01 });
       s.ellipsoid([m * 0.133, 0.183, 0.075], [0.02, 0.027, 0.024], { ...S, bone: b, k: 0.012, rot: [0.3, 0, m * 0.15] });
       for (const t of [-1, 0, 1]) {
+        if (m < 0) {
+          // The right hand shut round the dagger's grip: over the outside of it, under, and back up the inside.
+          const z = 0.074 + t * 0.012;
+          s.chain([[-0.134, 0.166, z], [-0.152, 0.152, z + 0.002], [-0.147, 0.136, z + 0.003], [-0.131, 0.137, z + 0.003]], [0.0072, 0.0065, 0.006, 0.0052], { ...S, bone: b, k: 0.005 });
+          continue;
+        }
         const a = [m * (0.133 + t * 0.002), 0.165, 0.078 + t * 0.012];
         const mid = [m * (0.14 + t * 0.002), 0.142, 0.083 + t * 0.016];
         const tip = [m * (0.137 + t * 0.001), 0.128, 0.094 + t * 0.017];
@@ -183,19 +190,25 @@ export default {
       for (const t of [-1, 0, 1]) {
         const x = m * 0.072 + t * 0.015 + m * 0.008 + t * 0.008 + m * 0.006;
         s.limb([x, 0.011, 0.093], [x + t * 0.003, 0.004, 0.108], 0.0055, 0.0012, { color: claw, mat: 'claw', bone: `ft${b}`, k: 0.002 });
+        if (m < 0) {
+          const z = 0.074 + t * 0.012 + 0.003;
+          s.limb([-0.131, 0.137, z], [-0.126, 0.144, z + 0.002], 0.004, 0.001, { color: claw, mat: 'claw', bone: `ha${b}`, k: 0.002 });
+          continue;
+        }
         const tip = [m * (0.137 + t * 0.001), 0.128, 0.094 + t * 0.017];
         s.limb(tip, add(tip, [0, -0.008, 0.012]), 0.0042, 0.001, { color: claw, mat: 'claw', bone: `ha${b}`, k: 0.002 });
       }
     }));
 
-    // ——— Belt, pouch.
+    // ——— The tunic: leather, its own layer over the trunk from the hips to under the arms, so it has an edge.
+    shell(s, (p) => Math.max(0.192 - p[1], p[1] - 0.372), { color: leather, mat: 'leather', part: 'cloth', thick: 0.007, lift: 0.002, over: ['body'], keep: (sh) => sh.bone === 'hips' || sh.bone === 'chest', k: 0.004 });
+
+    // ——— Belt, lying on the tunic all the way round, the buckle at the front, the pouch on the hip.
+    const { front } = band(s, [0, 0.236, 0.005], [0, 1, 0], { color: darkLeather, width: 0.016, thick: 0.006, sink: 0.1, tag: null, bone: 'hips', part: 'gear', count: 32 });
     s.part('gear', () => {
-      s.ellipsoid([0, 0.235, 0.0], [0.08, 0.05, 0.07], { color: darkLeather, mat: 'leather', bone: 'hips', k: 0.004 });
-      s.ellipsoid([0, 0.235, 0.0], [0.074, 0.06, 0.064], { op: 'sub', k: 0.004 });
-      s.box([0, 0.236, 0], [0.12, 0.012, 0.12], 0.004, { op: 'inter', k: 0.004 });
-      s.box([0, 0.236, 0.072], [0.014, 0.014, 0.004], 0.003, { color: rust, mat: 'metal', bone: 'hips', k: 0.002 });
-      s.ellipsoid([0.07, 0.21, 0.035], [0.022, 0.026, 0.016], { color: pouchLeather, mat: 'leather', bone: 'hips', k: 0.006, rot: [0, 0.9, 0] });
-      s.ellipsoid([0.072, 0.228, 0.036], [0.024, 0.008, 0.018], { color: pouchLeather, mat: 'leather', bone: 'hips', k: 0.004, rot: [0, 0.9, 0.1] });
+      s.box(add(front.p, front.n, 0.003), [0.012, 0.011, 0.003], 0.002, { color: rust, mat: 'metal', bone: 'hips', k: 0.001 });
+      s.ellipsoid([0.074, 0.212, 0.038], [0.022, 0.026, 0.016], { color: pouchLeather, mat: 'leather', bone: 'hips', k: 0.006, rot: [0, 0.9, 0] });
+      s.ellipsoid([0.076, 0.229, 0.039], [0.024, 0.008, 0.018], { color: pouchLeather, mat: 'leather', bone: 'hips', k: 0.004, rot: [0, 0.9, 0.1] });
     });
 
     // ——— Ragged hem of the tunic: strips hanging from the belt.
@@ -213,13 +226,13 @@ export default {
 
     // ——— The dagger, in the right hand: a wrapped grip, a crossguard and a curved, notched blade.
     s.part('gear', () => {
-      s.limb([-0.133, 0.183, 0.045], [-0.133, 0.183, 0.108], 0.0065, 0.0065, { color: darkLeather, mat: 'leather', bone: 'haR', k: 0.002 });
-      s.sphere([-0.133, 0.183, 0.043], 0.009, { color: rust, mat: 'metal', bone: 'haR', k: 0.002 });
-      s.box([-0.133, 0.183, 0.11], [0.006, 0.02, 0.005], 0.003, { color: rust, mat: 'metal', bone: 'haR', k: 0.002 });
+      s.limb([-0.139, 0.149, 0.048], [-0.139, 0.149, 0.106], 0.0062, 0.0062, { color: darkLeather, mat: 'leather', bone: 'haR', k: 0.002 });
+      s.sphere([-0.139, 0.149, 0.046], 0.009, { color: rust, mat: 'metal', bone: 'haR', k: 0.002 });
+      s.box([-0.139, 0.149, 0.108], [0.006, 0.02, 0.005], 0.003, { color: rust, mat: 'metal', bone: 'haR', k: 0.002 });
     });
     s.part('blade', () => {
       const up = [1, 0, 0];
-      const pts = [[-0.133, 0.183, 0.112], [-0.133, 0.188, 0.15], [-0.133, 0.2, 0.185], [-0.133, 0.222, 0.21]];
+      const pts = [[-0.139, 0.149, 0.11], [-0.139, 0.154, 0.148], [-0.139, 0.166, 0.183], [-0.139, 0.188, 0.208]];
       s.flake(pts[0], pts[1], up, 0.0125, 0.0125, 0.16, { color: rust, mat: 'metal', bone: 'haR', k: 0.006 });
       s.flake(pts[1], pts[2], up, 0.0125, 0.0095, 0.16, { color: rust, mat: 'metal', bone: 'haR', k: 0.006 });
       s.flake(pts[2], pts[3], up, 0.0095, 0.0015, 0.16, { color: rust, mat: 'metal', bone: 'haR', k: 0.006 });

@@ -1,5 +1,5 @@
 import { coat } from '../models/skins.js';
-import { cloth, hold, person } from './person.js';
+import { axisRot, bag, cloth, hold, onBody, person, plate, shell, strap } from './person.js';
 
 /**
  * The Superfan: has been to every show of the tour, front row, and is
@@ -19,6 +19,7 @@ const SHIRT = (p, n) => {
   return c;
 };
 const DENIM = coat({ over: '#3a5a8a', under: '#24406a', vary: 0.14, freq: 20 });
+const SCARF = (p) => (Math.floor((p[0] + p[1] * 3) * 40) % 2 ? [0.94, 0.75, 0.12] : [0.09, 0.09, 0.11]);
 const BADGES = ['#d8141e', '#f0c020', '#1a8ad8', '#2aa04a', '#f4f2ec', '#ff6ad8'];
 
 export default person({
@@ -48,33 +49,35 @@ export default person({
       if (clip === 'idle') k.move('root', 0, beat * 0.01, 0);
     },
   },
-  extras(s, J) {
-    s.part('kit', () => {
-      // The bucket hat, badges all round it.
-      s.cylinder([0, 0.785, -0.004], 0.1, 0.042, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02 });
-      s.cylinder([0, 0.748, -0.004], 0.158, 0.0055, { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.01, round: 0.005, rot: [0.1, 0, 0] });
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        s.cylinder([Math.sin(a) * 0.1, 0.785, Math.cos(a) * 0.1 - 0.004], 0.014, 0.003, { color: BADGES[i % 6], mat: 'plastic', bone: 'head', k: 0.001, rot: [Math.PI / 2, a, 0] });
-      }
-      // Face paint: a stripe of the tour's yellow on each cheek.
-      for (const m of [1, -1]) s.box([m * 0.055, 0.635, 0.085], [0.022, 0.006, 0.006], 0.003, { color: '#f0c020', mat: 'plastic', bone: 'head', k: 0.001, rot: [0, m * 0.5, m * 0.2] });
-      // The scarf, yellow and black, the ends down.
-      s.torus([0, 0.53, 0.0], 0.07, 0.025, { color: '#f0c020', mat: 'cloth', bone: 'chest', k: 0.006 });
-      for (const m of [1, -1]) s.flake([m * 0.04, 0.52, 0.07], [m * 0.05, 0.36, 0.12], [0, 0, 1], 0.025, 0.025, 0.25, { color: m > 0 ? '#f0c020' : '#16161c', mat: 'cloth', bone: 'chest', k: 0.004 });
-      // Lanyards, and a pass on each.
-      for (const [dx, c] of [[-0.03, '#d8141e'], [0.0, '#1a8ad8'], [0.03, '#2aa04a']]) {
-        s.limb([dx * 1.6, 0.52, 0.05], [dx, 0.4, 0.12], 0.003, 0.003, { color: c, mat: 'cloth', bone: 'chest', k: 0 });
-        s.box([dx, 0.385, 0.125], [0.016, 0.022, 0.003], 0.002, { color: '#f4f2ec', mat: 'plastic', bone: 'chest', k: 0 });
-      }
-      // The tattoo on the left arm: a grey boulder with eyes. It is not Rock's face.
-      s.ellipsoid([0.125, 0.45, 0.02], [0.012, 0.026, 0.024], { color: '#7a7a82', mat: 'plastic', bone: 'armL', k: 0.002 });
-      for (const dz of [-0.008, 0.008]) s.sphere([0.135, 0.455, 0.02 + dz], 0.004, { color: '#14141a', mat: 'plastic', bone: 'armL', k: 0 });
-      // The foam finger: a huge yellow hand, one finger up, the number one on it.
-      const h = J.handR;
-      s.box([h[0], h[1] - 0.02, h[2] + 0.02], [0.03, 0.05, 0.045], 0.02, { color: '#f0c020', mat: 'plastic', bone: 'handR', k: 0.008 });
-      s.limb([h[0], h[1] - 0.06, h[2] + 0.05], [h[0], h[1] - 0.2, h[2] + 0.05], 0.022, 0.02, { color: '#f0c020', mat: 'plastic', bone: 'handR', k: 0.008 });
-      s.box([h[0] - 0.031, h[1] - 0.02, h[2] + 0.02], [0.002, 0.028, 0.006], 0.001, { color: '#16161c', mat: 'plastic', bone: 'handR', k: 0 });
+  extras(s, J, { pose }) {
+    // The bucket hat: the crown over the hair, the soft brim round it sloping down, badges pinned round the crown.
+    shell(s, (p) => 0.71 - p[1], { color: '#e8dcc0', mat: 'cloth', part: 'outer', thick: 0.008, lift: 0.002, over: ['head', 'hair'], bone: 'head', k: 0.004 });
+    s.part('outer2', () => s.shape((p) => {
+      const r = Math.hypot(p[0], p[2] + 0.004), y = 0.713 - Math.max(0, r - 0.1) * 0.4;
+      return Math.max(Math.abs(p[1] - y) * 0.93 - 0.0035, r - 0.158, 0.098 - r);
+    }, [[-0.17, 0.68, -0.17], [0.17, 0.73, 0.17]], { color: '#e8dcc0', mat: 'cloth', bone: 'head', k: 0.003 }));
+    const pins = [];
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; pins.push([Math.sin(a) * 0.12, 0.745, Math.cos(a) * 0.12]); }
+    onBody(s, pins, ['outer']).forEach((h, i) => s.part('kit', () => s.cylinder(h.p.map((v, j) => v + h.n[j] * 0.002), 0.014, 0.0028, { color: BADGES[i % 6], mat: 'plastic', bone: 'head', k: 0.001, rot: axisRot(h.n) })));
+    // Face paint: a stripe of the tour's yellow on each cheek.
+    for (const m of [1, -1]) s.paint((p) => Math.max(Math.abs(p[1] - 0.632 - (p[0] * m - 0.055) * 0.35) - 0.0055, Math.abs(p[0] * m - 0.06) - 0.022, 0.04 - p[2]), '#f0c020', 0.0015);
+    // The scarf, yellow and black, round the neck, its ends down the front.
+    strap(s, [[0, 0.545, 0.075], [0.055, 0.548, 0.045], [0.07, 0.552, -0.01], [0.045, 0.555, -0.065], [0, 0.556, -0.075], [-0.045, 0.555, -0.065], [-0.07, 0.552, -0.01], [-0.055, 0.548, 0.045], [0, 0.545, 0.075]], { width: 0.03, thick: 0.014, color: SCARF, mat: 'cloth', over: ['top', 'head'], part: 'outer2', bone: 'chest', closed: true });
+    for (const m of [1, -1]) shell(s, (p) => Math.max(Math.abs(p[0] - m * 0.04) - 0.017, p[1] - 0.535, 0.37 - p[1], 0.03 - p[2]), { color: SCARF, mat: 'cloth', part: 'outer', thick: 0.006, lift: 0.002, over: ['top'], bone: 'chest', k: 0.003 });
+    // Lanyards, and a pass on each.
+    [[-0.03, '#d8141e', 0.43], [0.0, '#1a8ad8', 0.41], [0.03, '#2aa04a', 0.39]].forEach(([dx, c, y]) => {
+      strap(s, [[0, 0.552, -0.06], [0.05, 0.545, -0.03], [0.056, 0.53, 0.03], [dx + 0.01, y + 0.02, 0.1], [dx, y, 0.11]], { width: 0.005, thick: 0.002, color: c, mat: 'cloth', over: ['top', 'outer', 'head'], bone: 'chest' });
+      bag(s, [dx, y - 0.02, 0.11], { size: [0.015, 0.02, 0.0018], color: '#f4f2ec', flap: false, over: ['top', 'outer'], bone: 'chest' });
     });
+    // The foam finger: a huge yellow foam hand over his fist, the index finger up, NO 1 across the palm.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      const F = { color: '#f0c020', mat: 'plastic', k: 0.008 };
+      plate(s, G.at(0, -0.035, 0), G.along, G.up, [0.05, 0.065, 0.026], 0.02, F);
+      s.limb(G.at(0.025, -0.1), G.at(0.025, -0.25), 0.02, 0.018, F);
+      for (const t of [0.0, -0.025]) s.limb(G.at(t - 0.005, -0.1, 0.008), G.at(t - 0.005, -0.08, 0.03), 0.014, 0.013, F);
+      s.limb(G.at(0.05, -0.04), G.at(0.075, -0.075), 0.014, 0.012, F);
+      s.limb(G.at(0, 0.03), G.at(0, 0.05), 0.04, 0.04, { ...F, color: '#16161c' });
+    }));
   },
 });

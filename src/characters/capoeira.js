@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.js';
+import { cloth, hold, onBody, person, strap } from './person.js';
 
 /**
  * The Capoeirista: from the roda on the beach at Ipanema, bare to the
@@ -48,14 +48,15 @@ export default person({
     },
   },
   extras(s) {
+    // Muscle: the pecs, melted into the bare chest.
+    s.part('body', () => { for (const m of [1, -1]) s.ellipsoid([m * 0.04, 0.47, 0.052], [0.04, 0.028, 0.022], { color: SKIN, mat: 'skin', bone: 'chest', k: 0.03 }); });
+    // The cord of his grade, round the waistband of the abadá, knotted at the left hip, its two ends hanging.
+    strap(s, [[0, 0.352, 0.085], [0.07, 0.352, 0.06], [0.09, 0.352, 0], [0.05, 0.352, -0.07], [-0.05, 0.352, -0.07], [-0.09, 0.352, 0], [-0.07, 0.352, 0.06]], { round: true, closed: true, thick: 0.0075, lift: 0.0005, color: '#2a8a3a', mat: 'cloth', over: ['bottoms'] });
+    const knot = onBody(s, [0.078, 0.35, 0.05], ['bottoms']);
     s.part('kit', () => {
-      // The waistband, and the cord of his grade knotted at the left hip, its ends down.
-      s.torus([0, 0.335, 0.0], 0.08, 0.012, { color: '#f6f4f0', mat: 'cloth', bone: 'hips', k: 0.004 });
-      s.torus([0, 0.33, 0.0], 0.083, 0.006, { color: '#2a8a3a', mat: 'cloth', bone: 'hips', k: 0.002 });
-      s.sphere([0.07, 0.325, 0.04], 0.012, { color: '#f0c020', mat: 'cloth', bone: 'hips', k: 0.002 });
-      for (const [dz, c] of [[0.03, '#2a8a3a'], [0.05, '#f0c020']]) s.limb([0.075, 0.32, dz], [0.085, 0.22, dz + 0.01], 0.005, 0.005, { color: c, mat: 'cloth', bone: 'hips', k: 0.001 });
-      // Muscle: pecs and the line down the middle.
-      for (const m of [1, -1]) s.ellipsoid([m * 0.04, 0.47, 0.055], [0.04, 0.03, 0.025], { color: SKIN, mat: 'skin', bone: 'chest', k: 0.02 });
+      const c = knot.p.map((v, i) => v + knot.n[i] * 0.01);
+      s.sphere(c, 0.011, { color: '#f0c020', mat: 'cloth', bone: 'hips', k: 0.002 });
+      for (const [dx, col] of [[-0.006, '#2a8a3a'], [0.008, '#f0c020']]) s.limb(c, [c[0] + dx + 0.008, c[1] - 0.09, c[2] + 0.008], 0.0055, 0.0045, { color: col, mat: 'cloth', bone: 'hips', k: 0.002 });
     });
   },
 });

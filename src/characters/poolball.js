@@ -20,9 +20,10 @@ export default {
     for (const side of [1, -1]) {
       const spot = (p) => Math.hypot(p[0], p[1] - R) - 0.14 + (side * (p[2]) < 0 ? 1 : 0);
       s.paint(spot, '#f4f0e6', 0.006);
-      const ring = (yo) => (p) => Math.abs(Math.hypot(p[0], p[1] - R - yo) - 0.03) - 0.008 + (side * p[2] < 0 ? 1 : 0);
-      s.paint(ring(0.04), '#0b0b10', 0.004);
-      s.paint(ring(-0.04), '#0b0b10', 0.004);
+      // The 8: a smaller loop sitting on a bigger one, joined where they meet.
+      const ring = (yo, r) => (p) => Math.abs(Math.hypot(p[0], p[1] - R - yo) - r) - 0.0085 + (side * p[2] < 0 ? 1 : 0);
+      s.paint(ring(0.033, 0.023), '#0b0b10', 0.003);
+      s.paint(ring(-0.026, 0.03), '#0b0b10', 0.003);
     }
   },
   animate(k, { clip = 'idle', time = 0, seed = 0 }) {

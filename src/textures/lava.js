@@ -1,9 +1,13 @@
 /**
  * Lava, as a shader of its own (GLSL for WebGL 2, WGSL for WebGPU, the same
- * picture from each). A crust of dark plates drifts and grinds over it, the
- * melt shows white-hot in the cracks between them, pools of it well up and
- * crust over again, bubbles swell and burst, and the whole of it pulses. It
- * lights itself: what it draws is what you see, whatever the lights.
+ * picture from each). A crust of dark basalt plates drifts and grinds over
+ * it, each plate domed and grainy, fine cracks crazing it, its edges lit
+ * from the melt beneath; between the plates the melt shows in the cracks,
+ * hottest in the middle of them, the colour of the heat — red, orange,
+ * yellow, nearly white — streaming as it moves; pools of it well up and
+ * crust over again, embers wink on the crust, bubbles swell and burst, and
+ * the whole of it pulses. It lights itself: what it draws is what you see,
+ * whatever the lights.
  */
 
 const GLSL_VERTEX = `varying vec3 vWorld;
@@ -41,20 +45,37 @@ vec2 plates(vec2 p, float t) {
   }
   return vec2(d1, d2 - d1);
 }
+// The colour of the heat, 0 (dull red) to 1 (nearly white).
+vec3 glow(float h) {
+  vec3 c = mix(vec3(0.3, 0.025, 0.0), vec3(0.95, 0.22, 0.02), smoothstep(0.0, 0.45, h));
+  c = mix(c, vec3(1.0, 0.6, 0.12), smoothstep(0.4, 0.75, h));
+  return mix(c, vec3(1.0, 0.94, 0.72), smoothstep(0.78, 1.0, h));
+}
 void main() {
   float t = uTime;
   vec2 p = vWorld.xz;
   vec2 warp = vec2(fbm(p * 0.7 + vec2(t * 0.05, 0.0)), fbm(p * 0.7 + vec2(3.1, -t * 0.04)));
   vec2 q = p * 1.5 + warp * 1.3;
   vec2 v = plates(q, t);
-  float crack = 1.0 - smoothstep(0.03, 0.17, v.y);
-  float pool = smoothstep(0.5, 0.76, fbm(p * 0.8 + vec2(t * 0.06, -t * 0.045)));
-  float heat = clamp(crack + pool, 0.0, 1.0);
-  vec3 crust = mix(vec3(0.1, 0.03, 0.018), vec3(0.62, 0.12, 0.02), (1.0 - smoothstep(0.0, 0.36, v.y)) * 0.9);
-  crust *= 0.75 + 0.5 * vnoise(q * 5.0);
-  vec3 melt = mix(vec3(1.0, 0.3, 0.02), vec3(1.0, 0.86, 0.42), heat * heat);
-  float pulse = 0.82 + 0.18 * sin(t * 1.9 + fbm(p * 1.7) * 6.0);
-  vec3 col = mix(crust, melt * pulse, heat);
+  vec2 w = plates(q * 3.1 + vec2(5.2, 1.3), t * 0.7);
+  float crack = 1.0 - smoothstep(0.02, 0.15, v.y);
+  float fine = (1.0 - smoothstep(0.0, 0.06, w.y)) * 0.55 * smoothstep(0.08, 0.3, v.y);
+  float pool = smoothstep(0.52, 0.78, fbm(p * 0.8 + vec2(t * 0.06, -t * 0.045)));
+  float heat = clamp(max(crack, fine) + pool, 0.0, 1.0);
+  // The crust: basalt, each plate domed (lighter to its middle) and grainy, its edges lit from below.
+  float dome = 1.0 - smoothstep(0.0, 0.62, v.x);
+  float grain = vnoise(q * 7.0) * 0.6 + vnoise(q * 17.0) * 0.4;
+  vec3 crust = vec3(0.1, 0.048, 0.04) * (0.55 + 0.7 * dome) * (0.65 + 0.7 * grain);
+  crust += glow(0.3) * exp(-v.y * 10.0) * 0.6;
+  // Embers winking on the crust.
+  vec2 ec = floor(q * 22.0);
+  float ember = step(0.986, hash1(ec)) * (1.0 - smoothstep(0.08, 0.28, length(fract(q * 22.0) - 0.5))) * (0.5 + 0.5 * sin(t * 3.0 + hash1(ec + 3.0) * 40.0));
+  crust += vec3(1.0, 0.42, 0.08) * ember * 0.7;
+  // The melt: hotter the deeper in the crack or the pool, streaming as it moves.
+  float flow = fbm(p * 2.2 + warp * 2.0 + vec2(t * 0.25, t * 0.1));
+  float h = clamp(0.35 + 0.65 * heat * heat + (flow - 0.5) * 0.55, 0.0, 1.0);
+  float pulse = 0.85 + 0.15 * sin(t * 1.9 + fbm(p * 1.7) * 6.0);
+  vec3 col = mix(crust, glow(h) * pulse, heat);
   // Bubbles: here and there a swelling bright ring that bursts.
   vec2 cell = floor(p * 1.25);
   float pick = hash1(cell);
@@ -63,8 +84,8 @@ void main() {
     float phase = fract(t * (0.18 + pick * 0.2) + pick * 9.0);
     float r = phase * 0.28, d = length(p - at);
     float ring = (1.0 - smoothstep(0.0, 0.035, abs(d - r))) * (1.0 - phase);
-    float dome = (1.0 - smoothstep(0.0, r, d)) * (1.0 - phase) * 0.6;
-    col = mix(col, vec3(1.0, 0.72, 0.25), clamp((ring + dome) * (0.35 + 0.65 * pool), 0.0, 1.0));
+    float bulge = (1.0 - smoothstep(0.0, max(r, 0.001), d)) * (1.0 - phase) * 0.6;
+    col = mix(col, glow(0.85), clamp((ring + bulge) * (0.35 + 0.65 * pool), 0.0, 1.0));
   }
   gl_FragColor = vec4(col * uBright, 1.0);
 }`;
@@ -107,20 +128,33 @@ fn plates(p: vec2f, t: f32) -> vec2f {
   }
   return vec2f(d1, d2 - d1);
 }
+fn glow(h: f32) -> vec3f {
+  var c = mix(vec3f(0.3, 0.025, 0.0), vec3f(0.95, 0.22, 0.02), smoothstep(0.0, 0.45, h));
+  c = mix(c, vec3f(1.0, 0.6, 0.12), smoothstep(0.4, 0.75, h));
+  return mix(c, vec3f(1.0, 0.94, 0.72), smoothstep(0.78, 1.0, h));
+}
 @fragment fn fs(in: Varyings) -> @location(0) vec4f {
   let t = material.uTime;
   let p = in.world.xz;
   let warp = vec2f(fbm(p * 0.7 + vec2f(t * 0.05, 0.0)), fbm(p * 0.7 + vec2f(3.1, -t * 0.04)));
   let q = p * 1.5 + warp * 1.3;
   let v = plates(q, t);
-  let crack = 1.0 - smoothstep(0.03, 0.17, v.y);
-  let pool = smoothstep(0.5, 0.76, fbm(p * 0.8 + vec2f(t * 0.06, -t * 0.045)));
-  let heat = clamp(crack + pool, 0.0, 1.0);
-  var crust = mix(vec3f(0.1, 0.03, 0.018), vec3f(0.62, 0.12, 0.02), (1.0 - smoothstep(0.0, 0.36, v.y)) * 0.9);
-  crust *= 0.75 + 0.5 * vnoise(q * 5.0);
-  let melt = mix(vec3f(1.0, 0.3, 0.02), vec3f(1.0, 0.86, 0.42), heat * heat);
-  let pulse = 0.82 + 0.18 * sin(t * 1.9 + fbm(p * 1.7) * 6.0);
-  var col = mix(crust, melt * pulse, heat);
+  let w = plates(q * 3.1 + vec2f(5.2, 1.3), t * 0.7);
+  let crack = 1.0 - smoothstep(0.02, 0.15, v.y);
+  let fine = (1.0 - smoothstep(0.0, 0.06, w.y)) * 0.55 * smoothstep(0.08, 0.3, v.y);
+  let pool = smoothstep(0.52, 0.78, fbm(p * 0.8 + vec2f(t * 0.06, -t * 0.045)));
+  let heat = clamp(max(crack, fine) + pool, 0.0, 1.0);
+  let dome = 1.0 - smoothstep(0.0, 0.62, v.x);
+  let grain = vnoise(q * 7.0) * 0.6 + vnoise(q * 17.0) * 0.4;
+  var crust = vec3f(0.1, 0.048, 0.04) * (0.55 + 0.7 * dome) * (0.65 + 0.7 * grain);
+  crust += glow(0.3) * exp(-v.y * 10.0) * 0.6;
+  let ec = floor(q * 22.0);
+  let ember = step(0.986, hash1(ec)) * (1.0 - smoothstep(0.08, 0.28, length(fract(q * 22.0) - 0.5))) * (0.5 + 0.5 * sin(t * 3.0 + hash1(ec + 3.0) * 40.0));
+  crust += vec3f(1.0, 0.42, 0.08) * ember * 0.7;
+  let flow = fbm(p * 2.2 + warp * 2.0 + vec2f(t * 0.25, t * 0.1));
+  let h = clamp(0.35 + 0.65 * heat * heat + (flow - 0.5) * 0.55, 0.0, 1.0);
+  let pulse = 0.85 + 0.15 * sin(t * 1.9 + fbm(p * 1.7) * 6.0);
+  var col = mix(crust, glow(h) * pulse, heat);
   let cell = floor(p * 1.25);
   let pick = hash1(cell);
   if (pick > 0.72) {
@@ -129,8 +163,8 @@ fn plates(p: vec2f, t: f32) -> vec2f {
     let r = phase * 0.28;
     let d = length(p - at);
     let ring = (1.0 - smoothstep(0.0, 0.035, abs(d - r))) * (1.0 - phase);
-    let dome = (1.0 - smoothstep(0.0, max(r, 0.001), d)) * (1.0 - phase) * 0.6;
-    col = mix(col, vec3f(1.0, 0.72, 0.25), clamp((ring + dome) * (0.35 + 0.65 * pool), 0.0, 1.0));
+    let bulge = (1.0 - smoothstep(0.0, max(r, 0.001), d)) * (1.0 - phase) * 0.6;
+    col = mix(col, glow(0.85), clamp((ring + bulge) * (0.35 + 0.65 * pool), 0.0, 1.0));
   }
   return vec4f(col * material.uBright, 1.0);
 }`;

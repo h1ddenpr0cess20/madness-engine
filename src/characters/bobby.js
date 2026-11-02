@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { buttons, cloth, cord, hold, person, strap } from './person.js';
 import { moustache } from './wardrobe.js';
 
 /**
@@ -34,7 +34,7 @@ export default person({
     },
   },
   extras(s) {
-    moustache(s, { color: '#5a3a24' });
+    moustache(s, { color: '#5a3a24', wide: 1.1 });
     s.part('kit', () => {
       const H = { color: '#14161e', mat: 'cloth', bone: 'head' };
       // The helmet: tall, domed, a rim, the badge on the front and the knob on top.
@@ -47,10 +47,11 @@ export default person({
         return Math.max(Math.hypot(dx, dy) - 0.03 * (0.62 + 0.38 * Math.cos(a * 8)), 0.06 - p[2]);
       }, '#c8ccd4', 0.002);
       s.sphere([0, 0.8, 0.104], 0.01, { color: '#2a3a8a', mat: 'metal', bone: 'head', k: 0.002 });
-      // Silver buttons down the tunic, the chequered cuff band, the whistle chain.
-      for (const y of [0.5, 0.45, 0.4, 0.36]) s.sphere([0, y, 0.077 + (0.5 - y) * 0.12], 0.007, { color: '#c8ccd4', mat: 'metal', bone: y > 0.42 ? 'chest' : 'spine', k: 0.001 });
-      s.chain([[0, 0.47, 0.084], [0.025, 0.452, 0.084], [0.05, 0.448, 0.08]], [0.0022, 0.0022, 0.0022], { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.0005 });
-      s.limb([0.05, 0.448, 0.082], [0.066, 0.446, 0.08], 0.005, 0.0045, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.001 });
     });
+    // Silver buttons down the tunic, and the whistle's chain from the top one to the breast pocket.
+    buttons(s, [[0, 0.51, 0.08], [0, 0.468, 0.09], [0, 0.426, 0.09], [0, 0.385, 0.085]], { r: 0.0068, color: '#c8ccd4', over: ['top'] });
+    const chain = strap(s, [[0.004, 0.47, 0.09], [0.03, 0.455, 0.088], [0.055, 0.462, 0.08]], { round: true, thick: 0.0022, color: '#c8ccd4', mat: 'metal', over: ['top'], bone: 'chest' });
+    const end = chain[chain.length - 1];
+    s.part('kit', () => cord(s, [end.p, end.p.map((v, i) => v + [0.012, -0.002, 0.004][i])], 0.0045, { color: '#c8ccd4', mat: 'metal', bone: 'chest' }));
   },
 });

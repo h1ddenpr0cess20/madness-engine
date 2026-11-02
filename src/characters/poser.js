@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person } from './person.js';
 import { chestPrint, guitar, longHair } from './metalwear.js';
 
 /**
@@ -19,26 +19,21 @@ export default person({
   hair: longHair(cloth('#3a2818', '#241810'), { length: 0.9, fringe: true }),
   style: {
     attack: 'chop',
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, reach }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
-      // The pose: a knee bent, the head back, strumming at nothing at all.
+      // The pose: a knee bent, the head back, the fretting hand up the neck, strumming at nothing at all.
       const strum = Math.sin(T * 13);
-      hold(k, 'armR', -0.4, 0.8, 0.1); hold(k, 'foreR', -0.35 + strum * 0.12, 0, 0);
       hold(k, 'armL', -0.15, -0.2, -0.1); hold(k, 'foreL', -1.85, 0, 0);
+      hold(k, 'armR', -0.3, 0.3, -0.1); hold(k, 'foreR', -1.2, 0, 0);
+      reach?.(k, 'R', 'spine', [-0.035, 0.35 + strum * 0.012, 0.13]);
       k.turn('head', -0.2 + Math.sin(T * 0.8) * 0.06, 0.2, 0);
       k.turn('thighL', -0.2, 0, 0.1); k.turn('shinL', 0.35, 0, 0);
       k.move('hips', 0, Math.abs(strum) * 0.004, 0);
     },
   },
-  extras(s) {
-    guitar(s, { body: '#d81c2a', style: 'strat' });
-    s.part('kit', () => { chestPrint(s, 'logo', '#d8d8d0', { y: 0.46, size: 0.045 }); });
-    s.part('kit', () => {
-      // The price tag, hung off the sleeve by its string: white card, a red sticker.
-      s.limb([0.1, 0.46, 0.0], [0.115, 0.4, 0.02], 0.002, 0.002, { color: '#d8d8d0', mat: 'cloth', bone: 'armL', k: 0.001 });
-      s.box([0.118, 0.385, 0.02], [0.016, 0.022, 0.003], 0.002, { color: '#f4f2ee', mat: 'paper', bone: 'armL', k: 0.001, rot: [0, 0.3, 0.1] });
-      s.paint((p) => Math.max(Math.hypot(p[0] - 0.118, p[1] - 0.388) - 0.008, Math.abs(p[2] - 0.02) - 0.006), '#e8202a', 0.002);
-    });
+  extras(s, J, { pose }) {
+    chestPrint(s, 'logo', '#d8d8d0', { y: 0.46, size: 0.045 });
+    guitar(s, { body: '#d81c2a', style: 'strat', pose });
   },
 });

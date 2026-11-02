@@ -65,10 +65,10 @@ const HIND_LEG = {
   },
 };
 
-const HAMSTER = {
+export const HAMSTER = {
   name: 'hamster',
   cell: 0.0065,
-  cells: { eyes: 0.003, fine: 0.0025 },
+  cells: { eyes: 0.003, whiskers: 0.0011 },
   materials: {
     fur: { roughness: 0.82, sheen: 1, sheenColor: '#ffe2bc', sheenRoughness: 0.5 },
     skin: { roughness: 0.55 },
@@ -103,9 +103,13 @@ const HAMSTER = {
     s.sphere([0, 0.085, -0.212], 0.016, { color: PINK, mat: 'skin', k: 0.01 });
     // Eyes: big, black and glassy.
     s.part('eyes', () => s.mirror((m) => s.sphere([m * 0.056, 0.192, 0.158], 0.022, { color: '#0c0809', mat: 'eye', k: 0.002 })));
-    // Whiskers.
-    s.part('fine', () => s.mirror((m) => {
-      for (const d of [-0.012, 0, 0.012]) s.limb([m * 0.035, 0.145, 0.195], [m * 0.13, 0.15 + d * 1.6, 0.17], 0.0016, 0.0007, { color: '#fff6e8', mat: 'skin', k: 0 });
+    // Whiskers: four a side out of the muzzle, each a fine curve sweeping back, thick enough for the grid to keep whole.
+    s.part('whiskers', () => s.mirror((m) => {
+      for (const [i, d] of [-0.014, -0.004, 0.006, 0.016].entries()) {
+        const a = [m * 0.032, 0.146 + d * 0.3, 0.196], len = 0.1 - i * 0.008;
+        const pts = [0, 0.33, 0.66, 1].map((t) => [a[0] + m * len * t, a[1] + d * 1.8 * t - 0.012 * t * t, a[2] - 0.035 * t * t]);
+        s.chain(pts, [0.0019, 0.0016, 0.0013, 0.001], { color: '#fff8ec', mat: 'skin', k: 0.0004 });
+      }
     }));
   },
 };
@@ -157,7 +161,7 @@ export function createBall(GFX, { radius = RADIUS, tint = TINTS.blue } = {}) {
         const lon = (i / n) * Math.PI * 2 + (lat * 7) % 1;
         const x = side * Math.sin(lat) * R, ring = Math.cos(lat) * R;
         const y = Math.cos(lon) * ring, z = Math.sin(lon) * ring;
-        kit.box([x, y, z], [0.009, 0.004, 0.042], deep, { rot: [lon, 0, 0], finish: 'shiny' });
+        kit.box([x, y, z], [0.009, 0.004, 0.042], deep, { rot: [lon, 0, -side * lat], finish: 'shiny' });
       }
     }
   }

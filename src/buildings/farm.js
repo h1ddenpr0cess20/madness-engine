@@ -29,6 +29,55 @@ function sails() {
   return m.finish();
 }
 
+/**
+ * An axe with its bit sunk in `a` and its haft up to `b`: a wooden haft with a
+ * swell at the end, the head a wedge of iron — a broad bit, the cheeks
+ * narrowing to the eye, the poll behind — set across the haft.
+ */
+function axe(m, a, b) {
+  const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L = Math.hypot(...d), u = d.map((x) => x / L);
+  const p = (t) => [a[0] + d[0] * t, a[1] + d[1] * t, a[2] + d[2] * t];
+  m.beam('wood', p(0.08), p(1), 0.014, '#a87a48');
+  m.sphere('wood', ...p(1), 0.016, 0.016, 0.016, '#8a5a30', { detail: 0 });
+  // The head: across the haft, at its foot; its bit down into the block.
+  const side = [-u[1], u[0], 0], eye = p(0.1), w = 0.008;
+  const q = (s, t, k) => [eye[0] + side[0] * s + u[0] * t, eye[1] + side[1] * s + u[1] * t, eye[2] + k];
+  const IRON = '#8a8a92', EDGE = '#c8ccd2';
+  // Bit (wide, toward −side), cheeks to the eye, poll behind.
+  const pts = [[-0.075, -0.035], [-0.075, 0.035], [-0.02, 0.016], [0.03, 0.016], [0.03, -0.016], [-0.02, -0.016]];
+  for (const k of [-w, w]) for (let i = 1; i < pts.length - 1; i++) {
+    const [p0, p1, p2] = [pts[0], pts[i], pts[i + 1]].map(([s, t]) => q(s, t, s < -0.05 ? k * 0.3 : k));
+    if (k > 0) m.tri('metal', p0, p1, p2, i === 1 ? EDGE : IRON); else m.tri('metal', p0, p2, p1, i === 1 ? EDGE : IRON);
+  }
+  for (let i = 0; i < pts.length; i++) {
+    const [s0, t0] = pts[i], [s1, t1] = pts[(i + 1) % pts.length];
+    const k0 = s0 < -0.05 ? w * 0.3 : w, k1 = s1 < -0.05 ? w * 0.3 : w;
+    m.quad('metal', q(s0, t0, -k0), q(s1, t1, -k1), q(s1, t1, k1), q(s0, t0, k0), i === 0 ? EDGE : IRON);
+  }
+}
+
+/** A spade with its blade at `a` and its handle up to `b`: a D-grip, a haft, a tread, and a square iron blade. */
+function spade(m, a, b) {
+  const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L = Math.hypot(...d), u = d.map((x) => x / L);
+  const p = (t) => [a[0] + d[0] * t, a[1] + d[1] * t, a[2] + d[2] * t];
+  m.beam('wood', p(0.22), p(0.88), 0.012, '#a87a48');
+  // The D-grip.
+  const g = p(0.88), side = [-u[1], u[0], 0];
+  const at = (s, t) => [g[0] + side[0] * s + u[0] * t, g[1] + side[1] * s + u[1] * t, g[2]];
+  m.beam('wood', at(0, 0), at(-0.03, 0.04), 0.008, '#8a5a30');
+  m.beam('wood', at(0, 0), at(0.03, 0.04), 0.008, '#8a5a30');
+  m.beam('wood', at(-0.035, 0.045), at(0.035, 0.045), 0.009, '#8a5a30');
+  // The blade: a flat plate, its shoulders a tread, a socket up round the haft.
+  const bl = (s, t) => [a[0] + side[0] * s + u[0] * t, a[1] + side[1] * s + u[1] * t, a[2]];
+  for (const k of [-0.004, 0.004]) {
+    const off = (q) => [q[0], q[1], q[2] + k];
+    const c = [bl(-0.045, 0.0), bl(0.045, 0.0), bl(0.045, 0.11), bl(-0.045, 0.11)].map(off);
+    if (k > 0) m.quad('metal', c[0], c[1], c[2], c[3], '#8a8a92'); else m.quad('metal', c[3], c[2], c[1], c[0], '#8a8a92');
+  }
+  m.beam('metal', bl(-0.048, 0.112), bl(0.048, 0.112), 0.008, '#6a6a70');
+  m.beam('metal', bl(0, 0.1), bl(0, 0.2), 0.016, '#6a6a70');
+}
+
 export function mill(m, v) {
   const { rnd } = v;
   const tower = '#eee6d6';
@@ -60,7 +109,11 @@ export function mill(m, v) {
   // The bakehouse leaning on its side, with an oven chimney.
   gabled(m, rnd, { x0: 0.6, x1: 1.45, z0: -0.1, z1: 0.8, h1: 0.5, wall: '#e4d6be', roof: pickFrom(rnd, PALETTE.thatch), roofMat: 'thatch', ridgeH: 0.4, axis: 'z', doors: [{ face: 'front', u: 0.4, w: 0.2, h: 0.36 }], windows: [{ face: 'left', u: 0.45 }] });
   const top = chimney(m, 1.2, 0.2, 0.4, 1.15, { w: 0.2 });
-  m.box('glow', 0.78, 0.2, 0.805, 0.98, 0.34, 0.82, '#ff8a2a', { skip: ['bottom'] });
+  // The oven's iron door in a stone surround, the fire showing round it.
+  m.box('stone', 1.17, 0.13, 0.8, 1.41, 0.4, 0.84, PALETTE.stone[1], { skip: ['bottom'] });
+  m.box('plain', 1.21, 0.17, 0.84, 1.37, 0.33, 0.846, '#1a1410', { skip: ['bottom'] });
+  m.box('glow', 1.22, 0.17, 0.846, 1.36, 0.2, 0.85, '#ff8a2a', { skip: ['bottom'] });
+  m.box('metal', 1.23, 0.21, 0.846, 1.35, 0.32, 0.852, '#2e2a26', { skip: ['bottom'] });
   sack(m, -0.5, 0, 0.8); sack(m, -0.38, 0, 0.88, '#d8c394'); sack(m, -0.6, 0, 0.95);
   cart(m, -1.0, 0, 0.7, 0.4);
   return { smoke: [top], anim: [{ kind: 'spin', pivot: [0, 2.25, 0.68], rate: -0.35, parts: sails() }], height: 2.7 };
@@ -121,7 +174,18 @@ export function brewery(m, v) {
   m.cylinder('stone', 0.4, 0.5, -1.0, 0.18, 0.22, 1.45, 10, PALETTE.stone[1], { smooth: true, bottom: false });
   m.cylinder('stone', 0.4, 1.92, -1.0, 0.25, 0.19, 0.08, 10, PALETTE.stone[3], { smooth: true });
   // Barrels in a pyramid, a cart.
-  for (let r = 0; r < 3; r++) for (let k = 0; k < 3 - r; k++) barrel(m, 0.95 + r * 0.14, 0.09 + r * 0.14, 0.15 + (k - (2 - r) / 2) * 0.3 + 0.2, { r: 0.1, h: 0.17 });
+  // Barrels on their sides in a stack, each row lying in the grooves of the one under it, chocks at the foot.
+  const R = 0.09, L = 0.2;
+  for (let r = 0; r < 3; r++) for (let k = 0; k < 3 - r; k++) {
+    const z = 0.35 + (k - (2 - r) / 2) * R * 2.02, y = R + r * R * 1.73;
+    m.push().translate(1.05, y, z).rotateZ(Math.PI / 2);
+    m.cylinder('wood', 0, -L / 2, 0, R * 0.9, R * 0.9, L, 10, PALETTE.wood[1], { smooth: true, bottom: true, capCol: '#8a6a44' });
+    m.cylinder('wood', 0, -L * 0.32, 0, R, R * 0.9, L * 0.32, 10, PALETTE.wood[1], { smooth: true, caps: false });
+    m.cylinder('wood', 0, 0, 0, R * 0.9, R, L * 0.32, 10, PALETTE.wood[1], { smooth: true, caps: false });
+    for (const h of [-0.07, 0.06]) m.cylinder('metal', 0, h, 0, R * 1.0, R * 1.0, 0.012, 10, '#3a3a3a', { caps: false });
+    m.pop();
+  }
+  for (const z of [0.35 - R * 2.02 - R * 0.9, 0.35 + R * 2.02 + R * 0.9]) m.box('wood', 0.98, 0, z - 0.02, 1.12, 0.04, z + 0.02, PALETTE.wood[0], { skip: ['bottom'] });
   climbers(m, rnd, -0.9, -1.4, 0.4, -1.4, { h: 0.85, n: 5 });
   cart(m, -1.0, 0, 0.75, -0.5);
   return { smoke: [[0.4, 2.0, -1.0]], height: 2.0 };
@@ -135,8 +199,7 @@ export function woodcutter(m, v) {
   logPile(m, -0.85, 0.0, 0.5, { len: 0.5, rows: 3, r: 0.04, yaw: Math.PI / 2 });
   // A chopping block with an axe in it.
   m.cylinder('bark', 0.1, 0, 0.7, 0.11, 0.12, 0.2, 9, '#7a5a3a', { smooth: true, capCol: '#c9a26a' });
-  m.beam('wood', [0.1, 0.2, 0.7], [0.2, 0.42, 0.7], 0.018, PALETTE.wood[0]);
-  m.box('metal', 0.07, 0.18, 0.685, 0.14, 0.24, 0.715, '#8a8a90');
+  axe(m, [0.1, 0.19, 0.7], [0.22, 0.46, 0.7]);
   // A trestle, planks, a few stumps.
   m.beam('wood', [0.45, 0.2, 0.9], [0.45, 0, 0.9], 0.03, PALETTE.wood[1]);
   for (let i = 0; i < 4; i++) m.box('wood', 0.55, i * 0.025, 0.95, 0.95, i * 0.025 + 0.025, 1.12, PALETTE.wood[(i + 1) % 3], { skip: ['bottom'] });
@@ -161,8 +224,7 @@ export function forester(m, v) {
   }
   // A watering tub, a spade and a bundle of whips.
   barrel(m, -0.5, 0.0, 0.3);
-  m.beam('wood', [-0.2, 0.0, 0.45], [-0.12, 0.42, 0.45], 0.016, PALETTE.wood[0]);
-  m.box('metal', -0.17, 0.0, 0.43, -0.08, 0.06, 0.47, '#8a8a90');
+  spade(m, [-0.2, 0.0, 0.45], [-0.16, 0.46, 0.45]);
   logPile(m, -0.75, 0.0, 0.35, { len: 0.3, rows: 2, r: 0.015, yaw: Math.PI / 2 });
   return { smoke: [top], height: 1.1 };
 }
@@ -190,7 +252,17 @@ export function fishery(m, v) {
   m.quad('cloth', [-0.95, 0.66, 0.5], [-0.35, 0.66, 0.5], [-0.35, 0.18, 0.5], [-0.95, 0.18, 0.5], '#b8b4a0');
   m.quad('cloth', [-0.95, 0.18, 0.5], [-0.35, 0.18, 0.5], [-0.35, 0.66, 0.5], [-0.95, 0.66, 0.5], '#a8a490');
   m.beam('wood', [-0.2, 0.5, 0.9], [0.5, 0.5, 0.9], 0.02, PALETTE.wood[1]);
-  for (let i = 0; i < 6; i++) m.sphere('metal', -0.12 + i * 0.1, 0.4, 0.9, 0.025, 0.07, 0.015, '#b8c4cc', { detail: 0 });
+  // Fish hung by their tails to dry: a body, a tail fin up against the line, an eye.
+  for (let i = 0; i < 6; i++) {
+    const x = -0.12 + i * 0.1, len = 0.06 + (i % 3) * 0.012;
+    m.beam('cloth', [x, 0.5, 0.9], [x, 0.47, 0.9], 0.003, '#b8a880');
+    m.tri('metal', [x, 0.47, 0.9], [x - 0.022, 0.485, 0.9], [x, 0.44, 0.9], '#8a98a0');
+    m.tri('metal', [x, 0.47, 0.9], [x, 0.44, 0.9], [x + 0.022, 0.485, 0.9], '#8a98a0');
+    m.tri('metal', [x, 0.47, 0.9], [x, 0.44, 0.9], [x - 0.022, 0.485, 0.9], '#8a98a0');
+    m.tri('metal', [x, 0.47, 0.9], [x + 0.022, 0.485, 0.9], [x, 0.44, 0.9], '#8a98a0');
+    m.sphere('metal', x, 0.445 - len / 2, 0.9, 0.018, len / 2, 0.011, '#b8c4cc', { detail: 1, colorFn: (q) => (q[0] > 0.2 ? '#6a7a86' : '#c8d4dc') });
+    m.sphere('plain', x, 0.445 - len + 0.012, 0.9105, 0.004, 0.004, 0.002, '#141414', { detail: 0 });
+  }
   barrel(m, -0.8, 0.0, -0.4);
   barrel(m, -0.8, 0.0, -0.15);
   crate(m, 0.85, 0.0, -0.3, 0.14);

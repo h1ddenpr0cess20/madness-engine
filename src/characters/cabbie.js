@@ -1,5 +1,6 @@
 import { coat } from '../models/skins.js';
-import { cloth, hold, person } from './person.js';
+import { axisRot, cloth, cord, hold, onBody, person, shell, strap } from './person.js';
+import { cap } from './wardrobe.js';
 
 /**
  * The Cab Driver: twenty years behind the wheel of a yellow cab and out of
@@ -24,40 +25,52 @@ export default person({
   hair: { color: cloth('#4a3a2a', '#2a1a10'), cap: [0.104, 0.07, 0.104] },
   style: {
     attack: 'smite', twist: 0,
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, aim }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed, honk = Math.max(0, Math.sin(T * 4)) ** 4;
-      // The horn up and honking; the coffee in the other hand; shouting about it.
+      // The horn up and honking; the coffee in the other hand, upright; shouting about it.
       hold(k, 'armR', -1.0, 0, -0.3);
       hold(k, 'foreR', -0.8, 0, 0);
       k.scale('handR', 1 - honk * 0.15, 1, 1);
       hold(k, 'armL', -0.2, 0, 0.15);
       hold(k, 'foreL', -1.3, 0.3, 0);
+      aim?.(k, 'L', 'chest', [0.12, 2.0, 0.25]);
       k.turn('head', -0.15 * honk, 0, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
+    // The flat cap, and the light on top of it: OFF DUTY.
+    cap(s, { color: '#5a5a62', peak: '#5a5a62', flat: true });
     s.part('kit', () => {
-      // The flat cap, and the light on top: OFF DUTY.
-      s.ellipsoid([0, 0.745, 0.005], [0.108, 0.04, 0.115], { color: '#5a5a62', mat: 'cloth', bone: 'head', k: 0.012 });
-      s.flake([0, 0.745, 0.08], [0, 0.735, 0.14], [0, 1, 0], 0.07, 0.06, 0.12, { color: '#5a5a62', mat: 'cloth', bone: 'head', k: 0.006 });
-      s.box([0, 0.8, 0.0], [0.05, 0.022, 0.016], 0.006, { color: '#ffd23a', mat: 'glow', bone: 'head', k: 0.002 });
-      s.box([0, 0.8, 0.017], [0.04, 0.008, 0.002], 0.001, { color: '#1a1a1e', mat: 'plastic', bone: 'head', k: 0 });
-      // The jacket's back and collar over the vest; the gold chain.
-      s.ellipsoid([0, 0.44, -0.03], [0.105, 0.1, 0.055], { color: JACKET, mat: 'leather', bone: 'chest', k: 0.02 });
-      s.torus([0, 0.525, -0.005], 0.055, 0.012, { color: JACKET, mat: 'leather', bone: 'chest', k: 0.004, rot: [0.25, 0, 0] });
-      s.torus([0, 0.51, 0.03], 0.045, 0.004, { color: '#e8c050', mat: 'metal', bone: 'chest', k: 0.001, rot: [0.6, 0, 0] });
-      // The toothpick.
-      s.limb([0.02, 0.612, 0.1], [0.05, 0.605, 0.12], 0.0025, 0.002, { color: '#e8d8a8', mat: 'paper', bone: 'head', k: 0 });
-      // The horn: a red bulb, a brass horn curling out of it.
-      const r = J.handR;
-      s.sphere([r[0], r[1] - 0.02, r[2] + 0.01], 0.03, { color: '#c8141e', mat: 'rubber', bone: 'handR', k: 0.004 });
-      s.limb([r[0], r[1] + 0.01, r[2] + 0.01], [r[0], r[1] + 0.08, r[2] + 0.03], 0.008, 0.01, { color: '#d8b040', mat: 'metal', bone: 'handR', k: 0.002 });
-      s.cone([r[0], r[1] + 0.08, r[2] + 0.03], 0.03, 0.04, { color: '#d8b040', mat: 'metal', bone: 'handR', k: 0.002, rot: [Math.PI + 0.3, 0, 0] });
-      // The coffee.
-      const l = J.handL;
-      s.cylinder([l[0], l[1] + 0.02, l[2] + 0.02], 0.022, 0.04, { color: '#f4f2ec', mat: 'paper', bone: 'handL', k: 0.002, round: 0.004 });
-      s.cylinder([l[0], l[1] + 0.065, l[2] + 0.02], 0.024, 0.006, { color: '#2a2a30', mat: 'plastic', bone: 'handL', k: 0.001, round: 0.003 });
+      s.box([0, 0.808, 0.0], [0.05, 0.02, 0.016], 0.006, { color: '#ffd23a', mat: 'glow', bone: 'head', k: 0.002 });
+      s.box([0, 0.808, 0.0165], [0.04, 0.008, 0.0015], 0.001, { color: '#1a1a1e', mat: 'plastic', bone: 'head', k: 0 });
     });
+    // The leather jacket, open over the white vest, its collar up; a gold chain on the vest.
+    const trunk = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
+    shell(s, (p) => Math.max(0.31 - p[1], p[1] - 0.552, Math.min(0.03 + (p[1] - 0.31) * 0.14 - Math.abs(p[0]), p[2] - 0.02)), {
+      color: JACKET, mat: 'leather', thick: 0.0065, lift: 0.0015, over: ['top', 'belt'], keep: trunk, bones: { spine: (p) => p[1] - 0.445, chest: (p) => 0.425 - p[1] },
+    });
+    shell(s, (p) => Math.max(Math.abs(p[1] - 0.552) - 0.014, -p[2] - 0.04, 0.012 - Math.abs(p[0])), { color: JACKET, mat: 'leather', thick: 0.006, lift: 0.004, over: ['head', 'outer'], part: 'outer2', bone: 'neck' });
+    strap(s, [[0.032, 0.553, -0.03], [0.045, 0.53, 0.035], [0, 0.505, 0.075], [-0.045, 0.53, 0.035], [-0.032, 0.553, -0.03], [0, 0.556, -0.04]], { round: true, closed: true, thick: 0.0042, color: '#e8c050', mat: 'metal', over: ['top', 'head'] });
+    // The toothpick, from the corner of the mouth.
+    const corner = onBody(s, [0.016, 0.609, 0.1], ['head']);
+    s.part('kit', () => s.limb(corner.p.map((v, i) => v - corner.n[i] * 0.003), corner.p.map((v, i) => v + [0.026, -0.006, 0.024][i]), 0.0024, 0.0018, { color: '#e8d8a8', mat: 'paper', bone: 'head', k: 0 }));
+    // The horn: the red rubber bulb squeezed in the fist, the brass horn out of it curling round to a bell that
+    // faces forward.
+    const H = pose.grip('R'), fwd = [0, 0.15, 1];
+    const tip = (d) => H.at(0.034).map((v, i) => v + fwd[i] * d + H.along[i] * d * 0.4);
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.ellipsoid(H.at(-0.004), [0.024, 0.024, 0.03].map((r, i) => [0.026, 0.026, 0.026][i]), { color: '#c8141e', mat: 'rubber', k: 0.004 });
+      cord(s, [H.at(0.022), H.at(0.036), tip(0.03), tip(0.07)], 0.007, { color: '#d8b040', mat: 'metal' });
+      s.cone(tip(0.07), 0.028, 0.04, { color: '#d8b040', mat: 'metal', k: 0.002, rot: axisRot(fwd.map((v) => -v)) });
+      s.cone(tip(0.072), 0.022, 0.034, { op: 'sub', k: 0.002, rot: axisRot(fwd.map((v) => -v)) });
+    }));
+    // The coffee: a paper cup in the other hand, the fingers round it, its lid on.
+    const C = pose.grip('L'), cupAt = C.at(0.012, 0, -0.022), rot = axisRot(C.along);
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      s.cylinder(cupAt, 0.023, 0.04, { color: '#f4f2ec', mat: 'paper', k: 0.002, round: 0.004, rot });
+      s.cylinder(cupAt.map((v, i) => v + C.along[i] * 0.043), 0.025, 0.0055, { color: '#2a2a30', mat: 'plastic', k: 0.001, round: 0.003, rot });
+      s.cylinder(cupAt.map((v, i) => v + C.along[i] * 0.004), 0.0236, 0.012, { color: '#c8862a', mat: 'paper', k: 0.001, round: 0.002, rot });
+    }));
   },
 });

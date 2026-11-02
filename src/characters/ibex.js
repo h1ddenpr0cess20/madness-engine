@@ -10,7 +10,26 @@ import { quadruped } from './quadruped.js';
  */
 
 const HIDE = coat({ over: '#8a7258', under: '#e0d4c0', vary: 0.12, freq: 14, edge: [-0.3, 0.1] });
+const EYE = '#b08a3a';
 const DARK = coat({ over: '#4a3a2a', under: '#3a2a1e', vary: 0.1, freq: 18 });
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+/**
+ * The ibex's coat as it is in summer: grey-brown over the back, a dark
+ * stripe along the flank dividing it from the pale belly, the fronts of
+ * the legs dark and their backs light, a pale patch under the tail, the
+ * chin and the throat dark under the beard.
+ */
+const IBEX = (p, n) => {
+  let c = HIDE(p, n);
+  const dark = DARK(p, n), pale = [0.86, 0.82, 0.74];
+  const flank = smooth(0.022, 0.006, Math.abs(p[1] - 0.235)) * smooth(0.4, 0.8, Math.abs(n[0])) * smooth(0.16, 0.12, Math.abs(p[2]));
+  c = blend(c, dark, flank * 0.85);
+  if (p[1] < 0.22) c = blend(c, n[2] > 0 ? dark : blend(c, pale, 0.35), smooth(0.0, 0.6, Math.abs(n[2])) * 0.8);
+  c = blend(c, pale, smooth(-0.3, -0.75, n[1]) * smooth(0.26, 0.2, p[1]));
+  c = blend(c, pale, smooth(-0.13, -0.17, p[2]) * smooth(0.2, 0.6, -n[2]) * 0.8);
+  return c;
+};
 const HORN = { color: coat({ over: '#5a4a3a', under: '#3a3026', vary: 0.15, freq: 30 }), mat: 'horn', bone: 'head' };
 
 export default quadruped({
@@ -26,14 +45,18 @@ export default quadruped({
   tail: { len: 0.045, rise: 0.9, r: 0.013, tip: 0.008 },
   ears: { kind: 'small', size: 0.9 },
   feet: 'hoof',
-  paint: { body: HIDE, head: HIDE, snout: HIDE, legs: DARK, feet: '#2a2018', tail: DARK, ears: HIDE, nose: '#2a2018' },
+  eye: { look: [0.82, 0.12, 0.56], pupil: 'bar', size: 0.22 },
+  paint: { body: IBEX, head: IBEX, snout: IBEX, legs: IBEX, feet: '#2a2018', tail: DARK, ears: HIDE, inner: '#b8a890', countershade: 0.3, nose: '#2a2018', eye: EYE },
   style: { rate: 10, wag: 0.3, attack: 'butt', after(k, { clip }, T) {
     // Chewing, always.
     if (clip === 'idle' || clip === 'walk') k.turn('jaw', Math.max(0, Math.sin(T * 6)) * 0.12, 0, 0);
   } },
   extras(s, P, { Hd }) {
     // The beard, under the chin.
-    s.cone([0, P.S1[1] - 0.085, P.S1[2] - 0.035], 0.012, 0.045, { color: DARK, mat: 'fur', bone: 'jaw', k: 0.008, rot: [Math.PI, 0, 0] });
+    // Grown from under the chin, rooted in it, hanging down and a little back, a tuft at its end.
+    const chin = [0, P.S1[1] - Hd.sr * 0.95, P.S1[2] - Hd.sr * 0.9];
+    s.limb([0, chin[1] + Hd.sr * 0.35, chin[2] + 0.004], [0, chin[1] - 0.03, chin[2] - 0.008], 0.009, 0.006, { color: DARK, mat: 'fur', bone: 'jaw', k: 0.008, bump: [0.0012, 160] });
+    s.limb([0, chin[1] - 0.03, chin[2] - 0.008], [0, chin[1] - 0.046, chin[2] - 0.006], 0.006, 0.0025, { color: DARK, mat: 'fur', bone: 'jaw', k: 0.004 });
     // A dark stripe down the spine.
     s.limb([0, 0.37, 0.12], [0, 0.37, -0.15], 0.012, 0.01, { color: DARK, mat: 'fur', bone: 'trunk', k: 0.03 });
     s.part('kit', () => {

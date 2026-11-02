@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, cord, hold, onBody, person } from './person.js';
 import { baseballCap, chestPrint } from './metalwear.js';
 
 /**
@@ -39,10 +39,11 @@ export default person({
   extras(s) {
     baseballCap(s, { color: '#d8202a', back: true });
     chestPrint(s, 'x', '#16161a', { y: 0.46, size: 0.05 });
-    s.part('kit', () => {
-      // The goatee, and a chain from the belt looping down the leg.
-      s.ellipsoid([0, 0.595, 0.098], [0.022, 0.026, 0.016], { color: '#2a1c12', mat: 'hair', bone: 'head', k: 0.008 });
-      s.torus([0.095, 0.3, 0.02], 0.045, 0.004, { color: '#c8ccd4', mat: 'metal', bone: 'hips', k: 0.001, rot: [0, 0, Math.PI / 2] });
-    });
+    // The goatee.
+    const chin = onBody(s, [0, 0.592, 0.1], ['head']);
+    s.part('hair', () => s.ellipsoid(chin.p.map((v, i) => v + chin.n[i] * 0.004), [0.02, 0.022, 0.01], { color: '#2a1c12', mat: 'hair', bone: 'head', k: 0.004 }));
+    // The wallet chain: from a belt loop at the front, down the side of the leg in a loop, up to the back pocket.
+    const pts = onBody(s, [[0.075, 0.335, 0.075], [0.11, 0.27, 0.04], [0.118, 0.235, -0.005], [0.105, 0.26, -0.05], [0.075, 0.32, -0.075]], ['bottoms', 'belt']);
+    s.part('kit', () => cord(s, pts.map((h) => h.p.map((v, i) => v + h.n[i] * 0.006)), 0.0032, { color: '#c8ccd4', mat: 'metal', bone: 'hips', bump: [0.0012, 400] }));
   },
 });

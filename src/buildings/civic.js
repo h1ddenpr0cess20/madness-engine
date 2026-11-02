@@ -17,34 +17,111 @@ export function well(m, v) {
   for (const s of [-1, 1]) m.box('wood', s * 0.25 - 0.03, 0.33, -0.03, s * 0.25 + 0.03, 0.95, 0.03, PALETTE.wood[1], { skip: ['bottom'] });
   m.beam('wood', [-0.27, 0.8, 0], [0.27, 0.8, 0], 0.05, PALETTE.wood[0]);
   m.gable('tile', -0.3, -0.22, 0.3, 0.22, 0.92, 1.18, pickFrom(rnd, PALETTE.tile), { over: 0.08, gable: 'wood', gableColor: PALETTE.wood[1], axis: 'x' });
-  m.beam('metal', [0, 0.8, 0], [0, 0.55, 0], 0.008, '#222');
-  barrel(m, 0, 0.45, 0, { r: 0.04, h: 0.07 });
+  // The rope wound on the windlass and down to the bucket's bail; the crank on the end of the axle.
+  m.push().translate(0, 0.8, 0).rotateZ(Math.PI / 2);
+  m.cylinder('cloth', 0, -0.09, 0, 0.042, 0.042, 0.18, 10, '#b89a6a', { smooth: true, caps: true, bottom: true });
+  m.pop();
+  m.beam('cloth', [0, 0.76, 0.03], [0, 0.6, 0.0], 0.007, '#b89a6a');
+  m.beam('metal', [-0.04, 0.55, 0], [0, 0.6, 0], 0.005, '#222');
+  m.beam('metal', [0.04, 0.55, 0], [0, 0.6, 0], 0.005, '#222');
+  barrel(m, 0, 0.47, 0, { r: 0.042, h: 0.08 });
+  m.beam('metal', [0.27, 0.8, 0], [0.34, 0.8, 0], 0.012, '#2a2a2a');
+  m.beam('metal', [0.34, 0.8, 0], [0.34, 0.8, 0.12], 0.012, '#2a2a2a');
+  m.beam('wood', [0.34, 0.8, 0.12], [0.42, 0.8, 0.12], 0.016, PALETTE.wood[0]);
   return { height: 1.2 };
 }
 
+/**
+ * The village green: a lawn with a duck pond on it — a natural, irregular
+ * pond with a muddy bank, reeds, lily pads and two ducks — a maypole wound
+ * with ribbons and a crown of flowers, the ribbons pegged out round it, a
+ * bench with a back, a path of stepping stones, flower beds, and three
+ * trees.
+ */
 export function green(m, v) {
   const { rnd } = v;
-  // A pond, a maypole with ribbons, a bench, a few small trees.
-  // The curb is a wall and a ring on top, and the water lies a little under it, out beneath the ring: a stone lid on the pond and water at the same height fight for every pixel of it.
-  m.cylinder('stone', -0.4, 0.0, 0.3, 0.55, 0.56, 0.06, 18, '#8f887a', { smooth: true, bottom: false, caps: false });
-  m.ring('stone', -0.4, 0.06, 0.3, 0.5, 0.55, 18, '#8f887a');
-  m.cylinder('glass', -0.4, 0.035, 0.3, 0.53, 0.53, 0.01, 18, '#2a5a78', { smooth: true });
-  for (let i = 0; i < 6; i++) m.sphere('hedge', -0.4 + Math.cos(i) * 0.38, 0.05, 0.3 + Math.sin(i) * 0.3, 0.07, 0.03, 0.07, '#5f9a3a', { detail: 0 });
-  m.cylinder('wood', 0.7, 0, -0.3, 0.025, 0.04, 1.35, 7, '#d8caa0');
-  const cols = ['#b32a2a', '#2a4a9a', '#c9a227', '#2a7a4a', '#b32a2a', '#2a4a9a'];
-  cols.forEach((c, i) => {
-    const a = (i / cols.length) * Math.PI * 2;
-    m.beam('cloth', [0.7, 1.3, -0.3], [0.7 + Math.cos(a) * 0.35, 0.35, -0.3 + Math.sin(a) * 0.35], 0.012, c);
+  const GRASS = '#5f9a3a';
+  m.disc('hedge', 0, 0.006, 0, 1.45, 28, GRASS);
+  // The pond: a wobbly outline, a muddy bank a little bigger, the water inside.
+  const [px, pz] = [-0.45, 0.35];
+  const ring = (scale, k) => Array.from({ length: 18 }, (_, i) => {
+    const a = (i / 18) * Math.PI * 2;
+    const r = (0.48 + 0.08 * Math.sin(a * 2 + 0.7) + 0.05 * Math.sin(a * 3 + 2.1)) * scale;
+    return [px + Math.cos(a) * r * 1.25, k, pz + Math.sin(a) * r];
   });
-  m.sphere('wood', 0.7, 1.37, -0.3, 0.04, 0.04, 0.04, '#d4b24a', { detail: 0 });
-  m.box('wood', -0.3, 0.14, -0.85, 0.3, 0.17, -0.7, PALETTE.wood[0], { skip: ['bottom'] });
-  m.box('wood', -0.29, 0.0, -0.84, -0.25, 0.15, -0.71, PALETTE.wood[1]);
-  m.box('wood', 0.25, 0.0, -0.84, 0.29, 0.15, -0.71, PALETTE.wood[1]);
-  for (let i = 0; i < 5; i++) {
-    const a = rnd() * 6.28, d = 0.9 + rnd() * 0.4;
-    m.sphere('hedge', Math.cos(a) * d, 0.1, Math.sin(a) * d * 0.9, 0.12, 0.1, 0.12, pickFrom(rnd, ['#5f9a3a', '#78b043', '#c9a24a', '#c9507a']), { detail: 0, jitter: 0.25 });
+  const fan = (pts, y, col, mat) => { for (let i = 0; i < pts.length; i++) m.tri(mat, [px, y, pz], pts[(i + 1) % pts.length], pts[i], col); };
+  fan(ring(1.12, 0.014), 0.014, '#6e5a3a', 'plain');
+  fan(ring(1.0, 0.02), 0.02, '#2f6a86', 'glass');
+  // Reeds in clumps on the bank, bulrushes among them.
+  for (const a of [0.3, 1.9, 2.4, 4.1]) {
+    const r = 0.5 * 1.12;
+    const cx = px + Math.cos(a) * r * 1.25, cz = pz + Math.sin(a) * r;
+    for (let k = 0; k < 6; k++) {
+      const x = cx + (rnd() - 0.5) * 0.1, z = cz + (rnd() - 0.5) * 0.08, h = 0.14 + rnd() * 0.1;
+      m.beam('hedge', [x, 0.01, z], [x + (rnd() - 0.5) * 0.04, h, z + (rnd() - 0.5) * 0.04], 0.006, pickFrom(rnd, ['#6a8a3a', '#7a9a44', '#5a7a30']));
+      if (k % 3 === 0) m.cylinder('plain', x, h * 0.7, z, 0.011, 0.011, 0.05, 5, '#5a3a20');
+    }
   }
-  return { height: 1.4 };
+  // Lily pads with a flower or two, and two ducks.
+  for (const [x, z, f] of [[-0.6, 0.2, true], [-0.25, 0.45, false], [-0.5, 0.55, true], [-0.3, 0.15, false]]) {
+    m.disc('hedge', x, 0.024, z, 0.045, 7, '#4a8a3a');
+    if (f) m.sphere('cloth', x + 0.01, 0.034, z, 0.014, 0.01, 0.014, '#f0a0c0', { detail: 0 });
+  }
+  for (const [x, z, yaw, col] of [[-0.62, 0.42, 0.6, '#f4f0e8'], [-0.36, 0.28, 2.5, '#8a6a48']]) {
+    m.at(x, 0.02, z, () => {
+      m.sphere('cloth', 0, 0.025, 0, 0.045, 0.026, 0.028, col, { detail: 1 });
+      m.sphere('cloth', 0.04, 0.06, 0, 0.018, 0.018, 0.017, col === '#f4f0e8' ? col : '#2a6a3a', { detail: 1 });
+      m.beam('plain', [0.055, 0.058, 0], [0.075, 0.055, 0], 0.006, '#e8902a');
+      m.sphere('cloth', -0.045, 0.035, 0, 0.012, 0.01, 0.02, col, { detail: 0 });
+    }, yaw);
+  }
+  // The maypole: ribbons wound round its foot, a crown of flowers at its top, streamers pegged out round it.
+  const MX = 0.75, MZ = -0.35, H = 1.35;
+  m.cylinder('wood', MX, 0, MZ, 0.025, 0.04, H, 8, '#d8caa0', { smooth: true });
+  const cols = ['#b32a2a', '#2a4a9a', '#c9a227', '#2a7a4a', '#7a3a8a', '#efe4cc'];
+  for (let i = 0; i < 24; i++) {
+    const a0 = i * 0.9, a1 = a0 + 0.9, y0 = 0.15 + i * 0.03, y1 = y0 + 0.03;
+    const r = 0.04 - (y0 / H) * 0.015 + 0.004;
+    m.beam('cloth', [MX + Math.cos(a0) * r, y0, MZ + Math.sin(a0) * r], [MX + Math.cos(a1) * r, y1, MZ + Math.sin(a1) * r], 0.009, cols[i % 3]);
+  }
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    m.sphere('cloth', MX + Math.cos(a) * 0.07, H - 0.06, MZ + Math.sin(a) * 0.07, 0.025, 0.02, 0.025, pickFrom(rnd, ['#f0d040', '#f08ab0', '#f4f0e8', '#d84a3a']), { detail: 0 });
+  }
+  m.sphere('wood', MX, H + 0.03, MZ, 0.04, 0.04, 0.04, '#d4b24a', { detail: 0 });
+  cols.forEach((c, i) => {
+    const a = (i / cols.length) * Math.PI * 2 + 0.3, r = 0.62;
+    const end = [MX + Math.cos(a) * r, 0.02, MZ + Math.sin(a) * r];
+    const mid = [MX + Math.cos(a) * r * 0.55, 0.55, MZ + Math.sin(a) * r * 0.55];
+    m.beam('cloth', [MX, H - 0.08, MZ], mid, 0.01, c);
+    m.beam('cloth', mid, end, 0.01, c);
+    m.beam('wood', [end[0], -0.02, end[2]], [end[0], 0.05, end[2]], 0.012, PALETTE.wood[1]);
+  });
+  // The bench: planks on two ends, a back on posts.
+  m.at(0.1, 0, -1.05, () => {
+    for (const x of [-0.3, 0.3]) {
+      m.box('wood', x - 0.02, 0, -0.07, x + 0.02, 0.16, 0.07, PALETTE.wood[1], { skip: ['bottom'] });
+      m.box('wood', x - 0.02, 0.16, -0.08, x + 0.02, 0.38, -0.05, PALETTE.wood[1], { skip: ['bottom'] });
+      m.box('wood', x - 0.02, 0.24, -0.07, x + 0.02, 0.26, 0.07, PALETTE.wood[0], { skip: ['bottom'] });
+    }
+    for (const z of [-0.04, 0.0, 0.04]) m.box('wood', -0.34, 0.16, z - 0.017, 0.34, 0.185, z + 0.017, PALETTE.wood[0], { skip: ['bottom'] });
+    for (const y of [0.26, 0.33]) m.box('wood', -0.34, y, -0.08, 0.34, y + 0.035, -0.055, PALETTE.wood[0], { skip: [] });
+  });
+  // The path across, in stepping stones.
+  for (let i = 0; i < 8; i++) {
+    const t = i / 7, x = 1.2 - t * 1.15, z = 1.1 - t * 1.25 + Math.sin(t * 3) * 0.12;
+    m.cylinder('stone', x, 0.0, z, 0.06 + (i % 2) * 0.01, 0.065, 0.02, 7, pickFrom(rnd, STONE), { rot: i });
+  }
+  // Flower beds along the edge, and three trees.
+  for (let i = 0; i < 22; i++) {
+    const a = 3.6 + i * 0.12, r = 1.3 + (i % 2) * 0.05;
+    m.sphere('hedge', Math.cos(a) * r, 0.04, Math.sin(a) * r, 0.04, 0.035, 0.04, pickFrom(rnd, ['#c9507a', '#e8c040', '#f4f0e8', '#8a5ac0', '#d8503a']), { detail: 0, jitter: 0.2 });
+  }
+  for (const [x, z, h, s] of [[1.05, 0.75, 0.7, 1], [-1.05, -0.75, 0.85, 1.15], [0.95, -1.1, 0.6, 0.85]]) {
+    m.cylinder('bark', x, 0, z, 0.03 * s, 0.05 * s, h * 0.6, 7, '#5a4430', { smooth: true });
+    m.crown('leafB', x, h * 0.75, z, 0.28 * s, 0.24 * s, 0.28 * s, '#5f8f3a', { detail: 1, lump: 0.22, seed: Math.round(x * 10) });
+  }
+  return { height: 1.45 };
 }
 
 export function tavern(m, v) {
@@ -83,7 +160,10 @@ export function tavern(m, v) {
   for (const x of [-0.85, 0.85]) {
     m.box('wood', x - 0.22, 0.2, 1.05, x + 0.22, 0.24, 1.28, PALETTE.wood[0], { skip: ['bottom'] });
     for (const sx of [-0.18, 0.18]) for (const sz of [1.08, 1.25]) m.box('wood', x + sx - 0.015, 0.0, sz - 0.015, x + sx + 0.015, 0.2, sz + 0.015, PALETTE.wood[1]);
-    for (const bz of [0.95, 1.38]) m.box('wood', x - 0.2, 0.1, bz - 0.04, x + 0.2, 0.13, bz + 0.04, PALETTE.wood[1], { skip: ['bottom'] });
+    for (const bz of [0.95, 1.38]) {
+      m.box('wood', x - 0.2, 0.1, bz - 0.04, x + 0.2, 0.13, bz + 0.04, PALETTE.wood[1], { skip: ['bottom'] });
+      for (const lx of [-0.16, 0.16]) m.box('wood', x + lx - 0.015, 0, bz - 0.03, x + lx + 0.015, 0.1, bz + 0.03, PALETTE.wood[0], { skip: ['bottom'] });
+    }
   }
   for (let i = 0; i < 3; i++) barrel(m, 1.5 + (i % 2) * 0.06, 0, 0.0 + i * 0.25, { r: 0.1, h: 0.17 });
   cart(m, -1.5, 0, 0.4, 1.5);
@@ -167,8 +247,10 @@ export function healer(m, v) {
   gabled(m, rnd, { x0: -0.7, x1: 0.7, z0: -0.75, z1: 0.2, h1: 0.62, roof: pickFrom(rnd, PALETTE.thatch), roofMat: 'thatch', ridgeH: 0.46, over: 0.15, doors: [{ face: 'front', u: 0.4 }], windows: [{ face: 'front', u: 1.05, shutters: '#3f5a40' }, { face: 'right', u: 0.5 }] });
   const top = chimney(m, -0.45, -0.45, 0.5, 1.2);
   // A green cross over the door, herbs hung from the eaves, a herb garden with rows.
-  panel(m, 'cloth', faces(-0.7, -0.75, 0.7, 0.2, 0.09, 0.62).front, 0.54, 0.46, 0.58, 0.58, 0.04, '#2a7a4a');
-  panel(m, 'cloth', faces(-0.7, -0.75, 0.7, 0.2, 0.09, 0.62).front, 0.5, 0.5, 0.62, 0.54, 0.046, '#2a7a4a');
+  const HF = faces(-0.7, -0.75, 0.7, 0.2, 0.09, 0.62).front;
+  panel(m, 'wood', HF, 0.66, 0.24, 0.84, 0.42, 0.03, '#efe4cc');
+  panel(m, 'cloth', HF, 0.73, 0.26, 0.77, 0.4, 0.036, '#2a7a4a');
+  panel(m, 'cloth', HF, 0.68, 0.31, 0.82, 0.35, 0.04, '#2a7a4a');
   for (let i = 0; i < 5; i++) m.sphere('hedge', -0.5 + i * 0.22, 0.52, 0.24, 0.04, 0.07, 0.04, pickFrom(rnd, ['#8aa84a', '#a8b85a', '#7a9a3a']), { detail: 0 });
   m.box('plain', -0.9, 0, 0.45, 0.9, 0.04, 0.95, '#4a3622');
   for (let r = 0; r < 3; r++) for (let i = 0; i < 9; i++) m.sphere('hedge', -0.8 + i * 0.2, 0.08, 0.55 + r * 0.16, 0.045, 0.045, 0.045, pickFrom(rnd, ['#6a9a3a', '#8ab84a', '#c97a9a', '#b8a84a']), { detail: 0 });
@@ -188,7 +270,9 @@ export function market(m, v) {
   for (const [x, z, yaw] of [[-1.0, -1.0, 0.0], [1.0, -1.0, 0.0], [-1.0, 1.0, Math.PI], [1.0, 1.0, Math.PI]]) {
     m.at(x, 0.04, z, () => {
       const c1 = pickFrom(rnd, ['#b32a2a', '#2a4a9a', '#2a7a4a', '#c9a227', '#7a3a8a']);
-      for (const sx of [-0.35, 0.35]) for (const sz of [-0.2, 0.15]) m.box('wood', sx - 0.02, 0, sz - 0.02, sx + 0.02, 0.58, sz + 0.02, PALETTE.wood[1], { skip: ['bottom'] });
+      // The awning slopes from 0.54 at the front (z 0.2) to 0.66 at the back: each post stops under it.
+      const under = (z) => 0.54 + ((0.2 - z) / 0.45) * 0.12 - 0.006;
+      for (const sx of [-0.35, 0.35]) for (const sz of [-0.2, 0.15]) m.box('wood', sx - 0.02, 0, sz - 0.02, sx + 0.02, under(sz), sz + 0.02, PALETTE.wood[1], { skip: ['bottom'] });
       const n = 6;
       for (let i = 0; i < n; i++) {
         const a = -0.4 + (0.8 * i) / n, b = -0.4 + (0.8 * (i + 1)) / n;
@@ -323,7 +407,17 @@ export function cathedral(m, v) {
   }
   const W = faces(-0.8, nz0, 0.8, 2.7, 0.2, 1.9);
   lancet(m, W.front, 0.8, 0.9, 0.5, 0.95, '#ff6a8a');
-  m.cylinder('glow', 0, 1.9, 2.72, 0.2, 0.2, 0.02, 14, '#ffb45a', { smooth: true });
+  // The rose window over the door: a ring of stone set in the west front, the glass glowing in it, tracery across.
+  m.at(0, 1.9, 2.72, () => {
+    m.push().rotateX(Math.PI / 2);
+    m.cylinder('stone', 0, -0.03, 0, 0.27, 0.27, 0.05, 18, STONE[2], { smooth: true, bottom: true });
+    m.cylinder('glow', 0, -0.05, 0, 0.21, 0.21, 0.05, 18, '#ffb45a', { smooth: true, bottom: true });
+    m.pop();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI;
+      m.beam('stone', [-Math.cos(a) * 0.21, -Math.sin(a) * 0.21, 0.035], [Math.cos(a) * 0.21, Math.sin(a) * 0.21, 0.035], 0.018, STONE[2]);
+    }
+  });
   doorOn(m, { ...W.front, P: [-0.8, 0.2, 2.74] }, 0.8, 0.5, 0.8, '#4a3220', {});
   // The crossing tower and its spire.
   m.box('stone', -0.5, 1.9, -1.4, 0.5, 2.7, -0.6, STONE[2], { skip: ['bottom', 'top'] });

@@ -15,6 +15,10 @@ import { createOcean, SEAS, SKIES } from '../../../src/ocean.js';
 import { createRiver, RIVERS, riverOf } from '../../../src/river.js';
 import { createEffects, CONFETTI, WEATHER, shardGeometry } from '../../../src/effects.js';
 import { createDungeonMeshes, createExit, createTorches, flicker } from '../../../src/scenery/dungeon.js';
+import { createLavaMaterial } from '../../../src/textures/lava.js';
+import { createBogMaterial } from '../../../src/textures/bog.js';
+import { createIceCube } from '../../../src/scenery/ice.js';
+import { createGate, createWallLights } from '../../../src/scenery/mazepieces.js';
 
 /** The seconds since the last call, from a clock that may be reset to 0. */
 const ticker = () => {
@@ -49,8 +53,8 @@ const count = (object) => {
 
 // ———————————————————————————————————————————————— trees
 
-const LEAF = { leafA: '#4f8a3a', leafB: '#5f9a42', needle: '#2f5d3a' };
-const TREES = { palm: 'Date palm', fanPalm: 'Fan palm', redwood: 'Redwood', cypress: 'Cypress' };
+const LEAF = { leafA: '#4f8a3a', leafB: '#5f9a42', leafC: '#6a9a3a', needle: '#2f5d3a' };
+const TREES = { palm: 'Date palm', fanPalm: 'Fan palm', redwood: 'Redwood', cypress: 'Cypress', oak: 'Oak', birch: 'Birch', pine: 'Pine', fruitTree: 'Fruit tree (autumn)', boulder: 'Boulders', ore: 'Iron ore' };
 
 const treeItems = () => Object.entries(TREES).map(([key, name]) => ({
   id: `flora/${key}`, category: 'Flora', group: 'flora', name, source: 'flora.js', kind: 'object',
@@ -66,9 +70,9 @@ const treeItems = () => Object.entries(TREES).map(([key, name]) => ({
 
 const SEA_FRAME = { center: [0, 1, 0], radius: 14 };
 
-function seaItem(id, name, sea, sky, source) {
+function seaItem(id, name, sea, sky, source, category = 'Water', group = 'sea') {
   return {
-    id, category: 'Water', group: source, name, source, kind: 'object',
+    id, category, group, name, source, kind: 'object',
     build({ stage }) {
       const ocean = createOcean(GFX, { sea, sky, reach: 600, rings: 120, segments: 160 });
       const group = new GFX.Group();
@@ -85,8 +89,9 @@ function seaItem(id, name, sea, sky, source) {
 }
 
 const waterItems = () => [
-  ...Object.keys(SEAS).map((s) => seaItem(`water/sea/${s}`, `Sea · ${s}`, s, 'noon', 'ocean')),
-  ...Object.keys(SKIES).map((s) => seaItem(`water/sky/${s}`, `Sky over the sea · ${s}`, 'breeze', s, 'ocean/sky')),
+  ...Object.keys(SEAS).map((s) => seaItem(`water/sea/${s}`, `Sea · ${s}`, s, 'noon', 'ocean.js')),
+  // The ocean's skies are skies: filed with the others, over a breeze of a sea.
+  ...Object.keys(SKIES).map((s) => seaItem(`water/sky/${s}`, `Ocean sky · ${s}`, 'breeze', s, 'ocean/sky.js', 'Skies', 'ocean')),
   ...Object.entries(RIVERS).map(([name, wild]) => ({
     id: `water/river/${name}`, category: 'Water', group: 'river', name: `River · ${name}`, source: 'river.js', kind: 'object',
     build({ stage }) {
@@ -226,6 +231,80 @@ const dungeonItem = () => ({
   },
 });
 
+/** The lava by itself: a pool of it three tiles across in a rim of dark stone, moving as it does in the dungeon. */
+const lavaItem = () => ({
+  id: 'textures/lava', category: 'Dungeon', group: 'dungeon', name: 'Lava (shader)', source: 'textures/lava.js', kind: 'object',
+  build() {
+    const material = createLavaMaterial(GFX);
+    const pool = new GFX.Mesh(new GFX.PlaneGeometry(3, 3, 1, 1), material);
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.y = -0.04;
+    pool.frustumCulled = false;
+    const group = new GFX.Group();
+    group.add(pool);
+    const stone = new GFX.MeshStandardMaterial({ color: '#2e2a28', roughness: 0.9 });
+    for (const [x, z, w, d] of [[0, -1.6, 3.4, 0.2], [0, 1.6, 3.4, 0.2], [-1.6, 0, 0.2, 3.0], [1.6, 0, 0.2, 3.0]]) {
+      const rim = new GFX.Mesh(new GFX.BoxGeometry(w, 0.12, d), stone);
+      rim.position.set(x, 0.02, z);
+      rim.castShadow = rim.receiveShadow = true;
+      group.add(rim);
+    }
+    const pose = ({ time }) => { material.uniforms.uTime.value = time; };
+    pose({ time: 0 });
+    return { object: group, pose, dark: true, info: { Source: 'textures/lava.js', Kind: 'shader (GLSL and WGSL)', Size: '3 × 3 tiles' } };
+  },
+});
+
+/** Blubber's pieces: the ice cube that the winter walls are built of, the moon gate, the candles on the walls, and the bog. */
+const blubberItems = () => [
+  {
+    id: 'scenery/ice-cube', category: 'Dungeon', group: 'maze (blubber)', name: 'Ice cube', source: 'scenery/ice.js', kind: 'object',
+    build() {
+      const cube = createIceCube(GFX);
+      const holder = new GFX.Group();
+      holder.add(cube.group);
+      holder.position.y = 0.6;
+      let last = 0;
+      const pose = ({ time }) => { cube.update?.(Math.max(0, time - last)); last = time; };
+      return { object: holder, pose, info: { Source: 'scenery/ice.js' } };
+    },
+  },
+  {
+    id: 'scenery/moon-gate', category: 'Dungeon', group: 'maze (blubber)', name: 'Moon gate (open)', source: 'scenery/mazepieces.js', kind: 'object',
+    build() {
+      const gate = createGate(GFX, { x: 0, y: 0, z: 0, size: 1 }, { textures: { wall: 'fieldstone' }, season: 'halloween' });
+      gate.open(1);
+      const pose = ({ time }) => gate.update(time);
+      pose({ time: 0 });
+      return { object: gate.group, pose, dark: true, info: { Source: 'scenery/mazepieces.js' } };
+    },
+  },
+  {
+    id: 'scenery/wall-candles', category: 'Dungeon', group: 'maze (blubber)', name: 'Wall candles and lamps', source: 'scenery/mazepieces.js', kind: 'object',
+    build() {
+      const group = new GFX.Group();
+      const candles = createWallLights(GFX, [{ x: -0.6, y: 0, z: 0 }, { x: 0.6, y: 0, z: 0 }], 'candles');
+      const lamps = createWallLights(GFX, [{ x: 0, y: 0, z: -0.8 }], 'lamp');
+      group.add(candles.group, lamps.group);
+      const pose = ({ time }) => { candles.update(time); lamps.update(time); };
+      pose({ time: 0 });
+      return { object: group, pose, dark: true, info: { Source: 'scenery/mazepieces.js' } };
+    },
+  },
+  {
+    id: 'textures/bog', category: 'Dungeon', group: 'maze (blubber)', name: 'Bog (shader)', source: 'textures/bog.js', kind: 'object',
+    build() {
+      const material = createBogMaterial(GFX);
+      const pool = new GFX.Mesh(new GFX.PlaneGeometry(3, 3, 1, 1), material);
+      pool.rotation.x = -Math.PI / 2;
+      pool.frustumCulled = false;
+      const pose = ({ time }) => { if (material.uniforms?.uTime) material.uniforms.uTime.value = time; };
+      pose({ time: 0 });
+      return { object: pool, pose, dark: true, info: { Source: 'textures/bog.js' } };
+    },
+  },
+];
+
 // ———————————————————————————————————————————————— what a building carries
 
 /** Puffs of smoke over each chimney, the lamps (on the stage's real lights) and the parts that turn, for a building's model. */
@@ -270,4 +349,4 @@ export function dress(model, group, lights = []) {
   };
 }
 
-export const extraItems = () => [...treeItems(), ...waterItems(), ...effectItems(), dungeonItem()];
+export const extraItems = () => [...treeItems(), ...waterItems(), ...effectItems(), dungeonItem(), lavaItem(), ...blubberItems()];

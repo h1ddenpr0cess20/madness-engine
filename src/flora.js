@@ -1,10 +1,12 @@
 import { rngFor } from './buildings/common.js';
 
 /**
- * Trees of the California coast, drawn into a `Mesher` standing on y = 0 at
- * the origin, a tile across: the date palm with its curved trunk and drooping
- * fronds, the tall thin fan palm of the boulevards, the coast redwood, and the
- * Italian cypress. `hi` draws the near version, false a cheaper one for far
+ * Trees, drawn into a `Mesher` standing on y = 0 at the origin, a tile
+ * across. From the California coast: the date palm with its curved trunk and
+ * drooping fronds, the tall thin fan palm of the boulevards, the coast
+ * redwood and the Italian cypress. From the moat games' woods: the oak, the
+ * birch, the pine and the orchard's fruit tree, and the outcrops of boulders
+ * and iron ore. `hi` draws the near version, false a cheaper one for far
  * away. Leaves are drawn near-white in the material `leaf` (or `needle` for
  * conifers), so the game's leaf materials color them.
  *
@@ -99,5 +101,131 @@ export function cypress(m, { hi = true, seed = 0, needle = 'needle' } = {}) {
   m.crown(needle, 0, h * 0.5, 0, 0.17, h * 0.55, 0.17, '#d8d8d8', { detail: hi ? 2 : 1, lump: 0.12, seed });
 }
 
+
+// ———————————————————————————————————————————————— the woods of the moat games
+
+/** A hash of two whole numbers and a seed, 0 to 1 (the moat games' `hash2`), so each variant is the same each time. */
+function hash2(x, y, s = 0) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(s | 0, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/** A color part of the way from one hex color to another. */
+function mixHex(a, b, t) {
+  const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const A = p(a), B = p(b);
+  return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+
+/** A clump of canopy in near-white (the leaf material colors it): lumpy, shaded round, pale on top and dark underneath. */
+function blob(m, x, y, z, rx, ry, rz, mat, detail, seed, lump = 0.24) {
+  m.crown(mat, x, y, z, rx, ry, rz, '#e8e8e8', { detail, lump, seed });
+}
+
+const TRUNK = ['#6a4a2c', '#5a3e26', '#74532f'];
+
+/**
+ * An oak (from the moat games' woods): a trunk that flares at the root and
+ * tapers, limbs reaching up into a crown of five clumps. Six variants, by
+ * `seed`; the leaf material by variant too unless `leaf` is given.
+ */
+export function oak(m, { hi = true, seed = 0, leaf = null, bark = 'bark' } = {}) {
+  const v = ((seed % 6) + 6) % 6;
+  const L = leaf ?? ['leafA', 'leafB', 'leafC'][v % 3];
+  const rnd = (k) => hash2(v * 13 + k, k * 7, 3);
+  const trunk = TRUNK[v % 3];
+  const lean = (rnd(9) - 0.5) * 0.06;
+  m.cylinder(bark, 0, -0.05, 0, 0.1, 0.13, 0.12, hi ? 8 : 5, trunk, { smooth: hi, caps: false });
+  m.cylinder(bark, lean * 0.4, 0.06, 0, 0.05, 0.1, 0.34, hi ? 8 : 5, trunk, { smooth: hi });
+  m.cylinder(bark, lean, 0.38, 0, 0.04, 0.05, 0.3, hi ? 7 : 5, trunk, { smooth: hi });
+  if (hi) {
+    for (let b = 0; b < 4; b++) {
+      const a = b * 1.7 + rnd(b) * 1.5;
+      m.beam(bark, [lean, 0.5, 0], [Math.cos(a) * 0.26, 0.9 + rnd(b + 3) * 0.14, Math.sin(a) * 0.26], 0.04 - b * 0.004, trunk);
+    }
+  }
+  const R = 0.34 + rnd(1) * 0.1, D = hi ? 2 : 1;
+  blob(m, lean, 0.96, 0, R, R * 0.8, R, L, D, v);
+  blob(m, 0.2 * (rnd(2) - 0.5) * 2, 1.14, 0.18 * (rnd(3) - 0.5) * 2, R * 0.78, R * 0.66, R * 0.78, L, hi ? 1 : 0, v + 3);
+  blob(m, -0.24, 0.86, 0.14, R * 0.62, R * 0.52, R * 0.62, L, hi ? 1 : 0, v + 5);
+  if (hi) {
+    blob(m, 0.25, 0.84, -0.18, R * 0.58, R * 0.5, R * 0.58, L, 1, v + 7);
+    blob(m, 0.02, 0.74, 0.27, R * 0.5, R * 0.42, R * 0.5, L, 0, v + 9);
+  }
+}
+
+/** A birch: a slim white trunk with dark marks across it, a few twigs, a narrow crown. Three variants, by `seed`. */
+export function birch(m, { hi = true, seed = 0, leaf = 'leafB', bark = 'bark' } = {}) {
+  const v = ((seed % 3) + 3) % 3;
+  const lean = (hash2(v, 4, 2) - 0.5) * 0.08;
+  m.cylinder(bark, 0, -0.05, 0, 0.03, 0.05, 0.5, hi ? 7 : 4, '#e2ded2', { smooth: hi });
+  m.cylinder(bark, lean * 0.5, 0.45, 0, 0.022, 0.03, 0.55, hi ? 7 : 4, '#e2ded2', { smooth: hi });
+  if (hi) {
+    for (let k = 0; k < 8; k++) m.box('plain', -0.03 + lean * (k / 8), 0.12 + k * 0.11, -0.002, 0.03 + lean * (k / 8), 0.14 + k * 0.11 + 0.02 * (k % 3), 0.045, '#34312c', { skip: ['bottom'] });
+    for (let b = 0; b < 3; b++) m.beam(bark, [lean, 0.7 + b * 0.1, 0], [lean + Math.cos(b * 2.3 + v) * 0.14, 0.95 + b * 0.08, Math.sin(b * 2.3 + v) * 0.14], 0.016, '#cfcabd');
+  }
+  const D = hi ? 2 : 1;
+  blob(m, lean, 1.1, 0, 0.25, 0.34, 0.25, leaf, D, v, 0.3);
+  blob(m, lean + 0.13, 0.84, 0.06, 0.2, 0.24, 0.2, leaf, hi ? 1 : 0, v + 2, 0.3);
+  if (hi) blob(m, lean - 0.12, 0.8, -0.07, 0.18, 0.22, 0.18, leaf, 1, v + 4, 0.3);
+}
+
+/** A pine: tiers of drooping boughs up a straight trunk to a point. Four variants, by `seed`. */
+export function pine(m, { hi = true, seed = 0, needle = 'needle', bark = 'bark' } = {}) {
+  const v = ((seed % 4) + 4) % 4;
+  const tiers = hi ? 5 : 3, sides = hi ? 10 : 6;
+  m.cylinder(bark, 0, -0.05, 0, 0.035, 0.06, 0.5, hi ? 6 : 4, '#5a3e26', { smooth: hi });
+  for (let t = 0; t < tiers; t++) {
+    const f = t / (tiers - 1);
+    const r = (0.5 - f * 0.34) * (0.9 + 0.2 * hash2(v, t, 5));
+    const y = 0.22 + f * (hi ? 0.95 : 0.88);
+    m.bough(needle, 0, y, 0, r, hi ? 0.4 : 0.5, sides, '#e0e0e0', { seed: v * 7 + t, rot: t * 0.5 });
+  }
+  m.bough(needle, 0, 0.22 + (hi ? 0.95 : 0.88) + 0.12, 0, 0.1, 0.3, hi ? 8 : 5, '#e0e0e0', { seed: v });
+}
+
+const BLOOM = { spring: '#f6d8e8', summer: null, autumn: '#d8402a', winter: null };
+
+/** A fruit tree from an orchard: a short trunk, a round crown, blossom in spring and fruit in autumn (`season`). Two variants, by `seed`. */
+export function fruitTree(m, { hi = true, seed = 0, season = 'autumn', bark = 'bark' } = {}) {
+  const v = ((seed % 2) + 2) % 2, col = BLOOM[season] ?? null;
+  m.cylinder(bark, 0, -0.05, 0, 0.035, 0.055, 0.34, hi ? 6 : 4, '#5a3e26', { smooth: false });
+  blob(m, 0, 0.5, 0, 0.3, 0.26, 0.3, v ? 'leafB' : 'leafA', hi ? 2 : 1, v + 9);
+  if (hi && col) for (let k = 0; k < 9; k++) {
+    const a = k * 2.4 + v, d = 0.18 + 0.1 * hash2(k, v, 4);
+    m.sphere('plain', Math.cos(a) * d, 0.42 + 0.2 * hash2(k, 3, v), Math.sin(a) * d, 0.026, 0.026, 0.026, col, { detail: 0 });
+  }
+}
+
+const GRAY = [['#7a756b', '#6a655d', '#8a8478'], ['#8a8478', '#756f66', '#7f796c'], ['#6a655d', '#5c5851', '#7a756b'], ['#7f796c', '#8c8676', '#6e695f']];
+const DARK = [['#5e5a52', '#4e4a44', '#6c675e'], ['#6c675e', '#58544c', '#625c54'], ['#4e4a44', '#5e5a52', '#403c38'], ['#625c54', '#6c675e', '#54504a']];
+
+/** An outcrop: a heap of knocked-about rock, a big one with smaller ones and chips against its foot. Four variants, by `seed`. */
+export function boulder(m, { hi = true, seed = 0 } = {}) {
+  const v = ((seed % 4) + 4) % 4, c = GRAY[v], D = hi ? 1 : 0;
+  m.rock('rock', 0, 0.1, 0, 0.3 + 0.05 * v, 0.2 + 0.03 * v, 0.26 + 0.04 * v, c[0], { detail: D, rough: 0.3, seed: v, cuts: 5 });
+  m.rock('rock', 0.27 + 0.03 * v, 0.04, 0.12, 0.15, 0.11, 0.13, c[1], { detail: 0, rough: 0.28, seed: v + 4, cuts: 3 });
+  m.rock('rock', -0.2, 0.03, -0.24 + 0.04 * v, 0.12, 0.09, 0.11, c[2], { detail: 0, rough: 0.28, seed: v + 8, cuts: 3 });
+  if (hi) m.rock('rock', 0.1, 0.01, 0.3, 0.06, 0.04, 0.05, c[0], { detail: 0, rough: 0.2, seed: v + 12, cuts: 2 });
+}
+
+/** Iron ore: dark rock with rust-brown seams and stains through it, and a few rusty lumps broken off. Four variants, by `seed`. */
+export function ore(m, { hi = true, seed = 0 } = {}) {
+  const v = ((seed % 4) + 4) % 4, c = DARK[v], D = hi ? 1 : 0;
+  const seams = (dir, lump, grain) => {
+    const s = Math.abs(Math.sin((dir[0] * 3.1 + dir[1] * 5.3 - dir[2] * 2.2 + v) * 2.6 + lump * 4));
+    const w = Math.max(0, 1 - s * 7) * 0.9 + Math.max(0, grain - 0.72) * 2;
+    return w > 0.08 ? { col: '#8a4a2e', w: Math.min(1, w) } : null;
+  };
+  const tint = (base) => (dir, lump, grain) => { const t = seams(dir, lump, grain); return t ? mixHex(base, t.col, t.w) : base; };
+  m.rock('rock', 0, 0.1, 0, 0.27 + 0.04 * v, 0.2 + 0.03 * v, 0.23 + 0.04 * v, c[0], { detail: D, rough: 0.28, seed: v + 20, cuts: 5, lichen: 0.15, colorFn: tint(c[0]) });
+  m.rock('rock', -0.24, 0.03, 0.1, 0.13, 0.1, 0.12, c[1], { detail: 0, rough: 0.26, seed: v + 24, cuts: 3, lichen: 0.15, colorFn: tint(c[1]) });
+  for (let k = 0; k < (hi ? 3 : 1); k++) {
+    const a = k * 2.3 + v, r = 0.2 + 0.03 * hash2(k, v, 5);
+    m.rock('rock', Math.cos(a) * r, 0.05 + 0.03 * k, Math.sin(a) * r * 0.9, 0.07, 0.05, 0.06, k % 2 ? '#7a4630' : '#69392a', { detail: 0, rough: 0.18, seed: k + v * 5, cuts: 3, base: 0.3 });
+  }
+}
+
 /** The trees by name, for a game that picks one. */
-export const FLORA = Object.freeze({ palm, fanPalm, redwood, cypress });
+export const FLORA = Object.freeze({ palm, fanPalm, redwood, cypress, oak, birch, pine, fruitTree, boulder, ore });

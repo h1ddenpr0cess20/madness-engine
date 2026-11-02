@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person } from './person.js';
 
 /**
  * The Stage Diver: flat out across the air, head first, arms out in front like

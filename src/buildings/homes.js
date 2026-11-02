@@ -29,7 +29,7 @@ function path(m, x, z0, z1) {
 
 /** The standard small house: walls, timber, roof, chimney, door and windows. All four faces are done. */
 function body(m, rnd, v, o) {
-  const { x0, x1, z0, z1, h0, h1, wall, roof, roofMat, ridgeH, over = 0.13, gableAxis = 'x', doorU, doorCol, shutters = null, floors = 1, upper = null } = o;
+  const { x0, x1, z0, z1, h0, h1, wall, roof, roofMat, ridgeH, over = 0.13, gableAxis = 'x', doorU, doorCol, shutters = null, floors = 1, upper = null, frontWindow = true } = o;
   m.box('rubble', x0 - 0.03, -0.35, z0 - 0.03, x1 + 0.03, h0, z1 + 0.03, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
   m.box('plaster', x0, h0, z0, x1, h1, z1, wall, { skip: ['bottom', 'top'] });
   const F = faces(x0, z0, x1, z1, h0, h1);
@@ -41,7 +41,7 @@ function body(m, rnd, v, o) {
   const fw = x1 - x0;
   doorOn(m, F.front, fw * doorU, 0.22, 0.42, doorCol);
   const wu = doorU < 0.5 ? 0.72 : 0.26;
-  windowOn(m, F.front, fw * wu, 0.2, 0.2, 0.19, { shutters });
+  if (frontWindow) windowOn(m, F.front, fw * wu, 0.2, 0.2, 0.19, { shutters });
   if (upper) windowOn(m, F.front, fw * upper, h1 - h0 - 0.28, 0.2, 0.19, { shutters });
   windowOn(m, F.right, (z1 - z0) * 0.5, 0.2, 0.2, 0.19, { shutters });
   windowOn(m, F.left, (z1 - z0) * 0.45, 0.2, 0.2, 0.19, { shutters });
@@ -173,7 +173,9 @@ export function stall(m, v) {
   const { rnd } = v;
   const c1 = pickFrom(rnd, ['#b32a2a', '#2a4a9a', '#2a7a4a', '#c9a227', '#7a3a8a']);
   const x0 = -0.62, x1 = 0.62;
-  for (const x of [x0, x1]) for (const z of [-0.2, 0.15]) m.box('wood', x - 0.022, 0, z - 0.022, x + 0.022, 0.62, z + 0.022, PALETTE.wood[1], { skip: ['bottom'] });
+  // The awning slopes from 0.72 at the back (z −0.24) to 0.56 at the front (z 0.22): each pole stops just under it.
+  const under = (z) => 0.56 + ((0.22 - z) / 0.46) * 0.16 - 0.008;
+  for (const x of [x0, x1]) for (const z of [-0.2, 0.15]) m.box('wood', x - 0.022, 0, z - 0.022, x + 0.022, under(z), z + 0.022, PALETTE.wood[1], { skip: ['bottom'] });
   awning(m, x0 - 0.06, x1 + 0.06, -0.24, 0.22, 0.62, c1, '#efe4cc');
   m.box('wood', x0, 0.28, -0.12, x1, 0.32, 0.12, PALETTE.wood[0], { skip: ['bottom'] });
   m.box('wood', x0, 0, -0.1, x1, 0.28, 0.1, PALETTE.wood[1], { skip: ['bottom', 'top'] });
@@ -197,7 +199,7 @@ export function shop(m, v) {
   const wall = pickFrom(rnd, PALETTE.plaster);
   const x0 = -0.78, x1 = 0.78, z0 = -0.74, z1 = 0.34;
   const roof = pickFrom(rnd, PALETTE.tile);
-  const F = body(m, rnd, v, { x0, x1, z0, z1, h0: 0.09, h1: 0.7, wall, roof, roofMat: 'tile', ridgeH: 0.52, doorU: 0.28, doorCol: pickFrom(rnd, PALETTE.door), shutters: pickFrom(rnd, PALETTE.shutter) });
+  const F = body(m, rnd, v, { x0, x1, z0, z1, h0: 0.09, h1: 0.7, wall, roof, roofMat: 'tile', ridgeH: 0.52, doorU: 0.28, doorCol: pickFrom(rnd, PALETTE.door), shutters: pickFrom(rnd, PALETTE.shutter), frontWindow: false });
   // A wide counter window with an awning over it.
   panel(m, 'wood', F.front, 0.7, 0.12, 1.35, 0.5, 0.042, '#3a2a1c');
   panel(m, 'glass', F.front, 0.75, 0.2, 1.3, 0.46, 0.047, PALETTE.glass);
@@ -205,9 +207,9 @@ export function shop(m, v) {
   awning(m, x0 + 0.62, x0 + 1.4, z1 + 0.02, z1 + 0.34, 0.54, pickFrom(rnd, ['#b32a2a', '#2a4a9a', '#2a7a4a']), '#efe4cc');
   sign(m, F.front, 0.14, 0.6);
   const top = chimney(m, 0.55, -0.3, 0.55, 1.35);
-  crate(m, 0.7, 0.09, 0.62, 0.13);
-  barrel(m, -0.92, 0.09, 0.3);
-  sack(m, -0.9, 0.09, 0.55);
+  crate(m, 0.7, 0, 0.62, 0.13);
+  barrel(m, -0.92, 0, 0.3);
+  sack(m, -0.9, 0, 0.55);
   path(m, 1.56 * 0.28 - 0.78, 0.36, 0.95);
   return { smoke: [top] };
 }

@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { bag, cloth, hold, onBody, person, plate, strap } from './person.js';
 import { glasses, suitFront } from './wardrobe.js';
 
 /**
@@ -24,26 +24,29 @@ export default person({
     after(k, { clip, time, seed }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
-      // The folder held to the chest, the other hand turning a page, the head shaking slowly: no. Not without Form 27B.
-      hold(k, 'armL', -0.9, 0.4, 0.4); hold(k, 'foreL', -1.7, 0, 0);
+      // The folder held up open in front of him, read from, the other hand turning a page; the head shaking slowly:
+      // no. Not without Form 27B.
+      hold(k, 'armL', -0.75, 0, 0.15); hold(k, 'foreL', -1.3, 0, 0);
       hold(k, 'armR', -0.6 + Math.sin(T * 1.8) * 0.1, 0, -0.2); hold(k, 'foreR', -1.2, 0, 0);
-      k.turn('head', 0.1, Math.sin(T * 0.8) * 0.3, 0);
+      k.turn('head', 0.15, Math.sin(T * 0.8) * 0.3, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     glasses(s, { rim: '#c8a030', round: true, size: 0.02 });
     suitFront(s, { shirt: '#f2f0ec', tie: '#1a3aa0', lapel: '#565e6e', buttons: '#2a2e38' });
-    s.part('kit', () => {
-      // The stars on the tie, and the lanyard round the neck.
-      for (let i = 0; i < 7; i++) {
-        const a = (i / 7) * Math.PI * 2;
-        s.sphere([Math.cos(a) * 0.012, 0.44 + Math.sin(a) * 0.012, 0.09], 0.0035, { color: '#f4d020', mat: 'metal', bone: 'chest', k: 0.001 });
-      }
-      s.torus([0, 0.5, 0.01], 0.06, 0.004, { color: '#1a3aa0', mat: 'cloth', bone: 'chest', k: 0.002, rot: [0.5, 0, 0] });
-      s.box([0, 0.4, 0.092], [0.02, 0.026, 0.003], 0.001, { color: '#f4f0e6', mat: 'paper', bone: 'chest', k: 0.001 });
-      // The folder.
-      const h = J.handL;
-      s.box([h[0] + 0.01, h[1] + 0.02, h[2] + 0.03], [0.075, 0.1, 0.012], 0.004, { color: '#1a3aa0', mat: 'paper', bone: 'handL', k: 0.002, rot: [0.2, 0, 0.1] });
-    });
+    // The circle of gold stars on the tie.
+    const ring = [];
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; ring.push([Math.cos(a) * 0.009, 0.455 + Math.sin(a) * 0.009, 0.1]); }
+    onBody(s, ring, ['outer2']).forEach((h) => s.part('fine', () => s.sphere(h.p.map((v, i) => v + h.n[i] * 0.001), 0.0022, { color: '#f4d020', mat: 'metal', bone: 'chest', k: 0 })));
+    // The lanyard and the pass.
+    strap(s, [[0, 0.552, -0.06], [0.05, 0.545, -0.03], [0.058, 0.53, 0.03], [0.055, 0.47, 0.08], [0.05, 0.43, 0.09]], { width: 0.006, thick: 0.002, color: '#1a3aa0', mat: 'cloth', over: ['outer2', 'outer', 'top', 'head'], bone: 'chest' });
+    bag(s, [0.05, 0.41, 0.092], { size: [0.017, 0.024, 0.0018], color: '#f4f0e6', flap: false, over: ['outer2', 'outer', 'top'], bone: 'chest' });
+    // The folder in the left fist, held by its spine and opened toward him: blue card, the white pages.
+    const L = pose.grip('L'), n = [L.along[1] * L.out[2] - L.along[2] * L.out[1], L.along[2] * L.out[0] - L.along[0] * L.out[2], L.along[0] * L.out[1] - L.along[1] * L.out[0]];
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      const c = L.at(0, 0, -0.065);
+      plate(s, c, L.along, L.out, [0.075, 0.058, 0.004], 0.003, { color: '#1a3aa0', mat: 'paper', k: 0.001 });
+      for (const sg of [1, -1]) plate(s, c.map((v, i) => v + n[i] * sg * 0.0045 - L.out[i] * 0.004), L.along, L.out, [0.068, 0.05, 0.0012], 0.0006, { color: '#f4f0e6', mat: 'paper', k: 0 });
+    }));
   },
 });

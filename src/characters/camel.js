@@ -10,10 +10,20 @@ import { quadruped } from './quadruped.js';
  */
 
 const HIDE = coat({ over: '#c8a070', under: '#e0c8a0', vary: 0.12, freq: 12 });
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+/** The camel's coat: sand, darker over the hump and along the top of the neck, pale down the legs and underneath. */
+const COAT = (p, n) => {
+  let c = HIDE(p, n);
+  c = blend(c, [0.62, 0.45, 0.28], smooth(0.4, 0.9, n[1]) * smooth(0.5, 0.58, p[1]) * 0.55);
+  c = blend(c, [0.93, 0.86, 0.72], smooth(0.36, 0.26, p[1]) * 0.45);
+  return c;
+};
 const BLANKET = bands(2, 0.03, '#c82a2a', '#f0c030', 0.45, 0.15);
 
 export default quadruped({
   name: 'camel',
+  budget: 90000,
   scale: 1.55,
   hip: 0.44,
   len: 0.16,
@@ -21,10 +31,10 @@ export default quadruped({
   stance: 0.05,
   leg: [0.034, 0.023, 0.02],
   neck: { len: 0.2, rise: 0.75, r: 0.044 },
-  head: { r: 0.05, snout: 0.075, sr: 0.033, drop: 0.05 },
+  head: { r: 0.05, snout: 0.075, sr: 0.033, drop: 0.05, pad: false },
   tail: { len: 0.16, rise: -1.35, r: 0.01, tip: 0.008 },
   ears: { kind: 'small', size: 0.7 },
-  paint: { body: HIDE, feet: '#b08a5a', nose: '#5a3a24' },
+  paint: { body: COAT, head: COAT, snout: COAT, legs: COAT, feet: '#b08a5a', nose: '#5a3a24', inner: '#8a6a4a', countershade: 0.35 },
   style: { rate: 6, wag: 0.15, lift: 0.5, attack: 'spit', after(k, { clip }, T) {
     // Chewing sideways, the head high and turned away.
     if (clip === 'idle' || clip === 'walk') {
@@ -39,7 +49,7 @@ export default quadruped({
     // The knobbly knees and a pad on each foot.
     for (const n of ['FL', 'FR', 'BL', 'BR']) {
       const L = P.legs[n];
-      s.sphere(L.knee, 0.026, { ...H, bone: `shin${n}`, k: 0.012 });
+      s.sphere(n[0] === 'F' ? L.ankle : L.knee, 0.026, { ...H, bone: n[0] === 'F' ? `foot${n}` : `shin${n}`, k: 0.012 });
       s.cylinder([L.foot[0], 0.01, L.foot[2] + 0.012], 0.03, 0.01, { color: '#a07a4a', mat: 'hide', bone: `foot${n}`, k: 0.008, round: 0.008 });
     }
     // The split upper lip, hanging.

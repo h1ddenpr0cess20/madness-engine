@@ -1,5 +1,5 @@
-import { cloth, person } from './person.rocknroller.js';
-import { cap } from './wardrobe.rocknroller-ii.js';
+import { buttons, cloth, person, shell, skirt, trunk } from './person.js';
+import { cap } from './wardrobe.js';
 
 /**
  * The Muscle: Mr. Big's. Huge, in a dark overcoat too small for him, the
@@ -34,14 +34,12 @@ export default person({
   },
   extras(s) {
     cap(s, { color: '#4a4440', peak: '#4a4440', flat: true });
-    // A nose that has been broken more than once, and a scar through the brow.
+    // A nose that has been broken more than once, and a scar through the brow (on the skin, under the cap).
     s.ellipsoid([0.006, 0.655, 0.112], [0.02, 0.016, 0.014], { color: '#d0a080', mat: 'skin', bone: 'head', k: 0.01 });
-    s.paint((p) => Math.max(Math.abs(p[0] + 0.04 - (p[1] - 0.69) * 0.3) - 0.003, Math.abs(p[1] - 0.69) - 0.03, 0.07 - p[2]), '#b06a5a', 0.002);
-    s.part('kit', () => {
-      // The coat's collar turned up round the neck, and the coat to the knee.
-      s.torus([0, 0.53, -0.004], 0.06, 0.02, { color: coat, mat: 'cloth', bone: 'chest', k: 0.01, rot: [0.15, 0, 0] });
-      s.ellipsoid([0, 0.26, 0.0], [0.11, 0.1, 0.085], { color: coat, mat: 'cloth', bone: 'hips', k: 0.03 });
-      for (const y of [0.45, 0.4, 0.35]) s.sphere([0.03, y, 0.085], 0.007, { color: '#1a1614', mat: 'plastic', bone: 'chest', k: 0.001 });
-    });
+    s.paint((p) => Math.max(Math.abs(p[0] + 0.04 - (p[1] - 0.69) * 0.3) - 0.003, Math.abs(p[1] - 0.688) - 0.018, 0.075 - p[2]), '#b06a5a', 0.002);
+    // The coat's skirts to the knee, open at the front; its collar turned up round the neck; buttons down the front.
+    skirt(s, trunk(1, 0), { top: 0.34, hem: 0.18, flare: 1.1, color: coat, part: 'outer', b: 1, slit: 0.016 });
+    shell(s, (p) => Math.max(Math.abs(p[1] - 0.552) - 0.016, -p[2] - 0.04, 0.014 - Math.abs(p[0])), { color: coat, mat: 'cloth', thick: 0.007, lift: 0.004, over: ['head', 'top'], part: 'outer2', bone: 'neck' });
+    buttons(s, [[0, 0.46, 0.09], [0, 0.41, 0.09], [0, 0.36, 0.088]], { r: 0.0072, color: '#1a1614', mat: 'plastic', over: ['top'] });
   },
 });

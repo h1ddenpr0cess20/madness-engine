@@ -1,5 +1,5 @@
 import { bands, grainy } from '../models/skins.js';
-import { cloth, person } from './person.js';
+import { cloth, onBody, person, strap } from './person.js';
 import { moustache } from './wardrobe.js';
 
 /**
@@ -22,7 +22,7 @@ const WOOD = { color: grainy('#8a5a2e', 0.18, 30), mat: 'leather', bone: 'handR'
 const RIBBON = { color: '#c81c24', mat: 'cloth', bone: 'head' };
 
 // The oar, in his right fist: along `up` from the fist, the blade at the top.
-const OAR = { up: [0, 0.17, 0.985], below: 0.3, above: 0.78 };
+const OAR = { below: 0.3, above: 0.78 };
 
 export default person({
   name: 'gondolier',
@@ -36,12 +36,14 @@ export default person({
   hair: { color: cloth('#2a1a10', '#140a06'), cap: [0.106, 0.09, 0.106], at: [0, 0.69, -0.012], locks: [[[0.08, 0.7, -0.03], [0.1, 0.64, -0.07], 0.026], [[-0.08, 0.7, -0.03], [-0.1, 0.64, -0.07], 0.026], [[0, 0.7, -0.09], [0, 0.63, -0.1], 0.035]] },
   style: {
     attack: 'thrust', twist: 0,
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, aim }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
       // Leaning on the oar; the other arm out to the canal, sweeping with the song, chin up, chest out.
       const song = Math.sin(T * 1.3);
       k.turn('armR', 0.1, 0, -0.08);
+      // The oar up beside him, its blade high.
+      aim?.(k, 'R', 'root', [-0.2, 2.5, 0.5]);
       if (clip === 'idle') {
         k.turn('armL', -1.25 + song * 0.15, -0.2, 0.75 + song * 0.1);
         k.turn('foreL', 0.05, 0, 0);
@@ -51,8 +53,8 @@ export default person({
       }
     },
   },
-  extras(s, J) {
-    moustache(s, { color: '#1a120c', wide: 1.3 });
+  extras(s, J, { pose }) {
+    moustache(s, { color: '#1a120c', wide: 1.35 });
     s.part('kit', () => {
       // A straw boater: a flat brim, a flat-topped crown, a red ribbon round it, the ends down the back.
       const tilt = [-0.12, 0, 0.06];
@@ -60,14 +62,20 @@ export default person({
       s.cylinder([0, 0.79, -0.004], 0.094, 0.036, { color: straw, mat: 'cloth', bone: 'head', k: 0.006, round: 0.008, rot: tilt });
       s.cylinder([0, 0.77, -0.004], 0.097, 0.013, { ...RIBBON, k: 0.003, round: 0.004, rot: tilt });
       for (const m of [1, -1]) s.flake([m * 0.012, 0.77, -0.1], [m * 0.03, 0.67, -0.17], [0, 0.4, -1], 0.012, 0.014, 0.25, { ...RIBBON, k: 0.003 });
-      // A red sash round the waist, its ends hanging at the left hip.
-      s.torus([0, 0.34, 0.004], 0.078, 0.016, { color: '#c81c24', mat: 'cloth', bone: 'hips', k: 0.006 });
-      s.flake([0.075, 0.33, 0.03], [0.092, 0.22, 0.045], [1, 0, 0.4], 0.016, 0.02, 0.3, { color: '#c81c24', mat: 'cloth', bone: 'hips', k: 0.004 });
-      // The oar: a long pale shaft, a grip at the fist, a flat blade at the top.
-      const h = J.handR, u = OAR.up;
-      const at = (d) => [h[0] + u[0] * d, h[1] + 0.004 + u[1] * d, h[2] + 0.01 + u[2] * d];
-      s.limb(at(-OAR.below), at(OAR.above), 0.011, 0.012, { ...WOOD, k: 0.002 });
-      s.flake(at(OAR.above - 0.04), at(OAR.above + 0.24), [1, 0, 0], 0.024, 0.04, 0.16, { ...WOOD, k: 0.004 });
     });
+    // A red sash, wound round the waist and knotted at the left hip, its ends hanging.
+    strap(s, [[0, 0.345, 0.085], [0.075, 0.345, 0.06], [0.095, 0.345, 0], [0.06, 0.345, -0.07], [-0.06, 0.345, -0.07], [-0.095, 0.345, 0], [-0.075, 0.345, 0.06]], { closed: true, width: 0.03, thick: 0.007, color: '#c81c24', mat: 'cloth', over: ['top', 'bottoms'] });
+    const knot = onBody(s, [0.088, 0.345, 0.035], ['straps']);
+    s.part('kit', () => {
+      const c = knot.p.map((v, i) => v + knot.n[i] * 0.008);
+      s.ellipsoid(c, [0.012, 0.012, 0.01], { color: '#c81c24', mat: 'cloth', bone: 'hips', k: 0.003 });
+      for (const [dx, dz] of [[0.004, 0.008], [0.012, -0.004]]) s.flake(c, [c[0] + dx, c[1] - 0.11, c[2] + dz], [1, 0, 0.3], 0.012, 0.016, 0.3, { color: '#c81c24', mat: 'cloth', bone: 'hips', k: 0.004 });
+    });
+    // The oar: a long pale shaft through the fist, a flat blade at the top.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(G.at(-OAR.below), G.at(OAR.above), 0.011, 0.012, { ...WOOD, k: 0.002 });
+      s.flake(G.at(OAR.above - 0.04), G.at(OAR.above + 0.24), G.out, 0.024, 0.04, 0.16, { ...WOOD, k: 0.004 });
+    }));
   },
 });

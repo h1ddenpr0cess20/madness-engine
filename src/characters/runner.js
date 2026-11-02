@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person, shell, strap, tube } from './person.js';
 
 /**
  * The Bull Runner: in the whites of San Fermín, a red pañuelo knotted at
@@ -8,6 +8,7 @@ import { cloth, hold, person } from './person.metroll.js';
  * no plan. Running from the bull. Into you. About 0.95 tiles tall.
  */
 
+const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
 const WHITE = cloth('#f6f4f0', '#d8d4cc');
 
 export default person({
@@ -16,7 +17,7 @@ export default person({
   b: 0.96,
   shape: { legs: 1.06, girth: 0.9 },
   skin: '#e0a880',
-  look: { torso: WHITE, sleeve: WHITE, cuff: '#e0a880', legs: WHITE, boot: '#f4f2ec', sole: '#c8141e' },
+  look: { torso: WHITE, sleeve: WHITE, cuff: '#e0a880', legs: WHITE, boot: '#f4f2ec', sole: '#c8141e', tuck: true },
   mats: { cuff: 'skin', boot: 'cloth' },
   face: { eyeColor: '#2a1a0a', brow: '#1a120a', blush: 0.9, jaw: 1.0 },
   hair: { color: cloth('#1a120a', '#0a0604'), locks: [[[0.03, 0.78, 0.06], [0.07, 0.77, 0.1], 0.03], [[-0.04, 0.78, 0.05], [-0.08, 0.76, 0.09], 0.03]] },
@@ -38,17 +39,21 @@ export default person({
       k.turn('head', 0, 1.1 + Math.sin(T * 1.3) * 0.2, 0);
     },
   },
-  extras(s, J) {
-    s.part('kit', () => {
-      // The pañuelo, knotted at the throat, its point down the chest; the sash, its ends at the hip.
-      s.torus([0, 0.53, 0.01], 0.04, 0.012, { color: '#c8141e', mat: 'cloth', bone: 'chest', k: 0.004, rot: [0.3, 0, 0] });
-      s.cone([0, 0.47, 0.072], 0.024, 0.05, { color: '#c8141e', mat: 'cloth', bone: 'chest', k: 0.004, rot: [Math.PI, 0, 0] });
-      s.torus([0, 0.34, 0.004], 0.08, 0.016, { color: '#c8141e', mat: 'cloth', bone: 'hips', k: 0.006 });
-      s.flake([0.075, 0.33, 0.03], [0.09, 0.22, 0.04], [1, 0, 0.4], 0.016, 0.02, 0.3, { color: '#c8141e', mat: 'cloth', bone: 'hips', k: 0.004 });
-      // The rolled newspaper.
-      const h = J.handR;
-      s.limb([h[0], h[1] - 0.05, h[2] + 0.01], [h[0], h[1] + 0.16, h[2] + 0.01], 0.018, 0.016, { color: '#ece6d6', mat: 'paper', bone: 'handR', k: 0.003 });
-      s.torus([h[0], h[1] + 0.1, h[2] + 0.01], 0.018, 0.002, { color: '#3a3a3a', mat: 'paper', bone: 'handR', k: 0 });
+  extras(s, J, { pose }) {
+    // The pañuelo knotted round the throat, its point down the chest; the sash round the waist, its ends at the hip.
+    strap(s, [[0, 0.53, 0.07], [0.05, 0.538, 0.04], [0.062, 0.548, -0.01], [0.04, 0.552, -0.06], [0, 0.553, -0.07], [-0.04, 0.552, -0.06], [-0.062, 0.548, -0.01], [-0.05, 0.538, 0.04], [0, 0.53, 0.07]], { width: 0.016, thick: 0.004, color: '#c8141e', mat: 'cloth', over: ['top', 'head'], bone: 'chest', closed: true });
+    shell(s, (p) => Math.max(Math.abs(p[0]) - Math.max(0, (p[1] - 0.47) * 0.6), 0.47 - p[1], p[1] - 0.53, 0.03 - p[2]), { color: '#c8141e', mat: 'cloth', part: 'outer', thick: 0.003, lift: 0.0005, over: ['top'], bone: 'chest', k: 0.002 });
+    s.part('outer2', () => s.sphere([0, 0.528, 0.075], 0.01, { color: '#c8141e', mat: 'cloth', bone: 'chest', k: 0.003 }));
+    strap(s, [[0, 0.335, 0.1], [0.08, 0.34, 0.07], [0.11, 0.345, 0.0], [0.08, 0.35, -0.07], [0, 0.355, -0.09], [-0.08, 0.35, -0.07], [-0.11, 0.345, 0.0], [-0.08, 0.34, 0.07], [0, 0.335, 0.1]], { width: 0.022, thick: 0.005, color: '#c8141e', mat: 'cloth', over: ['top', 'bottoms'], keep: TRUNK, closed: true });
+    s.part('outer2', () => {
+      s.sphere([0.1, 0.34, 0.045], 0.012, { color: '#c8141e', mat: 'cloth', bone: 'hips', k: 0.004 });
+      s.flake([0.104, 0.335, 0.05], [0.12, 0.25, 0.06], [1, 0, 0.3], 0.012, 0.015, 0.28, { color: '#c8141e', mat: 'cloth', bone: 'hips', k: 0.003 });
     });
+    // The rolled newspaper in the right fist.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      tube(s, G.at(-0.06), G.at(0.17), 0.016, 0.016, { color: '#ece6d6', mat: 'paper', k: 0.002 });
+      for (const t of [0.07, 0.1, 0.13]) tube(s, G.at(t), G.at(t + 0.012), 0.0163, 0.0163, { color: '#5a5a5e', mat: 'paper', k: 0 });
+    }));
   },
 });

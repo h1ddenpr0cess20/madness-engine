@@ -1,93 +1,77 @@
-import { coat } from '../models/skins.js';
+import { mix, smooth } from '../models/skins.js';
+import { rgb } from '../models/sdf.js';
+import { bird, plumed } from './bird.js';
 
 /**
- * The Macaw: a scarlet macaw off the beach at Copacabana, red all over, a
- * bare white face, a hooked beak that could open a coconut, wings yellow
- * and then blue at the ends, and a long red-and-blue tail. Loud. Steals
- * everybody's chips, and is flying round with one now, sideways in its
- * beak. About 0.55 tiles across the wings; a flyer, so its origin is its
+ * The Macaw: a scarlet macaw off the beach at Copacabana. Red all over, a
+ * big head with a bare white face, a pale yellow eye, a hooked beak that
+ * could open a coconut (pale on top, black underneath), wings red at the
+ * shoulder, then yellow tipped with green, then blue to the ends, and a
+ * long tail, red down the middle and blue at the sides. Loud. Steals
+ * everybody's chips, and is flying round with one now, crosswise in its
+ * beak. About 0.75 tiles across the wings; a flyer, so its origin is its
  * middle.
  */
 
-const RED = coat({ over: '#e0202a', under: '#9a1018', vary: 0.12, freq: 30 });
-const YELLOW = '#f2c41a';
-const BLUE = '#1a5ad8';
+const RED = rgb('#d0141c'), DEEP = rgb('#a40c16'), YELLOW = rgb('#f4c010'), GREEN = rgb('#3c9a3a'), BLUE = rgb('#1f52c4'), NAVY = rgb('#163a9e');
+const WHITE = rgb('#f6f0ea'), GOLD = rgb('#cc4a24');
+const H = [0, 0.062, 0.088], HR = 0.031;
 
-export default {
+/** How far into the bare face a point is: the side of the head from the eye forward and down to the beak. */
+function face(p) {
+  const q = [Math.abs(p[0]), p[1] - H[1], p[2] - H[2]];
+  return smooth(0.3 * HR, 0.45 * HR, q[0]) * smooth(0.25 * HR, 0.05 * HR, q[1]) * smooth(-0.15 * HR, 0.05 * HR, q[2] + q[1] * 0.4) * smooth(0.6 * HR, 0.35 * HR, -q[1]);
+}
+
+const COAT = (() => {
+  const red = plumed((p, n) => mix(RED, DEEP, smooth(0.2, 0.9, n[1]) * smooth(0.05, -0.04, p[2]) * 0.6), { size: 0.01, edge: 0.18 });
+  return (p, n) => {
+    const f = face(p);
+    if (f <= 0) return red(p, n);
+    // Bare skin, with faint lines of tiny red feathers across it.
+    const lines = smooth(0.75, 0.95, Math.abs(Math.sin((p[1] - p[2] * 0.3) * 900)));
+    return mix(red(p, n), mix(WHITE, rgb('#e8b0a8'), lines * 0.5), f);
+  };
+})();
+
+const UNDER = (n, c) => (n[1] < -0.2 ? GOLD : c);
+const GREATER = (p, n, t) => UNDER(n, mix(YELLOW, GREEN, smooth(0.55, 0.8, t)));
+const MEDIAN = (p, n, t) => UNDER(n, mix(YELLOW, GREEN, smooth(0.7, 0.95, t)));
+const SEC = (p, n, t) => UNDER(n, mix(BLUE, NAVY, t * 0.5));
+const PRIM = (p, n, t) => UNDER(n, mix(BLUE, NAVY, 0.4 + t * 0.4));
+const TERT = (p, n, t) => UNDER(n, mix(mix(YELLOW, GREEN, 0.6), BLUE, smooth(0.3, 0.6, t)));
+const TAIL = (p, n, t, f) => (Math.abs(f) < 0.3 ? mix(RED, BLUE, smooth(0.62, 0.82, t)) : mix(BLUE, NAVY, t * 0.5));
+
+/** The upper half of the beak: pale horn, black along its edge at the base. */
+const UPPER = (p) => {
+  const edge = smooth(H[1] - 0.004, H[1] - 0.012, p[1]) * smooth(H[2] + HR * 1.35, H[2] + HR * 1.15, p[2]);
+  return mix(rgb('#efe4cf'), rgb('#26201e'), edge);
+};
+
+export default bird({
   name: 'macaw',
   scale: 1.5,
-  cell: 0.0055,
-  cells: { kit: 0.003, fine: 0.0025 },
-  budget: 18000,
-  bones: [
-    ['root', null, [0, 0, 0]],
-    ['body', 'root', [0, 0, 0]],
-    ['head', 'body', [0, 0.06, 0.07]],
-    ['beak', 'head', [0, 0.07, 0.12]],
-    ['wingL', 'body', [0.045, 0.03, 0.02]],
-    ['wingR', 'body', [-0.045, 0.03, 0.02]],
-    ['tail', 'body', [0, -0.01, -0.07]],
-  ],
-  materials: {
-    feather: { roughness: 0.7, sheen: 0.5, sheenColor: '#ffd0a0' },
-    face: { roughness: 0.6 },
-    beak: { roughness: 0.35, clearcoat: 0.5 },
-    eye: { roughness: 0.1, clearcoat: 1 },
+  budget: 62000,
+  body: { r: [0.045, 0.048, 0.078] },
+  head: { r: HR, at: H, crown: 0.9 },
+  beak: { len: 0.036, depth: 0.03, width: 0.021, tilt: 0.3, curve: 1.45, power: 2.2, y: 0.02, bulk: 0.9, upper: UPPER, lower: '#1e1c1e', low: { len: 0.72, depth: 0.95, curve: -0.7 }, nostrils: false },
+  eye: { r: 0.006, iris: '#f2e6a8', pupil: 0.32, ring: '#f4eee6', ringW: 0.3, look: [0.86, 0.12, 0.5] },
+  wing: { arm: 0.16, chord: 0.074, primary: 0.13, nP: 9, nS: 9, fingers: 0.3, round: 0.35, colors: { leading: COAT, lesser: COAT, median: MEDIAN, greater: GREATER, tertials: TERT, secondaries: SEC, coverts: SEC, primaries: PRIM, alula: SEC } },
+  tail: { len: 0.24, width: 0.011, count: 8, spread: 0.13, droop: 0.18, tip: 0.55, shape: (f) => 1 - 0.62 * Math.abs(f) ** 0.8, color: TAIL },
+  feet: { color: '#5c5a60', claw: '#1a1a1c', zygo: true },
+  plumage: COAT,
+  style: { rate: 8, amp: 0.85, after(k, { clip }, T) {
+    // The beak going: squawk. Not wide enough to drop the chip.
+    if (clip === 'idle' || clip === 'walk') k.turn('jaw', Math.max(0, Math.sin(T * 3)) * 0.12, 0, 0);
+  } },
+  extras(s, F, { down }) {
+    // The chip: a ridged crisp, crosswise in the beak, held by the bottom half.
+    // Held by its edge in the tip of the beak, sticking out forward and to one side.
+    const tip = down.pts.at(-1);
+    const c = [0.012, tip[1] - 0.004, tip[2] + 0.012];
+    s.part('kit', () => s.ellipsoid(c, [0.021, 0.0021, 0.016], {
+      color: (p) => mix(rgb('#f2cc6a'), rgb('#b8742a'), smooth(0.012, 0.02, Math.hypot((p[0] - c[0]) * 0.75, p[2] - c[2]))),
+      mat: 'skin', bone: 'jaw', k: 0.002, rot: [0.35, 0.6, 0.2], bump: [0.001, 170],
+    }));
   },
-  sculpt(s) {
-    const F = { color: RED, mat: 'feather' };
-    // The body, the head, the white face, the beak: the top hooked, the lower on its own bone.
-    s.ellipsoid([0, 0, 0], [0.05, 0.055, 0.08], { ...F, bone: 'body', k: 0.03 });
-    s.sphere([0, 0.065, 0.075], 0.042, { ...F, bone: 'head', k: 0.03 });
-    for (const m of [1, -1]) s.ellipsoid([m * 0.026, 0.06, 0.098], [0.014, 0.02, 0.016], { color: '#f4f0ea', mat: 'face', bone: 'head', k: 0.008 });
-    s.limb([0, 0.075, 0.11], [0, 0.04, 0.142], 0.02, 0.006, { color: '#e8e0d0', mat: 'beak', bone: 'head', k: 0.008 });
-    s.ellipsoid([0, 0.045, 0.118], [0.014, 0.01, 0.014], { color: '#1a1a1c', mat: 'beak', bone: 'beak', k: 0.004 });
-    s.part('kit', () => {
-      for (const m of [1, -1]) {
-        const S = m > 0 ? 'L' : 'R';
-        // A wing: red at the shoulder, then yellow, then the long blue flight feathers.
-        s.flake([m * 0.045, 0.03, 0.02], [m * 0.13, 0.04, -0.01], [0, 1, 0], 0.03, 0.03, 0.25, { ...F, bone: `wing${S}`, k: 0.01 });
-        s.flake([m * 0.1, 0.04, 0.0], [m * 0.18, 0.045, -0.03], [0, 1, 0], 0.03, 0.028, 0.22, { color: YELLOW, mat: 'feather', bone: `wing${S}`, k: 0.008 });
-        for (let i = 0; i < 4; i += 0.5) {
-          s.flake([m * (0.15 + i * 0.01), 0.045 + i * 0.003, -0.02 - i * 0.005], [m * (0.28 - i * 0.03), 0.05 + i * 0.003, -0.04 - i * 0.03], [0, 1, 0], 0.014, 0.0075, 0.3, { color: BLUE, mat: 'feather', bone: `wing${S}`, k: 0.0006 });
-        }
-      }
-      // The tail: long, red and blue.
-      for (const [x, c] of [[0, RED], [0.015, BLUE], [-0.015, BLUE]]) {
-        s.flake([x, -0.01, -0.06], [x * 3, -0.04, -0.24], [0, 1, 0], 0.016, 0.008, 0.25, { color: c, mat: 'feather', bone: 'tail', k: 0.006 });
-      }
-      // The chip, crosswise in the beak.
-      s.box([0.012, 0.042, 0.125], [0.05, 0.008, 0.008], 0.004, { color: '#f0c860', mat: 'face', bone: 'beak', k: 0.002, rot: [0, 0.25, 0.1] });
-      // Grey feet, tucked under.
-      for (const m of [1, -1]) s.limb([m * 0.02, -0.05, 0.0], [m * 0.02, -0.07, 0.02], 0.006, 0.005, { color: '#6a6a72', mat: 'face', bone: 'body', k: 0.004 });
-    });
-    s.part('eyes', () => {
-      for (const m of [1, -1]) s.sphere([m * 0.033, 0.07, 0.1], 0.009, { color: '#f2e4a0', mat: 'eye', bone: 'head', k: 0 });
-    });
-    s.part('fine', () => {
-      for (const m of [1, -1]) {
-        s.sphere([m * 0.037, 0.07, 0.104], 0.005, { color: '#0a0a0c', mat: 'eye', bone: 'head', k: 0 });
-      }
-    });
-  },
-  animate(k, { clip, t = 0, time, seed = 0 }) {
-    const T = time + seed;
-    if (clip === 'ko') {
-      // Winded: wings stuck out, head down, tipped over, still holding the chip.
-      k.turn('body', 0.4, 0, 1.4 * Math.min(1, t / 0.5));
-      k.turn('head', 0.6, 0, 0);
-      k.turn('beak', 0.4, 0, 0);
-      return;
-    }
-    const rate = clip === 'attack' ? 14 : 10;
-    const f = Math.sin(T * rate);
-    k.turn('wingL', 0, 0, f * 0.8);
-    k.turn('wingR', 0, 0, -f * 0.8);
-    k.turn('tail', Math.sin(T * rate * 0.5) * 0.1, Math.sin(T * 2) * 0.15, 0);
-    k.move('root', 0, -f * 0.01, 0);
-    k.turn('body', clip === 'walk' || clip === 'attack' ? 0.25 : 0.05, 0, Math.sin(T * 1.2) * 0.1);
-    // The head turning in jerks, the beak going: squawk.
-    k.turn('head', Math.sin(T * 3) * 0.1, Math.round(Math.sin(T * 0.8) * 2) * 0.3, 0);
-    k.turn('beak', Math.max(0, Math.sin(T * (clip === 'attack' ? 12 : 4))) * 0.5, 0, 0);
-  },
-};
+});

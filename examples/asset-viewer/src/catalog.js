@@ -8,7 +8,7 @@
  * returns { object, pose?, clips?, info } for the viewer to stand up.
  */
 import * as GFX from '../../../src/gfx/index.js';
-import { bake, createModel, createStatic } from '../../../src/models/model.js';
+import { adopt, bake, createModel, createStatic, hasBake } from '../../../src/models/model.js';
 import { createBuildings, FOOTPRINTS } from '../../../src/buildings/index.js';
 import { CALIFORNIA_FOOTPRINTS } from '../../../src/buildings/california.js';
 import { MOODS } from '../../../src/moods/index.js';
@@ -54,11 +54,61 @@ function countOf(object) {
   return { vertices, triangles: Math.round(triangles) };
 }
 
-/** A sculpted definition: animated if it has `animate`, a still prop if not. */
-function sculptedItem(def, category, group, name, source) {
+/** Which shelf a character goes on: people (on the shared body), or the animals and monsters. */
+function kindOf(def) {
+  const names = new Set((def.bones ?? []).map(([n]) => n));
+  if (names.has('thighL') && names.has('armL') && names.has('head')) return 'people';
+  return 'animals & monsters';
+}
+
+/** A painter's file as a shelf's name: `venue (rocknroller-ii)` for `textures/venue.rocknroller-ii.js`. */
+const shelf = (path) => {
+  const name = path.split('/').pop().replace(/\.js$/, '');
+  const [base, game] = name.split('.');
+  const dir = path.split('/').slice(0, -1).join('/');
+  return `${dir ? `${dir} ` : ''}${base}${game ? ` (${game})` : ''}`;
+};
+
+/**
+ * Bakes off the page's thread (bake.worker.js), so that a big model never freezes the page: one worker, kept, its
+ * jobs taken in turn. Resolves to the mesh's arrays, to `adopt`.
+ */
+let baker = null, jobs = 0;
+const pending = new Map();
+function bakeElsewhere(job) {
+  if (typeof Worker === 'undefined') return Promise.reject(new Error('no workers here'));
+  if (!baker) {
+    baker = new Worker(new URL('./bake.worker.js', import.meta.url), { type: 'module' });
+    baker.onmessage = ({ data: { id, data, error } }) => {
+      const p = pending.get(id);
+      pending.delete(id);
+      if (error) p?.reject(new Error(error));
+      else p?.resolve(data);
+    };
+    baker.onerror = (e) => {
+      for (const p of pending.values()) p.reject(new Error(e.message || 'the bake worker failed'));
+      pending.clear();
+      baker = null;
+    };
+  }
+  const id = ++jobs;
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    baker.postMessage({ id, ...job });
+  });
+}
+
+/**
+ * A sculpted definition: animated if it has `animate`, a still prop if not. `job` says where it is found ({ path,
+ * key, sub }), for the worker to bake it; if it can't, it is baked here.
+ */
+function sculptedItem(def, category, group, name, source, job = null) {
   return {
     id: source, category, group, name, source, kind: 'object',
-    build({ detail = 1 }) {
+    async build({ detail = 1 }) {
+      if (job && !hasBake(def, detail)) {
+        try { adopt(def, detail, await bakeElsewhere({ ...job, detail })); } catch (err) { console.warn(`${source}: baked here instead (${err.message})`); }
+      }
       const data = bake(def, { detail });
       const info = {
         Source: source,
@@ -81,29 +131,78 @@ function sculptedItem(def, category, group, name, source) {
 }
 
 /** Heroes are made by functions; each returns something with the group to draw somewhere inside it. */
-const objectOf = (r) => (r?.isObject3D ? r : r?.group ?? r?.player ?? r?.marble ?? r?.hamster ?? r?.mesh ?? r);
+const objectOf = (r) => (r?.isObject3D ? r : r?.group ?? r?.player ?? r?.marble ?? r?.hamster ?? r?.root ?? r?.mesh ?? r);
 const HEROES = [
   ['marble', () => import('../../../src/heroes/marble.js').then((m) => m.createMarble(GFX))],
   ['die (d20)', () => import('../../../src/heroes/die.js').then((m) => m.dieModel(GFX))],
   ['hamster in ball', () => import('../../../src/heroes/hamster.js').then((m) => m.createPlayer(GFX))],
   ['hamster', () => import('../../../src/heroes/hamster.js').then((m) => m.createHamster(GFX))],
-  ['mace', () => import('../../../src/heroes/mace.js').then((m) => m.createMace(GFX))],
   ['morningstar', () => import('../../../src/heroes/morningstar.js').then((m) => m.createMorningStar(GFX))],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
-  ['boulder', () => import('../../../src/heroes/boulder.js').then((m) => m.createRock(GFX))],
-  ['ball (mace player)', () => import('../../../src/heroes/ball.js').then((m) => m.createPlayer(GFX))],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
+  ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],
+  ['egg (debater)', () => import('../../../src/heroes/debater-egg/index.js').then((m) => m.createEgg({ GFX }))],
+  ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
+  ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
+  ['slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createSlimeOrb')],
+  // Floating at its own height, framed on the berry rather than on its halos, which spread far wider.
+  ['blubber', () => import('../../../src/heroes/blubber.js').then((m) => {
+    const b = m.createBlubber(GFX, { size: 1 });
+    b.group.position.y = 0.75;
+    return Object.assign(b, { frame: { center: [0, 0.75, 0], radius: 0.62 } });
+  })],
 ];
+
+/** The avatar apps' models, made on a stand-in for their stage (heroes/standin.js). */
+const avatars = import.meta.glob('../../../src/heroes/{vibey,slimey,krystal,alan}/index.js');
+async function avatar(path, fn) {
+  const [{ standIn }, mod] = await Promise.all([import('../../../src/heroes/standin.js'), avatars[path]()]);
+  const { group, stage } = standIn(GFX, globalThis.assetViewer?.renderer ?? null);
+  // Its night painted at half the width the app paints it: a quarter of the work, and still sharp behind it here.
+  const made = mod[fn]({ stage, GFX, sky: 2048 });
+  // Shown where it lives: what it reflects is what it set for its own stage, and its sky is its backdrop's.
+  let sky = null;
+  stage._scene.traverse((o) => { if (o.name === 'backdrop' && o.material?.map?.image) sky = o.material.map.image; });
+  return { group, made, environment: stage._scene.environment ?? null, sky };
+}
+/** What an avatar brings with it to be shown in: its reflections and its sky. */
+const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.sky ?? null });
+
+/**
+ * Props that move as a part of what they are: Krystal, the crystal ball, its cloud turning and churning inside it.
+ * And the debate's frying pan, which is a prop but not a sculpt.
+ */
+const MOVING = [
+  ['krystal', 'Animated props', 'crystal ball', () => avatar('../../../src/heroes/krystal/index.js', 'createKrystal')],
+  ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
+];
+function movingItem([name, category, group, make]) {
+  return {
+    id: `${category === 'Props' ? 'props' : 'animated'}/${name}`, category, group, name, source: category === 'Props' ? 'props/pan' : `heroes/${name}`, kind: 'object',
+    async build() {
+      const made = await make();
+      const object = objectOf(made);
+      if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
+      return { object, ...dressOf(made), info: { Source: category === 'Props' ? 'props/pan' : `heroes/${name}`, ...countOf(object) } };
+    },
+  };
+}
 
 function heroItem([name, make]) {
   return {
     id: `heroes/${name}`, category: 'Heroes', group: 'heroes', name, source: 'heroes', kind: 'object',
     async build() {
       const made = await make();
+      // Those that are posed by how far they have come (the yarn ball, its strand laid out behind it) are shown a little way along.
+      made?.pose?.(1.2);
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
-      return { object, info: { Source: 'heroes', ...countOf(object) } };
+      // Those moved on by the game loop with nothing but the time (Blubber) are moved on by the viewer's.
+      let last = 0;
+      const pose = typeof made?.update === 'function' && made.update.length === 1 ? ({ time }) => { made.update(Math.max(0, time - last)); last = time; } : undefined;
+      pose?.({ time: 0.016 });
+      return { object, pose, frame: made?.frame, ...dressOf(made), info: { Source: 'heroes', ...countOf(object) } };
     },
   };
 }
@@ -112,7 +211,7 @@ function buildingItems() {
   const buildings = createBuildings();
   const sizes = { ...FOOTPRINTS, ...CALIFORNIA_FOOTPRINTS };
   return buildings.types().map((type) => ({
-    id: `buildings/${type}`, category: 'Buildings', group: 'buildings', name: type, source: 'buildings', kind: 'object',
+    id: `buildings/${type}`, category: 'Buildings', group: type in CALIFORNIA_FOOTPRINTS ? 'california' : 'medieval town', name: type, source: 'buildings', kind: 'object',
     options: { level: [1, 2, 3], variant: [0, 1, 2, 3, 4, 5, 6, 7], construction: [0, 0.25, 0.5, 0.75] },
     build({ level = 1, variant = 0, construction = 0, lights = [] }) {
       const model = buildings.modelFor(type, construction ? { level, variant, building: true, progress: construction } : { level, variant });
@@ -122,7 +221,7 @@ function buildingItems() {
         g.setAttribute('position', new GFX.BufferAttribute(p.pos, 3));
         g.setAttribute('normal', new GFX.BufferAttribute(p.nor, 3));
         g.setAttribute('color', new GFX.BufferAttribute(p.col, 3));
-        const m = new GFX.Mesh(g, new GFX.MeshStandardMaterial({ name: mat, vertexColors: true, roughness: 0.85, side: GFX.DoubleSide }));
+        const m = new GFX.Mesh(g, new GFX.MeshStandardMaterial({ name: mat, vertexColors: true, roughness: 0.85 }));
         m.castShadow = m.receiveShadow = true;
         group.add(m);
       }
@@ -140,7 +239,7 @@ function buildingItems() {
 /** A painter's result ({ map, bump }) laid on a slab, repeated so the tiling shows. */
 function textureItem(id, name, source, make) {
   return {
-    id, category: 'Textures', group: source, name, source, kind: 'object',
+    id, category: 'Textures', group: shelf(source.replace(/^textures\//, '')), name, source, kind: 'object',
     async build() {
       const t = await make();
       const map = t?.map ?? (t?.isTexture ? t : null);
@@ -158,7 +257,7 @@ function textureItem(id, name, source, make) {
 /** A painted canvas (sky or room): worn as the backdrop and the reflections of a chrome ball. */
 function paintedItem(category, id, name, source, paint) {
   return {
-    id, category, group: source, name, source, kind: category === 'Skies' ? 'sky' : 'room',
+    id, category, group: category === 'Skies' ? 'backdrops' : 'rooms', name, source, kind: category === 'Skies' ? 'sky' : 'room',
     async build() {
       const canvas = await paint();
       if (!canvas) throw new Error('No canvas came back');
@@ -218,7 +317,11 @@ export async function loadCatalog(onProgress = () => {}) {
   let n = 0;
   const total = Object.keys(sculpted).length + Object.keys(textures).length;
 
-  for (const [path, load] of Object.entries(sculpted)) {
+  // Defaults before their versions: where a version is only the default under another name (rat.dungeon-roller), the
+  // one model is listed once, under its own name.
+  const isVersion = (path) => stem(path).includes('.');
+  const files = Object.entries(sculpted).sort(([a], [b]) => isVersion(a) - isVersion(b));
+  for (const [path, load] of files) {
     onProgress(++n / total);
     const file = stem(path);
     if (file === 'index') continue;
@@ -232,15 +335,21 @@ export async function loadCatalog(onProgress = () => {}) {
         if (seen.has(def)) continue;
         seen.add(def);
         const direct = value === def;
-        const label = direct && key === 'default' ? file : direct ? (file.startsWith(key) || key === def.name ? file : `${file} · ${key}`) : `${file} · ${k}`;
+        // Its own name: the file's, for a file of one thing (or its default); the export's, for one of several
+        // things in a file (halloween.js has a haybale, a scarecrow, a coffin...), with the file's name only where
+        // the export's is no name of its own.
+        const own = (name) => (name === def.name || file === name || file.startsWith(`${name}.`) ? (file.startsWith(`${name}.`) ? file : name) : `${file} · ${name}`);
+        const label = direct && key === 'default' ? file : own(direct ? key : k);
         const source = `${where(path)}${direct && key === 'default' ? '' : `#${direct ? key : `${key}.${k}`}`}`;
-        items.push(sculptedItem(rooted(def), CATEGORY[folder], group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
+        items.push(sculptedItem(rooted(def), CATEGORY[folder], folder === 'characters' ? kindOf(def) : group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source, { path, key, sub: direct ? null : k }));
       }
     }
   }
-  items.push(...HEROES.map(heroItem));
+  items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...buildingItems());
 
+  // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
+  const painted = new Set();
   for (const [path, load] of Object.entries(textures)) {
     onProgress(++n / total);
     let mod;
@@ -251,7 +360,8 @@ export async function loadCatalog(onProgress = () => {}) {
     for (const [key, value] of Object.entries(mod)) {
       if (!/^[A-Z_]+$/.test(key) || !value || typeof value !== 'object') continue;
       for (const [k, fn] of Object.entries(value)) {
-        if (typeof fn !== 'function') continue;
+        if (typeof fn !== 'function' || painted.has(fn)) continue;
+        painted.add(fn);
         items.push(textureItem(`textures/${file}#${key}.${k}`, `${k} (${key.toLowerCase()})`, where(path), () => fn(GFX)));
       }
     }
@@ -259,6 +369,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
-  return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
+  const order = ['Characters', 'Props', 'Animated props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  // By category, and within one by shelf, so that each shelf's things are together under its heading.
+  return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }
