@@ -15,6 +15,7 @@ import { createOcean, SEAS, SKIES } from '../../../src/ocean.js';
 import { createRiver, RIVERS, riverOf } from '../../../src/river.js';
 import { createEffects, CONFETTI, WEATHER, shardGeometry } from '../../../src/effects.js';
 import { createDungeonMeshes, createExit, createTorches, flicker } from '../../../src/scenery/dungeon.js';
+import { createLavaMaterial } from '../../../src/textures/lava.js';
 
 /** The seconds since the last call, from a clock that may be reset to 0. */
 const ticker = () => {
@@ -227,6 +228,30 @@ const dungeonItem = () => ({
   },
 });
 
+/** The lava by itself: a pool of it three tiles across in a rim of dark stone, moving as it does in the dungeon. */
+const lavaItem = () => ({
+  id: 'textures/lava', category: 'Dungeon', group: 'dungeon', name: 'Lava (shader)', source: 'textures/lava.js', kind: 'object',
+  build() {
+    const material = createLavaMaterial(GFX);
+    const pool = new GFX.Mesh(new GFX.PlaneGeometry(3, 3, 1, 1), material);
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.y = -0.04;
+    pool.frustumCulled = false;
+    const group = new GFX.Group();
+    group.add(pool);
+    const stone = new GFX.MeshStandardMaterial({ color: '#2e2a28', roughness: 0.9 });
+    for (const [x, z, w, d] of [[0, -1.6, 3.4, 0.2], [0, 1.6, 3.4, 0.2], [-1.6, 0, 0.2, 3.0], [1.6, 0, 0.2, 3.0]]) {
+      const rim = new GFX.Mesh(new GFX.BoxGeometry(w, 0.12, d), stone);
+      rim.position.set(x, 0.02, z);
+      rim.castShadow = rim.receiveShadow = true;
+      group.add(rim);
+    }
+    const pose = ({ time }) => { material.uniforms.uTime.value = time; };
+    pose({ time: 0 });
+    return { object: group, pose, dark: true, info: { Source: 'textures/lava.js', Kind: 'shader (GLSL and WGSL)', Size: '3 × 3 tiles' } };
+  },
+});
+
 // ———————————————————————————————————————————————— what a building carries
 
 /** Puffs of smoke over each chimney, the lamps (on the stage's real lights) and the parts that turn, for a building's model. */
@@ -271,4 +296,4 @@ export function dress(model, group, lights = []) {
   };
 }
 
-export const extraItems = () => [...treeItems(), ...waterItems(), ...effectItems(), dungeonItem()];
+export const extraItems = () => [...treeItems(), ...waterItems(), ...effectItems(), dungeonItem(), lavaItem()];
