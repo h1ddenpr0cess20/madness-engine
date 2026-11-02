@@ -1075,13 +1075,16 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
  * Hair's colour (a function or hex) in strands: lighter and darker streaks
  * running down from the crown `at`, fine ones over broad ones.
  */
-function strands(color, at) {
-  const base = typeof color === 'function' ? color : () => rgb(color);
-  return (p, n) => {
+export function strands(color, at = [0, 0.695, -0.006]) {
+  const base = typeof color === 'function' ? color : (() => { const c = typeof color === 'string' ? rgb(color) : color; return () => c; })();
+  const fn = (p, n) => {
     const a = Math.atan2(p[0] - at[0], p[2] - at[2]), x = Math.cos(a), z = Math.sin(a);
     const v = noise(x * 5.5, z * 5.5, p[1] * 4) * 0.5 + noise(x * 10 + 40, z * 10, p[1] * 6) * 0.5;
     return base(p, n).map((c) => c * (0.66 + v * 0.62));
   };
+  // The same strands in another colour (see person.js `variant`).
+  fn.retint = (other) => strands(other, at);
+  return fn;
 }
 
 /**

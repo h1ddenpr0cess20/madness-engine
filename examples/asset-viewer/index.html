@@ -41,6 +41,11 @@
       #flagbtn { width: 100%; padding: 9px; font-weight: 600; } #flagbtn.on { background: var(--flag); border-color: var(--flag); color: #1a0a08; }
       textarea { width: 100%; min-height: 70px; resize: vertical; }
       #err { color: var(--flag); white-space: pre-wrap; }
+      #colourrows .swatchrow { display: grid; grid-template-columns: 1fr 34px 22px; gap: 6px; align-items: center; }
+      #colourrows .swatchrow label { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      #colourrows input[type=color] { padding: 0; width: 34px; height: 22px; }
+      #colourrows .swatchrow button { padding: 0; width: 22px; height: 22px; visibility: hidden; }
+      #colourrows .swatchrow.changed button { visibility: visible; }
       kbd { background: #1d2230; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
       @media (max-width: 900px) { #app { grid-template-columns: 1fr; grid-template-rows: 200px 1fr 220px; } aside { border: 0; } aside.right { border-top: 1px solid var(--line); } }
     </style>
@@ -84,6 +89,11 @@
           <div class="line"><label>Ambient</label><input id="ambi" type="range" min="0" max="3" step="0.05" value="1" style="width:120px" /></div>
           <div class="line"><label>Fill</label><input id="filli" type="range" min="0" max="2" step="0.05" value="0.5" style="width:120px" /></div>
           <div class="line"><label><input id="shadows" type="checkbox" checked /> Shadows</label><button id="lightreset">Reset light</button></div>
+        </div>
+        <div class="group" id="colourgroup" style="display:none"><h3>Colours</h3>
+          <div id="colourrows" style="display:grid;gap:5px"></div>
+          <div class="line"><button id="colourdiverse" title="A skin tone, hair and eyes from the palettes (diverse() in characters/person.js)">Randomise</button><button id="colourreset">Reset</button><button id="colourcopy">Copy code</button></div>
+          <div style="color:var(--dim)" id="colourhint">The same model in other colours: <code>variant()</code>. Hair also dyes beards and crests.</div>
         </div>
         <div class="group" id="animgroup"><h3>Animation</h3>
           <div class="line"><select id="clip"></select><button id="pause">Pause (Space)</button></div>

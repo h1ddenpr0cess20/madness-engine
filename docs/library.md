@@ -147,6 +147,7 @@ The people, creatures and monsters. Most are sculpted definitions (the default e
 | `characters/mailcarrier` | `mailcarrier` | The Mail Carrier: the same round every day for twenty years and knows every dog on it by name. |
 | `characters/oldtimer` | `oldtimer` | The Old-Timer: been going to the same corner shop since it sold everything loose, and tells them so. |
 | `characters/shopper` | `shopper` | The Shopper: out for the week's groceries, list in hand, ticking it off. |
+| `characters/santa` | `santa` | Father Christmas, cut from the Flatfoot's cloth: a red suit with white fur at the cuffs, collar, front and hem, black gloves and boots, a beard to the belt, a stocking cap with a bobble, and a sack of presents in his left hand. Waves with the right. |
 | `characters/runner` | `runner` (metrlol, rocknroller-iii) | The Bull Runner: in the whites of San Fermín, a red pañuelo knotted at the throat and a red sash round the waist, a rolled-up newspaper in his fist for the bull's nose, and the look over the should… |
 | `characters/salaryman` | `salaryman` (rocknroller-iii) | The Salaryman: missed the last train home from Shinjuku, found a karaoke bar instead, and has the microphone yet. |
 | `characters/sambista` | `sambista` (rocknroller-iii) | The Samba Dancer: off a float in the Sambódromo and not stopping for anybody, in gold sequins and not a lot else, a headdress of feathers twice her height, a back-piece of feathers fanned out behin… |
