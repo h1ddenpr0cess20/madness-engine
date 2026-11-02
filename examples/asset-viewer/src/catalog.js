@@ -266,7 +266,11 @@ export async function loadCatalog(onProgress = () => {}) {
   let n = 0;
   const total = Object.keys(sculpted).length + Object.keys(textures).length;
 
-  for (const [path, load] of Object.entries(sculpted)) {
+  // Defaults before their versions: where a version is only the default under another name (rat.dungeon-roller), the
+  // one model is listed once, under its own name.
+  const isVersion = (path) => stem(path).includes('.');
+  const files = Object.entries(sculpted).sort(([a], [b]) => isVersion(a) - isVersion(b));
+  for (const [path, load] of files) {
     onProgress(++n / total);
     const file = stem(path);
     if (file === 'index') continue;

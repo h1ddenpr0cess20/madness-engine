@@ -154,6 +154,11 @@ async function show(item) {
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
+    // A flyer's origin is its middle: lift it clear of the floor rather than half under it.
+    if (!built.noFloor && !built.frame && item.kind === 'object') {
+      const lo = boundsOf(built.object).min[1];
+      if (lo < -0.005) built.object.position.y += -lo + 0.08;
+    }
     if (built.dark) {
       // A light wants a dark room to show in; the Lighting panel can bring it back.
       key.intensity = rest.key * 0.06;

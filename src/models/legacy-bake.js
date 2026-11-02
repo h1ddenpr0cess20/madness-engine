@@ -68,22 +68,28 @@ export function materialsOf(GFX, def, overrides = {}) {
   }));
 }
 
-const cache = new Map();
+/** Bakes by definition, not by name: two versions of a thing may share a name, and must not share a mesh. */
+const cache = new WeakMap();
+/** The names baked, for a game that asks by name (its own models' names are its own, and don't clash). */
+const named = new Set();
 
 /** Bakes a definition here and now, once: { geometry, materials, data }. */
 export function bake(GFX, def) {
-  if (cache.has(def.name)) return cache.get(def.name);
+  if (cache.has(def)) return cache.get(def);
   const data = bakeData(def);
   const out = { data, geometry: geometryOf(GFX, data), materials: materialsOf(GFX, def) };
-  cache.set(def.name, out);
+  cache.set(def, out);
+  named.add(def.name);
   return out;
 }
 
 /** Puts arrays baked elsewhere (a worker) into the cache. */
 export function adopt(GFX, def, data) {
   const out = { data, geometry: geometryOf(GFX, data), materials: materialsOf(GFX, def) };
-  cache.set(def.name, out);
+  cache.set(def, out);
+  named.add(def.name);
   return out;
 }
 
-export const isBaked = (name) => cache.has(name);
+/** Whether a definition (or anything under a name) is baked. */
+export const isBaked = (what) => (typeof what === 'string' ? named.has(what) : cache.has(what));

@@ -26,7 +26,13 @@ import { Skeleton, skin } from './rig.js';
  *   measure(sculpt)   what `settle` needs to know of the sculpt, worked out as it is baked (kept as `baked.measure`)
  */
 
-const cache = new Map();
+/**
+ * Bakes, by definition and detail. By the definition itself, not its name: versions of a thing share a name
+ * (`rat` and `rat.dungeon-roller` were both 'rat'), and keyed by name the second was drawn with the first's mesh on its
+ * own skeleton — half of it missing, a leg off.
+ */
+const cache = new WeakMap();
+const bakesOf = (def) => { let m = cache.get(def); if (!m) cache.set(def, (m = new Map())); return m; };
 
 /** How big the biggest shape in a sculpt is, across. */
 function largest(sculpt) {
@@ -41,8 +47,7 @@ function largest(sculpt) {
  * 0.5 a quarter of the triangles (for far away).
  */
 export function bake(def, { detail = 1 } = {}) {
-  const key = `${def.name}@${detail}`;
-  if (cache.has(key)) return cache.get(key);
+  if (bakesOf(def).has(detail)) return bakesOf(def).get(detail);
   const cell = (def.cell ?? 0.012) / detail;
   const sculpt = new Sculpt();
   def.sculpt(sculpt);
@@ -96,7 +101,7 @@ export function bake(def, { detail = 1 } = {}) {
     count: base,
   };
   if (def.measure) baked.measure = def.measure(sculpt);
-  cache.set(key, baked);
+  bakesOf(def).set(detail, baked);
   return baked;
 }
 
@@ -104,9 +109,9 @@ const materialCache = new WeakMap();
 
 export function materialsOf(GFX, def) {
   let byDef = materialCache.get(GFX);
-  if (!byDef) materialCache.set(GFX, (byDef = new Map()));
-  if (!byDef.has(def.name)) {
-    byDef.set(def.name, Object.entries(def.materials).map(([name, m]) => {
+  if (!byDef) materialCache.set(GFX, (byDef = new WeakMap()));
+  if (!byDef.has(def)) {
+    byDef.set(def, Object.entries(def.materials).map(([name, m]) => {
       const { emissive, sheenColor, attenuationColor, side, ...rest } = m;
       const material = new GFX.MeshPhysicalMaterial({ name: `${def.name}-${name}`, vertexColors: true, roughness: 0.6, ...rest });
       if (emissive) material.emissive.set(emissive);
@@ -117,12 +122,12 @@ export function materialsOf(GFX, def) {
       return material;
     }));
   }
-  return byDef.get(def.name);
+  return byDef.get(def);
 }
 
 /** A mesh baked elsewhere (a worker: see library.js), to be used as if baked here. */
 export function adopt(def, detail, data) {
-  cache.set(`${def.name}@${detail}`, data);
+  bakesOf(def).set(detail, data);
 }
 
 /**

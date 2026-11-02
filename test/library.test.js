@@ -164,3 +164,12 @@ test('a cat\'s feet and tail stay on the floor, not through it, in every clip an
     assert.ok(low > -0.01, `${clip}: ${(low * 1000).toFixed(1)} thousandths under the floor`);
   }
 });
+
+test('two definitions under one name are baked apart', async () => {
+  const { bake } = await import('../src/models/model.js');
+  const one = { name: 'twin', cell: 0.02, bones: [['root', null, [0, 0, 0]]], materials: { skin: {} }, sculpt: (s) => s.sphere([0, 0.1, 0], 0.1) };
+  const two = { ...one, sculpt: (s) => s.box([0, 0.1, 0], [0.2, 0.05, 0.05], 0.01) };
+  const a = bake(one), b = bake(two);
+  assert.notEqual(a, b);
+  assert.notEqual(a.count, b.count);
+});
