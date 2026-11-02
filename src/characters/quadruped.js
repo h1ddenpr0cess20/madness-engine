@@ -24,8 +24,8 @@
  * `wag` (how much the tail goes), and `after(k, state)` for the rest.
  */
 
-import { rgb } from '../models/sdf.js';
-import { coat, mix } from '../models/skins.js';
+import { fbm, noise, rgb } from '../models/sdf.js';
+import { coat, mix, smooth } from '../models/skins.js';
 
 const LEGS = [['FL', 1, 1], ['FR', -1, 1], ['BL', 1, -1], ['BR', -1, -1]];
 const add = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
@@ -107,6 +107,33 @@ export function quadruped({
     C.inner = (p, n) => mix(typeof ear === 'function' ? ear(p, n) : ear, pink, 0.5);
   }
   const M = { body: 'fur', head: 'fur', snout: 'fur', legs: 'fur', feet: feet === 'hoof' ? 'hoof' : 'fur', tail: 'fur', ears: 'fur', ...mats };
+  // Every coat finished as the cat's is: paler underneath — the belly, the throat, the insides of the legs, under the
+  // jaw — by `countershade`, toward `paint.under`; a fine grain along the way the hair lies; and soft variation over
+  // it, so no colour is flat.
+  const shadeK = paint.shade ?? 0.1, grainK = paint.grain ?? 0.1, cs = paint.countershade ?? 0.55;
+  const underCol = paint.under ? (typeof paint.under === 'string' ? rgb(paint.under) : paint.under) : null;
+  const pale = (p, n) => {
+    const below = smooth(-0.05, -0.65, n[1]);
+    // The throat: facing forward and down, round the lower side of the neck and under the jaw.
+    const ax = [P.N1[0] - P.N0[0], P.N1[1] - P.N0[1], P.N1[2] - P.N0[2]], al = ax[0] * ax[0] + ax[1] * ax[1] + ax[2] * ax[2];
+    const tt = Math.max(0, Math.min(1.4, ((p[0] - P.N0[0]) * ax[0] + (p[1] - P.N0[1]) * ax[1] + (p[2] - P.N0[2]) * ax[2]) / al));
+    const q = [P.N0[0] + ax[0] * tt, P.N0[1] + ax[1] * tt, P.N0[2] + ax[2] * tt];
+    const throat = smooth(0.25, -0.5, n[1] - n[2] * 0.6) * smooth(0, 0.5, n[2] - n[1] * 0.2) * (p[1] < q[1] ? 1 : 0) * smooth(0.12, 0.05, Math.abs(p[0]) / Math.max(0.01, gx));
+    // The insides of the legs.
+    const inner = p[1] < hip - gy * 0.3 && Math.abs(p[0]) < stance * 1.3 ? smooth(-0.1, -0.6, n[0] * Math.sign(p[0] || 1)) : 0;
+    return Math.max(below, throat, inner * 0.8);
+  };
+  const finish = (col) => {
+    const f = typeof col === 'string' ? rgb(col) : col;
+    return (p, n) => {
+      let c = typeof f === 'function' ? f(p, n) : f;
+      if (cs > 0) c = mix(c, underCol ?? c.map((v) => Math.min(1, v * 0.55 + 0.42)), pale(p, n) * cs);
+      const hair = 1 + (noise(p[0] * 240, p[1] * 240, p[2] * 60) - 0.5) * 2 * grainK;
+      const soft = 1 + (fbm(p[0] * 16, p[1] * 16, p[2] * 16, 2) - 0.5) * 2 * shadeK;
+      return c.map((v) => Math.min(1, v * hair * soft));
+    };
+  };
+  for (const part of ['body', 'head', 'snout', 'legs', 'tail']) if (M[part] === 'fur' || M[part] === 'hide') C[part] = finish(C[part]);
   const bones = [
     ['root', null, [0, 0, 0]],
     ['trunk', 'root', [0, hip, 0]],
@@ -155,9 +182,11 @@ export function quadruped({
           s.ellipsoid(P.H, [Hd.r * 0.92, Hd.r * 0.85, Hd.r], Hc);
           for (const m of [1, -1]) s.ellipsoid(add(P.H, [m * Hd.r * 0.58, -Hd.r * 0.22, Hd.r * 0.22]), [Hd.r * 0.42, Hd.r * 0.4, Hd.r * 0.55], { ...Hc, k: k * 0.5 });
           s.ellipsoid(add(P.S0, [0, Hd.sr * 0.55, 0]), [Hd.sr * 0.9, Hd.sr * 0.55, Hd.sr * 0.9], { ...Hc, k: k * 0.5 });
+          // The skull narrowing into the muzzle, a wedge rather than a ball with a muzzle stuck on it.
+          s.limb(add(P.H, [0, -Hd.r * 0.05, Hd.r * 0.1]), add(P.S0, [0, Hd.sr * 0.1, Hd.sr * 0.2]), Hd.r * 0.7, Hd.sr * 1.08, { ...Hc, k: k * 0.6 });
           // The muzzle, and the jaw under it; the pads of the lip either side, and the chin.
           s.limb(P.S0, P.S1, Hd.sr, Hd.sr * 0.82, { ...Hc, color: C.snout, mat: M.snout });
-          for (const m of [1, -1]) s.ellipsoid(add(P.S1, [m * Hd.sr * 0.5, -Hd.sr * 0.35, -Hd.sr * 0.25]), [Hd.sr * 0.5, Hd.sr * 0.48, Hd.sr * 0.62], { ...Hc, color: C.snout, mat: M.snout, k: k * 0.3 });
+          for (const m of [1, -1]) s.ellipsoid(add(P.S1, [m * Hd.sr * 0.42, -Hd.sr * 0.38, -Hd.sr * 0.35]), [Hd.sr * 0.4, Hd.sr * 0.38, Hd.sr * 0.55], { ...Hc, color: C.snout, mat: M.snout, k: k * 0.25 });
           if (Hd.jaw) {
             s.limb(add(P.S0, [0, -Hd.sr * 0.55, -Hd.r * 0.1]), add(P.S1, [0, -Hd.sr * 0.7, -Hd.sr * 0.4]), Hd.sr * 0.62, Hd.sr * 0.5, { color: C.snout, mat: M.snout, bone: 'jaw', k: k * 0.4 });
             s.ellipsoid(add(P.S1, [0, -Hd.sr * 0.85, -Hd.sr * 0.55]), [Hd.sr * 0.42, Hd.sr * 0.3, Hd.sr * 0.42], { color: C.snout, mat: M.snout, bone: 'jaw', k: k * 0.3 });
@@ -176,14 +205,21 @@ export function quadruped({
         const L = P.legs[n];
         const top = f > 0 ? leg[0] : leg[0] * 1.15;
         const Lg = { color: C.legs, mat: M.legs };
-        s.limb(add(L.top, [0, gy * 0.3, 0]), L.knee, top, leg[1], { ...Lg, bone: `thigh${n}`, k: k * 0.8 });
-        // The muscle of the shoulder or the haunch: flat to the side, full fore and aft, tapering to the knee.
+        // The upper leg out of the body, and its muscle — the shoulder's or the haunch's — full in its upper part, flat
+        // to the side, tapering to a lean knee or elbow.
+        s.limb(add(L.top, [0, gy * 0.3, 0]), L.knee, top, leg[1] * 0.88, { ...Lg, bone: `thigh${n}`, k: k * 0.8 });
         const upper = L.top[1] + gy * 0.3 - L.knee[1];
-        s.ellipsoid(add(L.top, [0, -upper * 0.22, f > 0 ? top * 0.1 : -top * 0.15]), [top * 1.02, upper * 0.42, top * (f > 0 ? 1.25 : 1.45)], { ...Lg, bone: `thigh${n}`, k: k * 0.6 });
-        // The shin to the wrist or hock (the hock with the point of its heel behind), then the slim cannon down to the foot.
-        s.limb(L.knee, L.ankle, leg[1] * 0.92, leg[2] * 0.95, { ...Lg, bone: `shin${n}`, k: k * 0.2 });
-        if (f < 0) s.sphere(add(L.ankle, [0, leg[2] * 0.2, -leg[2] * 0.55]), leg[2] * 0.75, { ...Lg, bone: `shin${n}`, k: k * 0.15 });
-        s.limb(L.ankle, add(L.foot, [0, leg[2] * 1.2, 0]), leg[2] * 0.95, leg[2] * 0.82, { ...Lg, bone: `foot${n}`, k: k * 0.15 });
+        s.ellipsoid(add(L.top, [0, -upper * 0.18, f > 0 ? top * 0.05 : -top * 0.2]), [top * 0.86, upper * 0.4, top * (f > 0 ? 1.12 : 1.38)], { ...Lg, bone: `thigh${n}`, k: k * 0.6 });
+        // The point of the elbow behind, or the stifle in front.
+        s.sphere(add(L.knee, [0, leg[1] * 0.1, f > 0 ? -leg[1] * 0.42 : leg[1] * 0.3]), leg[1] * 0.68, { ...Lg, bone: `shin${n}`, k: k * 0.25 });
+        // The forearm or the gaskin: muscle in its upper half, tapering hard to a slim wrist or hock.
+        s.limb(L.knee, L.ankle, leg[1] * 0.78, leg[2] * 0.78, { ...Lg, bone: `shin${n}`, k: k * 0.2 });
+        const mid = [0, 1, 2].map((i) => L.knee[i] + (L.ankle[i] - L.knee[i]) * 0.3);
+        s.ellipsoid(mid, [leg[1] * 0.82, Math.hypot(L.ankle[1] - L.knee[1], L.ankle[2] - L.knee[2]) * 0.34, leg[1] * 0.95], { ...Lg, bone: `shin${n}`, k: k * 0.25, rot: [Math.atan2(L.ankle[2] - L.knee[2], L.knee[1] - L.ankle[1]), 0, 0] });
+        // The knob of the wrist or the point of the hock, then the slim cannon down to the foot.
+        if (f < 0) s.sphere(add(L.ankle, [0, leg[2] * 0.2, -leg[2] * 0.55]), leg[2] * 0.72, { ...Lg, bone: `shin${n}`, k: k * 0.15 });
+        else s.sphere(add(L.ankle, [0, 0, leg[2] * 0.1]), leg[2] * 0.86, { ...Lg, bone: `foot${n}`, k: k * 0.15 });
+        s.limb(L.ankle, add(L.foot, [0, leg[2] * 1.2, 0]), leg[2] * 0.78, leg[2] * 0.72, { ...Lg, bone: `foot${n}`, k: k * 0.15 });
         footOn(s, L.foot, n, feet, leg[2], { color: C.feet, mat: M.feet });
       }
       extras?.(s, P, { C, Hd, N, T, hip, len, girth, stance, leg });
@@ -249,12 +285,23 @@ function footOn(s, at, n, kind, r, o) {
   }
 }
 
-/** The nose on the end of the snout, a mesh of its own so it keeps its shape, with its two nostrils. */
+/**
+ * The nose on the end of the snout, a mesh of its own so it keeps its
+ * shape: a pad wider than it is tall, flat in front and rounded over the
+ * top, its two nostrils curling out to the sides, and the groove down
+ * from between them to the lip.
+ */
 function noseOn(s, P, Hd, o) {
-  const tip = add(P.S1, [0, Hd.sr * 0.25, Hd.sr * 0.5]), r = Hd.sr * 0.42;
+  const r = Hd.sr * 0.38, tip = add(add(P.S1, P.fwd, Hd.sr * 0.62), [0, Hd.sr * 0.22, 0]);
+  const rot = [Math.asin(P.fwd[1]) * -1, 0, 0];
   s.part('nose', () => {
-    s.sphere(tip, r, { ...o, k: 0 });
-    for (const m of [1, -1]) s.ellipsoid(add(add(tip, P.fwd, r * 0.8), [m * r * 0.42, -r * 0.18, 0]), [r * 0.2, r * 0.13, r * 0.3], { op: 'sub', k: r * 0.12 });
+    s.ellipsoid(tip, [r * 1.25, r * 0.82, r * 0.78], { ...o, k: 0, rot });
+    s.ellipsoid(add(tip, [0, r * 0.35, -r * 0.35]), [r * 1.05, r * 0.5, r * 0.7], { ...o, k: r * 0.3, rot });
+    for (const m of [1, -1]) {
+      s.ellipsoid(add(add(tip, P.fwd, r * 0.62), [m * r * 0.5, -r * 0.12, 0]), [r * 0.26, r * 0.17, r * 0.34], { op: 'sub', k: r * 0.14, rot: [rot[0], 0, m * 0.5] });
+      s.ellipsoid(add(add(tip, P.fwd, r * 0.5), [m * r * 0.82, -r * 0.28, 0]), [r * 0.22, r * 0.08, r * 0.3], { op: 'sub', k: r * 0.08, rot: [rot[0], m * 0.6, 0] });
+    }
+    s.box(add(add(tip, P.fwd, r * 0.7), [0, -r * 0.62, 0]), [r * 0.07, r * 0.4, r * 0.3], 0, { op: 'sub', k: r * 0.06, rot });
   });
 }
 
@@ -292,7 +339,7 @@ function eyesOn(s, P, Hd, { color, lid, rim = null, look = [0.5, 0.12, 0.86], si
     s.ellipsoid(add(add(c, [0, r * 0.6, 0]), d, r * 0.05), [r * 1.1, r * 0.48, r * 1.0], { ...lid, bone: 'head', k: r * 0.3, rot });
     s.ellipsoid(add(add(c, [0, -r * 0.72, 0]), d, -r * 0.05), [r * 1.0, r * 0.36, r * 0.92], { ...lid, bone: 'head', k: r * 0.3, rot });
     // The brow over it, and a dark rim round it, as an animal's eye has.
-    s.ellipsoid(add(add(c, [m * -r * 0.15, r * 1.25, 0]), d, -r * 0.35), [r * 1.35, r * 0.5, r * 0.9], { ...lid, bone: 'head', k: r * 0.45, rot: [rot[0], rot[1], m * -0.2] });
+    s.ellipsoid(add(add(c, [m * -r * 0.15, r * 1.25, 0]), d, -r * 0.35), [r * 1.35, r * 0.5, r * 0.9], { ...lid, bone: 'head', k: r * 0.45, rot: [rot[0], rot[1], m * 0.22] });
     s.paint((p) => Math.abs(Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]) - r * 1.08) - r * 0.09, rim ?? '#1e1612', r * 0.05);
   }
 }
