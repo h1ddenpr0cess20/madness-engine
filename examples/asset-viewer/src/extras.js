@@ -18,6 +18,9 @@ import { createDungeonMeshes, createExit, createTorches, flicker } from '../../.
 import { createLavaMaterial } from '../../../src/textures/lava.js';
 import { createBogMaterial } from '../../../src/textures/bog.js';
 import { createIceCube } from '../../../src/scenery/ice.js';
+import { PROPS } from '../../../src/scenery/gear/decor.js';
+import { createBumperMesh, createDropMesh, createGateMesh, createLiftMesh, createPanelMesh, createPickupMesh, createPyroMesh } from '../../../src/scenery/gear/machinery.js';
+import { BUMPERS, BURSTS, DROPS, RIDES } from '../../../src/scenery/gear/travel.js';
 import { createGate, createWallLights } from '../../../src/scenery/mazepieces.js';
 
 /** The seconds since the last call, from a clock that may be reset to 0. */
@@ -349,4 +352,91 @@ export function dress(model, group, lights = []) {
   };
 }
 
-export const extraItems = () => [...treeItems(), ...waterItems(), ...effectItems(), dungeonItem(), lavaItem(), ...blubberItems()];
+
+// ———————————————————————————————————————————————— stage gear
+
+/**
+ * The rock'n'roll games' venues, dressed and rigged: every prop (amps,
+ * drums, the bar, pinball, the sights of the tour and the compilation...),
+ * every bumper, every drop that comes down on the beat, every ride across
+ * a gap, every burst out of the floor, the gates and the breakaway panels,
+ * and every pickup, each at the size it is used at, moving as it does.
+ */
+const GEAR_SIZES = {"amp": [1, 1, 1], "drums": [2, 2, 0.35], "case": [1, 1, 0.8], "bar": [1, 12, 0.9], "table": [1, 1, 0.6], "jukebox": [1, 1, 1], "pool": [3, 2, 0.7], "keg": [1, 1, 0.7], "pinball": [1, 1, 0.9], "rack": [1, 1, 1.1], "console": [6, 2, 0.6], "speaker": [1, 1, 1.2], "racking": [2, 5, 1.3], "seat": [1, 1, 0.8], "piano": [3, 2, 0.88], "dome": [2, 2, 0.9], "bale": [1, 1, 1.4], "loo": [1, 1, 1.3], "barrier": [1, 9, 1], "stands": [17, 11, 2.4], "chairs": [1, 1, 0.8], "cooler": [1, 1, 1.1], "desk": [2, 2, 0.8], "lamp": [1, 1, 1.2], "camera": [1, 1, 1], "chair": [1, 1, 0.9], "rail": [1, 1, 1.1], "sedan": [2, 3, 0.9], "trash": [1, 1, 0.8], "cart": [1, 2, 0.9], "craft": [2, 1, 0.85], "tombstone": [1, 1, 0.7], "trough": [1, 1, 0.6], "mirror": [1, 1, 1], "pod": [1, 1, 1.2], "coffin": [1, 1, 0.6], "bookcase": [1, 1, 1.3], "cabinet": [1, 1, 1.2], "crate": [1, 1, 0.9], "wheel": [1, 1, 0.9], "barrel": [1, 1, 0.7], "cannon": [1, 1, 0.8], "chest": [1, 1, 0.7], "vent": [1, 1, 1], "airbag": [1, 1, 0.6], "statue": [3, 2, 2], "phonebox": [1, 1, 1.6], "bench": [1, 1, 0.9], "fountain": [2, 2, 1.2], "cafe": [1, 1, 0.8], "bookstall": [1, 1, 0.9], "easel": [1, 2, 0.8], "well": [1, 1, 1.2], "planter": [1, 1, 0.8], "candelabra": [1, 1, 0.8], "amphora": [1, 1, 0.7], "summit": [1, 1, 1.6], "stove": [1, 1, 1.2], "skirack": [1, 1, 1], "orange": [1, 1, 1.2], "stall": [1, 1, 0.9], "stones": [12, 1, 0.8], "sarcophagus": [1, 1, 0.6], "vending": [1, 1, 1.4], "karaoke": [2, 1, 0.8], "taiko": [1, 2, 1], "surdo": [1, 9, 0.85], "flagpole": [1, 1, 1], "bbq": [2, 2, 0.9], "umbrella": [2, 1, 0.9], "surfrack": [1, 1, 1.3], "lockers": [1, 3, 1.3], "oildrums": [1, 1, 1.1], "anvil": [1, 1, 1.2], "furnace": [2, 1, 1.3], "limo": [4, 2, 0.7], "motorbike": [2, 1, 0.7], "hottub": [2, 2, 0.7], "van": [3, 2, 0.9], "boombox": [1, 1, 0.6], "tomb": [2, 1, 0.8], "gravestones": [1, 1, 0.8], "couch": [1, 1, 0.7], "boiler": [2, 2, 1.3], "stump": [1, 1, 1.1], "gurney": [1, 2, 0.7], "toxicbarrel": [1, 1, 0.8], "tent": [3, 3, 1.6]};
+/** A venue for gear to look at that has nothing else in it. */
+const bareVenue = (look = {}) => ({ look, cols: 0, rows: 0, cell: () => null, heightAt: () => 0, lowest: 0 });
+const gearItem = (group, name, source, make) => ({
+  id: `gear/${group}/${name}`, category: 'Stage gear', group, name, source: `scenery/gear/${source}`, kind: 'object',
+  build() {
+    const { object, pose, frame } = make();
+    return { object, pose, frame, info: { Source: `scenery/gear/${source}` } };
+  },
+});
+const gearItems = () => {
+  const items = [];
+  for (const kind of Object.keys(PROPS)) {
+    const [w, d, rise] = GEAR_SIZES[kind] ?? [1, 1, 1];
+    items.push(gearItem('props', kind, 'decor.js', () => {
+      const made = PROPS[kind](GFX, { kind, w, d, rise, rot: 0, x: 0, z: 0, base: 0, venue: bareVenue() });
+      return { object: made.group, pose: made.update ? ({ time }) => made.update(time, time * 2) : undefined };
+    }));
+  }
+  for (const look of ['post', 'rope', 'podium', 'barrel', 'cactus', 'hydrant', 'drum', ...Object.keys(BUMPERS)]) {
+    items.push(gearItem('bumpers', look, look in BUMPERS ? 'bumpers.js' : 'machinery.js', () => {
+      const made = createBumperMesh(GFX, { radius: 0.55, look });
+      return { object: made.group, pose: ({ time }) => made.update?.(time % 1.6) };
+    }));
+  }
+  for (const crusher of ['speaker', 'sandbag', 'rig', 'boulder', 'piston', 'chandelier', 'crate', ...Object.keys(DROPS)]) {
+    items.push(gearItem('drops', crusher, crusher in DROPS ? 'drops.js' : 'machinery.js', () => {
+      const made = createDropMesh(GFX, { w: 2, d: 1, height: 0.9, venue: bareVenue({ crusher }) });
+      const holder = new GFX.Group();
+      holder.add(made.group);
+      made.group.position.y = 0.45;
+      // Framed on the drop, not the chains it hangs from up into the dark.
+      return { object: holder, frame: { center: [0, 1.1, 0], radius: 1.6 }, pose: ({ time }) => made.update?.(0.3 + 0.3 * Math.sin(time * 2), time) };
+    }));
+  }
+  for (const style of ['dolly', 'tram', 'raft', 'cart', 'saucer', 'crowd', 'forklift', 'riser', ...Object.keys(RIDES)]) {
+    items.push(gearItem('rides', style, style in RIDES ? 'rides.js' : 'machinery.js', () => {
+      const made = createLiftMesh(GFX, { w: 2, d: 2, thickness: 0.5, style, lift: { w: 2, d: 2, to: [4, 0, 0] } });
+      const holder = new GFX.Group();
+      holder.add(made.group);
+      holder.position.y = 0.5;
+      return { object: holder, pose: ({ time }) => made.update?.(time) };
+    }));
+  }
+  for (const pyro of ['flame', 'steam', ...Object.keys(BURSTS)]) {
+    items.push(gearItem('bursts', pyro, pyro in BURSTS ? 'bursts.js' : 'machinery.js', () => {
+      const made = createPyroMesh(GFX, { x: 0, z: 0, w: 1, d: 1, venue: bareVenue(pyro === 'flame' ? {} : { pyro }) });
+      return { object: made.group, pose: ({ time }) => { const c = time % 2.4; made.update?.(c < 1 ? Math.sin(c * Math.PI) : 0, c > 1.8 ? (c - 1.8) / 0.6 : 0, time, 0); } };
+    }));
+  }
+  for (const look of [null, 'bars', 'border', 'velvet']) {
+    items.push(gearItem('gates', look ?? 'gate', 'machinery.js', () => {
+      const made = createGateMesh(GFX, { span: 3, height: 1.5, thickness: 0.18, across: 'x', look });
+      made.group.position.y = 0.75;
+      const holder = new GFX.Group();
+      holder.add(made.group);
+      return { object: holder };
+    }));
+  }
+  for (const look of ['flat', 'drywall', 'wood', 'curtain', 'foam', 'steel', 'canvas', 'brick', 'glass', 'backdrop', 'stone', 'snow']) {
+    items.push(gearItem('panels', look, 'machinery.js', () => {
+      const made = createPanelMesh(GFX, { span: 3, height: 1.5, thickness: 0.18, across: 'x', look });
+      made.group.position.y = 0.75;
+      const holder = new GFX.Group();
+      holder.add(made.group);
+      return { object: holder };
+    }));
+  }
+  for (const kind of ['pick', 'popcorn', 'case', 'tape', 'lighter', 'pass', 'record', 'bucket', 'clapper', 'reel', 'suitcase', 'globe', 'vinyl', 'whetstone', 'demo']) {
+    items.push(gearItem('pickups', kind, 'machinery.js', () => {
+      const made = createPickupMesh(GFX, kind, { amount: 10 });
+      return { object: made.group, pose: made.update ? ({ time }) => made.update(time) : undefined };
+    }));
+  }
+  return items;
+};
+
+export const extraItems = () => [...treeItems(), ...waterItems(), ...effectItems(), dungeonItem(), lavaItem(), ...blubberItems(), ...gearItems()];
