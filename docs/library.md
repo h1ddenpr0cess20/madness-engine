@@ -354,3 +354,15 @@ The look of every set: its light, its sky and what its chrome reflects (each wit
 | `moods/whitby` | `whitby` (metroll) | Whitby (Goth, 1988): the mist grade; `abbey` at 110 on `music/band` |
 | `moods/woodstock` | `woodstock` (metroll) | Woodstock '99 (Nu Metal, 1999): the dust grade, a sandstorm; `airfield` at 96 on `music/band` |
 
+## Stage gear
+
+The rock'n'roll games' venues, dressed and rigged, in `scenery/gear/` (Rock 'n' Roller I, II and III and Metroll use them; the asset viewer lists every one under Stage gear). Each game's own copies are merged here: one version of each.
+
+| File | Games | What it is |
+|---|---|---|
+| `scenery/gear/decor` | rocknroller, rocknroller-ii, rocknroller-iii, metroll | The props over a venue's tiles (`PROPS`): amps, road cases, drums, speakers, the bar, a pool table, a jukebox, pinball, kegs, tables, with the furniture, dressing and sights below; `createProps(GFX, venue)` builds a venue's, each facing the open floor (`FACING`, `openSide`). |
+| `scenery/gear/furniture` | rocknroller, rocknroller-ii, rocknroller-iii, metroll | A mixing desk, racks of gear, arena seats, pianos, hay bales, portable loos, tents, racking, a dome, crowd barriers, the stands. |
+| `scenery/gear/dressing` | rocknroller-ii, rocknroller-iii, metroll | The film sets' and the tour's dressing: airbags, barrels, bookcases, cameras, a cannon, chests, coffins, a craft table, crates, desks, lamps, mirrors, a sedan, statues, tombstones... |
+| `scenery/gear/sights` | rocknroller-iii, metroll | The places' own furniture: the world tour's (`tour`: a phone box, a café, a well, a ski rack...) and the compilation's (`compilation`: an anvil, a furnace, a pink limo, a hot tub, tombs...). |
+| `scenery/gear/machinery` | rocknroller, rocknroller-ii, rocknroller-iii, metroll | What moves or is taken: drops that come down on the beat (a speaker stack, sandbags, a rig, a boulder, a piston, a chandelier, a crate), bursts out of the floor, lifts, gates, breakaway panels, bumpers (a pinball post and the rest) and pickups. A game hands over its pickups with `usePickups`. |
+| `scenery/gear/travel` | rocknroller-iii, metroll | The tracks' drops, rides, bumpers and bursts (`DROPS`, `RIDES`, `BUMPERS`, `BURSTS`), the world tour's and the compilation's together. |

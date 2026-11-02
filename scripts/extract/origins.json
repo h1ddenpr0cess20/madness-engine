@@ -81,7 +81,10 @@
     "src/boulder.js": "heroes/rock.js",
     "src/lightshow.js": "scenery/lightshow.rocknroller.js",
     "src/textures.js": "textures/venue.js",
-    "src/music.js": "music/band.rocknroller.js"
+    "src/music.js": "music/band.rocknroller.js",
+    "src/decor.js": "scenery/gear/decor.js",
+    "src/furniture.js": "scenery/gear/furniture.js",
+    "src/machinery.js": "scenery/gear/machinery.js"
   },
   "rocknroller-ii": {
     "src/models/cast/agent.js": "characters/suit.js",
@@ -133,7 +136,11 @@
     "src/boulder.js": "heroes/rock.js",
     "src/lightshow.js": "scenery/lightshow.rocknroller-ii.js",
     "src/textures.js": "textures/venue.js",
-    "src/music.js": "music/band.rocknroller-ii.js"
+    "src/music.js": "music/band.rocknroller-ii.js",
+    "src/decor.js": "scenery/gear/decor.js",
+    "src/furniture.js": "scenery/gear/furniture.js",
+    "src/dressing.js": "scenery/gear/dressing.js",
+    "src/machinery.js": "scenery/gear/machinery.js"
   },
   "rocknroller-iii": {
     "src/models/cast/archaeologist.js": "characters/archaeologist.js",
@@ -211,7 +218,13 @@
     "src/boulder.js": "heroes/rock.js",
     "src/lightshow.js": "scenery/lightshow.rocknroller-iii.js",
     "src/textures.js": "textures/venue.js",
-    "src/music.js": "music/band.rocknroller-iii.js"
+    "src/music.js": "music/band.rocknroller-iii.js",
+    "src/decor.js": "scenery/gear/decor.js",
+    "src/furniture.js": "scenery/gear/furniture.js",
+    "src/dressing.js": "scenery/gear/dressing.js",
+    "src/sights.js": "scenery/gear/tour.js",
+    "src/travel.js": "scenery/gear/travel.js",
+    "src/machinery.js": "scenery/gear/machinery.js"
   },
   "metroll": {
     "src/models/cast/bat.js": "characters/bat.js",
@@ -302,7 +315,18 @@
     "src/textures.js": "textures/venue.js",
     "src/music.js": "music/band.js",
     "src/stage.js#paintRoom": "textures/rooms/venue.js",
-    "src/horizons.js#paintBackdrop": "textures/skies/horizons.js"
+    "src/horizons.js#paintBackdrop": "textures/skies/horizons.js",
+    "src/decor.js": "scenery/gear/decor.js",
+    "src/furniture.js": "scenery/gear/furniture.js",
+    "src/dressing.js": "scenery/gear/dressing.js",
+    "src/sights.js": "scenery/gear/compilation.js",
+    "src/travel/index.js": "scenery/gear/travel.js",
+    "src/travel/common.js": "scenery/gear/common.js",
+    "src/travel/bumpers.js": "scenery/gear/bumpers.js",
+    "src/travel/drops.js": "scenery/gear/drops.js",
+    "src/travel/rides.js": "scenery/gear/rides.js",
+    "src/travel/bursts.js": "scenery/gear/bursts.js",
+    "src/machinery.js": "scenery/gear/machinery.js"
   },
   "metrlol": {
     "src/cast/agent.js": "characters/suit.js",
