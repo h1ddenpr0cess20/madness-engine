@@ -1,4 +1,5 @@
 import { mix } from '../venue.js';
+import { finishSky, grain, land, snapshot } from './finish.js';
 
 /**
  * The sky round each track, painted on a canvas: a gradient from `sky`,
@@ -22,39 +23,44 @@ import { mix } from '../venue.js';
  *   festival    a stage rig, flags, fireworks and the tents
  */
 
-export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#2a0f06'], stars = false, skyline = null, horizon = 'hills', glow = '#ff8a3a', width = 1024 } = {}) {
+export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#2a0f06'], stars = false, skyline = null, horizon = 'hills', glow = '#ff8a3a', width = 1024, scale = 4 } = {}) {
   const height = width / 2;
   const c = document.createElement('canvas');
-  c.width = width; c.height = height;
+  // Painted at `scale` times its layout: the same picture, sharp on a big screen.
+  c.width = Math.round(width * scale); c.height = Math.round(height * scale);
   const ctx = c.getContext('2d');
   if (!ctx) return null;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const g = ctx.createLinearGradient(0, 0, 0, height);
   sky.forEach((colour, i) => g.addColorStop(i / (sky.length - 1), colour));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, width, height);
   let s = 7;
   const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-  if (stars) {
-    for (let k = 0; k < 220; k++) {
-      ctx.fillStyle = `rgba(255,255,255,${0.2 + rnd() * 0.6})`;
-      const r = rnd() * 1.4 + 0.3;
-      ctx.fillRect(rnd() * width, rnd() * height * 0.5, r, r);
-    }
-  }
-  if (!skyline) return c;
+  const base0 = height * 0.5;
+  finishSky(ctx, width, height, sky, { stars, base: base0 });
+  const done = () => { grain(ctx, c); return c; };
+  const bare = skyline ? snapshot(ctx, c) : null;
+  let onLand = null;
+  if (!skyline) return done();
   const base = height * 0.5;
   const ridge = (f, colour) => {
     ctx.fillStyle = colour;
     ctx.beginPath();
     ctx.moveTo(0, height);
-    for (let x = 0; x <= width; x += 4) ctx.lineTo(x, f(x));
+    for (let x = 0; x <= width; x += 1) ctx.lineTo(x, f(x));
     ctx.lineTo(width, height);
     ctx.fill();
   };
+  // Lights: only on what stands against the sky, never in the air; tried a few times each to find somewhere.
   const windows = (n, top, depth, tint = null) => {
+    onLand = land(ctx, c, bare, scale);
     for (let k = 0; k < n; k++) {
+      let x, y, tries = 0;
+      do { x = rnd() * width; y = top + rnd() * depth; } while (!onLand(x, y) && ++tries < 6);
+      if (tries >= 6) continue;
       ctx.fillStyle = tint ?? `rgba(255,${200 + Math.floor(rnd() * 55)},${120 + Math.floor(rnd() * 100)},${0.3 + rnd() * 0.6})`;
-      ctx.fillRect(rnd() * width, top + rnd() * depth, 1.4, 1.4);
+      ctx.fillRect(x, y, 1.1, 1.3);
     }
   };
   const rgba = (hex, a) => {
@@ -113,7 +119,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
           ctx.fillStyle = ag;
           ctx.beginPath();
           ctx.moveTo(0, y0 + 70);
-          for (let x = 0; x <= width; x += 8) ctx.lineTo(x, y0 + amp * Math.sin(x * 0.006 + k * 1.7) + amp * 0.5 * Math.sin(x * 0.017 + k) - 30);
+          for (let x = 0; x <= width; x += 2) ctx.lineTo(x, y0 + amp * Math.sin(x * 0.006 + k * 1.7) + amp * 0.5 * Math.sin(x * 0.017 + k) - 30);
           for (let x = width; x >= 0; x -= 8) ctx.lineTo(x, y0 + 70 + amp * Math.sin(x * 0.004 + k));
           ctx.fill();
         }
@@ -121,15 +127,20 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
     }
     for (const [seed, tall, shade] of [[2, 150, 0.55], [5, 105, 1]]) {
       ridge((x) => peak(x, seed, tall), shade < 1 ? mix(skyline, '#c8d4ec', 0.45) : skyline);
-      ctx.fillStyle = shade < 1 ? 'rgba(236,242,255,0.85)' : 'rgba(244,248,255,0.95)';
-      ctx.beginPath();
-      for (let x = 0; x <= width; x += 4) {
-        const y = peak(x, seed, tall), snowline = base - tall * 0.95;
-        if (y < snowline) { ctx.moveTo(x, y); ctx.lineTo(x, Math.min(snowline + 8 * Math.sin(x * 0.2), y + 30)); }
+      // The snow: from the ridge down to a snowline that dips into the gullies, lit on the side that faces the light.
+      const f = (x) => peak(x, seed, tall), snowline = (x) => base - tall * (0.92 + 0.12 * Math.sin(x * 0.05 + seed) + 0.06 * Math.sin(x * 0.21));
+      const lit = shade < 1 ? 'rgba(236,242,255,0.88)' : 'rgba(246,250,255,0.97)', dim = shade < 1 ? 'rgba(200,212,236,0.8)' : 'rgba(206,218,240,0.92)';
+      for (let x = 0; x < width; x += 1) {
+        const y0 = f(x), y1 = Math.max(y0, Math.min(snowline(x), y0 + 40));
+        if (y1 - y0 < 0.5) continue;
+        // Lit by how much the slope there faces the light: shade first, the light laid over it in proportion.
+        ctx.fillStyle = dim;
+        ctx.fillRect(x, y0, 1.05, y1 - y0);
+        ctx.globalAlpha = Math.min(1, Math.max(0, 0.5 + (f(x - 12) - f(x + 12)) / 24 * 1.5));
+        ctx.fillStyle = lit;
+        ctx.fillRect(x, y0, 1.05, y1 - y0);
+        ctx.globalAlpha = 1;
       }
-      ctx.lineWidth = 4.5;
-      ctx.strokeStyle = ctx.fillStyle;
-      ctx.stroke();
     }
     if (horizon === 'fjord') {
       // A row of pines along the foot of them, and the water.
@@ -137,7 +148,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
       for (let x = 0; x < width; x += 14 + rnd() * 10) tree(x, base + 6, 26 + rnd() * 30, (rnd() - 0.5) * 3);
       mist('#c8d8f0', 0.25, 36);
     }
-    return c;
+    return done();
   }
 
   if (horizon === 'foundry') {
@@ -166,9 +177,11 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
       ctx.fillRect(cx - 6.4, base - h, 12.8, 6);
       plume(cx, base - h - 6, '#c8b8a8', 0.3, 10, 12);
     }
+    ctx.fillStyle = skyline;
+    ctx.fillRect(0, base, width, height - base);
     windows(300, base - 22, 22, rgba(glow, 0.7));
     mist('#8a7a6a', 0.3, 30);
-    return c;
+    return done();
   }
 
   if (horizon === 'strip') {
@@ -183,6 +196,8 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
       if (rnd() < 0.28) { ctx.fillStyle = neon[Math.floor(rnd() * neon.length)]; ctx.fillRect(x + 2, base - h + 4, w - 4, 3); ctx.fillStyle = skyline; }
       x += w + rnd() * 3;
     }
+    ctx.fillStyle = skyline;
+    ctx.fillRect(0, base, width, height - base);
     windows(700, base - 70, 70);
     // Palms along the front, tall and thin, the fronds out like fireworks.
     ctx.strokeStyle = skyline;
@@ -203,7 +218,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
       ctx.fillStyle = lg;
       ctx.beginPath(); ctx.moveTo(sx - 6, base); ctx.lineTo(sx + 6, base); ctx.lineTo(sx + lean * 300 + 30, base - 300); ctx.lineTo(sx + lean * 300 - 30, base - 300); ctx.fill();
     }
-    return c;
+    return done();
   }
 
   if (horizon === 'bay') {
@@ -237,7 +252,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
     }
     mist('#d8e0f0', 0.5, 70);
     mist('#e8eef8', 0.35, 28);
-    return c;
+    return done();
   }
 
   if (horizon === 'abbey') {
@@ -270,7 +285,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
       ctx.beginPath(); ctx.moveTo(bx - bs, by); ctx.quadraticCurveTo(bx - bs * 0.5, by - bs * 0.9, bx, by); ctx.quadraticCurveTo(bx + bs * 0.5, by - bs * 0.9, bx + bs, by); ctx.stroke();
     }
     mist('#b8c4e8', 0.35, 44);
-    return c;
+    return done();
   }
 
   if (horizon === 'swamp' || horizon === 'bayou') {
@@ -309,7 +324,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
       }
     }
     mist(bayou ? '#e8c890' : '#8aff6a', 0.35, 56);
-    return c;
+    return done();
   }
 
   if (horizon === 'powerplant') {
@@ -345,7 +360,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
     for (let i = 0; i < pylons.length - 1; i++) { ctx.beginPath(); ctx.moveTo(pylons[i] + 18, base - 62); ctx.quadraticCurveTo((pylons[i] + pylons[i + 1]) / 2, base - 44, pylons[i + 1] - 18, base - 62); ctx.stroke(); }
     windows(260, base - 12, 12, rgba('#ffd890', 0.7));
     mist('#8a8a98', 0.3, 30);
-    return c;
+    return done();
   }
 
   if (horizon === 'airfield') {
@@ -371,7 +386,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
     for (const [sx, h] of [[width * 0.8, 200], [width * 0.88, 150]]) plume(sx, base - 6, '#2a2a30', 0.45, 12, 8 + h * 0.01);
     windows(260, base - 4, 8, rgba('#ffe0a0', 0.8));
     mist('#8a7a6a', 0.3, 24);
-    return c;
+    return done();
   }
 
   if (horizon === 'fairground') {
@@ -400,7 +415,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
     ctx.lineWidth = 1;
     for (let x = 0.07; x <= 0.4; x += 0.02) { const y = base - 30 - 36 * Math.abs(Math.sin((x - 0.05) * 18)) * (1 - (x - 0.05)); ctx.beginPath(); ctx.moveTo(width * x, y); ctx.lineTo(width * x, base); ctx.stroke(); }
     windows(220, base - 14, 14, rgba('#ffd0f0', 0.8));
-    return c;
+    return done();
   }
 
   if (horizon === 'festival') {
@@ -428,7 +443,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
     ctx.fillStyle = skyline;
     for (let x = 0; x < width; x += 9) { ctx.beginPath(); ctx.arc(x + rnd() * 4, base + 4, 4 + rnd() * 2, 0, 7); ctx.fill(); }
     mist('#9a8a7a', 0.25, 26);
-    return c;
+    return done();
   }
 
   if (horizon === 'city' || horizon === 'nyc') {
@@ -447,12 +462,15 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
       }
       x += w + rnd() * 4;
     }
+    // The streets at their feet: no sky between them below the horizon.
+    ctx.fillStyle = skyline;
+    ctx.fillRect(0, base, width, height - base);
     windows(900, base - 100, 110);
-    return c;
+    return done();
   }
 
   // Hills along the horizon, and a town's lights scattered over them.
   ridge((x) => base - 18 - 22 * Math.sin(x * 0.011) - 12 * Math.sin(x * 0.031 + 1) - 6 * Math.sin(x * 0.09), skyline);
   windows(500, base - 10, 26);
-  return c;
+  return done();
 }

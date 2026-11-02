@@ -12,12 +12,14 @@ const SKY = [[0, '#03040c'], [0.3, '#070a1c'], [0.44, '#121a36'], [0.5, '#2a2a44
  * centres with their status lights, wind turbines with red lights on top,
  * and the lights of the suburbs.
  */
-export function paintSky(u, { width = 2048, ridge = true } = {}) {
+export function paintSky(u, { width = 2048, ridge = true, scale = 2 } = {}) {
   const height = width / 2;
   const c = document.createElement('canvas');
-  c.width = width; c.height = height;
+  // Painted at `scale` times its layout: the same picture, sharp on a big screen.
+  c.width = Math.round(width * scale); c.height = Math.round(height * scale);
   const ctx = c.getContext('2d');
   if (!ctx) return null;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const g = ctx.createLinearGradient(0, 0, 0, height);
   for (const [t, col] of SKY) g.addColorStop(t, col);
   ctx.fillStyle = g;
@@ -61,7 +63,7 @@ export function paintSky(u, { width = 2048, ridge = true } = {}) {
   ctx.fillStyle = ink;
   ctx.beginPath();
   ctx.moveTo(0, horizon + 6);
-  for (let x = 0; x <= width; x += 6) ctx.lineTo(x, horizon - 4 - 6 * (0.5 + 0.5 * Math.sin(x / 70)) - 4 * Math.sin(x / 19 + 1) ** 2);
+  for (let x = 0; x <= width; x += 2) ctx.lineTo(x, horizon - 4 - 6 * (0.5 + 0.5 * Math.sin(x / 70)) - 4 * Math.sin(x / 19 + 1) ** 2);
   ctx.lineTo(width, height); ctx.lineTo(0, height);
   ctx.fill();
   // A city on the horizon: towers, their windows lit, a red light on the tallest.
