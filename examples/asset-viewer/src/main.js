@@ -282,7 +282,11 @@ function animGroup(built) {
 /** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
-  if (pal.kind === 'dice') return [[ 'Resin', pal.color, c.color, (v) => { c.color = v; }, () => { delete c.color; } ]];
+  if (pal.kind === 'dice') return [
+    ['Resin', pal.color, c.color, (v) => { c.color = v; }, () => { delete c.color; }],
+    ['Numbers / dots', pal.markingColor, c.markingColor, (v) => { c.markingColor = v; }, () => { delete c.markingColor; }],
+    ['D20 highlight', pal.highlightColor, c.highlightColor, (v) => { c.highlightColor = v; }, () => { delete c.highlightColor; }],
+  ];
   const rows = [
     ['Skin', pal.skin, c.skin, (v) => { c.skin = v; }, () => { delete c.skin; }],
     ['Hair', pal.hair ?? '#3a2a20', c.hair, (v) => { c.hair = v; }, () => { delete c.hair; delete c.brow; }],
@@ -310,7 +314,7 @@ function colourGroup(item) {
   const isDice = item.palette.kind === 'dice';
   $('colourdiverse').style.display = isDice ? 'none' : '';
   $('colourhint').textContent = isDice
-    ? 'Change the resin colour of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
+    ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
     : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
   $('colourrows').replaceChildren(...colourRows(item).map(([label, was, now, set, clear]) => {
     const input = el('input', { type: 'color', value: now ?? was });
@@ -337,10 +341,10 @@ $('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
 $('colourcopy').onclick = async () => {
   let code;
   if (view.item.palette?.kind === 'dice') {
-    const colour = view.colours.color ?? view.item.palette.color;
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createDieProp } from 'madness-engine/props/dice';\n\n"
-      + "const die = createDieProp(GFX, '" + view.item.dieType + "', { color: '" + colour + "' });";
+      + "const die = createDieProp(GFX, '" + view.item.dieType + "', "
+      + JSON.stringify(view.colours, null, 2) + ");";
   } else {
     const name = view.item.name.replace(/[^a-z0-9]/gi, '');
     code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;
