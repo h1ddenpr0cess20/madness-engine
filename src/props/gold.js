@@ -1,70 +1,131 @@
-import { noise, rgb } from '../models/sdf.js';
-import { mix, smooth } from '../models/skins.js';
+import { noise, rgb, rotation } from '../models/sdf.js';
+import { mix } from '../models/skins.js';
 
 /**
- * A heap of gold: coins piled up in a mound, more slid off it on top and
- * spilled round the foot of it, and a couple of gems in amongst them. Sits
- * on the floor, about a third of a tile across.
+ * A heap of gold: coins piled up in a mound, two stacks of them beside it,
+ * more slid off onto the floor, each coin a proper coin — a raised rim, a
+ * milled edge and a star struck in the middle of it — and three cut gems
+ * in amongst them: a ruby, an emerald and a sapphire, faceted, the light
+ * coming through them. Sits on the floor, about a third of a tile across.
  */
 
-const GOLD = rgb('#f0bf4c'), DEEP = rgb('#8a5a14');
+const GOLD = rgb('#f4c656'), DEEP = rgb('#9a6a18'), BRIGHT = rgb('#ffe8a0');
+const R = 0.03, T = 0.0036;      // a coin's radius and half thickness
 
-/** A coin at `c`: a rim round its edge and a stamped face. */
-const coin = (c, r) => (p) => {
-  const d = Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]) / r;
-  const face = noise(p[0] * 220, p[1] * 220, p[2] * 220);
-  const k = d > 0.82 ? 0.7 + 0.3 * smooth(0.95, 0.85, d) : 0.85 + 0.25 * face;
-  return mix(DEEP, GOLD, k);
+/** A seeded run of numbers 0–1, so the heap is the same heap every time. */
+function random(seed) {
+  let s = seed;
+  return () => (s = (s * 16807) % 2147483647) / 2147483647;
+}
+
+/** The star struck in a coin: how far inside it (u, v) is, in its own units. */
+const star = (u, v) => {
+  const a = Math.atan2(u, v), f = (((a / (Math.PI * 2 / 5)) % 1) + 1) % 1;
+  return Math.hypot(u, v) - (0.2 + 0.24 * (1 - Math.abs(f * 2 - 1)));
 };
 
-/** The heap's shape: coins lie over this, each tipped to its slope. */
-const MOUND = [0.13, 0.085, 0.13];
-const height = (x, z) => MOUND[1] * Math.sqrt(Math.max(0, 1 - (x * x + z * z) / (MOUND[0] * MOUND[0]))) - 0.01;
-const R = 0.034;
+/** A coin at `c`, its face turned by `rot` (lying flat at [0, 0, 0]). */
+function coin(s, c, rot, mat = 'gold') {
+  const M = rotation(rot);
+  const local = (p) => {
+    const x = p[0] - c[0], y = p[1] - c[1], z = p[2] - c[2];
+    return [M[0][0] * x + M[1][0] * y + M[2][0] * z, M[0][1] * x + M[1][1] * y + M[2][1] * z, M[0][2] * x + M[1][2] * y + M[2][2] * z];
+  };
+  s.shape((p) => {
+    const [x, y, z] = local(p), r = Math.hypot(x, z);
+    // The milled edge, the rim standing a little proud of the field, the star proud of that.
+    const mill = r > R * 0.9 ? 0.00035 * (0.5 + 0.5 * Math.cos(Math.atan2(z, x) * 60)) : 0;
+    const rim = Math.min(1, Math.max(0, (r / R - 0.8) / 0.06));
+    const h = T - 0.0007 * (1 - rim) + (star(x / R, z / R) < 0 ? 0.0004 : 0);
+    const dr = r - R + mill + 0.001, dy = Math.abs(y) - h + 0.001;
+    return Math.min(Math.max(dr, dy), 0) + Math.hypot(Math.max(dr, 0), Math.max(dy, 0)) - 0.001;
+  }, [c.map((v) => v - R - 0.002), c.map((v) => v + R + 0.002)], {
+    color: (p) => {
+      const [x, y, z] = local(p), r = Math.hypot(x, z) / R;
+      if (r > 0.97 && Math.abs(y) < T * 0.9) return mix(DEEP, GOLD, 0.6 + 0.4 * Math.cos(Math.atan2(z, x) * 60));
+      if (r > 0.8) return mix(GOLD, BRIGHT, 0.35);
+      if (star(x / R, z / R) < 0) return mix(GOLD, BRIGHT, 0.5);
+      return mix(DEEP, GOLD, 0.72 + 0.2 * noise(x * 400, z * 400, c[0] * 50));
+    },
+    mat, k: 0,
+  });
+}
 
-/** Euler angles that tip a coin's face (its local y) to point along n. */
-const facing = (n) => [Math.asin(n[2]), 0, Math.atan2(-n[0], n[1])];
+/** A gem: a convex cut, its facets planes [nx, ny, nz, d] in its own frame, at `c` turned by `rot`. */
+function gem(s, c, rot, planes, size, color) {
+  const M = rotation(rot);
+  s.shape((p) => {
+    const x = p[0] - c[0], y = p[1] - c[1], z = p[2] - c[2];
+    const q = [M[0][0] * x + M[1][0] * y + M[2][0] * z, M[0][1] * x + M[1][1] * y + M[2][1] * z, M[0][2] * x + M[1][2] * y + M[2][2] * z];
+    let d = -Infinity;
+    for (const [a, b, e, k] of planes) d = Math.max(d, a * q[0] + b * q[1] + e * q[2] - k * size);
+    return d;
+  }, [c.map((v) => v - size * 1.6), c.map((v) => v + size * 1.6)], { color, mat: 'gem', k: 0 });
+}
+/** A round brilliant: a table, eight crown facets, eight pavilion facets to a point, the girdle round its middle. */
+const BRILLIANT = (() => {
+  const P = [[0, 1, 0, 0.42]];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2, b = a + Math.PI / 8;
+    P.push([Math.cos(a) * 0.82, 0.57, Math.sin(a) * 0.82, 0.82 * 0.95]);
+    P.push([Math.cos(b) * 0.66, -0.75, Math.sin(b) * 0.66, 0.66 * 0.95]);
+    P.push([Math.cos(b), 0, Math.sin(b), 1]);
+  }
+  return P;
+})();
+/** An emerald cut: a long table, stepped sides, the corners cut off. */
+const STEP = [
+  [0, 1, 0, 0.42], [0, -1, 0, 0.6],
+  [1, 0, 0, 1.3], [-1, 0, 0, 1.3], [0, 0, 1, 0.9], [0, 0, -1, 0.9],
+  [0.7, 0, 0.7, 1.45], [-0.7, 0, 0.7, 1.45], [0.7, 0, -0.7, 1.45], [-0.7, 0, -0.7, 1.45],
+  [0.6, 0.8, 0, 1.0], [-0.6, 0.8, 0, 1.0], [0, 0.8, 0.6, 0.78], [0, 0.8, -0.6, 0.78],
+  [0.6, -0.8, 0, 1.02], [-0.6, -0.8, 0, 1.02], [0, -0.8, 0.6, 0.8], [0, -0.8, -0.6, 0.8],
+];
 
 export default {
   name: 'gold',
-  cell: 0.0068,
-  budget: 13500,
-  cells: { gems: 0.0045 },
+  cell: 0.0026,
+  budget: 78000,
+  refine: 0.4,
+  cells: { gems: 0.0012, core: 0.006 },
   bones: [['root', null, [0, 0, 0]]],
   materials: {
-    gold: { roughness: 0.3, metalness: 1, emissive: '#3a2600', emissiveIntensity: 0.8 },
-    gem: { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05, emissive: '#400010', emissiveIntensity: 0.6 },
+    gold: { roughness: 0.24, metalness: 0.9, emissive: '#4a3000', emissiveIntensity: 0.55, clearcoat: 0.4, clearcoatRoughness: 0.1 },
+    gem: { roughness: 0.02, transmission: 0.55, thickness: 0.02, ior: 1.76, clearcoat: 1, clearcoatRoughness: 0.02, emissive: '#200008', emissiveIntensity: 0.4 },
   },
   sculpt(s) {
-    // A core for the coins to lie on, dark where it shows between them.
-    s.ellipsoid([0, -0.01, 0], MOUND, { color: DEEP, mat: 'gold', k: 0 });
-    s.box([0, 0.1, 0], [0.3, 0.1, 0.3], 0, { op: 'inter', k: 0 });
-    // Coins all over it, spiralling out from the top, each lying on the slope, a little askew.
-    const N = 34;
+    const rnd = random(4242);
+    // A core for the coins to lie on, dark gold where it shows between them.
+    const MOUND = [0.11, 0.07, 0.11];
+    const height = (x, z) => MOUND[1] * Math.sqrt(Math.max(0, 1 - (x * x + z * z) / (MOUND[0] * MOUND[0])));
+    s.part('core', () => {
+      s.shape((p) => Math.max(Math.hypot(p[0] / MOUND[0], p[1] / MOUND[1], p[2] / MOUND[2]) - 1, -p[1]) * MOUND[1], [[-MOUND[0], 0, -MOUND[2]], MOUND], { color: DEEP, mat: 'gold', k: 0 });
+    });
+
+    // The mound: coins spiralling out from the top, each lying on the slope, a little askew.
+    const N = 26;
     for (let i = 0; i < N; i++) {
-      const a = i * 2.399963, f = Math.sqrt((i + 0.5) / N) * 1.02;
-      const x = Math.cos(a) * MOUND[0] * f, z = Math.sin(a) * MOUND[0] * f;
-      const y = Math.max(0.004, height(x, z));
-      const g = [x / (MOUND[0] * MOUND[0]), (y + 0.01) / (MOUND[1] * MOUND[1]), z / (MOUND[0] * MOUND[0])];
-      const l = Math.hypot(...g);
-      const n = [g[0] / l + Math.sin(i * 3.7) * 0.2, g[1] / l, g[2] / l + Math.cos(i * 5.1) * 0.2];
-      const nl = Math.hypot(...n);
-      const c = [x, y + 0.003, z];
-      s.cylinder(c, R, 0.0045, { color: coin(c, R), mat: 'gold', k: 0, round: 0.0025, rot: facing(n.map((v) => v / nl)) });
+      const a = i * 2.399963, f = Math.sqrt((i + 0.5) / N) * 0.98;
+      const x = Math.cos(a) * MOUND[0] * f, z = Math.sin(a) * MOUND[0] * f, y = height(x, z);
+      // Tipped to the slope there: its face along the mound's normal, plus a wobble.
+      const g = [x / (MOUND[0] * MOUND[0]), y / (MOUND[1] * MOUND[1]), z / (MOUND[0] * MOUND[0])], l = Math.hypot(...g);
+      const tx = Math.asin(Math.max(-1, Math.min(1, g[2] / l))) + (rnd() - 0.5) * 0.4, tz = -Math.asin(Math.max(-1, Math.min(1, g[0] / l))) + (rnd() - 0.5) * 0.4;
+      coin(s, [x, y + T * 0.6, z], [tx, 0, tz]);
     }
-    // And a few slid off onto the floor.
-    for (const [x, z, t] of [[0.17, 0.05, 0.1], [-0.16, 0.09, -0.12], [0.05, 0.18, 0.08], [-0.06, -0.17, 0.14]]) {
-      const c = [x, 0.006, z];
-      s.cylinder(c, R, 0.0045, { color: coin(c, R), mat: 'gold', k: 0, round: 0.0025, rot: [t, 0, t * 0.6] });
+    // Two stacks beside it, the coins not quite square on each other.
+    for (const [sx, sz, n] of [[0.13, -0.06, 6], [-0.11, -0.1, 4]]) {
+      for (let k = 0; k < n; k++) coin(s, [sx + (rnd() - 0.5) * 0.004, T + k * T * 2.05, sz + (rnd() - 0.5) * 0.004], [(rnd() - 0.5) * 0.06, rnd() * 6, (rnd() - 0.5) * 0.06]);
     }
-    // Nothing under the floor.
-    s.box([0, 0.15, 0], [0.4, 0.15, 0.4], 0, { op: 'inter', k: 0 });
+    // And a few slid off onto the floor, one leaning on the heap.
+    for (const [x, z] of [[0.15, 0.06], [-0.14, 0.08], [0.04, 0.16], [-0.05, -0.16]]) coin(s, [x, T, z], [(rnd() - 0.5) * 0.06, rnd() * 6, 0]);
+    coin(s, [0.1, 0.03, 0.06], [0.5, 0.6, 1.1]);
 
     s.part('gems', () => {
-      // A ruby, cut square, and an emerald, long, half sunk in the coins; a sapphire on the floor.
-      s.box([0.04, height(0.04, -0.03) + 0.014, -0.03], [0.017, 0.017, 0.017], 0.003, { color: '#d0102c', mat: 'gem', k: 0, rot: [0.62, 0.78, 0.2] });
-      s.ellipsoid([-0.05, height(-0.05, 0.035) + 0.012, 0.035], [0.024, 0.012, 0.014], { color: '#0f9a48', mat: 'gem', k: 0, rot: [0, 0.9, 0.2] });
-      s.box([0.11, 0.012, -0.11], [0.012, 0.012, 0.012], 0.002, { color: '#2050e0', mat: 'gem', k: 0, rot: [0.6, 0.2, 0.7] });
+      // A ruby set in the top, an emerald half sunk in the side, a sapphire on the floor.
+      const tint = (hex, deep) => (p, n) => mix(rgb(deep), rgb(hex), 0.5 + 0.5 * Math.abs(n[1]));
+      gem(s, [0.012, height(0.012, -0.01) + 0.012, -0.01], [0.35, 0.4, 0.2], BRILLIANT, 0.022, tint('#ff2848', '#80001c'));
+      gem(s, [-0.06, height(-0.06, 0.04) + 0.006, 0.04], [0.2, 0.9, -0.5], STEP, 0.016, tint('#20d070', '#004a20'));
+      gem(s, [0.085, 0.012, -0.12], [0.1, 0.3, 0], BRILLIANT, 0.017, tint('#3a70ff', '#081a70'));
     });
   },
 };
