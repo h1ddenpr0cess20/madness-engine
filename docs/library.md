@@ -139,6 +139,11 @@ The people, creatures and monsters. Most are sculpted definitions (the default e
 | `characters/roadie` | `roadie` (metroll, metrlol, rocknroller) | The Roadie: huge, bald under a bandana, a black T-shirt that has done four hundred shows, shorts with a tool pouch, a keyring on the belt and a flight case on his shoulder. |
 | `characters/robot` | `robot` (rocknroller-iii, petroll, metroll, metrlol, rocknroller-ii) | The Robot Waiter: from the robot restaurant in Shinjuku, which is a man in a costume made out of a boiler. |
 | `characters/tinbot` | `tinbot` | The Tin Robot, hands free: the robot waiter's tin-can body, dryer-hose limbs, pincers and toaster boots, with nothing in its pincers. |
+| `characters/barista` | `barista` | The Barista: has opinions about your order and will make it anyway. |
+| `characters/crossingguard` | `crossingguard` | The Crossing Guard: on the corner by the school every morning and every afternoon, rain or shine, and takes it seriously. |
+| `characters/mailcarrier` | `mailcarrier` | The Mail Carrier: the same round every day for twenty years and knows every dog on it by name. |
+| `characters/oldtimer` | `oldtimer` | The Old-Timer: been going to the same corner shop since it sold everything loose, and tells them so. |
+| `characters/shopper` | `shopper` | The Shopper: out for the week's groceries, list in hand, ticking it off. |
 | `characters/runner` | `runner` (metrlol, rocknroller-iii) | The Bull Runner: in the whites of San Fermín, a red pañuelo knotted at the throat and a red sash round the waist, a rolled-up newspaper in his fist for the bull's nose, and the look over the should… |
 | `characters/salaryman` | `salaryman` (rocknroller-iii) | The Salaryman: missed the last train home from Shinjuku, found a karaoke bar instead, and has the microphone yet. |
 | `characters/sambista` | `sambista` (rocknroller-iii) | The Samba Dancer: off a float in the Sambódromo and not stopping for anybody, in gold sequins and not a lot else, a headdress of feathers twice her height, a back-piece of feathers fanned out behin… |
