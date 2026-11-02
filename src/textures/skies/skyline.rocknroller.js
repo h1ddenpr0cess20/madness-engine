@@ -1,4 +1,4 @@
-import { finishSky, grain } from './finish.js';
+import { finishSky, grain } from '../skyfinish.js';
 
 /** The dark round the venue: the colours it is given, top to bottom, and the glow of a crowd or a city if it has one. */
 export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#2a0f06'], stars = false, width = 1024, scale = 4 } = {}) {

@@ -4,7 +4,7 @@
  * brightness with a faint band of the galaxy through them and the moon; by
  * day, banks of soft cloud lit from above; and a fine grain over the whole
  * so its long gradients don't step. All drawn on a sky's canvas in its own
- * layout units (the sky painters scale their context up to paint sharp).
+ * layout units (the sky painters in skies/ scale their context up to paint sharp).
  */
 
 /** How bright a colour is, 0 to 1. */

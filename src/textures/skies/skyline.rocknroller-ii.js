@@ -1,4 +1,4 @@
-import { finishSky, grain } from './finish.js';
+import { finishSky, grain } from '../skyfinish.js';
 
 /**
  * The night round the set: the colours it is given, top to bottom, stars if

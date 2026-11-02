@@ -1,5 +1,5 @@
 import { mix } from '../venue.js';
-import { finishSky, grain, land, snapshot } from './finish.js';
+import { finishSky, grain, land, snapshot } from '../skyfinish.js';
 
 /**
  * The sky round each track, painted on a canvas: a gradient from `sky`,

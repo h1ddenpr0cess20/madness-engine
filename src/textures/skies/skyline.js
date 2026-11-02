@@ -1,5 +1,5 @@
 import { mix } from '../venue.rocknroller-iii.js';
-import { finishSky, grain, seeded } from './finish.js';
+import { finishSky, grain, seeded } from '../skyfinish.js';
 
 /**
  * The sky round the stop, painted on a canvas: a gradient from `sky`, the
