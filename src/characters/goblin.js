@@ -71,7 +71,6 @@ export default {
   },
   sculpt(s) {
     const S = { color: skin, mat: 'skin' };
-    const L = { color: leather, mat: 'leather' };
 
     // ——— Body: a pot belly, a narrow chest pitched forward, a hunched back.
     s.ellipsoid([0, 0.215, -0.01], [0.068, 0.05, 0.058], { ...S, bone: 'hips', k: 0.03 });
