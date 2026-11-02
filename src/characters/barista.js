@@ -1,5 +1,5 @@
 import { rgb } from '../models/sdf.js';
-import { cloth, hold, person, shell, strap } from './person.js';
+import { bodyField, cloth, hold, person, shell, strap } from './person.js';
 import { beanie } from './metalwear.js';
 import { beard } from './wardrobe.js';
 
@@ -49,13 +49,27 @@ export default person({
       bones: { chest: (p) => 0.42 - p[1], spine: (p) => Math.abs(p[1] - 0.36) - 0.06, hips: (p) => p[1] - 0.3 },
     });
     strap(s, [[0.07, 0.5, 0.075], [0.06, 0.56, 0.02], [0, 0.585, -0.06], [-0.06, 0.56, 0.02], [-0.07, 0.5, 0.075]], { width: 0.012, thick: 0.004, color: CANVAS, mat: 'cloth' });
-    strap(s, [[0.1, 0.33, 0.06], [0.11, 0.335, -0.04], [0, 0.33, -0.1], [-0.11, 0.335, -0.04], [-0.1, 0.33, 0.06]], { width: 0.01, thick: 0.004, color: CANVAS, mat: 'cloth' });
-    s.paint((p) => Math.max(Math.abs(p[0] + 0.035) - 0.03, Math.abs(p[1] - 0.44) - 0.022, 0.05 - p[2]), '#8a5a32', 0.0012);
+    // The ties: a band round the waist from the apron's sides to the back, lying on him, and a bow at the small of the back.
+    const trunk = (sh) => !/^(arm|fore|hand|head|neck|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
+    shell(s, (p) => Math.max(Math.abs(p[1] - 0.336) - 0.0055, p[2] - 0.05), { color: CANVAS, mat: 'cloth', thick: 0.0035, lift: 0.0015, part: 'outer2', keep: trunk, bone: 'hips' });
+    // The knot: straight in from behind at the ties' height, onto them.
+    const warp = s.warp, back = bodyField(s).cast(warp ? warp.to([0, 0.336, -0.3]) : [0, 0.336, -0.3], [0, 0, 1], 0.4);
+    const knot = back ? (warp ? warp.from(back.p) : back.p) : [0, 0.336, -0.1];
     s.part('kit', () => {
-      s.limb([-0.045, 0.445, 0.098], [-0.045, 0.485, 0.096], 0.0038, 0.0034, { color: '#1a1a1e', mat: 'plastic', bone: 'chest', k: 0.001 });
-      // The tea towel over the left shoulder, hanging down front and back.
-      s.flake([0.075, 0.57, 0.0], [0.09, 0.47, 0.085], [1, 0.3, 0], 0.024, 0.026, 0.25, { color: (p) => (((p[1] * 60) % 1 + 1) % 1 < 0.2 ? rgb('#3a6ad8') : rgb('#f2f0ea')), mat: 'cloth', bone: 'chest', k: 0.004 });
-      s.flake([0.075, 0.57, 0.0], [0.09, 0.48, -0.085], [1, 0.3, 0], 0.024, 0.026, 0.25, { color: (p) => (((p[1] * 60) % 1 + 1) % 1 < 0.2 ? rgb('#3a6ad8') : rgb('#f2f0ea')), mat: 'cloth', bone: 'chest', k: 0.004 });
+      const at = (x, y, out) => [knot[0] + x, knot[1] + y, knot[2] - out];
+      s.ellipsoid(at(0, 0, 0.006), [0.007, 0.0065, 0.005], { color: CANVAS, mat: 'cloth', bone: 'hips', k: 0.002 });
+      for (const m of [1, -1]) {
+        s.flake(at(m * 0.004, 0.001, 0.006), at(m * 0.03, 0.008, 0.004), [0, 0, 1], 0.004, 0.011, 0.25, { color: CANVAS, mat: 'cloth', bone: 'hips', k: 0.002 });
+        s.flake(at(m * 0.003, -0.003, 0.006), at(m * 0.016, -0.05, 0.003), [0, 0, 1], 0.004, 0.006, 0.25, { color: CANVAS, mat: 'cloth', bone: 'hips', k: 0.002 });
+      }
+    });
+    s.paint((p) => Math.max(Math.abs(p[0] + 0.035) - 0.03, Math.abs(p[1] - 0.44) - 0.022, 0.05 - p[2]), '#8a5a32', 0.0012);
+    s.part('kit', () => s.limb([-0.045, 0.445, 0.098], [-0.045, 0.485, 0.096], 0.0038, 0.0034, { color: '#1a1a1e', mat: 'plastic', bone: 'chest', k: 0.001 }));
+    // The tea towel over the left shoulder: lying on it and hanging down the front and the back, over the apron's strap.
+    const STRIPE = (p) => (((p[1] * 60) % 1 + 1) % 1 < 0.2 ? rgb('#3a6ad8') : rgb('#f2f0ea'));
+    shell(s, (p) => Math.max(Math.abs(p[0] - 0.072) - 0.024, 0.46 - p[1]), {
+      color: STRIPE, mat: 'cloth', thick: 0.004, lift: 0.002, part: 'outer2', over: ['body', 'top', 'outer', 'straps'], keep: trunk,
+      bones: { chest: (p) => 0.47 - p[1], spine: (p) => p[1] - 0.47 },
     });
     // The ink down the right forearm: swirls and a few stars, dark on the skin.
     const e = J.elbowR, w = J.wristR;

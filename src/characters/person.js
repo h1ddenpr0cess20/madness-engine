@@ -96,7 +96,7 @@ export function person({
     name,
     scale,
     cell,
-    cells: { head: 0.005, hands: 0.0024, shoes: 0.0042, soles: 0.0032, eyes: 0.0026, irises: 0.0017, pupils: 0.0011, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, outer: 0.0045, outer2: 0.004, straps: 0.003, belt: 0.004, ...cells },
+    cells: { head: 0.005, hands: 0.0024, shoes: 0.0042, soles: 0.0032, eyes: 0.0026, irises: 0.0017, pupils: 0.0011, brows: 0.003, hair: 0.0045, kit: 0.0042, fine: 0.0028, frames: 0.0012, outer: 0.0045, outer2: 0.004, straps: 0.003, belt: 0.0024, ...cells },
     budget,
     bones: skeleton,
     /** Their build, to take a posed point back to where it was sculpted. */

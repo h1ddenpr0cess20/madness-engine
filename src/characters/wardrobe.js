@@ -7,7 +7,7 @@
 
 import { rgb } from '../models/sdf.js';
 import { noise } from '../models/sdf.js';
-import { bag, shell, strap } from './humanoid.js';
+import { bag, onBody, shell, strap } from './humanoid.js';
 import { GLYPHS } from '../models/lettering.js';
 
 const HEAD = { bone: 'head' };
@@ -111,40 +111,83 @@ export function tricorn(s, { color = '#16161c', trim = '#e0b44a' } = {}) {
 
 /**
  * Glasses: round or square rims held in front of the eyes (where the head
- * put them: `s.eyes`), a bridge over the nose, and arms back along the side
- * of the head to rest on the ears. `dark` for shades; `size` the lens's half
- * width.
+ * put them: `s.eyes`), a bridge over the nose, and the arms. Each arm is one
+ * rigid piece with its rim, as a real frame is: hinged on the outside of the
+ * rim, straight back along the side of the head clear of it, over the top of
+ * the ear, and bent down behind it. `dark` for shades; `size` the lens's
+ * half width. On a fine grid of their own (the `frames` part), so the thin
+ * wire comes out solid.
  */
 export function glasses(s, { rim = '#16161a', round = true, dark = false, size = 0.025, lens = '#08080a' } = {}) {
   const eyes = s.eyes ?? [[0.041, 0.668, 0.089], [-0.041, 0.668, 0.089]];
+  const F = { ...HEAD, color: rim, mat: round ? 'metal' : 'plastic', k: 0.0008 };
+  const yaw = 0.16, half = round ? size + 0.0016 : size * 1.15;
   const centres = [];
-  s.part('kit', () => {
+  s.part('frames', () => {
     eyes.forEach((e, i) => {
       const m = i === 0 ? 1 : -1;
       // Clear of the lashes and the brow: a little in front of the eye's front.
       const c = [e[0] + m * 0.002, e[1] + 0.001, e[2] + 0.029];
       centres.push(c);
-      const rot = [Math.PI / 2, m * 0.16, 0];
+      const rot = [Math.PI / 2, m * yaw, 0];
       if (dark) s.cylinder(c, size * 0.96, 0.0016, { ...HEAD, color: lens, mat: 'glass', k: 0.001, rot });
-      if (round) s.torus(c, size, 0.0032, { ...HEAD, color: rim, mat: 'metal', k: 0.001, rot });
+      if (round) s.torus(c, size, 0.0032, { ...F, rot });
       else {
         // A square rim: a frame round a lens-shaped hole.
-        s.box(c, [size * 1.15, size * 0.82, 0.0032], 0.004, { ...HEAD, color: rim, mat: 'plastic', k: 0.001, rot: [0, m * 0.16, 0] });
-        s.box(c, [size * 0.98, size * 0.66, 0.008], 0.003, { op: 'sub', k: 0.001, rot: [0, m * 0.16, 0] });
-        if (dark) s.box(c, [size * 1.0, size * 0.68, 0.0012], 0.003, { ...HEAD, color: lens, mat: 'glass', k: 0.001, rot: [0, m * 0.16, 0] });
+        s.box(c, [size * 1.15, size * 0.82, 0.0032], 0.004, { ...F, rot: [0, m * yaw, 0] });
+        s.box(c, [size * 0.98, size * 0.66, 0.008], 0.003, { op: 'sub', k: 0.001, rot: [0, m * yaw, 0] });
+        if (dark) s.box(c, [size * 1.0, size * 0.68, 0.0012], 0.003, { ...HEAD, color: lens, mat: 'glass', k: 0.001, rot: [0, m * yaw, 0] });
       }
     });
     // The bridge, arched over the nose.
     const [L, R] = centres, y = (L[1] + R[1]) / 2 + 0.006, z = (L[2] + R[2]) / 2 + 0.001;
-    s.limb([L[0] - size * 0.92, y - 0.004, z], [0, y, z + 0.002], 0.0026, 0.0026, { ...HEAD, color: rim, mat: 'metal', k: 0.001 });
-    s.limb([0, y, z + 0.002], [R[0] + size * 0.92, y - 0.004, z], 0.0026, 0.0026, { ...HEAD, color: rim, mat: 'metal', k: 0.001 });
+    s.limb([L[0] - size * 0.92, y - 0.004, z], [0, y, z + 0.002], 0.0026, 0.0026, F);
+    s.limb([0, y, z + 0.002], [R[0] + size * 0.92, y - 0.004, z], 0.0026, 0.0026, F);
   });
-  // The arms: from the outside of each rim straight back along the side of the head, over the ear and down
-  // behind it, lying on the hair where there is hair.
+
+  // The arms. Where the head is (skin and ears, not the hair, which they go under), to keep them clear of it.
+  const r = 0.0024, gap = 0.0012;
+  const clearance = (p) => {
+    const { p: q, n } = onBody(s, p, ['head']);
+    return { d: (p[0] - q[0]) * n[0] + (p[1] - q[1]) * n[1] + (p[2] - q[2]) * n[2], q, n };
+  };
+  /** p, or the point just off the head over it if p is in it or too near. */
+  const clear = (p) => {
+    const { d, q, n } = clearance(p);
+    return d >= r + gap ? p : q.map((v, i) => v + n[i] * (r + gap));
+  };
   centres.forEach((c, i) => {
     const m = i === 0 ? 1 : -1;
-    strap(s, [[c[0] + m * size * 1.08, c[1] + 0.003, c[2] - 0.003], [m * 0.1, 0.676, 0.02], [m * 0.1, 0.676, -0.012], [m * 0.094, 0.66, -0.026]],
-      { round: true, thick: 0.004, lift: 0.0018, color: rim, mat: 'metal', over: ['head', 'hair'], bone: 'head' });
+    // The hinge: a lug on the outside of the rim, pointing back.
+    const h0 = [c[0] + m * half * Math.cos(yaw), c[1] + 0.0015, c[2] - half * Math.sin(yaw)];
+    const h1 = [h0[0] + m * 0.0025, h0[1], h0[2] - 0.008];
+    // Where it rests: on the top of the ear, where the ear meets the head, found by coming down on it from above
+    // (ears sit higher or lower from head to head), and then the bend down behind it.
+    let top = [m * 0.105, 0.74, 0.0];
+    for (let y = 0.74; y > 0.66; y -= 0.0015) {
+      top = [m * 0.105, y, 0.0];
+      if (clearance(top).d < r + gap) break;
+    }
+    top = clear(top);
+    const drop = 0.693 - top[1];
+    // Straight from the hinge to there; if the side of the head is in the way, swung out until it clears all along.
+    for (let pass = 0; pass < 8; pass++) {
+      let push = 0;
+      for (let k = 1; k < 10; k++) {
+        const t = k / 10, p = h1.map((v, j) => v + (top[j] - v) * t);
+        push = Math.max(push, (r + gap - clearance(p).d) / t);
+      }
+      if (push <= 1e-4) break;
+      top = [top[0] + m * push, top[1], top[2]];
+    }
+    const back = clear([m * 0.095, 0.684 - drop, -0.019]), tip = clear([m * 0.093, 0.667 - drop, -0.029]);
+    s.part('frames', () => {
+      s.limb(h0, h1, 0.0026, 0.0026, F);
+      s.limb(h1, top, r, r, F);
+      s.limb(top, back, r, r, F);
+      s.limb(back, tip, r, r * 1.1, F);
+      s.sphere(tip, r * 1.25, F);
+    });
   });
 }
 
@@ -290,9 +333,18 @@ export function bandana(s, { color = '#c81c24' } = {}) {
 export function satchel(s, { side = -1, color = '#8a6a3a', strap: strapColor = '#6a4a28', size = [0.045, 0.04, 0.016], width = 0.014, flap = null } = {}) {
   const m = side;
   const trunk = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
-  strap(s, [[m * 0.07, 0.552, 0.0], [m * 0.04, 0.5, 0.072], [-m * 0.03, 0.42, 0.082], [-m * 0.088, 0.35, 0.035], [-m * 0.085, 0.36, -0.04], [-m * 0.02, 0.43, -0.07], [m * 0.06, 0.52, -0.045]],
-    { width, thick: 0.0035, color: strapColor, closed: true, over: ['body', 'top', 'outer', 'bottoms', 'belt'], keep: trunk });
-  return bag(s, [-m * 0.1, 0.305, 0.01], { size, color, flap: flap ?? color, over: ['body', 'top', 'outer', 'bottoms'], keep: (sh) => trunk(sh) || /^thigh/.test(typeof sh.bone === 'string' ? sh.bone : '') , bone: 'hips' });
+  const at = [-m * 0.1, 0.305, 0.01], top = at[1] + size[1];
+  // The strap lies on the body as cloth does, not strung round it point to point: a band across the trunk, from over
+  // the shoulder, down the chest and the back alike, to the top of the bag at the other hip. It is the body there,
+  // cut by a slab the strap's width either side of the line from the shoulder to the bag.
+  const S = [m * 0.072, 0.57], H = [-m * 0.1, top - 0.004];
+  const L = Math.hypot(H[0] - S[0], H[1] - S[1]), nx = -(H[1] - S[1]) / L, ny = (H[0] - S[0]) / L;
+  const across = (p) => Math.abs((p[0] - S[0]) * nx + (p[1] - S[1]) * ny);
+  shell(s, (p) => Math.max(across(p) - width / 2, top - 0.012 - p[1], p[1] - 0.6), {
+    color: strapColor, mat: 'leather', thick: 0.0035, lift: 0.0015, part: 'straps', over: ['body', 'top', 'outer', 'bottoms', 'belt'], keep: trunk,
+    bones: { chest: (p) => 0.42 - p[1], spine: (p) => Math.abs(p[1] - 0.39) - 0.03, hips: (p) => p[1] - 0.36 },
+  });
+  return bag(s, at, { size, color, flap: flap ?? color, over: ['body', 'top', 'outer', 'bottoms'], keep: (sh) => trunk(sh) || /^thigh/.test(typeof sh.bone === 'string' ? sh.bone : ''), bone: 'hips' });
 }
 
 /**

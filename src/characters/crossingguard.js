@@ -1,6 +1,6 @@
 import { letters } from '../models/lettering.js';
 import { rgb } from '../models/sdf.js';
-import { cloth, hold, person, strap } from './person.js';
+import { cloth, hold, person, shell } from './person.js';
 import { glasses } from './wardrobe.js';
 
 /**
@@ -55,10 +55,23 @@ export default person({
       for (const x of [-0.035, 0.0, 0.03]) s.sphere([x, 0.735, 0.092], 0.014, { color: HAIR, mat: 'hair', bone: 'head', k: 0.006, bump: [0.0015, 260] });
     });
     glasses(s, { rim: '#3a3430', round: false, size: 0.023 });
-    // The Sam Browne: a fluorescent belt round the waist, and the sash from the right shoulder down to the left hip; silver bands round them.
-    const reflective = (p) => (Math.abs(((p[1] * 1.0 + p[0] * 0.4) * 60) % 1) < 0.18 ? SILVER : HIVIS);
-    strap(s, [[0, 0.33, 0.1], [0.1, 0.335, 0.05], [0.11, 0.335, -0.04], [0, 0.33, -0.1], [-0.11, 0.335, -0.04], [-0.1, 0.335, 0.05]], { width: 0.03, thick: 0.005, color: reflective, mat: 'plastic', part: 'straps', closed: true });
-    strap(s, [[-0.08, 0.535, 0.02], [-0.05, 0.5, 0.1], [0.04, 0.42, 0.11], [0.1, 0.35, 0.06], [0.11, 0.34, -0.02], [0.05, 0.42, -0.1], [-0.05, 0.51, -0.08], [-0.08, 0.535, 0.02]], { width: 0.03, thick: 0.005, color: reflective, mat: 'plastic', part: 'straps' });
+    // The Sam Browne, lying on the body as cloth does rather than strung round it: a fluorescent belt over the trouser belt,
+    // and the sash from the right shoulder, over it and down across the chest and the back, to the left hip. A silver
+    // reflective stripe runs down the middle of each, the way the real ones have it.
+    const trunk = (sh) => !/^(arm|fore|hand|head|neck|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
+    const BELT_Y = 0.352;
+    // Colours are asked for as built; the stripes are drawn where they were sculpted, as the bands are.
+    const w = s.warp, sculpted = (p) => (w ? w.from(p) : p);
+    shell(s, (p) => Math.abs(p[1] - BELT_Y) - 0.016, {
+      color: (p) => (Math.abs(sculpted(p)[1] - BELT_Y) < 0.0045 ? SILVER : HIVIS), mat: 'plastic', thick: 0.004, lift: 0.0015, part: 'outer', keep: trunk, bone: 'hips',
+    });
+    const S = [-0.075, 0.565], H = [0.095, BELT_Y - 0.004];
+    const L = Math.hypot(H[0] - S[0], H[1] - S[1]), nx = -(H[1] - S[1]) / L, ny = (H[0] - S[0]) / L;
+    const across = (p) => Math.abs((p[0] - S[0]) * nx + (p[1] - S[1]) * ny);
+    shell(s, (p) => Math.max(across(p) - 0.015, BELT_Y - 0.012 - p[1], p[1] - 0.6), {
+      color: (p) => (across(sculpted(p)) < 0.0045 ? SILVER : HIVIS), mat: 'plastic', thick: 0.004, lift: 0.0015, part: 'outer2', keep: trunk,
+      bones: { chest: (p) => 0.42 - p[1], spine: (p) => Math.abs(p[1] - 0.39) - 0.03, hips: (p) => p[1] - 0.36 },
+    });
 
     // The STOP paddle: up from the fist on its pole, an octagon of red with a white rim and STOP across it, both faces.
     const G = pose.grip('R');

@@ -1,4 +1,4 @@
-import { cloth, hold, person, plate } from './person.js';
+import { bodyField, cloth, hold, person, plate } from './person.js';
 import { cap, glasses, moustache } from './wardrobe.js';
 
 /**
@@ -46,9 +46,17 @@ export default person({
     cap(s, { color: TWEED, peak: '#5a4a36', flat: true });
     glasses(s, { rim: '#8a7a5a', round: true, size: 0.024 });
     moustache(s, { color: '#e8e8e4', wide: 1.1, droop: 0.3 });
-    // The cardigan's buttons down the front, and the checked collar of the shirt at the neck.
+    // The cardigan's buttons down the front, each set on the cardigan where it is (it stands out over the belly).
     s.part('kit', () => {
-      for (let i = 0; i < 5; i++) s.sphere([0, 0.53 - i * 0.045, 0.098 - Math.abs(i - 2) * 0.004 + (i === 4 ? 0.006 : 0)], 0.006, { color: '#2a1a10', mat: 'plastic', bone: i < 2 ? 'chest' : 'spine', k: 0.001 });
+      // Straight in from in front of him onto the cardigan at each button's height, so they keep their spacing.
+      const field = bodyField(s), w = s.warp;
+      for (let i = 0; i < 4; i++) {
+        const y = 0.495 - i * 0.038, from = w ? w.to([0, y, 0.3]) : [0, y, 0.3];
+        const hit = field.cast(from, [0, 0, -1], 0.4);
+        if (!hit) continue;
+        const p = w ? w.from(hit.p) : hit.p;
+        s.sphere([p[0], p[1], p[2] + 0.003], 0.006, { color: '#2a1a10', mat: 'plastic', bone: i < 2 ? 'chest' : 'spine', k: 0.001 });
+      }
     });
     s.paint((p) => Math.max(Math.abs(p[1] - 0.57) - 0.012, 0.04 - Math.abs(p[2] - 0.06)), (p) => ((((p[0] * 90) % 1) + 1) % 1 < 0.5 !== ((((p[1] * 90) % 1) + 1) % 1 < 0.5) ? [0.7, 0.2, 0.18] : [0.9, 0.86, 0.8]), 0.002);
 
@@ -62,17 +70,23 @@ export default person({
       s.limb(R.at(0.035), R.at(0.52), 0.0062, 0.0055, W);
       s.limb(R.at(0.51), R.at(0.545), 0.0072, 0.0072, { color: '#1a1a1a', mat: 'rubber', k: 0.001 });
     }));
-    // The bag of shopping in the crook of the left arm: brown paper, folded over at the top, a loaf and celery up out of it.
+    // The bag of shopping in the crook of the left arm: brown paper, folded over at the top, a loaf and celery up out of
+    // it. Hugged to the chest: upright behind the raised forearm, the hand over its top edge, its top up (not toward
+    // the wrist, whichever way the hand is turned).
     const L = pose.grip('L');
     pose.hold(s, 'handL', () => s.part('kit', () => {
-      const up = L.up, c = L.at(0, 0.06, -0.035);
-      plate(s, c, L.along, up, [0.05, 0.075, 0.035], 0.004, { color: (p) => (Math.abs(((p[1] * 140) % 1)) < 0.08 ? [0.6, 0.45, 0.3] : [0.78, 0.62, 0.42]), mat: 'paper', k: 0.002 });
-      const top = c.map((v, i) => v + up[i] * 0.075);
-      s.limb(top.map((v, i) => v - L.along[i] * 0.02), top.map((v, i) => v - L.along[i] * 0.03 + up[i] * 0.08), 0.016, 0.014, { color: '#d8a050', mat: 'skin', k: 0.004, bump: [0.0012, 160] });
+      const W = [1, 0, 0], Y = [0, 1, 0], D = [0, 0, 1];
+      const c = L.c.map((v, i) => v - Y[i] * 0.052 - D[i] * 0.042);
+      const at = (w, y, d) => c.map((v, i) => v + W[i] * w + Y[i] * y + D[i] * d);
+      plate(s, c, W, Y, [0.05, 0.07, 0.035], 0.004, { color: (p) => (Math.abs(((p[1] * 140) % 1)) < 0.08 ? [0.6, 0.45, 0.3] : [0.78, 0.62, 0.42]), mat: 'paper', k: 0.002 });
+      // The fold at the top, a band of doubled paper.
+      plate(s, at(0, 0.064, 0), W, Y, [0.0515, 0.008, 0.0365], 0.002, { color: [0.7, 0.54, 0.36], mat: 'paper', k: 0.001 });
+      // The loaf, leaning out of one end; the celery out of the other, its leaves on top.
+      s.limb(at(-0.025, 0.04, 0.005), at(-0.04, 0.15, 0.0), 0.016, 0.014, { color: '#d8a050', mat: 'skin', k: 0.004, bump: [0.0012, 160] });
       for (let i = 0; i < 4; i++) {
-        const b = top.map((v, j) => v + L.along[j] * (0.012 + i * 0.006) + L.out[j] * (i % 2 ? 0.006 : -0.006));
-        s.limb(b, b.map((v, j) => v + up[j] * 0.09 + L.along[j] * 0.01), 0.0045, 0.004, { color: '#9ac85a', mat: 'skin', k: 0.002 });
-        s.sphere(b.map((v, j) => v + up[j] * 0.095 + L.along[j] * 0.01), 0.011, { color: '#6aa840', mat: 'cloth', k: 0.004, bump: [0.002, 200] });
+        const b0 = at(0.012 + i * 0.006, 0.05, i % 2 ? 0.006 : -0.006), b1 = at(0.02 + i * 0.006, 0.15, i % 2 ? 0.008 : -0.008);
+        s.limb(b0, b1, 0.0045, 0.004, { color: '#9ac85a', mat: 'skin', k: 0.002 });
+        s.sphere(at(0.02 + i * 0.006, 0.155, i % 2 ? 0.008 : -0.008), 0.011, { color: '#6aa840', mat: 'cloth', k: 0.004, bump: [0.002, 200] });
       }
     }));
   },

@@ -77,11 +77,20 @@ export default person({
       }
       s.limb(at(-0.05, bottom - 0.005, 0.03), at(-0.07, top - 0.16, 0.035), 0.012, 0.011, { color: '#d8a050', mat: 'skin', k: 0.003, bump: [0.0012, 160] });
     }));
-    // The list in the right hand.
+    // The list in the right hand, pinched at its foot between the thumb and the side of the fist and standing up out
+    // of it, ruled and ticked: none of it through the fingers.
     const R = pose.grip('R');
     pose.hold(s, 'handR', () => s.part('kit', () => {
-      const c = R.at(0, 0.03, -0.006);
-      plate(s, c, R.along, R.up, [0.034, 0.048, 0.003], 0.0015, { color: (p) => ((((p[1] * 170) % 1) + 1) % 1 < 0.15 ? [0.25, 0.3, 0.6] : [0.97, 0.96, 0.92]), mat: 'paper', k: 0.0005 });
+      const [h, w] = [0.026, 0.019];
+      const c = R.at(0.01 + h, 0, 0.002);
+      plate(s, c, R.along, R.up, [h, w, 0.0012], 0.0008, {
+        color: (p) => {
+          const v = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
+          const y = v[0] * R.along[0] + v[1] * R.along[1] + v[2] * R.along[2];
+          const line = (((y * 150) % 1) + 1) % 1 < 0.14 && y < h - 0.008 && y > -h + 0.004;
+          return line ? [0.3, 0.36, 0.7] : [0.97, 0.96, 0.92];
+        }, mat: 'paper', k: 0.0004,
+      });
     }));
   },
 });

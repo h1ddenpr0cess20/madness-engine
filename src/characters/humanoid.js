@@ -1158,7 +1158,7 @@ export function grip(s, J, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'b
  * The thin pieces of what is worn (a brim, a peak, a sheet of paper),
  * meshed on the finer grid of the `fine` part, so they don't tear.
  */
-export function thin(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'brows'] } = {}) {
+export function thin(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'brows', 'frames'] } = {}) {
   const moved = [];
   for (const x of s.shapes) {
     if (isCore(x.part, core) || skip.includes(x.part)) continue;
@@ -1186,7 +1186,7 @@ export function thin(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'brow
  * is held out from the body (further than `reach`) stays where it is, and so
  * does a veil, which stands off the face.
  */
-export function fit(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'brows', 'veil'], reach = 0.035 } = {}) {
+export function fit(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'brows', 'veil', 'frames'], reach = 0.035 } = {}) {
   const body = new Sculpt();
   body.shapes = s.shapes.filter((x) => isCore(x.part, core));
   const [lo, hi] = body.bounds(0.06);
@@ -1277,7 +1277,7 @@ export function fit(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'brows
  * underside is cut away, so it can show below a brim but never come up
  * through one, or through a crown.
  */
-export function cover(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'brows', 'hair'], step = 0.003 } = {}) {
+export function cover(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'brows', 'hair', 'frames'], step = 0.003 } = {}) {
   if (!s.shapes.some((x) => x.part === 'hair' && x.op === 'add')) return;
   const skull = s.shapes.filter((x) => x.part === 'head' && x.op === 'add' && x.bone === 'head');
   const wide = Math.max(...skull.map((x) => x.box[1][0] - x.box[0][0]), 0);
