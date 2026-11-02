@@ -1,5 +1,6 @@
 import { bands } from '../models/skins.js';
-import { cloth, hold, person } from './person.js';
+import { cloth, hold, person, shell } from './person.js';
+import { suitFront } from './wardrobe.js';
 
 /**
  * The Matador: in the traje de luces, the suit of lights, a short jacket
@@ -25,7 +26,7 @@ export default person({
   b: 0.98,
   shape: { legs: 1.08, girth: 0.88, hips: 0.88 },
   skin: '#e0a880',
-  look: { torso: JACKET, sleeve: JACKET, cuff: JACKET, legs: BREECHES, boot: '#0a0a0c', sole: '#060608' },
+  look: { torso: JACKET, sleeve: JACKET, cuff: JACKET, legs: BREECHES, shin: cloth('#f2a8bc', '#d88aa0'), shorts: 0.82, boot: '#0a0a0c', sole: '#060608' },
   mats: { boot: 'leather' },
   face: { eyeColor: '#2a1a0a', brow: '#14100a', mood: 1, jaw: 0.98 },
   hair: { color: cloth('#14100a', '#0a0806'), cap: [0.104, 0.08, 0.104] },
@@ -43,31 +44,35 @@ export default person({
       k.turn('head', -0.15, pass * 0.2, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
+    // The white shirt and the thin black tie in the V of the jacket.
+    suitFront(s, { shirt: '#f6f4f0', tie: '#0a0a0c', low: 0.42 });
     s.part('kit', () => {
       // The montera: black, two lobes over the ears, the bobbles.
       for (const m of [1, -1]) s.ellipsoid([m * 0.05, 0.765, -0.01], [0.07, 0.05, 0.085], { color: '#121214', mat: 'cloth', bone: 'head', k: 0.02, bump: [0.002, 120] });
       s.ellipsoid([0, 0.79, -0.01], [0.06, 0.035, 0.08], { color: '#121214', mat: 'cloth', bone: 'head', k: 0.02 });
       // The pigtail, pinned on behind.
       s.sphere([0, 0.66, -0.105], 0.022, { color: '#14100a', mat: 'hair', bone: 'head', k: 0.006 });
-      // The epaulettes, gold, and the tassels down off them.
-      for (const m of [1, -1]) {
-        s.ellipsoid([m * 0.1, 0.515, 0.0], [0.045, 0.018, 0.04], { ...GOLDEN, bone: `arm${m > 0 ? 'L' : 'R'}`, k: 0.006 });
-        for (let i = 0; i < 4; i++) s.limb([m * 0.12, 0.505, -0.02 + i * 0.013], [m * 0.13, 0.475, -0.02 + i * 0.013], 0.004, 0.003, { ...GOLDEN, bone: `arm${m > 0 ? 'L' : 'R'}`, k: 0 });
-      }
-      // A thin black tie, the white shirt under the jacket.
-      s.box([0, 0.47, 0.068], [0.026, 0.06, 0.012], 0.006, { color: '#f6f4f0', mat: 'cloth', bone: 'chest', k: 0.004 });
-      s.limb([0, 0.52, 0.078], [0, 0.42, 0.084], 0.006, 0.006, { color: '#0a0a0c', mat: 'cloth', bone: 'chest', k: 0.002 });
-      // Pink stockings below the knee.
-      for (const m of [1, -1]) {
-        const S = m > 0 ? 'L' : 'R';
-        s.limb([J[`knee${S}`][0], 0.16, 0.006], [J[`ankle${S}`][0], 0.06, 0], 0.035, 0.03, { color: '#f0a8b8', mat: 'cloth', bone: `shin${S}`, k: 0.008 });
-      }
-      // The muleta: the stick out from the hand, the red cloth hanging from it.
-      const h = J.handR;
-      s.limb([h[0], h[1], h[2] - 0.02], [h[0], h[1], h[2] + 0.3], 0.005, 0.005, { color: '#8a5a2a', mat: 'leather', bone: 'handR', k: 0.001 });
-      s.panel([h[0], h[1] - 0.005, h[2] + 0.0], [h[0], h[1] - 0.005, h[2] + 0.3], [h[0] - 0.01, h[1] - 0.24, h[2] + 0.2], 0.008, { color: '#c8141e', mat: 'cloth', bone: 'handR', k: 0.006 });
-      s.panel([h[0], h[1] - 0.005, h[2] + 0.0], [h[0] - 0.01, h[1] - 0.24, h[2] + 0.2], [h[0] - 0.005, h[1] - 0.2, h[2] - 0.02], 0.008, { color: '#c8141e', mat: 'cloth', bone: 'handR', k: 0.006 });
     });
+    // The epaulettes: gold, stiff over the points of the shoulders, their fringe hanging off the outer edge.
+    for (const m of [1, -1]) {
+      const S = m > 0 ? 'L' : 'R', sh = J[`shoulder${S}`];
+      shell(s, (p) => Math.max(Math.hypot((p[0] - sh[0]) * 0.9, p[2] * 0.8) - 0.042, sh[1] - 0.005 - p[1]), { ...GOLDEN, part: 'outer', thick: 0.008, lift: 0.002, over: ['top', 'sleeves'], bone: `arm${S}`, k: 0.003 });
+      s.part('kit', () => {
+        for (let i = 0; i < 6; i++) {
+          const z = -0.03 + i * 0.012;
+          s.limb([sh[0] + m * 0.035, sh[1] + 0.012, z], [sh[0] + m * 0.042, sh[1] - 0.03, z], 0.0032, 0.0028, { ...GOLDEN, bone: `arm${S}`, k: 0.0008 });
+        }
+      });
+    }
+    // The muleta: the stick out from the fist, the red cloth hanging from it.
+    const G = pose.grip('R'), down = [0, -1, 0];
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      const a = G.at(0.02), b = G.at(0.32);
+      s.part('fine', () => s.limb(G.at(-0.03), b, 0.005, 0.005, { color: '#8a5a2a', mat: 'leather', k: 0.001 }));
+      const a2 = a.map((v, i) => v + down[i] * 0.24), b2 = b.map((v, i) => v + down[i] * 0.3);
+      s.panel(a, b, b2, 0.007, { color: '#c8141e', mat: 'cloth', k: 0.004 });
+      s.panel(a, b2, a2, 0.007, { color: '#c8141e', mat: 'cloth', k: 0.004 });
+    }));
   },
 });

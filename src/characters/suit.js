@@ -1,4 +1,5 @@
-import { cloth, person } from './person.metroll.js';
+import { cloth, cord, hold, person, plate } from './person.js';
+import { suitFront } from './wardrobe.js';
 
 /**
  * The A&R Suit: a sharp navy suit, a red tie, slicked hair, a phone at his
@@ -21,25 +22,29 @@ export default person({
   hair: { color: cloth('#1a1208', '#0a0804'), locks: [[[0, 0.785, 0.05], [0, 0.8, 0.12], 0.04], [[0.05, 0.77, 0.0], [0.09, 0.72, -0.03], 0.03], [[-0.05, 0.77, 0.0], [-0.09, 0.72, -0.03], 0.03]], cap: [0.108, 0.1, 0.108] },
   style: {
     attack: 'smite', twist: 0,
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, reach }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
-      // The phone hand up to the ear, talking.
-      k.turn('armR', -2.0, 0, -0.45);
-      k.turn('foreR', -2.0, 0, 0);
+      // The phone to his ear, talking; the briefcase in the other hand.
+      hold(k, 'armR', -1.0, 0, -0.5); hold(k, 'foreR', -2.0, 0, 0);
+      reach?.(k, 'R', 'head', [-0.122, 0.655, 0.03]);
+      hold(k, 'armL', 0.05, 0, 0.1); hold(k, 'foreL', -0.1, 0, 0);
       k.turn('head', 0, -0.2 + Math.sin(T * 3) * 0.05, 0.12);
     },
   },
-  extras(s, J) {
-    s.part('kit', () => {
-      // White shirt and a red tie in the V.
-      s.box([0, 0.47, 0.066], [0.028, 0.07, 0.014], 0.006, { color: '#f2f0ec', mat: 'cloth', bone: 'chest', k: 0.004 });
-      s.limb([0, 0.5, 0.082], [0, 0.4, 0.088], 0.011, 0.017, { color: '#d9232f', mat: 'cloth', bone: 'chest', k: 0.003 });
-      // A phone at the ear, and a briefcase in the left hand.
-      const r = J.handR, l = J.handL;
-      s.box([r[0], r[1] + 0.03, r[2]], [0.014, 0.036, 0.008], 0.004, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.002 });
-      s.box([l[0], l[1] - 0.09, l[2] + 0.02], [0.07, 0.05, 0.02], 0.008, { color: '#3a2a1a', mat: 'leather', bone: 'handL', k: 0.004 });
-      s.torus([l[0], l[1] - 0.04, l[2] + 0.02], 0.03, 0.005, { color: '#d6d9e0', mat: 'metal', bone: 'handL', k: 0.002, rot: [0, Math.PI / 2, 0] });
-    });
+  extras(s, J, { pose }) {
+    suitFront(s, { shirt: '#f2f0ec', tie: '#d9232f', lapel: cloth('#16244e', '#0c1430'), belly: 0.5, b: 1.08 });
+    // The phone at his ear, in the fist.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => plate(s, G.at(0.012, 0, -0.022), G.along, G.up, [0.045, 0.022, 0.0045], 0.004, { color: '#101014', mat: 'plastic', k: 0.002 })));
+    // The briefcase hanging from the left fist by its handle: brown leather, brass catches.
+    const L = pose.grip('L'), c = L.c.map((v, i) => v + [0, -0.08, 0][i]);
+    const X = [0, 0, 1], Y = [0, 1, 0], Z = [1, 0, 0], pt = (x, y, z) => c.map((v, i) => v + X[i] * x + Y[i] * y + Z[i] * z);
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      plate(s, c, X, Y, [0.075, 0.052, 0.018], 0.006, { color: '#4a2e18', mat: 'leather', k: 0.003 });
+      plate(s, pt(0, 0.012, 0), X, Y, [0.0755, 0.0015, 0.0185], 0.001, { color: '#2e1c0e', mat: 'leather', k: 0.001 });
+      for (const x of [-0.05, 0.05]) plate(s, pt(x, 0.03, 0), X, Y, [0.008, 0.006, 0.0195], 0.002, { color: '#d8b850', mat: 'metal', k: 0.001 });
+      cord(s, [pt(-0.022, 0.05, 0), pt(-0.016, 0.068, 0), L.c, pt(0.016, 0.068, 0), pt(0.022, 0.05, 0)], 0.0045, { color: '#2e1c0e', mat: 'leather' });
+    }));
   },
 });

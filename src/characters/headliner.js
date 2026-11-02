@@ -1,5 +1,6 @@
 import { bands } from '../models/skins.js';
-import { cloth, person } from './person.rocknroller.js';
+import { buttons, cloth, cuffBand, person, shell } from './person.js';
+import { guitar } from './metalwear.js';
 
 /**
  * The Headliner: a giant of a rock god, broad as a door at the shoulders
@@ -13,7 +14,6 @@ import { cloth, person } from './person.rocknroller.js';
 const leather = cloth('#1c1a20', '#08080a');
 const spandex = bands(1, 0.05, '#d81c34', '#140a10', 0.5, 0.2);
 const HAIR = { color: cloth('#f6dc78', '#c09a38'), mat: 'hair', bone: 'head' };
-const V = { color: '#e8e4ec', mat: 'plastic', bone: 'chest' };
 
 export default person({
   name: 'headliner',
@@ -41,7 +41,7 @@ export default person({
       k.turn('chest', 0, Math.sin(T * 0.7) * 0.1, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     s.part('hair', () => {
       // The mane: a crown teased up, and great hanks down over the shoulders and back.
       s.ellipsoid([0, 0.73, -0.02], [0.13, 0.11, 0.13], { ...HAIR, k: 0.03 });
@@ -54,43 +54,29 @@ export default person({
       // Off the face.
       s.box([0, 0.63, 0.16], [0.11, 0.08, 0.06], 0.03, { op: 'sub', k: 0.02 });
     });
-    s.part('kit', () => {
-      // An open leather vest, studs along its edges, and a studded belt.
-      for (const m of [1, -1]) {
-        s.ellipsoid([m * 0.075, 0.468, 0.006], [0.04, 0.075, 0.072], { color: leather, mat: 'leather', bone: 'chest', k: 0.012 });
-        for (let i = 0; i < 4; i++) s.sphere([m * (0.045 + i * 0.003), 0.52 - i * 0.03, 0.07], 0.006, { color: '#e8e8f0', mat: 'metal', bone: 'chest', k: 0.001 });
-      }
-      for (let i = 0; i < 10; i++) {
-        const a = (i / 10) * Math.PI * 2;
-        s.sphere([Math.sin(a) * 0.087 * 1.75 * 0.85, 0.338, Math.cos(a) * 0.08], 0.006, { color: '#e8e8f0', mat: 'metal', bone: 'hips', k: 0.001 });
-      }
-      // Star shades.
-      for (const m of [1, -1]) {
-        const c = [m * 0.042, 0.666, 0.104];
+    // An open leather vest, studs along its edges; studs round the belt.
+    shell(s, (p) => Math.max(0.33 - p[1], p[1] - 0.548, Math.min(0.034 + (p[1] - 0.33) * 0.2 - Math.abs(p[0]), p[2] - 0.02), -Math.hypot(Math.abs(p[0]) - 0.112, (p[1] - 0.49) * 0.8) + 0.044), {
+      color: leather, mat: 'leather', part: 'top', thick: 0.006, lift: 0.0015, over: ['body', 'belt'], keep: (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]), bones: { spine: (p) => p[1] - 0.445, chest: (p) => 0.425 - p[1] },
+    });
+    const edge = [];
+    for (let i = 0; i < 5; i++) for (const m of [1, -1]) edge.push([m * (0.05 + i * 0.006), 0.53 - i * 0.035, 0.08]);
+    buttons(s, edge, { r: 0.0055, color: '#e8e8f0', over: ['top'] });
+    const studs = [];
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; if (Math.cos(a) > 0.93) continue; studs.push([Math.sin(a) * 0.1, 0.352, Math.cos(a) * 0.09]); }
+    buttons(s, studs, { r: 0.0048, color: '#e8e8f0', over: ['belt'] });
+    // Star shades: a pink star round each eye, in front of it.
+    for (const e of s.eyes ?? []) {
+      const c = [e[0], e[1] + 0.002, e[2] + 0.03];
+      s.part('kit', () => {
         for (let i = 0; i < 5; i++) {
           const a = (i / 5) * Math.PI * 2;
-          s.limb(c, [c[0] + Math.sin(a) * 0.03, c[1] + Math.cos(a) * 0.03, c[2]], 0.009, 0.002, { color: '#ff2d95', mat: 'glass', bone: 'head', k: 0.004 });
+          s.limb(c, [c[0] + Math.sin(a) * 0.03, c[1] + Math.cos(a) * 0.03, c[2] - 0.004], 0.009, 0.002, { color: '#ff2d95', mat: 'glass', bone: 'head', k: 0.004 });
         }
-      }
-      // Wristbands.
-      for (const S of ['L', 'R']) {
-        const w = J[`wrist${S}`];
-        s.cylinder(w, 0.026, 0.016, { color: '#101014', mat: 'leather', bone: `fore${S}`, k: 0.003, round: 0.004 });
-      }
-      // The flying V, slung low across him: the body at his right hip, the neck up to his left hand, the two
-      // wings swept back from the neck in a white finish with a red bolt, and a pointed headstock.
-      const j = [-0.04, 0.34, 0.135], head = [0.3, 0.5, 0.15];
-      const d = [head[0] - j[0], head[1] - j[1]], L = Math.hypot(d[0], d[1]), back = Math.atan2(-d[1], -d[0]);
-      for (const m of [1, -1]) {
-        const a = back + m * 0.42;
-        const tip = [j[0] + Math.cos(a) * 0.24, j[1] + Math.sin(a) * 0.24, j[2]];
-        s.flake(j, tip, [0, 0, 1], 0.045, 0.028, 0.32, { ...V, k: 0.006 });
-        s.limb([tip[0] - Math.cos(back) * 0.0, tip[1], j[2] + 0.012], [j[0] + Math.cos(a) * 0.06, j[1] + Math.sin(a) * 0.06, j[2] + 0.012], 0.006, 0.006, { color: '#e01c34', mat: 'plastic', bone: 'chest', k: 0.002 });
-      }
-      s.limb(j, head, 0.016, 0.013, { color: '#3a2412', mat: 'leather', bone: 'chest', k: 0.004 });
-      s.flake(head, [head[0] + (d[0] / L) * 0.08, head[1] + (d[1] / L) * 0.08 + 0.01, head[2]], [0, 0, 1], 0.024, 0.012, 0.35, { color: '#101014', mat: 'plastic', bone: 'chest', k: 0.004 });
-      // The strap across the chest.
-      s.limb([0.12, 0.54, -0.02], [-0.1, 0.32, 0.11], 0.01, 0.01, { color: '#c81c34', mat: 'leather', bone: 'chest', k: 0.004 });
-    });
+      });
+    }
+    // Wristbands round both wrists.
+    for (const S of ['L', 'R']) cuffBand(s, J[`elbow${S}`], J[`wrist${S}`], 0.82, { width: 0.03, thick: 0.006, color: '#101014', bone: `fore${S}` });
+    // The flying V, white with a red finish, its neck up to his left hand.
+    guitar(s, { body: '#e8e4ec', style: 'v', neck: '#3a2412', pose });
   },
 });

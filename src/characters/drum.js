@@ -16,8 +16,9 @@ export default {
   budget: 18000,
   bones: [
     ['root', null, [0, 0, 0]],
-    ['stickL', 'root', [0.1, 0.24, 0]],
-    ['stickR', 'root', [-0.1, 0.24, 0]],
+    // Each stick turns about its butt, held up over the drum by hands nobody sees.
+    ['stickL', 'root', [0.09, 0.5, -0.14]],
+    ['stickR', 'root', [-0.09, 0.5, -0.14]],
   ],
   materials: {
     shell: { roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.05 },
@@ -35,9 +36,11 @@ export default {
         const a = (i / 8) * Math.PI * 2;
         s.box([Math.cos(a) * 0.246, 0.15, Math.sin(a) * 0.246], [0.012, 0.09, 0.012], 0.004, { color: '#d6d9e0', mat: 'chrome', k: 0.002 });
       }
+      // The sticks: from the butt, up over the back of the drum, down to a bead at the tip that rests on the head.
       for (const m of [1, -1]) {
-        s.limb([m * 0.1, 0.27, 0], [m * 0.1, 0.52, 0.08], 0.012, 0.016, { color: '#d9b080', mat: 'wood', bone: m > 0 ? 'stickL' : 'stickR', k: 0.002 });
-        s.sphere([m * 0.1, 0.52, 0.08], 0.021, { color: '#e8d4b0', mat: 'wood', bone: m > 0 ? 'stickL' : 'stickR', k: 0.002 });
+        const bone = m > 0 ? 'stickL' : 'stickR';
+        s.limb([m * 0.09, 0.5, -0.14], [m * 0.065, 0.318, 0.07], 0.0125, 0.0085, { color: '#d9b080', mat: 'wood', bone, k: 0.002 });
+        s.ellipsoid([m * 0.064, 0.31, 0.078], [0.011, 0.009, 0.013], { color: '#e8d4b0', mat: 'wood', bone, k: 0.002 });
       }
     });
   },
@@ -46,9 +49,11 @@ export default {
     const hop = clip === 'walk' ? Math.abs(Math.sin(T * 8)) * 0.07 : Math.abs(Math.sin(T * 3)) * 0.015;
     k.move('root', 0, hop, 0);
     k.turn('root', Math.sin(T * 8) * 0.06, 0, Math.cos(T * 6) * 0.06);
+    // The sticks lift and come down on the head in turn, the tips striking it and bouncing up again.
     const rate = clip === 'attack' ? 22 : 12;
-    k.turn('stickL', Math.sin(T * rate) * 0.8, 0, 0);
-    k.turn('stickR', -Math.sin(T * rate) * 0.8, 0, 0);
+    const lift = (ph) => -Math.pow(Math.max(0, Math.sin(T * rate + ph)), 0.7) * 0.75;
+    k.turn('stickL', lift(0), 0, 0);
+    k.turn('stickR', lift(Math.PI), 0, 0);
     if (clip === 'ko') k.turn('root', 0, 0, 1.3);
   },
 };

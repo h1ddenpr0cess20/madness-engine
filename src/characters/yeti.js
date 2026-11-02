@@ -1,5 +1,5 @@
 import { bands, pelt } from '../models/skins.js';
-import { hold, person } from './person.metroll.js';
+import { hold, person, shell, strap } from './person.js';
 
 /**
  * The Yeti: on holiday from the Himalaya and found its way up the Alps, a
@@ -13,7 +13,6 @@ import { hold, person } from './person.metroll.js';
 const FUR = pelt({ over: '#f2f2f6', under: '#c8ccd8', vary: 0.12, freq: 10, strands: 0.3, sfreq: 120, flow: 1 });
 const BARE = '#7a8aa8';
 const SCARF = bands(0, 0.04, '#d8141e', '#f4f2ec', 0.5, 0.2);
-const TUFT = { color: FUR, mat: 'hair' };
 
 export default person({
   name: 'yeti',
@@ -41,33 +40,20 @@ export default person({
       k.turn('head', -0.2 * beat, Math.sin(T * 0.4) * 0.3, 0);
     },
   },
-  extras(s, J) {
-    // Shaggy: tufts off the shoulders, the elbows, the backs of the legs; a ruff round the face.
+  extras(s, J, { pose }) {
+    // The big flat bare feet; two fangs down over the lip.
     s.part('kit', () => {
-      for (const m of [1, -1]) {
-        const S = m > 0 ? 'L' : 'R';
-        s.flake([m * 0.1, 0.52, 0], [m * 0.17, 0.44, -0.02], [m, 1, 0], 0.035, 0.02, 0.4, { ...TUFT, bone: `arm${S}`, k: 0.01 });
-        s.flake(J[`elbow${S}`], [J[`elbow${S}`][0] + m * 0.03, J[`elbow${S}`][1] - 0.07, -0.04], [m, 0, -1], 0.025, 0.012, 0.4, { ...TUFT, bone: `fore${S}`, k: 0.008 });
-        s.flake([m * 0.06, 0.25, -0.03], [m * 0.07, 0.14, -0.06], [0, 0, -1], 0.03, 0.015, 0.4, { ...TUFT, bone: `thigh${S}`, k: 0.008 });
-        // The big flat feet.
+      for (const S of ['L', 'R']) {
         const a = J[`ankle${S}`];
         s.ellipsoid([a[0], 0.025, a[2] + 0.05], [0.05, 0.028, 0.085], { color: BARE, mat: 'skin', bone: `foot${S}`, k: 0.02 });
       }
-      for (let i = 0; i < 9; i++) {
-        const a = -1.5 + (i / 8) * 3.0;
-        s.flake([Math.sin(a) * 0.09, 0.67 + Math.cos(a) * 0.03, 0.05 + Math.cos(a) * 0.04], [Math.sin(a) * 0.13, 0.62 + Math.cos(a) * 0.02, 0.04], [Math.sin(a), 0, Math.cos(a)], 0.025, 0.012, 0.4, { ...TUFT, bone: 'head', k: 0.01 });
-      }
-      // Two fangs down over the lip.
       for (const m of [1, -1]) s.cone([m * 0.022, 0.6, 0.1], 0.008, 0.026, { color: '#f8f4e8', mat: 'plastic', bone: 'head', k: 0.002, rot: [Math.PI, 0, 0] });
-      // The scarf off a skier, round and round, an end hanging.
-      s.torus([0, 0.53, 0.0], 0.075, 0.03, { color: SCARF, mat: 'cloth', bone: 'chest', k: 0.008 });
-      s.flake([0.04, 0.52, 0.08], [0.06, 0.36, 0.1], [0, 0, 1], 0.03, 0.03, 0.25, { color: SCARF, mat: 'cloth', bone: 'chest', k: 0.004 });
-      // Half a ski pole, bent, in the right fist.
-      const h = J.handR;
-      s.limb([h[0], h[1] + 0.05, h[2] + 0.01], [h[0], h[1] - 0.12, h[2] + 0.03], 0.006, 0.006, { color: '#c8ccd4', mat: 'metal', bone: 'handR', k: 0.001 });
-      s.limb([h[0], h[1] - 0.12, h[2] + 0.03], [h[0] + 0.04, h[1] - 0.2, h[2] + 0.05], 0.006, 0.006, { color: '#c8ccd4', mat: 'metal', bone: 'handR', k: 0.001 });
     });
+    // The scarf off a skier, wound round its neck, an end hanging down the front.
+    strap(s, [[0, 0.545, 0.075], [0.055, 0.548, 0.045], [0.07, 0.552, -0.01], [0.045, 0.555, -0.065], [0, 0.556, -0.075], [-0.045, 0.555, -0.065], [-0.07, 0.552, -0.01], [-0.055, 0.548, 0.045], [0, 0.545, 0.075]], { width: 0.034, thick: 0.016, color: SCARF, mat: 'cloth', over: ['top', 'head', 'hair'], part: 'outer2', bone: 'chest', closed: true });
+    shell(s, (p) => Math.max(Math.abs(p[0] - 0.045) - 0.019, p[1] - 0.535, 0.37 - p[1], 0.03 - p[2]), { color: SCARF, mat: 'cloth', part: 'outer', thick: 0.007, lift: 0.003, over: ['top'], bone: 'chest', k: 0.003 });
+    // A snowball in the right fist, packed hard, ready.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => s.sphere(G.at(0.01, -0.012, -0.022), 0.036, { color: '#f4f8ff', mat: 'cloth', k: 0.004, bump: [0.002, 90] })));
   },
-  cells: { kit: 0.005 },
-  budget: 52800,
 });

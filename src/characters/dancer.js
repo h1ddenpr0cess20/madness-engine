@@ -1,4 +1,4 @@
-import { cloth, person } from './person.js';
+import { buttons, cloth, hang, onBody, person, shell } from './person.js';
 import { suitFront, topHat } from './wardrobe.js';
 
 /**
@@ -16,7 +16,7 @@ export default person({
   b: 0.98,
   shape: { legs: 1.12, girth: 0.9, hips: 0.88 },
   skin: '#ecc0a0',
-  look: { torso: black, sleeve: black, cuff: black, hand: '#f8f8f6', legs: black, boot: '#f2f0ea', sole: '#08080a' },
+  look: { torso: black, sleeve: black, cuff: black, hand: '#f8f8f6', legs: black, boot: '#0a0a0c', sole: '#08080a' },
   mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'cloth', hand: 'cloth', legs: 'cloth', boot: 'leather' },
   face: { eyeColor: '#3a5a8a', brow: '#2a1a10', blush: 0.5 },
   hair: { color: cloth('#2a1a10', '#140a04'), locks: [[[0.04, 0.78, 0.04], [0.09, 0.77, 0.09], 0.035, 0.7], [[-0.05, 0.77, 0.0], [-0.1, 0.72, -0.04], 0.03]] },
@@ -40,29 +40,31 @@ export default person({
       k.turn('head', -0.08, 0, Math.sin(T * 4.5) * 0.08);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     topHat(s);
-    suitFront(s, { shirt: '#ffffff', tie: '#ffffff', bow: true, lapel: '#2a2a34' });
-    s.part('kit', () => {
-      // The tails, down the back of the legs.
-      for (const m of [1, -1]) s.flake([m * 0.035, 0.36, -0.05], [m * 0.05, 0.14, -0.09], [0, 0, -1], 0.045, 0.03, 0.22, { color: black, mat: 'cloth', bone: 'hips', k: 0.012 });
-      // White waistcoat points under the jacket.
-      s.ellipsoid([0, 0.37, 0.07], [0.05, 0.03, 0.02], { color: '#f6f4ee', mat: 'cloth', bone: 'spine', k: 0.008 });
-      // A red carnation in the buttonhole.
-      s.sphere([0.06, 0.49, 0.082], 0.013, { color: '#e01a3a', mat: 'cloth', bone: 'chest', k: 0.004, bump: [0.003, 120] });
-      // The cane: black, a silver top, held at its middle.
-      const r = J.handR;
-      s.limb([r[0], r[1] + 0.13, r[2]], [r[0], r[1] - 0.2, r[2]], 0.007, 0.007, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.002 });
-      s.sphere([r[0], r[1] + 0.135, r[2]], 0.013, { color: '#f4f6fc', mat: 'plastic', bone: 'handR', k: 0.002 });
-      s.cylinder([r[0], r[1] - 0.2, r[2]], 0.008, 0.008, { color: '#e0e2ea', mat: 'metal', bone: 'handR', k: 0.001 });
+    suitFront(s, { shirt: '#ffffff', tie: '#ffffff', bow: true, lapel: cloth('#2a2a34', '#14141a'), low: 0.415 });
+    // The white waistcoat's points, showing under the jacket at the front.
+    shell(s, (p) => Math.max(Math.abs(p[0]) - 0.045, p[1] - 0.405, 0.372 - Math.abs(p[0]) * 0.5 - p[1], 0.03 - p[2]), { color: '#f6f4ee', mat: 'cloth', part: 'outer', thick: 0.003, lift: 0.0005, over: ['top'], bone: 'spine' });
+    // The tails: two long flaps down the back from the waist to behind the knee, split up the middle.
+    hang(s, (p) => Math.max(p[1] - 0.37, 0.16 - p[1], Math.abs(p[0]) - 0.062, 0.006 - Math.abs(p[0]) + (0.37 - p[1]) * 0.02, p[2] + 0.0), {
+      side: -1, thick: 0.005, lift: 0.002, flare: 0.08, from: 0.33, color: black, x: [-0.12, 0.12], y: [0.14, 0.4], over: ['top', 'bottoms'],
+      bones: { spine: (p) => 0.34 - p[1], hips: (p) => p[1] - 0.36 },
     });
-    s.part('fine', () => {
-      // Spats: a pale band over each shoe, black buttons up the side.
-      for (const m of [1, -1]) {
-        const a = J[m > 0 ? 'ankleL' : 'ankleR'];
-        for (let i = 0; i < 3; i++) s.sphere([a[0] + m * 0.03, 0.03 + i * 0.016, a[2] + 0.01], 0.004, { color: '#101014', mat: 'plastic', bone: m > 0 ? 'footL' : 'footR', k: 0.001 });
-        s.ellipsoid([a[0], 0.022, a[2] + 0.075], [0.026, 0.014, 0.024], { color: '#08080a', mat: 'leather', bone: m > 0 ? 'footL' : 'footR', k: 0.006 });
-      }
-    });
+    // A red carnation in the buttonhole.
+    const hole = onBody(s, [0.064, 0.49, 0.09], ['outer2', 'top']);
+    s.part('kit', () => s.sphere(hole.p.map((v, i) => v + hole.n[i] * 0.008), 0.0125, { color: '#e01a3a', mat: 'cloth', bone: 'chest', k: 0.004, bump: [0.0028, 130] }));
+    // The cane: black, held by its middle in the right fist, a silver knob at the top and a tip at the bottom.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(G.at(-0.2), G.at(0.13), 0.0068, 0.0068, { color: '#101014', mat: 'plastic', k: 0.002 });
+      s.sphere(G.at(0.138), 0.013, { color: '#f4f6fc', mat: 'metal', k: 0.002 });
+      s.limb(G.at(-0.2), G.at(-0.212), 0.0075, 0.0075, { color: '#e0e2ea', mat: 'metal', k: 0.001 });
+    }));
+    // Spats: white over the tops of the black shoes, three black buttons up the outside.
+    for (const m of [1, -1]) {
+      const S = m > 0 ? 'L' : 'R', a = J[`ankle${S}`];
+      shell(s, (p) => Math.max(0.024 - p[1], p[1] - 0.085, Math.abs(p[0] - a[0]) - 0.04, p[2] - a[2] - 0.05), { color: '#f2f0ea', mat: 'cloth', part: 'outer', thick: 0.003, lift: 0.0006, over: ['shoes', 'bottoms'], bone: `foot${S}` });
+      buttons(s, [0, 1, 2].map((i) => [a[0] + m * 0.032, 0.036 + i * 0.016, a[2] + 0.006]), { r: 0.0036, color: '#101014', mat: 'plastic', over: ['outer'] });
+    }
   },
 });

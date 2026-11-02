@@ -1,6 +1,6 @@
 import { rotation } from '../models/sdf.js';
 import { bands } from '../models/skins.js';
-import { cloth, person } from './person.js';
+import { cloth, person, strap, tube } from './person.js';
 import { moustache } from './wardrobe.js';
 
 /**
@@ -37,8 +37,8 @@ export default person({
   b: 1.0,
   shape: { legs: 1.02, girth: 0.92, hips: 0.95, head: 1.02 },
   skin: '#a8704a',
-  look: { torso: robe, sleeve: robe, cuff: robe, legs: robe, boot: robe },
-  mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'cloth', legs: 'cloth', boot: 'cloth' },
+  look: { torso: robe, sleeve: robe, cuff: robe, legs: robe, shin: '#d8a888', skirt: { top: 0.38, hem: 0.045, flare: 1.18 }, boot: '#e0b030', sole: '#a07818' },
+  mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'cloth', legs: 'cloth', boot: 'leather' },
   face: { eyeColor: '#3a2412', brow: '#141010', jaw: 0.96, blush: 0.1 },
   style: {
     attack: 'thrust', twist: 0,
@@ -64,26 +64,18 @@ export default person({
       s.ellipsoid([0, 0.758, -0.006], [0.104, 0.05, 0.104], { ...W, k: 0.01 });
       s.torus([0, 0.738, -0.004], 0.096, 0.024, { ...W, k: 0.008, rot: [0.1, 0, 0.06] });
       s.torus([0, 0.762, -0.008], 0.088, 0.02, { ...W, k: 0.008, rot: [-0.12, 0, -0.1] });
-      // The galabeya: from the waist to the ankles, a little flared; the neck slit; wide sleeves.
-      s.limb([0, 0.34, 0.0], [0, 0.2, 0.004], 0.088, 0.1, { color: robe, mat: 'cloth', bone: 'hips', k: 0.02 });
-      s.cylinder([0, 0.14, 0.006], 0.104, 0.07, { color: robe, mat: 'cloth', bone: 'hips', k: 0.02, round: 0.012 });
+      // The galabeya's wide sleeves, open at the wrist; and the slippers' long toes, curled up.
       for (const m of [1, -1]) {
         const S = m > 0 ? 'L' : 'R';
-        s.limb(J[`elbow${S}`], [J[`wrist${S}`][0], J[`wrist${S}`][1] + 0.01, J[`wrist${S}`][2]], 0.03, 0.042, { color: robe, mat: 'cloth', bone: `fore${S}`, k: 0.01 });
-        // Pointed yellow slippers.
-        const a = J[`ankle${S}`], F = { color: '#e0b030', mat: 'leather', bone: `foot${S}` };
-        s.ellipsoid([a[0], 0.03, a[2] + 0.03], [0.034, 0.032, 0.056], { ...F, k: 0.012 });
-        s.limb([a[0], 0.02, a[2] + 0.06], [a[0], 0.034, a[2] + 0.11], 0.024, 0.006, { ...F, k: 0.012 });
+        s.part('cuffs', () => tube(s, J[`elbow${S}`], [J[`wrist${S}`][0], J[`wrist${S}`][1] + 0.012, J[`wrist${S}`][2]], 0.03, 0.04, { color: robe, mat: 'cloth', bone: `fore${S}`, k: 0.01 }));
+        const a = J[`ankle${S}`];
+        s.part('shoes', () => s.limb([a[0], 0.02, a[2] + 0.07], [a[0], 0.038, a[2] + 0.118], 0.02, 0.005, { color: '#e0b030', mat: 'leather', bone: `foot${S}`, k: 0.012 }));
       }
       // The tray, on a strap round the neck, and its rim.
       const TR = { color: cloth('#9a6232', '#6a4020'), mat: 'leather', bone: 'chest' };
       s.box([0, 0.37, 0.16], [0.12, 0.006, 0.08], 0.004, { ...TR, k: 0.002 });
-      for (const m of [1, -1]) {
-        s.box([m * 0.118, 0.38, 0.16], [0.005, 0.012, 0.08], 0.003, { ...TR, k: 0.002 });
-        s.limb([m * 0.1, 0.38, 0.09], [m * 0.045, 0.525, 0.02], 0.006, 0.006, { color: '#4a2a14', mat: 'leather', bone: 'chest', k: 0.004 });
-      }
+      for (const m of [1, -1]) s.box([m * 0.118, 0.38, 0.16], [0.005, 0.012, 0.08], 0.003, { ...TR, k: 0.002 });
       s.box([0, 0.38, 0.238], [0.12, 0.012, 0.005], 0.003, { ...TR, k: 0.002 });
-      s.torus([0, 0.53, -0.005], 0.05, 0.006, { color: '#4a2a14', mat: 'leather', bone: 'chest', k: 0.004, rot: [0.25, 0, 0] });
       // On the tray: pyramids, gold and sandstone; scarabs; papyrus rolled up.
       pyramid(s, [-0.07, 0.376, 0.13], 0.03, 0.05, { ...GOLD, bone: 'chest', k: 0.002 });
       pyramid(s, [-0.02, 0.376, 0.2], 0.022, 0.036, { ...SAND, bone: 'chest', k: 0.002 });
@@ -99,6 +91,8 @@ export default person({
       pyramid(s, off([0, 0.012, 0.004]), 0.035, 0.065, { ...GOLD, bone: 'handR', k: 0.002, rot: [2.25, 0, 0] });
       s.torus(off([0, 0.088, 0.004]), 0.014, 0.003, { color: '#d8dce4', mat: 'metal', bone: 'handR', k: 0.001, rot: [2.25, 0, Math.PI / 2] });
     });
+    // The tray's strap: from its back corners up over the shoulders and round behind the neck.
+    strap(s, [[0.1, 0.385, 0.088], [0.07, 0.48, 0.07], [0.04, 0.552, 0.01], [0, 0.556, -0.04], [-0.04, 0.552, 0.01], [-0.07, 0.48, 0.07], [-0.1, 0.385, 0.088]], { width: 0.012, thick: 0.004, color: '#4a2a14', over: ['top', 'head'], bone: 'chest' });
     s.part('fine', () => {
       // The scarabs' wing cases, and the papyrus' painted edges.
       for (const [x, z, a] of [[0.04, 0.13, 0.4], [0.085, 0.14, -0.3], [0.025, 0.205, 0.9]]) {

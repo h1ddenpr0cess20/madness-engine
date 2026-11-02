@@ -1,5 +1,6 @@
 import { baseballCap } from './metalwear.js';
-import { cloth, hold, person } from './person.metroll.js';
+import { bag, cloth, hold, person, plate, strap } from './person.js';
+import { print } from './wardrobe.js';
 
 /**
  * The Street Team: a neon-yellow T-shirt that says the name of an energy
@@ -33,15 +34,19 @@ export default person({
       k.turn('head', -0.05, Math.sin(T * 0.8) * 0.2, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     baseballCap(s, { color: '#e8ff3a' });
-    s.part('kit', () => {
-      // The shades on a cord round the neck, the lanyard and its badge.
-      s.torus([0, 0.54, 0.006], 0.052, 0.004, { color: '#16161a', mat: 'cloth', bone: 'neck', k: 0.001 });
-      s.box([0, 0.46, 0.078], [0.014, 0.02, 0.003], 0.001, { color: '#f4f2ee', mat: 'plastic', bone: 'chest', k: 0.001 });
-      // The stack of flyers in the right hand: white, pink and blue sheets.
-      const r = J.handR;
-      for (const [i, c] of [[0, '#f4f2ee'], [1, '#ff9ac8'], [2, '#9ad8ff']]) s.box([r[0], r[1] + 0.012 + i * 0.006, r[2] + 0.03], [0.03, 0.002, 0.04], 0.001, { color: c, mat: 'paper', bone: 'handR', k: 0.0005 });
-    });
+    print(s, 'FREE', { y: 0.43, size: 0.03, color: '#16161a', side: 1, width: 0.004 });
+    // The lanyard and its badge.
+    strap(s, [[0, 0.552, -0.06], [0.05, 0.545, -0.03], [0.056, 0.53, 0.03], [0.04, 0.5, 0.07], [0.032, 0.49, 0.08], [0.02, 0.5, 0.08]], { width: 0.006, thick: 0.002, color: '#16161a', mat: 'cloth', over: ['top', 'head'], bone: 'chest' });
+    bag(s, [0.045, 0.47, 0.082], { size: [0.014, 0.02, 0.0018], color: '#f4f2ee', flap: false, over: ['top'], bone: 'chest' });
+    // The flyers held out: a few sheets, white, pink and blue, out of the top of the fist, a little fanned.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      [['#f4f2ee', -0.12], ['#ff9ac8', 0], ['#9ad8ff', 0.12]].forEach(([c, a], i) => {
+        const dir = G.along.map((v, j) => v * Math.cos(a) - G.up[j] * Math.sin(a)), across = G.along.map((v, j) => v * Math.sin(a) + G.up[j] * Math.cos(a));
+        plate(s, G.c.map((v, j) => v + dir[j] * 0.055 + G.out[j] * (0.002 * i - 0.002)), across, dir, [0.032, 0.045, 0.0012], 0.0015, { color: c, mat: 'paper', k: 0.0005 });
+      });
+    }));
   },
 });

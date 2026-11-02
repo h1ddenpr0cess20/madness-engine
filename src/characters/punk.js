@@ -1,5 +1,6 @@
 import { coat } from '../models/skins.js';
-import { hold, person } from './person.metroll.js';
+import { cord, hold, onBody, person } from './person.js';
+import { suitFront } from './wardrobe.js';
 
 /**
  * The Camden Punk: a green mohican a foot high, a leather jacket studded
@@ -51,18 +52,30 @@ export default person({
       }
       s.ellipsoid([0, 0.75, -0.01], [0.03, 0.04, 0.1], { color: '#2ac03a', mat: 'hair', bone: 'head', k: 0.02 });
     });
+    // The biker jacket open over a white tee, its lapels; studs along the shoulders; safety pins on the lapels and
+    // through the ear; a chain from the belt.
+    suitFront(s, { shirt: '#f4f2ec', tie: null, lapel: LEATHER, low: 0.42 });
+    const pts = [];
+    for (const m of [1, -1]) for (let i = 0; i < 5; i++) pts.push([m * (0.055 + i * 0.012), 0.556 - i * 0.006, -0.005]);
+    const on = onBody(s, pts, ['top', 'sleeves']);
     s.part('kit', () => {
-      // Studs on the shoulders, safety pins on the lapels and through the ear, the chain off the belt.
+      for (const h of on) s.limb(h.p, h.p.map((v, i) => v + h.n[i] * 0.011), 0.0048, 0.0008, { color: '#d6d9e0', mat: 'metal', bone: h.bone, k: 0.0005 });
       for (const m of [1, -1]) {
-        for (let i = 0; i < 4; i++) s.cone([m * (0.07 + i * 0.014), 0.52 - i * 0.006, 0.0], 0.005, 0.01, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0 });
-        s.limb([m * 0.04, 0.49, 0.075], [m * 0.05, 0.44, 0.08], 0.003, 0.003, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.001 });
+        const a = onBody(s, [m * 0.045, 0.49, 0.08], ['outer2', 'outer', 'top']);
+        const c = a.p.map((v, i) => v + a.n[i] * 0.004);
+        s.limb(c, c.map((v, i) => v + [m * 0.006, -0.03, 0][i]), 0.0022, 0.0022, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.0005 });
       }
-      s.limb([0.1, 0.66, 0.0], [0.1, 0.63, 0.008], 0.0025, 0.0025, { color: '#d6d9e0', mat: 'metal', bone: 'head', k: 0 });
-      for (let i = 0; i < 5; i++) s.torus([-0.07 + i * 0.006, 0.32 - Math.sin(i / 4 * Math.PI) * 0.05, 0.06 - i * 0.012], 0.008, 0.0025, { color: '#c8ccd4', mat: 'metal', bone: 'hips', k: 0, rot: [i % 2 ? 0 : Math.PI / 2, 0.5, 0] });
-      // The painted back: a big white A in a circle.
-      s.torus([0, 0.45, -0.07], 0.04, 0.004, { color: '#f4f2ec', mat: 'cloth', bone: 'chest', k: 0.001, rot: [Math.PI / 2, 0, 0] });
-      s.limb([-0.022, 0.42, -0.072], [0, 0.48, -0.072], 0.004, 0.004, { color: '#f4f2ec', mat: 'cloth', bone: 'chest', k: 0 });
-      s.limb([0.022, 0.42, -0.072], [0, 0.48, -0.072], 0.004, 0.004, { color: '#f4f2ec', mat: 'cloth', bone: 'chest', k: 0 });
+      s.limb([0.104, 0.655, 0.0], [0.106, 0.628, 0.006], 0.002, 0.002, { color: '#d6d9e0', mat: 'metal', bone: 'head', k: 0 });
     });
+    const chain = onBody(s, [[-0.075, 0.335, 0.075], [-0.11, 0.27, 0.04], [-0.118, 0.235, -0.005], [-0.105, 0.26, -0.05], [-0.075, 0.32, -0.075]], ['bottoms', 'belt']);
+    s.part('kit', () => cord(s, chain.map((h) => h.p.map((v, i) => v + h.n[i] * 0.006)), 0.0032, { color: '#c8ccd4', mat: 'metal', bone: 'hips', bump: [0.0012, 400] }));
+    // Painted on the back in white: the circled A.
+    const W = '#f4f2ec', back = (d) => (p) => Math.max(d(p), p[2] + 0.03);
+    s.paint(back((p) => Math.abs(Math.hypot(p[0], p[1] - 0.45) - 0.042) - 0.0045), W, 0.0015);
+    const seg = (x0, y0, x1, y1) => s.paint(back((p) => {
+      const x = p[0] - x0, y = p[1] - y0, dx = x1 - x0, dy = y1 - y0, t = Math.max(0, Math.min(1, (x * dx + y * dy) / (dx * dx + dy * dy)));
+      return Math.hypot(x - dx * t, y - dy * t) - 0.0045;
+    }), W, 0.0015);
+    seg(-0.032, 0.4, 0, 0.5); seg(0.032, 0.4, 0, 0.5); seg(-0.03, 0.44, 0.03, 0.44);
   },
 });

@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, person, strap } from './person.js';
 import { headband, longHair } from './metalwear.js';
 
 /**
@@ -28,24 +28,34 @@ export default person({
   hair: longHair(cloth('#a8884a', '#7a5e30'), { length: 0.9, fringe: true }),
   style: {
     attack: 'smite',
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, reach, aim }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
-      // Both hands up in front holding the candle, the face tilted to it, a slow sway, eyes closed in spirit.
-      hold(k, 'armR', -1.0, 0, -0.15); hold(k, 'foreR', -1.4, 0.9, 0);
-      hold(k, 'armL', -1.0, 0, 0.15); hold(k, 'foreL', -1.4, -0.9, 0);
+      // The candle held up in front in the right hand, upright; the left cupped round its flame; a slow sway, eyes closed in spirit.
+      reach?.(k, 'R', 'chest', [-0.012, 0.455, 0.135]);
+      aim?.(k, 'R', 'chest', [-0.01, 2.0, 0.16]);
+      reach?.(k, 'L', 'chest', [0.03, 0.47, 0.14]);
       k.turn('hips', 0, 0, Math.sin(T * 0.8) * 0.05);
       k.turn('head', 0.18, Math.sin(T * 0.5) * 0.1, Math.sin(T * 0.8) * 0.05);
     },
   },
-  extras(s) {
+  extras(s, J, { pose }) {
     headband(s, { color: '#e8a020' });
+    // The peace sign on a leather thong round the neck.
+    strap(s, [[0.032, 0.553, -0.03], [0.045, 0.53, 0.035], [0, 0.485, 0.08], [-0.045, 0.53, 0.035], [-0.032, 0.553, -0.03], [0, 0.556, -0.04]], { round: true, closed: true, thick: 0.003, color: '#6a4a2a', mat: 'leather', over: ['top', 'head'] });
     s.part('kit', () => {
-      // The peace sign on a thong, and the candle between the hands, and its flame.
-      s.limb([0.0, 0.56, 0.06], [0, 0.46, 0.085], 0.003, 0.003, { color: '#6a4a2a', mat: 'leather', bone: 'chest', k: 0.001 });
-      s.torus([0, 0.45, 0.09], 0.016, 0.003, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.001 });
-      s.cylinder([0, 0.53, 0.168], 0.013, 0.05, { color: '#f4ecd0', mat: 'cloth', bone: 'chest', k: 0.003, round: 0.003 });
-      s.limb([0, 0.585, 0.168], [0, 0.615, 0.168], 0.01, 0.002, { color: '#ffb02a', mat: 'glow', bone: 'chest', k: 0.002 });
+      s.torus([0, 0.47, 0.088], 0.014, 0.0028, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.001, rot: [Math.PI / 2, 0, 0] });
+      s.limb([0, 0.484, 0.088], [0, 0.456, 0.088], 0.0022, 0.0022, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.001 });
+      for (const m of [1, -1]) s.limb([0, 0.468, 0.088], [m * 0.0095, 0.459, 0.088], 0.0022, 0.0022, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.001 });
+    });
+    // The candle, upright in the fist, and its flame.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => {
+      s.part('kit', () => {
+        s.limb(G.at(-0.03), G.at(0.08), 0.0115, 0.0112, { color: '#f4ecd0', mat: 'cloth', k: 0.002 });
+        s.limb(G.at(0.08), G.at(0.088), 0.0018, 0.0016, { color: '#1a1a1a', mat: 'cloth', k: 0.001 });
+      });
+      s.part('fine', () => s.limb(G.at(0.088), G.at(0.115), 0.0062, 0.0012, { color: '#ffb02a', mat: 'glow', k: 0.002 }));
     });
   },
 });

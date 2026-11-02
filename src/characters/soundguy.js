@@ -1,5 +1,5 @@
-import { cloth, hold, person } from './person.metroll.js';
-import { beard, glasses } from './wardrobe.js';
+import { cloth, hold, onBody, person } from './person.js';
+import { beard, glasses, headphones } from './wardrobe.js';
 
 /**
  * The Sound Engineer: a black T-shirt, big headphones, a beard, glasses, a
@@ -22,28 +22,34 @@ export default person({
   hair: { color: cloth('#2a1c12', '#160e08'), locks: [[[0, 0.77, -0.05], [0, 0.66, -0.13], 0.045, 0.5]] },
   style: {
     attack: 'thrust',
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, reach, aim }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
-      const T = time + seed;
-      // The microphone out in front, tapped: check one, check two.
-      hold(k, 'armR', -1.35, 0, -0.1); hold(k, 'foreR', -0.6 + Math.max(0, Math.sin(T * 4)) * 0.25, 0, 0);
+      const T = time + seed, tap = Math.max(0, Math.sin(T * 4));
+      // The microphone up under his chin, its head at his mouth: check one, check two.
+      hold(k, 'armR', -1.2, 0, -0.3); hold(k, 'foreR', -1.6, 0, 0);
+      reach?.(k, 'R', 'head', [-0.01, 0.54 - tap * 0.012, 0.13]);
+      aim?.(k, 'R', 'head', [0, 0.612, 0.135]);
       hold(k, 'armL', 0.1, 0, 0.2);
-      k.turn('head', 0.05, Math.sin(T * 0.6) * 0.2, 0);
+      k.turn('head', 0.05, Math.sin(T * 0.6) * 0.15, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     beard(s, { color: '#2a1c12' });
     glasses(s, { rim: '#16161a', round: false });
+    headphones(s, { color: '#1a1a1e' });
+    // A coil of cable hung on the belt at the left hip, the loops hanging down the outside of the leg.
+    const hook = onBody(s, [0.105, 0.33, 0.0], ['bottoms', 'belt']);
     s.part('kit', () => {
-      // Headphones: a band over the head, a cup over each ear.
-      s.torus([0, 0.69, -0.005], 0.1, 0.007, { color: '#1a1a1e', mat: 'plastic', bone: 'head', k: 0.003, rot: [0, 0, Math.PI / 2] });
-      for (const m of [1, -1]) s.cylinder([m * 0.11, 0.655, 0], 0.036, 0.016, { color: '#1a1a1e', mat: 'plastic', bone: 'head', k: 0.004, round: 0.006, rot: [0, 0, Math.PI / 2] });
-      // The cable, coiled on the shoulder.
-      for (let i = 0; i < 3; i++) s.torus([-0.075, 0.52 - i * 0.012, 0.0], 0.04, 0.006, { color: '#101014', mat: 'rubber', bone: 'chest', k: 0.002, rot: [0.2, 0, 0.3] });
-      // The microphone: a handle and a grille.
-      const h = J.handR;
-      s.limb([h[0], h[1] - 0.03, h[2] + 0.01], [h[0], h[1] + 0.06, h[2] + 0.03], 0.012, 0.011, { color: '#26262c', mat: 'plastic', bone: 'handR', k: 0.003 });
-      s.sphere([h[0], h[1] + 0.08, h[2] + 0.035], 0.02, { color: '#8a8e98', mat: 'metal', bone: 'handR', k: 0.003 });
+      for (let i = 0; i < 4; i++) {
+        const c = hook.p.map((v, j) => v + hook.n[j] * (0.012 + i * 0.006) + [0, -0.048, 0][j]);
+        s.torus(c, 0.05 - i * 0.002, 0.0045, { color: '#101014', mat: 'rubber', bone: 'hips', k: 0.001, rot: [0.15 * (i - 1.5), 0, Math.PI / 2] });
+      }
     });
+    // The microphone: the handle in the fist, the grille up at his mouth.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(G.at(-0.05), G.at(0.05), 0.0095, 0.012, { color: '#26262c', mat: 'plastic', k: 0.003 });
+      s.sphere(G.at(0.072), 0.018, { color: '#8a8e98', mat: 'metal', k: 0.003, bump: [0.0012, 500] });
+    }));
   },
 });

@@ -1,4 +1,5 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person, plate } from './person.js';
+import { beard, glasses } from './wardrobe.js';
 
 /**
  * The Engineer: a yellow hard hat, a hi-vis vest in orange with reflective
@@ -36,26 +37,35 @@ export default person({
       k.turn('head', 0.05, Math.round(Math.sin(T * 0.6) * 2) * 0.25, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
+    // The hard hat: a yellow shell over the head with a ridge along the top, a peak at the front and a narrow brim
+    // all round it.
     s.part('kit', () => {
-      // The hard hat: a yellow dome, a ridge along the top, a short peak.
-      s.ellipsoid([0, 0.745, -0.005], [0.112, 0.068, 0.114], { color: '#f2c41a', mat: 'plastic', bone: 'head', k: 0.012 });
-      s.limb([0, 0.8, -0.07], [0, 0.8, 0.07], 0.012, 0.012, { color: '#f2c41a', mat: 'plastic', bone: 'head', k: 0.004 });
-      s.flake([0, 0.715, 0.09], [0, 0.705, 0.16], [0, 1, 0], 0.075, 0.07, 0.14, { color: '#f2c41a', mat: 'plastic', bone: 'head', k: 0.005 });
-      // Safety glasses, and a beard.
-      s.box([0, 0.668, 0.1], [0.082, 0.016, 0.008], 0.006, { color: '#cfe8ff', mat: 'glass', bone: 'head', k: 0.003 });
-      s.ellipsoid([0, 0.6, 0.075], [0.075, 0.055, 0.05], { color: '#3a2a18', mat: 'hair', bone: 'head', k: 0.02 });
-      // The wrench: a long steel shaft and an open jaw at the end, over the shoulder.
-      const r = J.handR;
-      // Sculpted along `up`, straight up once the arm is raised: the jaw at the top.
-      const up = [-0.296, -0.954, -0.056], at = (t) => [r[0] + up[0] * t, r[1] + up[1] * t, r[2] + up[2] * t];
-      s.limb(at(-0.07), at(0.19), 0.012, 0.015, { color: '#9aa0aa', mat: 'metal', bone: 'handR', k: 0.004 });
-      s.torus(at(0.22), 0.03, 0.01, { color: '#9aa0aa', mat: 'metal', bone: 'handR', k: 0.003, rot: [Math.PI / 2, 0, 0] });
-      s.box(at(0.25), [0.012, 0.016, 0.014], 0.003, { op: 'sub', k: 0.002 });
-      // The clipboard.
-      const l = J.handL;
-      s.box([l[0] + 0.01, l[1] + 0.03, l[2] + 0.05], [0.045, 0.005, 0.06], 0.003, { color: '#8a6a3a', mat: 'leather', bone: 'handL', k: 0.002 });
-      s.box([l[0] + 0.01, l[1] + 0.036, l[2] + 0.05], [0.038, 0.002, 0.052], 0.002, { color: '#f4f2ee', mat: 'paper', bone: 'handL', k: 0.001 });
+      const Y = { color: '#f2c41a', mat: 'plastic', bone: 'head' };
+      s.ellipsoid([0, 0.752, -0.005], [0.108, 0.066, 0.112], { ...Y, k: 0.012 });
+      s.ellipsoid([0, 0.722, -0.005], [0.122, 0.01, 0.128], { ...Y, k: 0.006 });
+      s.ellipsoid([0, 0.718, 0.072], [0.09, 0.008, 0.07], { ...Y, k: 0.006 });
+      s.ellipsoid([0, 0.66, -0.005], [0.2, 0.06, 0.2], { op: 'sub', k: 0.01 });
+      s.limb([0, 0.808, -0.08], [0, 0.812, 0.07], 0.011, 0.011, { ...Y, k: 0.006 });
     });
+    // Safety glasses, and a beard.
+    glasses(s, { rim: '#2a2a30', round: false, size: 0.026 });
+    beard(s, { color: '#3a2a18' });
+    // The wrench, up over the right shoulder: a steel shaft through the fist, an open jaw at the top and a ring at the bottom.
+    const G = pose.grip('R'), steel = { color: '#9aa0aa', mat: 'metal', k: 0.002 };
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(G.at(-0.07), G.at(0.18), 0.0085, 0.0095, steel);
+      s.torus(G.at(0.205), 0.026, 0.009, { ...steel, rot: [Math.atan2(Math.hypot(G.out[0], G.out[2]), G.out[1]), Math.atan2(G.out[0], G.out[2]), 0] });
+      s.sphere(G.at(0.235), 0.026, { op: 'sub', k: 0.002 });
+      s.torus(G.at(-0.085), 0.018, 0.007, { ...steel, rot: [Math.atan2(Math.hypot(G.out[0], G.out[2]), G.out[1]), Math.atan2(G.out[0], G.out[2]), 0] });
+    }));
+    // The clipboard, in the left hand.
+    const L = pose.grip('L'), across = L.along, length = L.up.map((v) => -v);
+    const face = [across[1] * length[2] - across[2] * length[1], across[2] * length[0] - across[0] * length[2], across[0] * length[1] - across[1] * length[0]];
+    const board = L.at(0, 0, 0).map((v, i) => v + length[i] * 0.058 - L.out[i] * 0.004);
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      plate(s, board, across, length, [0.042, 0.058, 0.0028], 0.002, { color: '#8a6a3a', mat: 'leather', k: 0.001 });
+      plate(s, board.map((v, i) => v + face[i] * 0.0032), across, length, [0.036, 0.05, 0.0009], 0.0006, { color: '#f4f2ee', mat: 'paper', k: 0.0005 });
+    }));
   },
 });

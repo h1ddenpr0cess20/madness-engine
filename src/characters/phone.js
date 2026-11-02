@@ -1,4 +1,5 @@
-import { cloth, person } from './person.metroll.js';
+import { axisRot, bag, cloth, hold, person, plate, tube } from './person.js';
+import { baseballCap, hoodDown } from './metalwear.js';
 
 /**
  * Phone Guy: a grey hoodie, jeans, a cap on backwards, and one arm straight
@@ -7,6 +8,7 @@ import { cloth, person } from './person.metroll.js';
  * arm makes it more.
  */
 
+const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
 const hood = cloth('#8c919c', '#5c606a');
 
 export default person({
@@ -21,35 +23,42 @@ export default person({
   hair: { color: cloth('#2a1a10', '#1a0e08'), locks: [[[0, 0.74, -0.06], [0, 0.7, -0.115], 0.04]], cap: [0.106, 0.09, 0.106] },
   style: {
     attack: 'thrust', twist: 0,
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, aim }) {
       const T = time + seed;
       if (clip === 'ko' || clip === 'hit') return;
-      // The right arm up, the phone held out and steady; the head tilted back to see the show.
-      k.turn('armR', -2.75, 0, -0.12);
-      k.turn('foreR', -0.15, 0, 0);
-      k.turn('handR', -0.4 + Math.sin(T * 1.7) * 0.03, 0, 0);
+      // The right arm up and out, the phone held up and steady over the crowd filming the stage; the head tilted
+      // back to see the show; the drink upright in the other hand at the chest.
+      hold(k, 'armR', -2.45, 0, -0.3);
+      hold(k, 'foreR', -0.3, 0, 0);
+      aim?.(k, 'R', 'chest', [-0.35, 1.8, 0.4]);
       k.turn('head', -0.18, Math.sin(T * 0.6) * 0.14, 0);
-      // The left hand holds a drink at the chest.
-      k.turn('armL', -0.7, 0, 0.1);
-      k.turn('foreL', -1.3, 0, 0);
+      k.turn('armL', -0.65, 0, 0.1);
+      k.turn('foreL', -1.25, 0, 0);
+      aim?.(k, 'L', 'chest', [0.2, 1.5, 0.3]);
     },
   },
-  extras(s, J) {
-    const hand = J.handR;
-    s.part('kit', () => {
-      // The cap, backwards: a dome and a peak out of the back.
-      s.ellipsoid([0, 0.72, -0.01], [0.112, 0.07, 0.112], { color: '#d9232f', mat: 'cloth', bone: 'head', k: 0.012 });
-      s.flake([0, 0.71, -0.1], [0, 0.69, -0.2], [0, 1, 0], 0.075, 0.07, 0.15, { color: '#d9232f', mat: 'cloth', bone: 'head', k: 0.008 });
-      // The hood, down round the neck.
-      s.torus([0, 0.52, -0.02], 0.065, 0.026, { color: hood, mat: 'cloth', bone: 'neck', k: 0.012, rot: [0.2, 0, 0] });
-      // The phone: a black slab with a glowing face, turned back to the stage.
-      s.box([hand[0], hand[1] + 0.03, hand[2] + 0.02], [0.034, 0.062, 0.006], 0.006, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.003, rot: [-0.4, 0, 0] });
+  extras(s, J, { pose }) {
+    baseballCap(s, { color: '#d9232f', back: true });
+    hoodDown(s, { color: hood });
+    // The pouch pocket across the front of the hoodie.
+    bag(s, [0, 0.355, 0.085], { size: [0.065, 0.032, 0.005], color: hood, flap: false, over: ['top'], keep: TRUNK, bone: 'spine' });
+    // The phone, held up by its sides in the fist above it, its screen to him and its camera to the stage.
+    const G = pose.grip('R'), c = G.at(0, -0.038, -0.006);
+    const n0 = [G.along[1] * G.up[2] - G.along[2] * G.up[1], G.along[2] * G.up[0] - G.along[0] * G.up[2], G.along[0] * G.up[1] - G.along[1] * G.up[0]];
+    const eye = pose.at('head', [0, 0.67, 0.05]), toEye = eye.map((v, i) => v - c[i]);
+    const n = n0[0] * toEye[0] + n0[1] * toEye[1] + n0[2] * toEye[2] > 0 ? n0 : n0.map((v) => -v);
+    pose.hold(s, 'handR', () => {
+      s.part('kit', () => {
+        plate(s, c, G.along, G.up, [0.026, 0.05, 0.0042], 0.004, { color: '#101014', mat: 'plastic', k: 0.002 });
+        s.sphere(c.map((v, i) => v - n[i] * 0.004 - G.up[i] * 0.04 + G.along[i] * 0.014), 0.004, { color: '#2a2a30', mat: 'glass', k: 0.0005 });
+      });
+      s.part('fine', () => plate(s, c.map((v, i) => v + n[i] * 0.0043), G.along, G.up, [0.023, 0.046, 0.0008], 0.002, { color: '#cfeaff', mat: 'screen', k: 0 }));
     });
-    s.part('fine', () => {
-      s.box([hand[0], hand[1] + 0.036, hand[2] + 0.026], [0.03, 0.056, 0.003], 0.003, { color: '#cfeaff', mat: 'screen', bone: 'handR', k: 0.001, rot: [-0.4, 0, 0] });
-    });
-    // The drink in the left hand: a red cup.
-    const l = J.handL;
-    s.part('kit', () => s.cylinder([l[0], l[1] + 0.025, l[2] + 0.01], 0.026, 0.04, { color: '#d9232f', mat: 'plastic', bone: 'handL', k: 0.003, round: 0.004 }));
+    // The drink: a red party cup, upright in the left fist, its white rim.
+    const L = pose.grip('L');
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      tube(s, L.at(-0.045), L.at(0.05), 0.022, 0.029, { color: '#d9232f', mat: 'plastic', k: 0.002 });
+      s.torus(L.at(0.05), 0.0285, 0.0025, { color: '#f4f2ee', mat: 'plastic', k: 0.001, rot: axisRot(L.along) });
+    }));
   },
 });

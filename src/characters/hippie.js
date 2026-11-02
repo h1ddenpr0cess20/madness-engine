@@ -1,4 +1,4 @@
-import { hold, person } from './person.metroll.js';
+import { hold, onBody, person, strap } from './person.js';
 import { headband, longHair } from './metalwear.js';
 import { glasses } from './wardrobe.js';
 
@@ -22,7 +22,7 @@ export default person({
   b: 0.96,
   shape: { legs: 1.12, girth: 0.86, head: 1.02 },
   skin: '#e6b490',
-  look: { torso: dye, sleeve: dye, cuff: '#e6b490', legs: '#2c5a8a', boot: '#8a5a32', sole: '#4a3018' },
+  look: { torso: dye, sleeve: dye, cuff: '#e6b490', legs: '#2c5a8a', boot: '#8a5a32', sole: '#4a3018', flare: 1.5 },
   mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'skin', legs: 'denim', boot: 'leather' },
   face: { eyeColor: '#3a6a4a', brow: '#6a4a2a', mood: 0, blush: 0.4 },
   hair: longHair('#7a5a34', { length: 1.25 }),
@@ -38,23 +38,28 @@ export default person({
       k.turn('head', 0.05, Math.sin(T * 0.9) * 0.25, 0.12);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     headband(s, { color: '#f0c040' });
-    glasses(s, { rim: '#e86aa0', round: true, dark: true, size: 0.022 });
+    glasses(s, { rim: '#e86aa0', round: true, dark: true, size: 0.023 });
+    // The peace sign on its leather cord.
+    strap(s, [[0, 0.556, -0.04], [0.036, 0.553, -0.03], [0.055, 0.51, 0.035], [0, 0.47, 0.08], [-0.055, 0.51, 0.035], [-0.036, 0.553, -0.03]], { closed: true, round: true, thick: 0.003, color: '#8a5a32', mat: 'leather', over: ['top', 'head'] });
+    const at = onBody(s, [0, 0.452, 0.09], ['top']);
     s.part('kit', () => {
-      // Flared jeans: a flare at each ankle.
-      for (const m of [1, -1]) s.cone([m * 0.06, 0.2, 0.0], 0.05, 0.16, { color: '#2c5a8a', mat: 'denim', bone: m > 0 ? 'shinL' : 'shinR', k: 0.01 });
-      // The peace sign on its cord.
-      s.limb([-0.03, 0.55, 0.04], [0, 0.43, 0.082], 0.003, 0.003, { color: '#8a5a32', mat: 'leather', bone: 'chest', k: 0.001 });
-      s.torus([0, 0.42, 0.086], 0.016, 0.003, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.001, rot: [Math.PI / 2, 0, 0] });
-      // The daisy in the hand.
-      const h = J.handR;
-      s.limb([h[0], h[1] - 0.02, h[2]], [h[0], h[1] + 0.07, h[2]], 0.003, 0.003, { color: '#3a9a4a', mat: 'cloth', bone: 'handR', k: 0.001 });
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        s.ellipsoid([h[0] + Math.cos(a) * 0.016, h[1] + 0.08, h[2] + Math.sin(a) * 0.016], [0.009, 0.004, 0.009], { color: '#f8f4ec', mat: 'cloth', bone: 'handR', k: 0.002 });
-      }
-      s.sphere([h[0], h[1] + 0.08, h[2]], 0.008, { color: '#f0c040', mat: 'cloth', bone: 'handR', k: 0.002 });
+      const c = at.p.map((v, i) => v + at.n[i] * 0.003 - [0, 0.014, 0][i]);
+      s.torus(c, 0.014, 0.0026, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.0008, rot: [Math.PI / 2, 0, 0] });
+      s.limb([c[0], c[1] + 0.013, c[2]], [c[0], c[1] - 0.013, c[2]], 0.002, 0.002, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.0006 });
+      for (const m of [1, -1]) s.limb([c[0], c[1] - 0.002, c[2]], [c[0] + m * 0.0095, c[1] - 0.0095, c[2]], 0.002, 0.002, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.0006 });
     });
+    // The daisy, up in the hand: a green stem through the fist, white petals round a yellow middle.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(G.at(-0.03), G.at(0.075), 0.0028, 0.0028, { color: '#3a9a4a', mat: 'cloth', k: 0.001 });
+      const c = G.at(0.082);
+      for (let i = 0; i < 11; i++) {
+        const a = (i / 11) * Math.PI * 2, d = G.up.map((v, j) => v * Math.cos(a) + G.out[j] * Math.sin(a));
+        s.flake(c, c.map((v, j) => v + d[j] * 0.026), G.along, 0.004, 0.006, 0.35, { color: '#f8f4ec', mat: 'cloth', k: 0.0015 });
+      }
+      s.sphere(c.map((v, j) => v + G.along[j] * 0.003), 0.0075, { color: '#f0c040', mat: 'cloth', k: 0.002 });
+    }));
   },
 });

@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.js';
+import { cloth, hold, person, shell, strap } from './person.js';
 
 /**
  * The Sumo Apprentice: from one of the stables off Ryōgoku, enormous and
@@ -9,6 +9,7 @@ import { cloth, hold, person } from './person.js';
  * and as wide.
  */
 
+const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
 const BELT = cloth('#1a1e3a', '#0e1020');
 
 export default person({
@@ -41,14 +42,18 @@ export default person({
     },
   },
   extras(s) {
-    s.part('kit', () => {
-      // The mawashi: a thick band round and round the waist, up between the legs, the knot at the back.
-      s.torus([0, 0.27, 0.03], 0.12, 0.036, { color: BELT, mat: 'cloth', bone: 'hips', k: 0.01 });
-      s.torus([0, 0.24, 0.02], 0.1, 0.03, { color: BELT, mat: 'cloth', bone: 'hips', k: 0.01 });
-      s.box([0, 0.22, 0.1], [0.04, 0.05, 0.02], 0.012, { color: BELT, mat: 'cloth', bone: 'hips', k: 0.01 });
-      s.box([0, 0.3, -0.1], [0.035, 0.05, 0.035], 0.012, { color: BELT, mat: 'cloth', bone: 'hips', k: 0.01 });
-      // The topknot, folded forward on the crown.
-      s.limb([0, 0.77, -0.04], [0, 0.8, 0.03], 0.016, 0.02, { color: '#0a0806', mat: 'hair', bone: 'head', k: 0.008 });
+    // The mawashi: a broad band wound round the hips under the belly, its front panel down between the legs, the
+    // knot at the back and the strap down from it; the stiff fringe of the sagari hanging at the front.
+    strap(s, [[0, 0.27, 0.16], [0.11, 0.275, 0.12], [0.165, 0.285, 0.0], [0.11, 0.295, -0.12], [0, 0.3, -0.15], [-0.11, 0.295, -0.12], [-0.165, 0.285, 0.0], [-0.11, 0.275, 0.12], [0, 0.27, 0.16]], { width: 0.05, thick: 0.016, color: BELT, mat: 'cloth', over: ['body', 'bottoms'], keep: TRUNK, part: 'outer', closed: true });
+    shell(s, (p) => Math.max(Math.abs(p[0]) - 0.03 - Math.max(0, p[1] - 0.23) * 0.3, p[1] - 0.27, 0.19 - p[1]), { color: BELT, mat: 'cloth', part: 'outer', thick: 0.012, lift: 0.002, over: ['body', 'bottoms'], bone: 'hips', k: 0.004 });
+    s.part('outer2', () => {
+      s.box([0, 0.305, -0.17], [0.04, 0.03, 0.022], 0.012, { color: BELT, mat: 'cloth', bone: 'hips', k: 0.006 });
+      for (let i = 0; i < 9; i++) {
+        const x = -0.06 + i * 0.015;
+        s.limb([x, 0.262, 0.17 - Math.abs(x) * 0.25], [x * 1.05, 0.19, 0.172 - Math.abs(x) * 0.25], 0.0045, 0.004, { color: BELT, mat: 'cloth', bone: 'hips', k: 0.001 });
+      }
     });
+    // The topknot, folded forward on the crown.
+    s.part('hair', () => s.limb([0, 0.77, -0.04], [0, 0.8, 0.03], 0.016, 0.02, { color: '#0a0806', mat: 'hair', bone: 'head', k: 0.008 }));
   },
 });

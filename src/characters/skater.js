@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person } from './person.js';
 import { baseballCap } from './metalwear.js';
 
 /**
@@ -23,23 +23,41 @@ export default person({
     after(k, { clip, time, seed }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
-      // Bobbing, the board under one arm, the other hand out for balance; a look that says: whatever.
+      // Bobbing, the board hanging from one hand by its edge, the other hand in a pocket; a look that says: whatever.
       k.turn('hips', 0.08, Math.sin(T * 1.3) * 0.1, 0);
-      hold(k, 'armL', 0.05, 0, 0.42); hold(k, 'foreL', -0.55, 0, 0);
-      hold(k, 'armR', 0.1, 0, -0.1);
+      hold(k, 'armL', 0.05, 0, 0.22); hold(k, 'foreL', -0.15, 0, 0);
+      hold(k, 'armR', 0.12, 0, -0.1); hold(k, 'foreR', -0.2, 0, 0);
       k.turn('head', 0.1, Math.sin(T * 0.8) * 0.25, 0.1);
     },
   },
-  extras(s) {
+  extras(s, J, { pose }) {
     baseballCap(s, { color: '#1a1a1e', back: true });
-    s.part('kit', () => {
-      // The board: a long rounded deck with its wheels, held up under the left arm.
-      // Tucked under the left arm on its edge, the long way front to back, the fist over its top edge, the wheels outwards.
-      s.box([0.2, 0.3, 0.03], [0.007, 0.045, 0.15], 0.006, { color: '#e8c030', mat: 'plastic', bone: 'chest', k: 0.003 });
-      for (const z of [-0.08, 0.14]) {
-        s.box([0.214, 0.3, z], [0.008, 0.03, 0.008], 0.003, { color: '#9aa0aa', mat: 'metal', bone: 'chest', k: 0.002 });
-        for (const y of [0.27, 0.33]) s.cylinder([0.226, y, z], 0.014, 0.008, { color: '#f4f2ee', mat: 'rubber', bone: 'chest', k: 0.002, round: 0.003 });
-      }
+    // The board, hanging from the left fist by its edge, the long way front to back: the deck with its kicked-up
+    // nose and tail, black grip tape on top (to the leg), the graphic underneath, the trucks and the four wheels
+    // facing out.
+    const G = pose.grip('L'), c = G.c.map((v, i) => v + [0.004, -0.044, 0][i]);
+    // Its own axes, posed: u the length (front to back), v across (up and down as it hangs), w out of its top.
+    const deck = (p) => {
+      const u = p[2] - c[2], v = p[1] - c[1], x = -(p[0] - c[0]);
+      const kick = Math.max(0, Math.abs(u) - 0.095) ** 2 * 7;
+      const w = x - kick, len = Math.max(Math.abs(u) - 0.112, 0);
+      const out = Math.hypot(len, Math.max(Math.abs(v) - 0.0, 0)) - 0.04;
+      return Math.max(out, Math.abs(w) - 0.0035);
+    };
+    pose.hold(s, 'handL', () => {
+      s.part('kit', () => {
+        s.shape(deck, [[c[0] - 0.04, c[1] - 0.05, c[2] - 0.17], [c[0] + 0.04, c[1] + 0.05, c[2] + 0.17]], { color: '#e8c030', mat: 'plastic', k: 0.002 });
+        for (const u of [-0.085, 0.085]) {
+          const a = [c[0] + 0.009, c[1], c[2] + u];
+          s.box(a, [0.005, 0.016, 0.01], 0.003, { color: '#9aa0aa', mat: 'metal', k: 0.002 });
+          s.limb([c[0] + 0.019, c[1] - 0.034, c[2] + u], [c[0] + 0.019, c[1] + 0.034, c[2] + u], 0.0035, 0.0035, { color: '#9aa0aa', mat: 'metal', k: 0.001 });
+          for (const vv of [-0.032, 0.032]) s.cylinder([c[0] + 0.019, c[1] + vv, c[2] + u], 0.0125, 0.0065, { color: '#f4f2ee', mat: 'rubber', k: 0.002, round: 0.003 });
+        }
+      });
+      // Only on the deck: within its outline and its thickness (plus the kick), the grip on its top, the graphic under.
+      const onDeck = (p) => Math.max(Math.abs(p[1] - c[1]) - 0.042, Math.abs(p[2] - c[2]) - 0.155, Math.abs(p[0] - c[0]) - 0.02, deck(p) - 0.002);
+      s.paint((p) => Math.max(onDeck(p), p[0] - c[0] + Math.max(0, Math.abs(p[2] - c[2]) - 0.095) ** 2 * 7 * 0), '#16161a', 0.001);
+      s.paint((p) => Math.max(onDeck(p), c[0] - p[0], Math.abs(Math.abs(p[2] - c[2]) % 0.06 - 0.03) - 0.012, Math.abs(p[2] - c[2]) - 0.12), '#d8302a', 0.0015);
     });
   },
 });

@@ -1,10 +1,8 @@
-import agent from './agent.js';
 import alien from './alien.js';
 import archaeologist from './archaeologist.js';
 import artist from './artist.js';
 import bat from './bat.js';
 import beerguy from './beerguy.js';
-import blackcat from './blackcat.js';
 import blader from './blader.js';
 import bobby from './bobby.js';
 import bouncer from './bouncer.js';
@@ -164,7 +162,7 @@ import { CAT_DEFS } from './cat.js';
  * each. Hand one to `createModel` (models/model.js) or a bake library.
  */
 export const CHARACTERS = {
-  agent, alien, archaeologist, artist, bat, beerguy, blackcat, blader, bobby, bouncer, brassman,
+  alien, archaeologist, artist, bat, beerguy, blader, bobby, bouncer, brassman,
   brother, bull, cabbie, camel, candlekid, capoeira, clubber, cop, corgi, coroner, corpsepaint,
   cosplayer, count, cowboy, critic, croc, crow, crowdsurfer, cultist, cyclist, dame, dancer, director,
   diver, dj, doomlord, dracfan, dragon, drone, drum, drunk, emo, engineer, eurocrat, extra, fan,

@@ -54,6 +54,21 @@ function countOf(object) {
   return { vertices, triangles: Math.round(triangles) };
 }
 
+/** Which shelf a character goes on: people (on the shared body), or the animals and monsters. */
+function kindOf(def) {
+  const names = new Set((def.bones ?? []).map(([n]) => n));
+  if (names.has('thighL') && names.has('armL') && names.has('head')) return 'people';
+  return 'animals & monsters';
+}
+
+/** A painter's file as a shelf's name: `venue (rocknroller-ii)` for `textures/venue.rocknroller-ii.js`. */
+const shelf = (path) => {
+  const name = path.split('/').pop().replace(/\.js$/, '');
+  const [base, game] = name.split('.');
+  const dir = path.split('/').slice(0, -1).join('/');
+  return `${dir ? `${dir} ` : ''}${base}${game ? ` (${game})` : ''}`;
+};
+
 /** A sculpted definition: animated if it has `animate`, a still prop if not. */
 function sculptedItem(def, category, group, name, source) {
   return {
@@ -87,11 +102,8 @@ const HEROES = [
   ['die (d20)', () => import('../../../src/heroes/die.js').then((m) => m.dieModel(GFX))],
   ['hamster in ball', () => import('../../../src/heroes/hamster.js').then((m) => m.createPlayer(GFX))],
   ['hamster', () => import('../../../src/heroes/hamster.js').then((m) => m.createHamster(GFX))],
-  ['mace', () => import('../../../src/heroes/mace.js').then((m) => m.createMace(GFX))],
   ['morningstar', () => import('../../../src/heroes/morningstar.js').then((m) => m.createMorningStar(GFX))],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
-  ['boulder', () => import('../../../src/heroes/boulder.js').then((m) => m.createRock(GFX))],
-  ['ball (mace player)', () => import('../../../src/heroes/ball.js').then((m) => m.createPlayer(GFX))],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
 ];
@@ -112,7 +124,7 @@ function buildingItems() {
   const buildings = createBuildings();
   const sizes = { ...FOOTPRINTS, ...CALIFORNIA_FOOTPRINTS };
   return buildings.types().map((type) => ({
-    id: `buildings/${type}`, category: 'Buildings', group: 'buildings', name: type, source: 'buildings', kind: 'object',
+    id: `buildings/${type}`, category: 'Buildings', group: type in CALIFORNIA_FOOTPRINTS ? 'california' : 'medieval town', name: type, source: 'buildings', kind: 'object',
     options: { level: [1, 2, 3], variant: [0, 1, 2, 3, 4, 5, 6, 7], construction: [0, 0.25, 0.5, 0.75] },
     build({ level = 1, variant = 0, construction = 0, lights = [] }) {
       const model = buildings.modelFor(type, construction ? { level, variant, building: true, progress: construction } : { level, variant });
@@ -140,7 +152,7 @@ function buildingItems() {
 /** A painter's result ({ map, bump }) laid on a slab, repeated so the tiling shows. */
 function textureItem(id, name, source, make) {
   return {
-    id, category: 'Textures', group: source, name, source, kind: 'object',
+    id, category: 'Textures', group: shelf(source.replace(/^textures\//, '')), name, source, kind: 'object',
     async build() {
       const t = await make();
       const map = t?.map ?? (t?.isTexture ? t : null);
@@ -158,7 +170,7 @@ function textureItem(id, name, source, make) {
 /** A painted canvas (sky or room): worn as the backdrop and the reflections of a chrome ball. */
 function paintedItem(category, id, name, source, paint) {
   return {
-    id, category, group: source, name, source, kind: category === 'Skies' ? 'sky' : 'room',
+    id, category, group: category === 'Skies' ? 'backdrops' : 'rooms', name, source, kind: category === 'Skies' ? 'sky' : 'room',
     async build() {
       const canvas = await paint();
       if (!canvas) throw new Error('No canvas came back');
@@ -234,7 +246,7 @@ export async function loadCatalog(onProgress = () => {}) {
         const direct = value === def;
         const label = direct && key === 'default' ? file : direct ? (file.startsWith(key) || key === def.name ? file : `${file} · ${key}`) : `${file} · ${k}`;
         const source = `${where(path)}${direct && key === 'default' ? '' : `#${direct ? key : `${key}.${k}`}`}`;
-        items.push(sculptedItem(rooted(def), CATEGORY[folder], group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
+        items.push(sculptedItem(rooted(def), CATEGORY[folder], folder === 'characters' ? kindOf(def) : group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
       }
     }
   }
@@ -260,5 +272,6 @@ export async function loadCatalog(onProgress = () => {}) {
   items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
   const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
-  return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
+  // By category, and within one by shelf, so that each shelf's things are together under its heading.
+  return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }

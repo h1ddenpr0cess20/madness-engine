@@ -9,11 +9,9 @@ const HEROES = {
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
-  ball: ['createPlayer', 'RADIUS'],
-  mace: ['createMace'],
+  mace: ['createMace', 'createPlayer', 'RADIUS'],
   morningstar: [],
-  rock: ['createRock'],
-  boulder: [],
+  rock: ['createRock', 'createBoulder'],
 };
 
 for (const [file, exports] of Object.entries(HEROES)) {

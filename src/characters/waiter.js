@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hang, hold, person, shell, strap } from './person.js';
 import { moustache, suitFront } from './wardrobe.js';
 
 /**
@@ -10,6 +10,7 @@ import { moustache, suitFront } from './wardrobe.js';
  * 0.95 tiles tall.
  */
 
+const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
 const WAISTCOAT = cloth('#14141a', '#0a0a0e');
 const SHIRT = cloth('#f6f4f0', '#dcd8d2');
 
@@ -39,27 +40,33 @@ export default person({
       k.turn('head', -0.18, Math.sin(T * 0.3) * 0.3, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     moustache(s, { color: '#14100c', pencil: true });
     suitFront(s, { tie: '#0a0a0c', bow: true, buttons: '#c8ccd4' });
-    s.part('kit', () => {
-      // The apron: from the waist to the shins, wrapped round.
-      s.cone([0, 0.52, 0.004], 0.13, 0.42, { color: SHIRT, mat: 'cloth', bone: 'hips', k: 0.01 });
-      s.box([0, 0.1, -0.06], [0.14, 0.2, 0.05], 0.01, { op: 'sub', k: 0.01 });
-      s.torus([0, 0.34, 0.004], 0.078, 0.006, { color: SHIRT, mat: 'cloth', bone: 'hips', k: 0.003 });
-      // The cloth over the right forearm.
-      const r = J.elbowR;
-      s.flake([r[0], r[1] + 0.005, r[2] + 0.03], [r[0] - 0.01, r[1] - 0.06, r[2] + 0.05], [1, 0, 0], 0.03, 0.03, 0.2, { color: '#f6f4f0', mat: 'cloth', bone: 'foreR', k: 0.004 });
-      // The tray on the fingertips, a bottle and two glasses on it: sculpted hanging under the hand, as the arm
-      // goes up over the head they come up the right way.
-      const l = J.handL, y = l[1] - 0.035;
-      s.cylinder([l[0], y, l[2]], 0.085, 0.004, { color: '#c8ccd4', mat: 'metal', bone: 'handL', k: 0.002, round: 0.003 });
-      s.limb([l[0] - 0.02, y - 0.005, l[2]], [l[0] - 0.02, y - 0.07, l[2]], 0.016, 0.014, { color: '#1a4a2a', mat: 'glass', bone: 'handL', k: 0.006 });
-      s.limb([l[0] - 0.02, y - 0.07, l[2]], [l[0] - 0.02, y - 0.11, l[2]], 0.006, 0.005, { color: '#1a4a2a', mat: 'glass', bone: 'handL', k: 0.004 });
-      for (const dz of [-0.035, 0.03]) {
-        s.cone([l[0] + 0.035, y - 0.012, l[2] + dz], 0.016, 0.03, { color: '#e8d0d8', mat: 'glass', bone: 'handL', k: 0.002 });
-        s.limb([l[0] + 0.035, y - 0.005, l[2] + dz], [l[0] + 0.035, y - 0.012, l[2] + dz], 0.003, 0.003, { color: '#e8d0d8', mat: 'glass', bone: 'handL', k: 0.001 });
-      }
+    // The long white apron: tied round the waist, hanging down the front to the shins.
+    strap(s, [[0, 0.345, 0.095], [0.08, 0.35, 0.065], [0.105, 0.352, 0.0], [0.08, 0.355, -0.065], [0, 0.358, -0.085], [-0.08, 0.355, -0.065], [-0.105, 0.352, 0.0], [-0.08, 0.35, 0.065], [0, 0.345, 0.095]], { width: 0.012, thick: 0.003, color: SHIRT, mat: 'cloth', over: ['top', 'bottoms'], keep: TRUNK, closed: true });
+    hang(s, (p) => Math.max(Math.abs(p[0]) - 0.1, 0.1 - p[1], p[1] - 0.35), {
+      side: 1, thick: 0.009, lift: 0.004, flare: 0.08, from: 0.3, color: SHIRT, mat: 'cloth', part: 'outer', x: [-0.13, 0.13], y: [0.08, 0.37],
+      over: ['bottoms', 'top', 'straps'], bone: 'hips', smooth: 3,
     });
+    // The napkin over the right forearm.
+    const e = J.elbowR, w = J.wristR;
+    shell(s, (p) => { const t = ((p[0] - e[0]) * (w[0] - e[0]) + (p[1] - e[1]) * (w[1] - e[1]) + (p[2] - e[2]) * (w[2] - e[2])) / ((w[0] - e[0]) ** 2 + (w[1] - e[1]) ** 2 + (w[2] - e[2]) ** 2); return Math.max(Math.abs(t - 0.5) - 0.22, -p[0] + e[0] - 0.01); },
+      { color: '#f6f4f0', mat: 'cloth', part: 'outer', thick: 0.004, lift: 0.002, over: ['top', 'hands'], keep: (sh) => /foreR/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]), bone: 'foreR', k: 0.002 });
+    // The tray on the fingertips, high over his head: a round silver tray, a bottle and two glasses standing on it.
+    const G = pose.grip('L'), c = G.c.map((v, i) => v + [0, 0.032, 0][i]), up = (h) => c.map((v, i) => v + [0, h, 0][i]);
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      s.cylinder(c, 0.085, 0.0035, { color: '#c8ccd4', mat: 'metal', k: 0.002, round: 0.003 });
+      s.torus(up(0.004), 0.084, 0.003, { color: '#c8ccd4', mat: 'metal', k: 0.001 });
+      const b = up(0.004).map((v, i) => v + [-0.025, 0, 0.0][i]);
+      s.limb(b, b.map((v, i) => v + [0, 0.065, 0][i]), 0.016, 0.015, { color: '#1a4a2a', mat: 'glass', k: 0.006 });
+      s.limb(b.map((v, i) => v + [0, 0.065, 0][i]), b.map((v, i) => v + [0, 0.1, 0][i]), 0.007, 0.0055, { color: '#1a4a2a', mat: 'glass', k: 0.004 });
+      for (const dz of [-0.035, 0.03]) {
+        const g = up(0.004).map((v, i) => v + [0.035, 0, dz][i]);
+        s.cylinder(g.map((v, i) => v + [0, 0.002, 0][i]), 0.012, 0.0015, { color: '#e8d0d8', mat: 'glass', k: 0.001 });
+        s.limb(g, g.map((v, i) => v + [0, 0.025, 0][i]), 0.0025, 0.0025, { color: '#e8d0d8', mat: 'glass', k: 0.001 });
+        s.cone(g.map((v, i) => v + [0, 0.05, 0][i]), 0.016, 0.026, { color: '#d81c4a', mat: 'glass', k: 0.002 });
+      }
+    }));
   },
 });

@@ -1,5 +1,5 @@
 import { coat } from '../models/skins.js';
-import { cloth, hold, person } from './person.js';
+import { cloth, hang, hold, onBody, person, strap } from './person.js';
 
 /**
  * The Yokozuna: the grand champion, enormous, in the ring-entering
@@ -11,6 +11,7 @@ import { cloth, hold, person } from './person.js';
  * throws you out of it. A boss: about 2.6 tiles tall.
  */
 
+const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
 const SKIN = '#f0c4a0';
 const SILK = (p, n) => {
   const c = coat({ over: '#5a1a8a', under: '#3a0e5a', vary: 0.08, freq: 20 })(p, n);
@@ -50,29 +51,26 @@ export default person({
     },
   },
   extras(s) {
+    // The mawashi round the hips under the belly, the kesho-mawashi apron of silk hanging from it down the front to
+    // the knees; the tsuna, the thick white rope, round over it, its loop behind; the shide hanging off it in front.
+    strap(s, [[0, 0.27, 0.17], [0.12, 0.275, 0.13], [0.175, 0.285, 0.0], [0.12, 0.295, -0.12], [0, 0.3, -0.16], [-0.12, 0.295, -0.12], [-0.175, 0.285, 0.0], [-0.12, 0.275, 0.13], [0, 0.27, 0.17]], { width: 0.05, thick: 0.016, color: '#1a1030', mat: 'cloth', over: ['body', 'bottoms'], keep: TRUNK, part: 'outer', closed: true });
+    hang(s, (p) => Math.max(Math.abs(p[0]) - 0.075, 0.12 - p[1], p[1] - 0.27), { side: 1, thick: 0.008, lift: 0.004, flare: 0.05, from: 0.25, color: SILK, mat: 'cloth', part: 'outer', x: [-0.1, 0.1], y: [0.1, 0.29], over: ['outer', 'body', 'bottoms'], bone: 'hips', smooth: 3 });
+    strap(s, [[0, 0.3, 0.175], [0.125, 0.305, 0.135], [0.18, 0.31, 0.0], [0.125, 0.315, -0.125], [0, 0.32, -0.165], [-0.125, 0.315, -0.125], [-0.18, 0.31, 0.0], [-0.125, 0.305, 0.135], [0, 0.3, 0.175]], { width: 0.032, thick: 0.032, round: true, color: (p) => (Math.sin(Math.atan2(p[0], p[2]) * 40 + p[1] * 300) > 0 ? [0.98, 0.98, 0.96] : [0.86, 0.85, 0.82]), mat: 'cloth', over: ['outer', 'body'], part: 'outer2', bone: 'hips', closed: true });
+    const back = onBody(s, [0, 0.31, -0.25], ['outer2']);
     s.part('kit', () => {
-      // The silk apron, from the waist to the knees, and the dark belt under the rope.
-      s.box([0, 0.2, 0.1], [0.075, 0.11, 0.012], 0.012, { color: SILK, mat: 'cloth', bone: 'hips', k: 0.01 });
-      s.torus([0, 0.27, 0.03], 0.12, 0.032, { color: '#1a1030', mat: 'cloth', bone: 'hips', k: 0.01 });
-      // The tsuna: the white rope, twisted, thick at the front, a loop behind.
-      for (let i = 0; i < 24; i++) {
-        const a = (i / 24) * Math.PI * 2, b = ((i + 1) / 24) * Math.PI * 2;
-        const r = 0.13 + Math.max(0, Math.cos(a)) * 0.02;
-        s.limb([Math.sin(a) * r, 0.29, 0.03 + Math.cos(a) * r], [Math.sin(b) * r, 0.29, 0.03 + Math.cos(b) * r], 0.026 + Math.max(0, Math.cos(a)) * 0.012, 0.026, { ...ROPE, k: 0.004 });
-        s.torus([Math.sin(a) * r, 0.29, 0.03 + Math.cos(a) * r], 0.026, 0.004, { color: '#e0ddd4', mat: 'cloth', bone: 'hips', k: 0, rot: [0, -a, 0.7] });
-      }
-      for (const m of [1, -1]) s.torus([m * 0.05, 0.3, -0.13], 0.03, 0.014, { ...ROPE, k: 0.004 });
-      // The shide: five zigzags of white paper hanging off the rope at the front.
-      for (let i = 0; i < 5; i++) {
-        const x = -0.1 + i * 0.05, z = 0.03 + Math.sqrt(Math.max(0, 0.15 * 0.15 - x * x)) + 0.01;
-        let p = [x, 0.27, z];
+      for (const m of [1, -1]) s.torus(back.p.map((v, i) => v + [m * 0.045, 0.01, -0.012][i]), 0.03, 0.014, { ...ROPE, k: 0.004, rot: [Math.PI / 2, 0, 0] });
+    });
+    const front = onBody(s, [-0.1, -0.05, 0, 0.05, 0.1].map((x) => [x, 0.295, 0.25]), ['outer2']);
+    s.part('kit', () => {
+      for (const h of front) {
+        let p = h.p.map((v, i) => v + h.n[i] * 0.004 + [0, -0.012, 0][i]);
         for (let j = 0; j < 3; j++) {
           const q = [p[0] + (j % 2 ? -0.012 : 0.012), p[1] - 0.035, p[2] + 0.002];
           s.flake(p, q, [0, 0, 1], 0.008, 0.008, 0.2, { color: '#ffffff', mat: 'paper', bone: 'hips', k: 0.001 });
           p = q;
         }
       }
-      // The ōichō: the topknot fanned out like a ginkgo leaf on the crown.
+      // The oicho: the topknot fanned out like a ginkgo leaf on the crown.
       s.limb([0, 0.75, -0.06], [0, 0.79, 0.0], 0.016, 0.018, { color: '#0a0806', mat: 'hair', bone: 'head', k: 0.008 });
       s.flake([0, 0.79, 0.0], [0, 0.8, 0.07], [0, 1, 0], 0.025, 0.04, 0.3, { color: '#0a0806', mat: 'hair', bone: 'head', k: 0.008 });
     });

@@ -123,7 +123,7 @@ test('a person\'s head, hands and shoes are meshes of their own, finer than the 
 });
 
 test('what a person wears is put on them: a piece hanging just off the body moves onto it, and a hat comes down onto the head', async () => {
-  const { fit } = await import('../src/characters/humanoid.metroll.js');
+  const { fit } = await import('../src/characters/humanoid.js');
   const s = new Sculpt();
   s.sphere([0, 0.4, 0], 0.1, { bone: 'chest' });
   s.sphere([0, 0.7, 0], 0.08, { bone: 'head' });

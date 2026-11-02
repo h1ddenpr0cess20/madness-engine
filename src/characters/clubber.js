@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { buttons, cloth, hold, onBody, person, strap } from './person.js';
 import { shades } from './metalwear.js';
 
 /**
@@ -36,14 +36,18 @@ export default person({
   },
   extras(s) {
     shades(s, { color: '#08080a' });
-    s.part('kit', () => {
-      // The harness: straps over each shoulder crossing in a ring in the middle, a strap round the waist.
-      const L = { color: '#1e1e22', mat: 'leather', bone: 'chest', k: 0.003 };
-      s.limb([0.075, 0.54, 0.02], [0, 0.44, 0.08], 0.01, 0.01, L);
-      s.limb([-0.075, 0.54, 0.02], [0, 0.44, 0.08], 0.01, 0.01, L);
-      s.limb([0, 0.44, 0.08], [0, 0.36, 0.076], 0.009, 0.009, L);
-      s.torus([0, 0.44, 0.088], 0.02, 0.004, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.001 });
-      s.torus([0, 0.34, 0.0], 0.09, 0.008, { color: '#1e1e22', mat: 'leather', bone: 'hips', k: 0.003 });
-    });
+    // The harness, on the T-shirt: a strap over each shoulder from the belt at the back, crossing to a steel ring
+    // on the chest, and one down from the ring to the belt in front.
+    const trunk = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
+    const ring = onBody(s, [0, 0.445, 0.09], ['top']);
+    const R = ring.p.map((v, i) => v + ring.n[i] * 0.004);
+    for (const m of [1, -1]) {
+      strap(s, [[m * 0.012, 0.448, 0.09], [m * 0.05, 0.5, 0.07], [m * 0.06, 0.552, 0.0], [m * 0.045, 0.5, -0.07], [m * 0.03, 0.4, -0.07], [m * 0.02, 0.352, -0.065]],
+        { width: 0.016, thick: 0.004, color: '#1e1e22', over: ['top', 'belt'], keep: trunk });
+    }
+    strap(s, [[0, 0.432, 0.092], [0, 0.39, 0.09], [0, 0.358, 0.088]], { width: 0.016, thick: 0.004, color: '#1e1e22', over: ['top', 'belt'], keep: trunk });
+    s.part('kit', () => s.torus(R, 0.018, 0.0042, { color: '#d6d9e0', mat: 'metal', bone: 'chest', k: 0.001, rot: [Math.PI / 2 - Math.asin(ring.n[1]), Math.atan2(ring.n[0], ring.n[2]), 0] }));
+    // Rivets where the straps meet the ring.
+    buttons(s, [[0.022, 0.456, 0.09], [-0.022, 0.456, 0.09], [0, 0.426, 0.092]], { r: 0.004, color: '#d6d9e0', over: ['straps'] });
   },
 });

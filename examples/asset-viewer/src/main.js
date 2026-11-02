@@ -382,20 +382,33 @@ const catalog = await (async () => {
 })();
 await loadServerFlags();
 
-const categories = ['All', ...new Set(catalog.map((i) => i.category))];
-$('category').replaceChildren(...categories.map((c) => el('option', { value: c }, c === 'All' ? `All (${catalog.length})` : `${c} (${catalog.filter((i) => i.category === c).length})`)));
+// Every category, and under it each of its shelves (when it has more than one), to pick from.
+const categories = [...new Set(catalog.map((i) => i.category))];
+const shelfOf = (i) => (i.group === i.category.toLowerCase() ? '' : i.group);
+$('category').replaceChildren(
+  el('option', { value: 'All' }, `All (${catalog.length})`),
+  ...categories.flatMap((c) => {
+    const items = catalog.filter((i) => i.category === c);
+    const shelves = [...new Set(items.map(shelfOf))].filter(Boolean);
+    return [
+      el('option', { value: c }, `${c} (${items.length})`),
+      ...(shelves.length > 1 ? shelves.map((g) => el('option', { value: `${c}\u203a${g}` }, `\u00a0\u00a0\u203a ${g} (${items.filter((i) => shelfOf(i) === g).length})`)) : []),
+    ];
+  }),
+);
 
 let filtered = [];
 function applyFilter() {
   const q = $('search').value.trim().toLowerCase();
   const cat = $('category').value;
   const only = $('onlyflagged').checked;
-  filtered = catalog.filter((i) => (cat === 'All' || i.category === cat) && (!only || flags[i.id]) && (!q || `${i.name} ${i.source} ${i.group}`.toLowerCase().includes(q)));
+  const [catName, shelfName] = cat.split('\u203a');
+  filtered = catalog.filter((i) => (cat === 'All' || (i.category === catName && (shelfName === undefined || shelfOf(i) === shelfName))) && (!only || flags[i.id]) && (!q || `${i.name} ${i.source} ${i.group}`.toLowerCase().includes(q)));
   const list = $('list');
   list.replaceChildren();
   let group = null;
   for (const item of filtered) {
-    const g = item.group === item.category.toLowerCase() ? item.category : `${item.category} › ${item.group}`;
+    const g = shelfOf(item) ? `${item.category} › ${item.group}` : item.category;
     if (g !== group) { group = g; list.append(el('h4', {}, g)); }
     const row = el('div', { className: 'row', title: item.source }, el('span', {}, item.name), el('span', { className: 'flagmark' }, flags[item.id] ? '⚑' : ''));
     row.dataset.id = item.id;

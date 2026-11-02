@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hang, hold, onBody, person, strap } from './person.js';
 import { corpsePaint, robe } from './metalwear.js';
 
 /**
@@ -25,17 +25,18 @@ export default person({
   face: { eyeColor: '#6aff3a', brow: '#0a080c', mood: -1, blush: 0, jaw: 1.05 },
   style: {
     attack: 'smash', heavy: 0.9,
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, aim }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
       // The staff planted on the floor in one fist, the other hand open and low; a slow breathing, the head lifting.
-      hold(k, 'armR', -0.12, 0, -0.22); hold(k, 'foreR', -0.05, 0, 0);
+      hold(k, 'armR', -0.3, 0, -0.42); hold(k, 'foreR', -0.5, 0, 0);
+      aim?.(k, 'R', 'chest', [-0.3, 2.0, 0.1]);
       hold(k, 'armL', -0.2, 0, 0.5 + Math.sin(T * 0.6) * 0.05); hold(k, 'foreL', -0.4, 0, 0);
       k.turn('head', 0.05 + Math.sin(T * 0.5) * 0.05, Math.sin(T * 0.3) * 0.15, 0);
       k.move('root', 0, Math.sin(T * 0.6) * 0.01, 0);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     corpsePaint(s, { white: BONE, black: '#0a080c' });
     robe(s, { color: '#16121a', trim: '#6a2a9a', flare: 1.15 });
     s.part('kit', () => {
@@ -47,16 +48,30 @@ export default person({
         s.limb([m * 0.16, 0.86, -0.02], [m * 0.24, 0.9, 0.04], 0.01, 0.005, A);
         s.limb([m * 0.14, 0.82, -0.02], [m * 0.17, 0.93, 0.05], 0.009, 0.005, A);
       }
-      // A ragged shroud off the shoulders, and a heavy chain with a skull on it.
-      for (const m of [-0.07, 0, 0.07]) s.flake([m, 0.53, -0.05], [m * 2.2, 0.07, -0.14], [0, 0, -1], 0.03, 0.05, 0.14, { color: '#16121a', mat: 'cloth', bone: 'chest', k: 0.012 });
-      s.torus([0, 0.5, 0.02], 0.075, 0.008, { color: '#8a8e98', mat: 'metal', bone: 'chest', k: 0.003, rot: [1.3, 0, 0] });
-      s.sphere([0, 0.405, 0.07], 0.018, { color: BONE, mat: 'bone', bone: 'chest', k: 0.004 });
-      // The staff in the right hand: a gnarled black shaft, a skull on the top of it, a green glow in the eyes.
-      const r = J.handR;
-      s.limb([r[0], r[1] - 0.25, r[2]], [r[0] + 0.01, r[1] + 0.45, r[2] - 0.01], 0.014, 0.018, { color: '#2a1e14', mat: 'leather', bone: 'handR', k: 0.006 });
-      s.sphere([r[0] + 0.01, r[1] + 0.5, r[2] - 0.01], 0.04, { color: BONE, mat: 'bone', bone: 'handR', k: 0.01 });
-      s.ellipsoid([r[0] + 0.01, r[1] + 0.47, r[2] + 0.015], [0.026, 0.02, 0.026], { color: BONE, mat: 'bone', bone: 'handR', k: 0.008 });
-      for (const m of [1, -1]) s.sphere([r[0] + 0.01 + m * 0.016, r[1] + 0.51, r[2] + 0.03], 0.01, { color: '#6aff3a', mat: 'glow', bone: 'handR', k: 0.001 });
+    });
+    // A ragged shroud off the shoulders, hanging down the back over the robe to the floor, its hem torn.
+    hang(s, (p) => Math.max(Math.abs(p[0]) - (0.09 + (0.55 - p[1]) * 0.18), 0.03 + Math.abs(Math.sin(p[0] * 90)) * 0.03 - p[1], p[1] - 0.552, p[2] - 0.02), {
+      side: -1, thick: 0.007, lift: 0.004, flare: 0.1, from: 0.42, color: ROBE, x: [-0.22, 0.22], y: [0.0, 0.58],
+      over: ['top', 'bottoms', 'outer'], bones: { chest: (p) => 0.44 - p[1], spine: (p) => Math.max(p[1] - 0.46, 0.3 - p[1]), hips: (p) => p[1] - 0.32 },
+    });
+    // A heavy chain round the neck, and a skull on it.
+    strap(s, [[0, 0.556, -0.04], [0.036, 0.553, -0.03], [0.055, 0.52, 0.035], [0, 0.5, 0.08], [-0.055, 0.52, 0.035], [-0.036, 0.553, -0.03]], { closed: true, round: true, thick: 0.007, color: '#8a8e98', mat: 'metal', over: ['top', 'head', 'outer'] });
+    const at = onBody(s, [0, 0.49, 0.09], ['top']);
+    s.part('kit', () => {
+      const c = at.p.map((v, i) => v + at.n[i] * 0.016);
+      s.sphere(c, 0.017, { color: BONE, mat: 'bone', bone: 'chest', k: 0.004 });
+      s.ellipsoid(c.map((v, i) => v + [0, -0.012, 0.004][i]), [0.011, 0.007, 0.01], { color: BONE, mat: 'bone', bone: 'chest', k: 0.004 });
+      for (const m of [1, -1]) s.sphere(c.map((v, i) => v + [m * 0.007, 0.001, 0.014][i]), 0.0045, { op: 'sub', k: 0.001 });
+    });
+    // The staff in the right fist, upright and planted on the floor: a gnarled black shaft, a skull on the top of it, a green glow in the eyes.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => {
+      s.part('kit', () => {
+        s.limb(G.at(-0.36), G.at(0.36), 0.013, 0.017, { color: '#2a1e14', mat: 'leather', k: 0.006, bump: [0.002, 60] });
+        s.sphere(G.at(0.41), 0.038, { color: BONE, mat: 'bone', k: 0.01 });
+        s.ellipsoid(G.at(0.385, 0, -0.014), [0.024, 0.02, 0.024], { color: BONE, mat: 'bone', k: 0.008 });
+      });
+      s.part('fine', () => { for (const m of [1, -1]) s.sphere(G.at(0.42, 0, -0.03).map((v, i) => v + G.up[i] * m * 0.015), 0.009, { color: '#6aff3a', mat: 'glow', k: 0.001 }); });
     });
   },
 });

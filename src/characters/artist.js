@@ -1,5 +1,5 @@
 import { coat } from '../models/skins.js';
-import { cloth, hold, person } from './person.js';
+import { cloth, hold, person, skirt, strap, trunk } from './person.js';
 import { beard, beret, moustache } from './wardrobe.js';
 
 /**
@@ -45,27 +45,38 @@ export default person({
       k.turn('head', 0.05, -0.1, 0.18 + Math.sin(T * 0.6) * 0.05);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     beret(s, { color: '#14141a' });
     moustache(s, { color: '#2a1a10', wide: 1.5 });
-    beard(s, { color: '#2a1a10' });
-    s.part('kit', () => {
-      // The smock's skirt, down over the hips.
-      s.cone([0, 0.5, 0.005], 0.13, 0.3, { color: SMOCK, mat: 'cloth', bone: 'hips', k: 0.02 });
-      // The neckerchief.
-      s.torus([0, 0.525, 0.01], 0.042, 0.012, { color: '#c81c24', mat: 'cloth', bone: 'chest', k: 0.004, rot: [0.3, 0, 0] });
-      s.cone([0.01, 0.48, 0.07], 0.02, 0.04, { color: '#c81c24', mat: 'cloth', bone: 'chest', k: 0.004, rot: [Math.PI, 0, 0.2] });
-      // The brush: a long handle, a ferrule, a red tip.
-      const r = J.handR;
-      s.limb([r[0], r[1] - 0.06, r[2] + 0.01], [r[0], r[1] + 0.12, r[2] + 0.01], 0.004, 0.003, { color: '#1a1a1e', mat: 'plastic', bone: 'handR', k: 0.001 });
-      s.limb([r[0], r[1] + 0.12, r[2] + 0.01], [r[0], r[1] + 0.15, r[2] + 0.01], 0.0045, 0.002, { color: '#d8301a', mat: 'cloth', bone: 'handR', k: 0.001 });
-      // The palette on the left thumb, the dabs of paint round its edge.
-      const l = J.handL;
-      s.cylinder([l[0] + 0.03, l[1] + 0.01, l[2] + 0.03], 0.07, 0.004, { color: WOOD, mat: 'leather', bone: 'handL', k: 0.002, round: 0.003, rot: [0.2, 0, 1.2] });
-      ['#e8301a', '#f0c020', '#2a6ad8', '#2aa04a', '#f4f2ec'].forEach((c, i) => {
-        const a = i * 0.9;
-        s.sphere([l[0] + 0.03 + Math.cos(a) * 0.004, l[1] + 0.01 + Math.cos(a) * 0.045, l[2] + 0.03 + Math.sin(a) * 0.045], 0.01, { color: c, mat: 'plastic', bone: 'handL', k: 0.002 });
+    beard(s, { color: '#2a1a10', full: 0 });
+    // The smock, hanging loose over the hips to the thigh.
+    skirt(s, trunk(0.98, 0), { top: 0.37, hem: 0.24, flare: 1.08, color: SMOCK, part: 'outer', b: 0.98 });
+    // The neckerchief, knotted at the throat, its corner hanging down in front.
+    strap(s, [[0, 0.556, -0.035], [0.035, 0.552, -0.012], [0.042, 0.535, 0.03], [0, 0.522, 0.058], [-0.042, 0.535, 0.03], [-0.035, 0.552, -0.012]], { closed: true, width: 0.016, thick: 0.004, color: '#c81c24', mat: 'cloth', over: ['top', 'head'] });
+    s.part('outer2', () => s.panel([-0.016, 0.525, 0.064], [0.018, 0.522, 0.064], [0.004, 0.488, 0.072], 0.004, { color: '#c81c24', mat: 'cloth', bone: 'chest', k: 0.002 }));
+    // The brush: a long handle through the fist, held up between him and you, the ferrule and a red tip out past the thumb.
+    const B = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(B.at(-0.07), B.at(0.11), 0.0038, 0.003, { color: '#1a1a1e', mat: 'plastic', k: 0.001 });
+      s.limb(B.at(0.11), B.at(0.13), 0.0042, 0.0042, { color: '#c8ccd4', mat: 'metal', k: 0.001 });
+      s.limb(B.at(0.13), B.at(0.155), 0.0045, 0.0012, { color: '#d8301a', mat: 'cloth', k: 0.001 });
+    }));
+    // The palette: the thumb up through its hole, lying flat on the hand and forearm, the dabs of paint round its edge.
+    const L = pose.grip('L');
+    const flat = [0, 1, 0], rot = [0, 0, 0];
+    const hole = L.at(0.012, 0.004, -0.004);
+    const ctr = hole.map((v, i) => v + [0.045, 0, 0.03][i] * (i === 0 ? 1 : 1));
+    pose.hold(s, 'handL', () => {
+      s.part('kit', () => {
+        s.cylinder(ctr, 0.066, 0.0032, { color: WOOD, mat: 'leather', k: 0.002, round: 0.003, rot });
+        s.cylinder(hole, 0.011, 0.01, { op: 'sub', k: 0.002, rot });
+        s.cylinder(ctr.map((v, i) => v + [-0.05, 0, 0.035][i]), 0.026, 0.01, { op: 'sub', k: 0.002, rot });
+      });
+      ['#e8301a', '#f0c020', '#2a6ad8', '#2aa04a', '#f4f2ec', '#8a2ad8'].forEach((col, i) => {
+        const a = 0.6 + i * 0.75;
+        s.part('fine', () => s.ellipsoid([ctr[0] + Math.cos(a) * 0.046, ctr[1] + 0.0035, ctr[2] + Math.sin(a) * 0.046], [0.009, 0.0035, 0.008], { color: col, mat: 'plastic', k: 0.001 }));
       });
     });
+    void flat;
   },
 });

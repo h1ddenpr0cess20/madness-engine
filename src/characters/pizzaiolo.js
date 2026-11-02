@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.js';
+import { buttons, cloth, hold, onBody, person, shell, strap } from './person.js';
 import { moustache } from './wardrobe.js';
 
 /**
@@ -43,16 +43,23 @@ const base = person({
   },
   extras(s) {
     moustache(s, { color: '#1a120a', wide: 1.4 });
+    // The toque: a white band fitted round the head, and the tall pleated crown puffed out on top of it.
+    shell(s, (p) => 0.7 - p[1], { color: '#fbfaf8', mat: 'cloth', part: 'outer', thick: 0.008, lift: 0.002, over: ['head', 'hair'], bone: 'head', k: 0.004 });
+    const top = onBody(s, [0, 0.9, -0.004], ['outer']);
+    s.part('outer2', () => {
+      const b = top.p;
+      s.cylinder([b[0], b[1] + 0.05, b[2]], 0.092, 0.06, { color: '#fbfaf8', mat: 'cloth', bone: 'head', k: 0.012, round: 0.02, bump: [0.003, 50] });
+      s.ellipsoid([b[0], b[1] + 0.115, b[2]], [0.112, 0.042, 0.112], { color: '#fbfaf8', mat: 'cloth', bone: 'head', k: 0.02 });
+    });
+    // The neckerchief knotted at the throat.
+    strap(s, [[0, 0.53, 0.07], [0.05, 0.538, 0.04], [0.062, 0.548, -0.01], [0.04, 0.552, -0.06], [0, 0.553, -0.07], [-0.04, 0.552, -0.06], [-0.062, 0.548, -0.01], [-0.05, 0.538, 0.04], [0, 0.53, 0.07]], { width: 0.016, thick: 0.004, color: '#c81c24', mat: 'cloth', over: ['top', 'head'], bone: 'chest', closed: true });
+    s.part('outer2', () => s.sphere([0, 0.527, 0.077], 0.011, { color: '#c81c24', mat: 'cloth', bone: 'chest', k: 0.003 }));
+    // Double-breasted: two rows of buttons.
+    const rows = [];
+    for (const y of [0.48, 0.44, 0.4]) for (const m of [1, -1]) rows.push([m * 0.035, y, 0.12]);
+    buttons(s, rows, { r: 0.0058, color: '#f4f2ec', mat: 'plastic', over: ['top'] });
+    // The dough, under the hand as sculpted (the hand goes up over the head): a wide, thin disc, thicker at the rim.
     s.part('kit', () => {
-      // The toque: a band, and the tall pleated crown puffed out on top.
-      s.cylinder([0, 0.775, -0.004], 0.1, 0.02, { color: '#fbfaf8', mat: 'cloth', bone: 'head', k: 0.006, round: 0.006 });
-      s.cylinder([0, 0.87, -0.004], 0.095, 0.08, { color: '#fbfaf8', mat: 'cloth', bone: 'head', k: 0.01, round: 0.02, bump: [0.003, 50] });
-      s.ellipsoid([0, 0.95, -0.004], [0.115, 0.04, 0.115], { color: '#fbfaf8', mat: 'cloth', bone: 'head', k: 0.02 });
-      // The neckerchief.
-      s.torus([0, 0.525, 0.01], 0.042, 0.012, { color: '#c81c24', mat: 'cloth', bone: 'chest', k: 0.004, rot: [0.3, 0, 0] });
-      // Double-breasted: two rows of buttons.
-      for (const y of [0.48, 0.44, 0.4]) for (const m of [1, -1]) s.sphere([m * 0.035, y, 0.09 + (0.48 - y) * 0.3], 0.006, { color: '#f4f2ec', mat: 'plastic', bone: y > 0.42 ? 'chest' : 'spine', k: 0.001 });
-      // The dough, under the hand as sculpted (the hand goes up over the head): a wide, thin disc, thicker at the rim.
       s.cylinder(BASE, 0.11, 0.004, { ...DOUGH, bone: 'dough', k: 0.004, round: 0.004 });
       s.torus(BASE, 0.105, 0.01, { ...DOUGH, bone: 'dough', k: 0.004 });
     });

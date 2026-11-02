@@ -1,4 +1,5 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person, plate } from './person.js';
+import { beard, glasses, satchel } from './wardrobe.js';
 
 /**
  * The Music Critic: a cardigan, a tote bag, round glasses, a very small
@@ -29,20 +30,22 @@ export default person({
       k.turn('head', 0.18, Math.sin(T * 0.5) * 0.2, 0);
     },
   },
-  extras(s, J) {
-    s.part('kit', () => {
-      // Round glasses, the beard (small), a tote bag on the shoulder with its strap across.
-      for (const m of [1, -1]) s.torus([m * 0.042, 0.668, 0.1], 0.022, 0.004, { color: '#16161a', mat: 'metal', bone: 'head', k: 0.002, rot: [Math.PI / 2, 0, 0] });
-      s.limb([-0.02, 0.672, 0.106], [0.02, 0.672, 0.106], 0.003, 0.003, { color: '#16161a', mat: 'metal', bone: 'head', k: 0.001 });
-      s.part('brows', () => s.ellipsoid([0, 0.592, 0.088], [0.018, 0.016, 0.014], { color: '#3a2a1e', mat: 'hair', bone: 'head', k: 0.006 }));
-      s.limb([0.09, 0.5, 0.0], [-0.07, 0.38, 0.07], 0.007, 0.007, { color: '#e8e4d8', mat: 'cloth', bone: 'chest', k: 0.002 });
-      s.box([-0.115, 0.34, 0.0], [0.016, 0.06, 0.05], 0.01, { color: '#e8e4d8', mat: 'cloth', bone: 'hips', k: 0.004 });
-      s.paint((p) => Math.max(Math.abs(p[2]) - 0.025, Math.abs(p[1] - 0.34) - 0.014, Math.abs(p[0] + 0.131) - 0.006), '#d81c2a', 0.002);
-      // The notebook in one hand and the pen in the other.
-      s.box([0.035, 0.44, 0.165], [0.035, 0.045, 0.006], 0.003, { color: '#f2f0ec', mat: 'paper', bone: 'chest', k: 0.002, rot: [-0.6, 0, 0.2] });
-      s.box([0.035, 0.439, 0.16], [0.036, 0.046, 0.003], 0.002, { color: '#2a2a30', mat: 'leather', bone: 'chest', k: 0.001, rot: [-0.6, 0, 0.2] });
-      const r = J.handR;
-      s.limb([r[0], r[1] - 0.025, r[2] + 0.01], [r[0], r[1] + 0.03, r[2] + 0.01], 0.004, 0.002, { color: '#c8a030', mat: 'metal', bone: 'handR', k: 0.002 });
-    });
+  extras(s, J, { pose }) {
+    glasses(s, { rim: '#16161a', round: true, size: 0.024 });
+    // The beard: very small, on the chin only.
+    beard(s, { color: '#3a2a1e', full: 0, thick: 0.006 });
+    // The tote bag on the left shoulder, its strap across to the right hip, a red stripe on it.
+    const tote = satchel(s, { side: 1, color: '#e8e4d8', strap: '#d8d4c8', size: [0.05, 0.055, 0.012], width: 0.016, flap: false });
+    s.paint((p) => { const v = p.map((x, i) => x - tote.c[i]); const y = v[0] * tote.up[0] + v[1] * tote.up[1] + v[2] * tote.up[2], z = v[0] * tote.n[0] + v[1] * tote.n[1] + v[2] * tote.n[2], x = v[0] * tote.across[0] + v[1] * tote.across[1] + v[2] * tote.across[2]; return Math.max(Math.abs(y) - 0.012, Math.abs(x) - 0.055, -z); }, '#d81c2a', 0.002);
+    // The notebook open on the left hand, and the pen in the right, writing.
+    const L = pose.grip('L'), R = pose.grip('R');
+    const across = L.along, length = L.out.map((v) => -v);
+    const face = [across[1] * length[2] - across[2] * length[1], across[2] * length[0] - across[0] * length[2], across[0] * length[1] - across[1] * length[0]];
+    const book = L.at(0, 0, -0.01).map((v, i) => v + length[i] * 0.03 + face[i] * 0.004);
+    pose.hold(s, 'handL', () => s.part('kit', () => {
+      plate(s, book, across, length, [0.034, 0.045, 0.0028], 0.002, { color: '#2a2a30', mat: 'leather', k: 0.001 });
+      plate(s, book.map((v, i) => v + face[i] * 0.003), across, length, [0.031, 0.042, 0.0012], 0.001, { color: '#f2f0ec', mat: 'paper', k: 0.0005 });
+    }));
+    pose.hold(s, 'handR', () => s.part('kit', () => s.limb(R.at(-0.045), R.at(0.035), 0.0032, 0.0042, { color: '#c8a030', mat: 'metal', k: 0.001 })));
   },
 });

@@ -66,9 +66,9 @@ const treeItems = () => Object.entries(TREES).map(([key, name]) => ({
 
 const SEA_FRAME = { center: [0, 1, 0], radius: 14 };
 
-function seaItem(id, name, sea, sky, source) {
+function seaItem(id, name, sea, sky, source, category = 'Water', group = 'sea') {
   return {
-    id, category: 'Water', group: source, name, source, kind: 'object',
+    id, category, group, name, source, kind: 'object',
     build({ stage }) {
       const ocean = createOcean(GFX, { sea, sky, reach: 600, rings: 120, segments: 160 });
       const group = new GFX.Group();
@@ -85,8 +85,9 @@ function seaItem(id, name, sea, sky, source) {
 }
 
 const waterItems = () => [
-  ...Object.keys(SEAS).map((s) => seaItem(`water/sea/${s}`, `Sea · ${s}`, s, 'noon', 'ocean')),
-  ...Object.keys(SKIES).map((s) => seaItem(`water/sky/${s}`, `Sky over the sea · ${s}`, 'breeze', s, 'ocean/sky')),
+  ...Object.keys(SEAS).map((s) => seaItem(`water/sea/${s}`, `Sea · ${s}`, s, 'noon', 'ocean.js')),
+  // The ocean's skies are skies: filed with the others, over a breeze of a sea.
+  ...Object.keys(SKIES).map((s) => seaItem(`water/sky/${s}`, `Ocean sky · ${s}`, 'breeze', s, 'ocean/sky.js', 'Skies', 'ocean')),
   ...Object.entries(RIVERS).map(([name, wild]) => ({
     id: `water/river/${name}`, category: 'Water', group: 'river', name: `River · ${name}`, source: 'river.js', kind: 'object',
     build({ stage }) {

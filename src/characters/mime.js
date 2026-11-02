@@ -1,5 +1,5 @@
 import { bands } from '../models/skins.js';
-import { cloth, hold, person } from './person.metroll.js';
+import { buttons, cloth, hold, person, strap } from './person.js';
 import { beret } from './wardrobe.js';
 
 /**
@@ -11,6 +11,7 @@ import { beret } from './wardrobe.js';
  */
 
 const STRIPES = bands(1, 0.03, '#f4f2ec', '#14141a', 0.45, 0.1);
+const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
 const BLACK = cloth('#16161c', '#0a0a0e');
 
 export default person({
@@ -41,13 +42,11 @@ export default person({
   },
   extras(s) {
     beret(s, { color: '#14141a' });
-    s.part('kit', () => {
-      // Red braces over the stripes.
-      for (const m of [1, -1]) {
-        s.limb([m * 0.045, 0.52, 0.04], [m * 0.04, 0.35, 0.075], 0.008, 0.008, { color: '#c81c24', mat: 'cloth', bone: 'chest', k: 0.003 });
-        s.limb([m * 0.045, 0.52, -0.04], [m * 0.04, 0.35, -0.07], 0.008, 0.008, { color: '#c81c24', mat: 'cloth', bone: 'chest', k: 0.003 });
-      }
-    });
+    // Red braces over the stripes: down the front to the waistband, over the shoulders, down the back.
+    for (const m of [1, -1]) {
+      strap(s, [[m * 0.045, 0.355, 0.085], [m * 0.05, 0.45, 0.085], [m * 0.055, 0.53, 0.05], [m * 0.055, 0.556, 0.0], [m * 0.05, 0.53, -0.055], [m * 0.03, 0.45, -0.08], [m * 0.02, 0.355, -0.08]], { width: 0.011, thick: 0.0035, color: '#c81c24', mat: 'cloth', over: ['top', 'bottoms', 'belt'], keep: TRUNK });
+      buttons(s, [[m * 0.045, 0.352, 0.086]], { r: 0.0055, color: '#c81c24', over: ['bottoms', 'straps'] });
+    }
     s.part('fine', () => {
       // The red lips and the black tear.
       s.ellipsoid([0, 0.612, 0.1], [0.018, 0.006, 0.006], { color: '#c81c24', mat: 'skin', bone: 'head', k: 0.002 });

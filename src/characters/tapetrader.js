@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { bag, cloth, hold, person, strap } from './person.js';
 import { longHair } from './metalwear.js';
 
 /**
@@ -7,6 +7,10 @@ import { longHair } from './metalwear.js';
  * out in both hands (every one a copy of a copy), and a pen behind the ear.
  * Has your demo. Bootlegged it. Badly. About 0.85 tiles tall.
  */
+
+const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
+/** The middle of the shoebox held out in front (carried by the chest). */
+const BOX = [0, 0.37, 0.15];
 
 export default person({
   name: 'tapetrader',
@@ -20,29 +24,35 @@ export default person({
   hair: longHair(cloth('#6a4a28', '#44301a'), { length: 0.9, fringe: true }),
   style: {
     attack: 'shove',
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, reach }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
-      const T = time + seed;
-      // The shoebox held out, jiggled: want to trade?
+      const T = time + seed, jig = Math.abs(Math.sin(T * 4)) * 0.004;
+      // The shoebox held out in both hands, jiggled: want to trade?
       hold(k, 'armR', -0.15, 0, 0.25); hold(k, 'foreR', -1.1, 0, 0);
       hold(k, 'armL', -0.15, 0, -0.25); hold(k, 'foreL', -1.1, 0, 0);
-      k.turn('head', 0.05, Math.sin(T * 0.7) * 0.3, 0);
-      k.move('hips', 0, Math.abs(Math.sin(T * 4)) * 0.004, 0);
+      for (const m of [1, -1]) reach?.(k, m > 0 ? 'L' : 'R', 'chest', [m * (BOX[0] + 0.1), BOX[1] - 0.012 + jig, BOX[2]]);
+      k.turn('head', 0.1, Math.sin(T * 0.7) * 0.3, 0);
     },
   },
   extras(s) {
     const TAPES = ['#d81c2a', '#101014', '#f4f0e8', '#2a8ae8', '#f0c040'];
+    // The shoebox held out in front, open, and the cassettes standing in it on their edges, their labels up.
+    const [bx, by, bz] = BOX, from = s.shapes.length;
     s.part('kit', () => {
-      // The shoebox in front, and the cassettes standing in it on their edges.
-      s.box([0, 0.36, 0.13], [0.098, 0.03, 0.06], 0.006, { color: '#c8a870', mat: 'paper', bone: 'chest', k: 0.003 });
-      for (let i = 0; i < 7; i++) s.box([-0.072 + i * 0.024, 0.398, 0.13], [0.008, 0.026, 0.045], 0.002, { color: TAPES[i % TAPES.length], mat: 'plastic', bone: 'chest', k: 0.001 });
-      // The rucksack, stuffed, a cassette hanging off the strap.
-      s.box([0, 0.43, -0.09], [0.07, 0.08, 0.04], 0.02, { color: '#6a3a22', mat: 'cloth', bone: 'chest', k: 0.006 });
-      for (const m of [1, -1]) s.limb([m * 0.05, 0.51, -0.05], [m * 0.06, 0.4, 0.06], 0.007, 0.007, { color: '#2a1a10', mat: 'cloth', bone: 'chest', k: 0.003 });
-      // The pen behind the ear.
-      s.limb([0.1, 0.69, 0.0], [0.108, 0.74, 0.02], 0.004, 0.004, { color: '#2a6ad8', mat: 'plastic', bone: 'head', k: 0.001 });
+      s.box([bx, by, bz], [0.098, 0.03, 0.058], 0.004, { color: '#c8a870', mat: 'paper', bone: 'chest', k: 0.002 });
+      s.box([bx, by + 0.01, bz], [0.092, 0.03, 0.052], 0.002, { op: 'sub', k: 0.001 });
+      for (let i = 0; i < 7; i++) {
+        const x = bx - 0.075 + i * 0.025;
+        s.box([x, by + 0.012, bz], [0.0065, 0.03, 0.044], 0.0015, { color: TAPES[i % TAPES.length], mat: 'plastic', bone: 'chest', k: 0.0008 });
+        s.box([x, by + 0.042, bz], [0.0066, 0.002, 0.036], 0.0008, { color: '#f4f0e8', mat: 'paper', bone: 'chest', k: 0.0004 });
+      }
     });
-    // The letter on the back of the jacket, in marker.
-    s.paint((p) => Math.max(Math.abs(p[0]) - 0.05, Math.abs(p[1] - 0.45) - 0.02, 0.065 + p[2]), '#d8d4c8', 0.002);
+    // Held in the hands, not worn: left where it is.
+    for (const x of s.shapes.slice(from)) x.held = true;
+    // The rucksack on his back, its straps over the shoulders and under the arms; a cassette clipped to a strap; the
+    // pen behind the ear.
+    for (const m of [1, -1]) strap(s, [[m * 0.055, 0.5, -0.08], [m * 0.06, 0.552, -0.02], [m * 0.055, 0.53, 0.05], [m * 0.075, 0.45, 0.07], [m * 0.1, 0.4, 0.02], [m * 0.08, 0.39, -0.06]], { width: 0.014, thick: 0.004, color: '#2a1a10', mat: 'cloth', over: ['top'], keep: TRUNK });
+    bag(s, [0, 0.43, -0.09], { size: [0.07, 0.075, 0.035], color: '#6a3a22', flap: '#5a2e1a', over: ['top', 'straps'], keep: TRUNK, bone: 'chest' });
+    s.part('fine', () => s.limb([0.103, 0.69, 0.0], [0.11, 0.735, 0.022], 0.0035, 0.0035, { color: '#2a6ad8', mat: 'plastic', bone: 'head', k: 0.001 }));
   },
 });

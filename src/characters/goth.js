@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, onBody, person, strap } from './person.js';
 import { bigHair } from './metalwear.js';
 
 /**
@@ -15,6 +15,12 @@ const LACE = (p, n) => {
   return Math.sin(p[0] * 220) * Math.sin(p[1] * 220) > 0.5 ? [0.2, 0.14, 0.24] : base;
 };
 
+/** Fishnet tights: a dark net over the skin. */
+const FISHNET = (p) => {
+  const f = (x) => Math.abs(x - Math.round(x));
+  return f((p[1] + p[0] * 0.8 + p[2] * 0.8) * 70) < 0.14 || f((p[1] - p[0] * 0.8 - p[2] * 0.8) * 70) < 0.14 ? [0.02, 0.016, 0.024] : [0.82, 0.74, 0.74];
+};
+
 export default person({
   name: 'goth',
   budget: 62700,
@@ -22,7 +28,7 @@ export default person({
   b: 0.98,
   shape: { legs: 1.1, girth: 0.88, head: 1.0 },
   skin: '#f0eaf0',
-  look: { torso: cloth('#14101a', '#0a080e'), sleeve: LACE, cuff: LACE, legs: cloth('#14101a'), boot: '#0a080e', sole: '#2a2630', belt: '#2a2630', buckle: '#c8ccd4', boots: 0.13 },
+  look: { torso: cloth('#14101a', '#0a080e'), sleeve: LACE, cuff: LACE, legs: cloth('#14101a'), shin: FISHNET, skirt: { top: 0.37, hem: 0.235, flare: 1.32 }, boot: '#0a080e', sole: '#2a2630', boots: 0.14 },
   mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'cloth', legs: 'cloth', boot: 'leather' },
   face: { eyeColor: '#6a2a8a', brow: '#0a080e', mood: 1, blush: 0 },
   style: {
@@ -37,30 +43,29 @@ export default person({
       k.turn('head', 0.18, Math.sin(T * 0.4) * 0.3, 0.22);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     bigHair(s, '#0c0a12', { size: 1.32, drop: 0.14 });
+    // Heavy dark rings round the eyes, and the dark lips: painted on.
+    for (const m of [1, -1]) s.paint((p) => Math.max(Math.abs(Math.hypot((p[0] - m * 0.041) / 1.1, p[1] - 0.669) - 0.03) - 0.006, 0.07 - p[2]), '#0a080e', 0.003);
+    s.paint((p) => Math.max(Math.hypot(p[0] / 1.5, (p[1] - 0.609) * 1.4) - 0.013, 0.08 - p[2]), '#4a0820', 0.002);
+    // Silver necklaces, three of them, and an ankh on the longest.
+    for (const d of [0, 0.022, 0.044]) {
+      strap(s, [[0, 0.556, -0.04], [0.036, 0.553, -0.03], [0.05 + d * 0.3, 0.52 - d, 0.035], [0, 0.5 - d * 1.6, 0.08], [-0.05 - d * 0.3, 0.52 - d, 0.035], [-0.036, 0.553, -0.03]],
+        { closed: true, round: true, thick: 0.0028, color: '#c8ccd4', mat: 'metal', over: ['top', 'head'] });
+    }
+    const at = onBody(s, [0, 0.428, 0.09], ['top']);
     s.part('kit', () => {
-      // Heavy dark rings round the eyes and the dark lips: painted, not sculpted.
-      for (const m of [1, -1]) {
-        s.torus([m * 0.041, 0.668, 0.1], 0.026, 0.006, { color: '#0a080e', mat: 'cloth', bone: 'head', k: 0.001, rot: [Math.PI / 2, 0, 0] });
-      }
-      s.limb([-0.022, 0.611, 0.104], [0.022, 0.611, 0.104], 0.004, 0.004, { color: '#5a0a2a', mat: 'cloth', bone: 'head', k: 0.001 });
-      // Tulle skirt: a short bell of layers over the hips; fishnet bars on the legs.
-      s.cone([0, 0.4, 0.0], 0.14, 0.17, { color: '#14101a', mat: 'cloth', bone: 'hips', k: 0.012 });
-      for (const m of [1, -1]) {
-        const S = m > 0 ? 'L' : 'R';
-        for (let i = 0; i < 5; i++) s.torus([m * 0.058, 0.07 + i * 0.045, 0.0], 0.034, 0.002, { color: '#2a2630', mat: 'cloth', bone: `shin${S}`, k: 0.0008, rot: [0.3 * (i % 2 ? 1 : -1), 0, 0] });
-        s.box([m * 0.06, 0.012, 0.045], [0.034, 0.016, 0.062], 0.006, { color: '#0a080e', mat: 'leather', bone: `foot${S}`, k: 0.003 });
-      }
-      // The necklaces and the ankh.
-      for (const [r, y] of [[0.05, 0.53], [0.058, 0.5], [0.068, 0.47]]) s.torus([0, y, 0.035], r, 0.003, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.001, rot: [0.5, 0, 0] });
-      s.torus([0, 0.44, 0.088], 0.012, 0.0025, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.001, rot: [Math.PI / 2, 0, 0] });
-      s.box([0, 0.415, 0.088], [0.0025, 0.016, 0.0025], 0.001, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.0005 });
-      s.box([0, 0.425, 0.088], [0.012, 0.0025, 0.0025], 0.001, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.0005 });
-      // The rose, in the right hand: a red bloom on a green stem.
-      const h = J.handR;
-      s.limb([h[0], h[1] - 0.02, h[2]], [h[0], h[1] + 0.09, h[2]], 0.003, 0.003, { color: '#2a6a3a', mat: 'cloth', bone: 'handR', k: 0.001 });
-      s.sphere([h[0], h[1] + 0.1, h[2]], 0.013, { color: '#a0102a', mat: 'cloth', bone: 'handR', k: 0.004 });
+      const c = at.p.map((v, i) => v + at.n[i] * 0.003);
+      s.torus(c.map((v, i) => v + [0, 0.017, 0][i]), 0.0085, 0.0025, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.0008, rot: [Math.PI / 2, 0, 0] });
+      s.box(c.map((v, i) => v + [0, -0.004, 0][i]), [0.0025, 0.013, 0.0025], 0.001, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.0005 });
+      s.box(c.map((v, i) => v + [0, 0.006, 0][i]), [0.011, 0.0025, 0.0025], 0.001, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.0005 });
     });
+    // The rose, held out in the right hand: a green stem through the fist, a red bloom past the thumb.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(G.at(-0.03), G.at(0.09), 0.0028, 0.0028, { color: '#2a6a3a', mat: 'cloth', k: 0.001 });
+      s.ellipsoid(G.at(0.1), [0.013, 0.013, 0.013], { color: '#a0102a', mat: 'cloth', k: 0.004, bump: [0.002, 160] });
+      s.flake(G.at(0.04), G.at(0.04, 0, 0.022), G.up, 0.004, 0.006, 0.3, { color: '#2a6a3a', mat: 'cloth', k: 0.001 });
+    }));
   },
 });

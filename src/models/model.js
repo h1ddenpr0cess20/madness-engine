@@ -21,7 +21,9 @@ import { Skeleton, skin } from './rig.js';
  *   budget     how many vertices its board mesh may have (the tests hold it to this; 9000 if not given)
  *   sculpt(s)  adds its shapes to the Sculpt s (sdf.js)
  *   animate(skeleton, state)  poses it; state is { clip, t, time, seed, speed }
- *   settle(skeleton, state)   after the clip and any blend into it, puts it right: its feet on the floor
+ *   settle(skeleton, state, baked)   after the clip and any blend into it, puts it right: its feet on the floor,
+ *              a person's arms out of their head; `baked` is the bake, with what `measure` made
+ *   measure(sculpt)   what `settle` needs to know of the sculpt, worked out as it is baked (kept as `baked.measure`)
  */
 
 const cache = new Map();
@@ -93,6 +95,7 @@ export function bake(def, { detail = 1 } = {}) {
     groups,
     count: base,
   };
+  if (def.measure) baked.measure = def.measure(sculpt);
   cache.set(key, baked);
   return baked;
 }
@@ -179,7 +182,7 @@ export function createModel(GFX, def, { detail = 1 } = {}) {
           });
         }
       }
-      def.settle?.(skeleton, state);
+      def.settle?.(skeleton, state, data);
       skeleton.compute();
       skin(data, skeleton.matrices, position.array, normal.array);
       position.needsUpdate = true;

@@ -1,6 +1,6 @@
 import { coat } from '../models/skins.js';
-import { cloth, hold, person } from './person.js';
-import { fedora } from './wardrobe.js';
+import { cloth, hold, onBody, person, shell } from './person.js';
+import { beard, fedora, satchel } from './wardrobe.js';
 
 /**
  * The Archaeologist: on a dig in the Valley of the Kings for thirty years
@@ -20,7 +20,7 @@ export default person({
   b: 1.02,
   shape: { legs: 1.04, girth: 0.98 },
   skin: '#d8a07a',
-  look: { torso: KHAKI, sleeve: JACKET, cuff: JACKET, legs: cloth('#8a7a5a', '#6a5a3a'), boot: '#4a2a14', sole: '#2a1608', belt: '#3a2010', buckle: '#a8a8a8' },
+  look: { torso: KHAKI, sleeve: JACKET, cuff: JACKET, legs: cloth('#8a7a5a', '#6a5a3a'), boot: '#4a2a14', sole: '#2a1608', belt: '#3a2010', buckle: '#a8a8a8', boots: 0.125 },
   mats: { sleeve: 'leather', cuff: 'leather', boot: 'leather' },
   face: { eyeColor: '#4a6a3a', brow: '#4a3018', mood: 1, jaw: 1.08 },
   hair: { color: cloth('#5a3a1e', '#3a2410'), cap: [0.104, 0.08, 0.104] },
@@ -39,27 +39,29 @@ export default person({
       }
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     fedora(s, { color: '#6a4a2a', band: '#2a1a0a', brim: 0.16 });
+    // Three days of beard, close to the jaw.
+    beard(s, { color: '#4a3018', thick: 0.0032 });
+    // The leather jacket over the shirt: open down the front, the collar turned up round the neck.
+    const trunk = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
+    shell(s, (p) => Math.max(0.3 - p[1], p[1] - 0.552, Math.min(0.032 + (p[1] - 0.3) * 0.12 - Math.abs(p[0]), p[2] - 0.02)), {
+      color: JACKET, mat: 'leather', thick: 0.0065, lift: 0.0015, over: ['top', 'belt'], keep: trunk, bones: { spine: (p) => p[1] - 0.445, chest: (p) => 0.425 - p[1] },
+    });
+    shell(s, (p) => Math.max(Math.abs(p[1] - 0.552) - 0.014, -p[2] - 0.04, 0.012 - Math.abs(p[0])), { color: JACKET, mat: 'leather', thick: 0.006, lift: 0.004, over: ['head', 'outer'], part: 'outer2', bone: 'neck' });
+    // The satchel on its strap, across from the right shoulder to the left hip.
+    satchel(s, { side: -1, color: '#8a6a3a', strap: '#6a4a28', size: [0.042, 0.038, 0.014] });
+    // The whip, coiled and hung on the right hip.
+    const hip = onBody(s, [-0.098, 0.3, 0.0], ['bottoms', 'belt']);
+    const n = hip.n, c = hip.p.map((v, i) => v + n[i] * 0.01);
     s.part('kit', () => {
-      const L = { color: JACKET, mat: 'leather', bone: 'chest' };
-      // The jacket's open front over the shirt, the collar up.
-      for (const m of [1, -1]) s.ellipsoid([m * 0.07, 0.455, 0.01], [0.04, 0.08, 0.07], { ...L, k: 0.012 });
-      s.ellipsoid([0, 0.46, -0.03], [0.1, 0.08, 0.05], { ...L, k: 0.02 });
-      s.torus([0, 0.53, -0.005], 0.055, 0.012, { ...L, k: 0.004, rot: [0.25, 0, 0] });
-      // The satchel on its strap, across from the right shoulder to the left hip.
-      s.limb([-0.07, 0.52, 0.05], [0.09, 0.3, 0.06], 0.006, 0.006, { color: '#7a5a30', mat: 'leather', bone: 'chest', k: 0.002 });
-      s.box([0.1, 0.27, 0.0], [0.016, 0.05, 0.06], 0.012, { color: '#8a6a3a', mat: 'leather', bone: 'hips', k: 0.004 });
-      // The whip, coiled, on the right hip.
-      for (let i = 0; i < 3; i++) s.torus([-0.1, 0.27, 0.0], 0.04 - i * 0.004, 0.005, { color: '#3a2010', mat: 'leather', bone: 'hips', k: 0.001, rot: [0, 0, Math.PI / 2 + i * 0.1] });
-      // The brush.
-      const h = J.handR;
-      s.limb([h[0], h[1] - 0.03, h[2] + 0.01], [h[0], h[1] + 0.06, h[2] + 0.01], 0.005, 0.005, { color: '#c8a060', mat: 'leather', bone: 'handR', k: 0.001 });
-      s.box([h[0], h[1] - 0.05, h[2] + 0.01], [0.016, 0.02, 0.005], 0.003, { color: '#3a2a1a', mat: 'hair', bone: 'handR', k: 0.001 });
+      for (let i = 0; i < 3; i++) s.torus(c.map((v, j) => v + n[j] * i * 0.004), 0.036 - i * 0.004, 0.0048, { color: '#3a2010', mat: 'leather', bone: 'hips', k: 0.001, rot: [0, 0, Math.PI / 2] });
     });
-    s.part('fine', () => {
-      // Stubble.
-      s.ellipsoid([0, 0.615, 0.05], [0.08, 0.045, 0.06], { color: '#7a5a40', mat: 'skin', bone: 'head', k: 0.004, bump: [0.001, 200] });
-    });
+    // The brush: a wooden handle through the fist, its bristles out past the little finger, down at the find.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(G.at(0.04), G.at(-0.03), 0.0045, 0.005, { color: '#c8a060', mat: 'leather', k: 0.001 });
+      s.limb(G.at(-0.03), G.at(-0.05), 0.007, 0.0075, { color: '#3a2a1a', mat: 'hair', k: 0.001 });
+    }));
   },
 });

@@ -41,7 +41,8 @@ test('every other version stands beside a default of the same thing, and exports
     const shared = Object.keys(a).filter((k) => k in b);
     assert.ok(shared.length > 0, `${f} and ${def} have nothing in common`);
   }
-  assert.ok(versions > 50, `${versions} versions`);
+  // Where a version was only the default again by another name it has gone; these are the ones that differ.
+  assert.ok(versions > 20, `${versions} versions`);
 });
 
 test('where every game\'s file went is recorded, and is there', () => {
@@ -125,7 +126,7 @@ test('everything is imported by name through the package, as a game imports it',
   const { CHARACTERS } = await import('madness-engine/characters');
   const { PROPS } = await import('madness-engine/props');
   assert.ok(CHARACTERS.punk && PROPS.pick);
-  assert.ok((await import('madness-engine/characters/bouncer.rocknroller-iii')).default);
+  assert.ok((await import('madness-engine/characters/diver.rocknroller')).default);
 });
 
 test('the eyes of a person and of an animal show through the face, not just through the mesh\'s errors', async () => {
@@ -137,7 +138,9 @@ test('the eyes of a person and of an animal show through the face, not just thro
     const parts = s.split();
     const eyes = build(parts.get('eyes'), { cell: 0.005, refine: 0 });
     let out = 0;
-    for (let v = 0; v < eyes.count; v++) if (parts.get('body').field([eyes.position[v * 3], eyes.position[v * 3 + 1], eyes.position[v * 3 + 2]]) > 0.0005) out++;
+    // The face: a person's head is a part of its own, an animal's is the body's.
+    const face = parts.get('head') ?? parts.get('body');
+    for (let v = 0; v < eyes.count; v++) if (face.field([eyes.position[v * 3], eyes.position[v * 3 + 1], eyes.position[v * 3 + 2]]) > 0.0005) out++;
     assert.ok(out / eyes.count > 0.1, `${name}: ${Math.round((out / eyes.count) * 100)}% of the eyes are out of the skin`);
   }
 });

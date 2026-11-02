@@ -1,4 +1,4 @@
-import { cloth, MATERIALS, person } from './person.rocknroller.js';
+import { cloth, MATERIALS, onBody, person, strap } from './person.js';
 
 /**
  * The Dame: walked in out of the rain. A satin gown to the calf, long black
@@ -16,18 +16,17 @@ const dame = person({
   b: 0.92,
   shape: { legs: 1.1, girth: 0.86, hips: 0.95, head: 1.02 },
   skin: '#f2d0b8',
-  look: { torso: satin, sleeve: '#f2d0b8', cuff: '#101014', hand: '#101014', legs: satin, boot: '#101014' },
+  look: { torso: satin, sleeve: '#f2d0b8', cuff: '#101014', hand: '#101014', legs: satin, shin: '#e8c8b4', skirt: { hem: 0.1, flare: 1.16 }, boot: '#101014' },
   mats: { torso: 'leather', sleeve: 'skin', cuff: 'cloth', hand: 'cloth', legs: 'leather', boot: 'leather' },
   face: { eyeColor: '#3a6a5a', brow: '#8a6a3a', blush: 0.6, jaw: 0.88 },
   cells: { veil: 0.0014 },
   style: {
     attack: 'shove', twist: 0,
-    after(k, { clip, time, seed }) {
+    after(k, { clip, time, seed, reach }) {
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
       // One hand on the hip; the other up by her shoulder with the holder; a slow look round.
-      k.turn('armL', 0.1, 0, 0.55);
-      k.turn('foreL', -1.6, 0, 0);
+      reach?.(k, 'L', 'hips', [0.105, 0.34, 0.01]);
       k.turn('armR', -0.6, 0, -0.35);
       k.turn('foreR', -1.9, 0, 0);
       k.turn('handR', 0.3, 0, 0);
@@ -35,7 +34,7 @@ const dame = person({
       k.turn('head', -0.06, Math.sin(T * 0.35) * 0.4, 0.08);
     },
   },
-  extras(s, J) {
+  extras(s, J, { pose }) {
     // Red lips.
     s.paint((p) => Math.max(Math.hypot(p[0] * 0.8, (p[1] - 0.609) * 1.6) - 0.018, 0.08 - p[2]), '#c8102a', 0.004);
     s.part('hair', () => {
@@ -46,25 +45,27 @@ const dame = person({
       for (const m of [1, -1]) s.flake([m * 0.09, 0.7, -0.02], [m * 0.11, 0.56, -0.04], [m, 0, 0], 0.04, 0.045, 0.4, { ...HAIR, k: 0.015 });
       s.flake([0, 0.72, -0.08], [0, 0.56, -0.1], [0, 0, -1], 0.07, 0.06, 0.4, { ...HAIR, k: 0.015 });
     });
+    // The stole: white fox round the shoulders, fluffy, lying on them.
+    strap(s, [[0, 0.548, -0.07], [0.07, 0.55, -0.045], [0.1, 0.53, 0.0], [0.07, 0.525, 0.05], [0, 0.505, 0.07], [-0.07, 0.525, 0.05], [-0.1, 0.53, 0.0], [-0.07, 0.55, -0.045]],
+      { closed: true, round: true, thick: 0.034, lift: 0.0, color: '#f4f2ee', mat: 'cloth', over: ['top', 'body', 'head'] });
+    for (const x of s.shapes.filter((sh) => sh.part === 'straps' && sh.mat === 'cloth')) { const d = x.d; x.d = (p) => d(p) - 0.004 * Math.sin(p[0] * 300 + p[1] * 210) * Math.sin(p[2] * 260); }
     s.part('kit', () => {
-      // The gown: a skirt from the waist to the calf, a little flared.
-      s.limb([0, 0.33, 0.0], [0, 0.15, 0.005], 0.085, 0.1, { color: satin, mat: 'leather', bone: 'hips', k: 0.02 });
-      // The stole: white fox round the shoulders.
-      s.torus([0, 0.505, 0.0], 0.085, 0.03, { color: '#f4f2ee', mat: 'cloth', bone: 'chest', k: 0.02, bump: [0.006, 80], rot: [0.2, 0, 0] });
       // A little hat with a net veil, on the side of the head.
       s.cylinder([0.04, 0.79, 0.0], 0.05, 0.016, { color: '#101014', mat: 'cloth', bone: 'head', k: 0.008, round: 0.008, rot: [0, 0, -0.35] });
-      // The holder: long and black, a cigarette at its end.
-      const r = J.handR;
-      s.limb([r[0], r[1] + 0.02, r[2] + 0.01], [r[0] + 0.02, r[1] + 0.06, r[2] + 0.14], 0.004, 0.003, { color: '#101014', mat: 'plastic', bone: 'handR', k: 0.001 });
-      s.limb([r[0] + 0.02, r[1] + 0.06, r[2] + 0.14], [r[0] + 0.024, r[1] + 0.068, r[2] + 0.17], 0.0045, 0.0045, { color: '#f4f2ee', mat: 'paper', bone: 'handR', k: 0.001 });
     });
+    // The holder, long and black, between the fingers, a cigarette at its end.
+    const G = pose.grip('R');
+    pose.hold(s, 'handR', () => s.part('kit', () => {
+      s.limb(G.at(-0.01), G.at(0.13), 0.0038, 0.003, { color: '#101014', mat: 'plastic', k: 0.001 });
+      s.limb(G.at(0.13), G.at(0.165), 0.0045, 0.0045, { color: '#f4f2ee', mat: 'paper', k: 0.001 });
+    }));
+    pose.hold(s, 'handR', () => s.part('fine', () => s.sphere(G.at(0.167), 0.0048, { color: '#ff6a2a', mat: 'glow', k: 0.001 })));
+    // Pearls, a string of them round the neck, each sat on the skin or the stole.
+    const pts = [];
+    for (let i = 0; i < 15; i++) { const a = -1.15 + (i / 14) * 2.3; pts.push([Math.sin(a) * 0.045, 0.548 - Math.cos(a) * 0.03, 0.02 + Math.cos(a) * 0.045]); }
+    const pearls = onBody(s, pts, ['top', 'body', 'head', 'straps']);
+    s.part('fine', () => { for (const q of pearls) s.sphere(q.p.map((v, i) => v + q.n[i] * 0.005), 0.0058, { color: '#f4f0e8', mat: 'eye', bone: 'chest', k: 0.001 }); });
     s.part('fine', () => {
-      // Pearls.
-      for (let i = 0; i < 14; i++) {
-        const a = (i / 14) * Math.PI * 2;
-        if (Math.cos(a) < -0.2) continue;
-        s.sphere([Math.sin(a) * 0.04, 0.545 - Math.max(0, Math.cos(a)) * 0.03, Math.cos(a) * 0.035 + 0.01], 0.006, { color: '#f4f0e8', mat: 'eye', bone: 'chest', k: 0.001 });
-      }
       // The veil's net, and the cigarette's glow.
       // The veil: a net of fine black threads from the hat's brim down over the right brow, lying just off the face.
       const off = (q) => {
@@ -88,8 +89,6 @@ const dame = person({
           }
         }
       });
-      const r = J.handR;
-      s.sphere([r[0] + 0.024, r[1] + 0.068, r[2] + 0.172], 0.005, { color: '#ff6a2a', mat: 'glow', bone: 'handR', k: 0.001 });
     });
   },
 });

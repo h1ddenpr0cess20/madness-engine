@@ -1,4 +1,4 @@
-import { cloth, hold, person } from './person.metroll.js';
+import { cloth, hold, person } from './person.js';
 import { bulletBelt, corpsePaint, longHair, spikedCollar, spikedCuffs } from './metalwear.js';
 
 /**

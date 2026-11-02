@@ -1,5 +1,5 @@
 import { grime } from '../models/skins.js';
-import { cloth, person } from './person.metroll.js';
+import { cloth, person, shell } from './person.js';
 
 /**
  * The Zombie: up out of the swamp for the death-metal vocals. Grey-green skin, dark round the
@@ -39,21 +39,18 @@ export default person({
     // Dark rings round the eyes, and stitches across the cheek.
     s.paint((p) => Math.hypot(Math.abs(p[0]) - 0.041, (p[1] - 0.668) * 0.9, Math.max(0, 0.07 - p[2])) - 0.03, '#4a4a5a', 0.012);
     s.paint((p) => Math.max(Math.abs(p[1] - 0.64 + p[0] * 0.4) - 0.002, Math.abs(p[0] + 0.05) - 0.025, 0.07 - p[2]), '#3a1a1a', 0.002);
-    s.part('kit', () => {
-      // The tie, loose and askew, and the shirt torn open at the hem.
-      s.limb([0, 0.52, 0.074], [0.02, 0.42, 0.086], 0.01, 0.015, { color: '#6a2a2a', mat: 'cloth', bone: 'chest', k: 0.003 });
-      s.ellipsoid([0.04, 0.36, 0.07], [0.03, 0.025, 0.02], { color: flesh, mat: 'skin', bone: 'spine', k: 0.006 });
-      // Rags at the knees.
-      for (const m of [1, -1]) {
-        const S = m > 0 ? 'L' : 'R';
-        const kn = J[`knee${S}`];
-        for (let i = 0; i < 3; i++) s.flake([kn[0] + (i - 1) * 0.02, kn[1] + 0.01, kn[2] + 0.02], [kn[0] + (i - 1) * 0.025, kn[1] - 0.04, kn[2] + 0.03], [0, 0, 1], 0.012, 0.006, 0.4, { color: '#3a3a40', mat: 'cloth', bone: `shin${S}`, k: 0.004 });
-      }
-    });
-    // One shoe gone: a grey sock on the left foot.
-    s.part('fine', () => {
-      const a = J.ankleL;
-      s.ellipsoid([a[0], 0.034, a[2] + 0.04], [0.034, 0.034, 0.066], { color: '#8a8a90', mat: 'cloth', bone: 'footL', k: 0.008 });
-    });
+    for (let i = 0; i < 4; i++) { const x = -0.07 + i * 0.014; s.paint((p) => Math.max(Math.abs(p[0] - x) - 0.0015, Math.abs(p[1] - 0.64 + x * 0.4) - 0.007, 0.07 - p[2]), '#3a1a1a', 0.001); }
+    // His office tie, still on, loosened and pulled askew; the knot slipped down.
+    shell(s, (p) => { const c = (0.52 - p[1]) * 0.3; return Math.max(Math.abs(p[0] - c) - 0.008 - Math.max(0, 0.5 - p[1]) * 0.06, p[1] - 0.52, 0.4 - p[1], 0.02 - p[2]); }, { color: '#6a2a2a', mat: 'cloth', part: 'outer', thick: 0.004, lift: 0.001, over: ['top'], bone: 'chest', k: 0.002 });
+    s.part('outer2', () => s.ellipsoid([0.0, 0.517, 0.083], [0.011, 0.01, 0.008], { color: '#6a2a2a', mat: 'cloth', bone: 'chest', k: 0.002 }));
+    // The shirt torn open at the side and the trousers through at the knees, his grey skin showing, frayed.
+    const tear = (c, r, sx, sy) => (p) => Math.hypot((p[0] - c[0]) * sx, (p[1] - c[1]) * sy) - r - Math.sin(p[0] * 700 + p[1] * 500) * 0.0025;
+    const hole = tear([0.05, 0.36], 0.024, 1, 1.3);
+    s.paint((p) => Math.max(hole(p), 0.02 - p[2]), flesh, 0.002);
+    s.paint((p) => Math.max(Math.abs(hole(p) - 0.002) - 0.002, 0.02 - p[2]), '#e8e4d0', 0.0015);
+    for (const S of ['L', 'R']) {
+      const kn = J[`knee${S}`], k2 = tear(kn, 0.022, 1.3, 2.0);
+      s.paint((p) => Math.max(k2(p), 0.01 - p[2]), flesh, 0.002);
+    }
   },
 });
