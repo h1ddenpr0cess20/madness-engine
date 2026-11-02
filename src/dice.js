@@ -300,7 +300,7 @@ export function createDieProp(GFX, type, options = {}) {
   }
   const resin = options.color ?? DEFAULT_RESIN;
   const data = dataFor(GFX, canonical);
-  const labels = labelsFor(canonical);
+  const labels = labelsForType(canonical);
   const numbers = labelsFor(data.faces, labels, canonical !== 'd4');
   const usePips = canonical === 'd6-pips';
   const group = new GFX.Group();
