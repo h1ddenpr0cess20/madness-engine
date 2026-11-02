@@ -67,6 +67,37 @@ test('D10 and percentile faces use their conventional printed ranges', () => {
   assert.equal(pips.faces[0].mesh.geometry.parameters.width, 1.02, 'pip field fills most of the cube face');
 });
 
+test('percentile glyph tops point outward toward the nearest die tip', () => {
+  const die = createDieProp(GFX, 'd%');
+  assert.ok(die.faces.every((face) => face.labelUp), 'every percentile face has a tip-directed text axis');
+  for (const face of die.faces) {
+    assert.ok(Math.abs(face.labelUp.dot(face.normal)) < 1e-6, 'text axis lies in its face');
+    const tipY = face.centroid.y >= 0 ? 1 : -1;
+    const towardTip = new GFX.Vector3(0, tipY, 0)
+      .sub(face.centroid)
+      .projectOnPlane(face.normal)
+      .normalize();
+    assert.ok(face.labelUp.dot(towardTip) > 0.95, 'top of the numeral faces the nearest tip');
+  }
+  assert.ok(createDieProp(GFX, 'd10').faces.every((face) => !face.labelUp), 'the standard D10 layout is unchanged');
+});
+
+test('number, pip, and D20 highlight inks are configurable independently', () => {
+  const numbered = createDieProp(GFX, 'd12', { color: '#123456', numberColor: '#2468ac' });
+  assert.ok(numbered.faces.every((face) => face.markingColor === '#2468ac'));
+  assert.equal(numbered.dieMat.color.getHexString(), '123456');
+
+  const pips = createDieProp(GFX, 'd6-pips', { pipColor: '#12abef' });
+  assert.ok(pips.faces.every((face) => face.markingColor === '#12abef'));
+
+  const d20 = createDieProp(GFX, 'd20', {
+    numberColor: '#abcdef',
+    highlightColor: '#ff8800',
+  });
+  assert.ok(d20.faces.filter((face) => !face.highlighted).every((face) => face.markingColor === '#abcdef'));
+  assert.ok(d20.faces.filter((face) => face.highlighted).every((face) => face.markingColor === '#ff8800' && String(face.number) === '20'));
+});
+
 test('unknown die types are rejected rather than silently creating a different solid', () => {
   assert.throws(() => createDieProp(GFX, 'd16'), /unsupported die type/);
 });
