@@ -231,6 +231,7 @@ The balls the games are played as, each with what it is made of.
 | `heroes/tater` | `tater` (debater) | The Tater: a potato with a debater's opinions, rough-skinned, stepping about the pan (`createPotato({ GFX })`). |
 | `heroes/debater-egg` | `debater-egg` (debater) | The Egg: Marc, smooth and speckled, rocking and rolling (`createEgg({ GFX })`). |
 | `heroes/alan` | `alan` (alan) | Alan's eye: a sphere of clear glass with an iris painted deep inside it, the marble's original (`createEye(GFX)`), its attention, hung in its sky (`textures/skies/cloudsea`). |
+| `heroes/blubber` | `blubber` (blubber) | Blubber, the Blueberry avatar: a squashed deep-blue berry with a waxy bloom over a glowing juice core, five dried sepals in its crown, a rim glow and two halos, its skin moving in lobes of waves and its palette drifting (`createBlubber(GFX, { size })`; `update(dt)` each frame, `setMode` for idle, listening, thinking, speaking). |
 | `heroes/vibey` | `vibey` (vibey) | Vibey: a glowing five-pointed star that swells and pulses with its mood (`createStar({ stage, GFX })`; `standIn` gives it a stage anywhere). |
 | `heroes/slimey` | `slimey` (slimey) | Slimey: a glassy green orb of slime that deforms in lobes as it talks (`createSlimeOrb({ stage, GFX })`). |
 | `heroes/krystal` | `krystal` (krystal) | Krystal, an animated prop: a crystal ball on a gold stand, a cloud of colour turning and churning inside it (`createKrystal({ stage, GFX })`). |

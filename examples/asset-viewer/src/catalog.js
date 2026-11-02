@@ -111,6 +111,12 @@ const HEROES = [
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
   ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
   ['slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createSlimeOrb')],
+  // Floating at its own height, framed on the berry rather than on its halos, which spread far wider.
+  ['blubber', () => import('../../../src/heroes/blubber.js').then((m) => {
+    const b = m.createBlubber(GFX, { size: 1 });
+    b.group.position.y = 0.75;
+    return Object.assign(b, { frame: { center: [0, 0.75, 0], radius: 0.62 } });
+  })],
 ];
 
 /** The avatar apps' models, made on a stand-in for their stage (heroes/standin.js). */
@@ -156,7 +162,11 @@ function heroItem([name, make]) {
       made?.pose?.(1.2);
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
-      return { object, ...dressOf(made), info: { Source: 'heroes', ...countOf(object) } };
+      // Those moved on by the game loop with nothing but the time (Blubber) are moved on by the viewer's.
+      let last = 0;
+      const pose = typeof made?.update === 'function' && made.update.length === 1 ? ({ time }) => { made.update(Math.max(0, time - last)); last = time; } : undefined;
+      pose?.({ time: 0.016 });
+      return { object, pose, frame: made?.frame, ...dressOf(made), info: { Source: 'heroes', ...countOf(object) } };
     },
   };
 }
