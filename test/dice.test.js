@@ -26,6 +26,11 @@ test('every die has the expected number of closed, numbered faces', () => {
     assert.equal(new Set(die.numbers.map(String)).size, entry.faceCount, entry.label + ' unique labels');
     assert.ok(die.faces.every((face) => face.normal.length() > 0.99), entry.label + ' face normals');
     assert.ok(die.faces.every((face) => face.mesh?.isMesh), entry.label + ' face glyph meshes');
+    assert.deepEqual(
+      die.faces.filter((face) => face.highlighted).map((face) => String(face.number)),
+      entry.id === 'd20' ? ['20'] : [],
+      entry.label + ' highlighted face',
+    );
   }
 });
 
