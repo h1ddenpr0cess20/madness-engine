@@ -222,7 +222,7 @@ What lies about to be picked up: sculpted, still, for `createStatic`, and the co
 | `props/pumpkin` | `pumpkin` (blubber) | Pumpkins: a fat one of eight ribs, squat, its crown sunk round a crooked stalk, waxy orange deepening into the grooves. |
 | `props/sweets` | `sweets` (blubber) | The sweets, from October to December. |
 | `props/winter` | `winter` (blubber) | December's: the snow lantern — a cone of snowballs heaped in rings with a candle inside, glowing out between them (`snowlantern`; unlit, `snowheap`) — the big snowball that rolls down the halls, snowy pines, rocks under snow, and clusters of ice crystals. |
-| `props/dice` | `DICE` (engine) | Eight standalone resin dice props: D4, numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90), D12 and D20. Each has a colourable resin finish. |
+| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4, numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20's highlighted 20 can be coloured independently. |
 
 ## heroes
 
