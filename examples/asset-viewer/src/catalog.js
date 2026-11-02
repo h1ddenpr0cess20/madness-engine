@@ -108,19 +108,24 @@ const HEROES = [
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
   ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],
   ['egg (debater)', () => import('../../../src/heroes/debater-egg/index.js').then((m) => m.createEgg({ GFX }))],
-  ["alan's eye", () => import('../../../src/heroes/alan/model.js').then((m) => m.createEye(GFX).eye)],
+  ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
   ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
   ['slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createSlimeOrb')],
 ];
 
 /** The avatar apps' models, made on a stand-in for their stage (heroes/standin.js). */
-const avatars = import.meta.glob('../../../src/heroes/{vibey,slimey,krystal}/index.js');
+const avatars = import.meta.glob('../../../src/heroes/{vibey,slimey,krystal,alan}/index.js');
 async function avatar(path, fn) {
   const [{ standIn }, mod] = await Promise.all([import('../../../src/heroes/standin.js'), avatars[path]()]);
   const { group, stage } = standIn(GFX, globalThis.assetViewer?.renderer ?? null);
   const made = mod[fn]({ stage, GFX });
-  return { group, made };
+  // Shown where it lives: what it reflects is what it set for its own stage, and its sky is its backdrop's.
+  let sky = null;
+  stage._scene.traverse((o) => { if (o.name === 'backdrop' && o.material?.map?.image) sky = o.material.map.image; });
+  return { group, made, environment: stage._scene.environment ?? null, sky };
 }
+/** What an avatar brings with it to be shown in: its reflections and its sky. */
+const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.sky ?? null });
 
 /**
  * Props that move as a part of what they are: Krystal, the crystal ball, its cloud turning and churning inside it.
@@ -137,7 +142,7 @@ function movingItem([name, category, group, make]) {
       const made = await make();
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
-      return { object, info: { Source: category === 'Props' ? 'props/pan' : `heroes/${name}`, ...countOf(object) } };
+      return { object, ...dressOf(made), info: { Source: category === 'Props' ? 'props/pan' : `heroes/${name}`, ...countOf(object) } };
     },
   };
 }
@@ -151,7 +156,7 @@ function heroItem([name, make]) {
       made?.pose?.(1.2);
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
-      return { object, info: { Source: 'heroes', ...countOf(object) } };
+      return { object, ...dressOf(made), info: { Source: 'heroes', ...countOf(object) } };
     },
   };
 }

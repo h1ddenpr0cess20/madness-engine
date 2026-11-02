@@ -189,3 +189,18 @@ export function createCosmosTexture(GFX, { width = 4096, height = 2048, random }
   texture.colorSpace = GFX.SRGBColorSpace;
   return texture;
 }
+
+/**
+ * Krystal's night as a sky like the others: an equirectangular canvas `width`
+ * across, indigo and nebula and stars. Null without a canvas.
+ */
+export function paintSky(width = 2048, { random = Math.random } = {}) {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = width / 2;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  paintCosmos(ctx, canvas.width, canvas.height, { random });
+  return canvas;
+}

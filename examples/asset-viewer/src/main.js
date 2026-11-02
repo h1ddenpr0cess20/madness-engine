@@ -166,6 +166,9 @@ async function show(item) {
       if (fill) fill.intensity = 0;
       syncLights();
     }
+    // An avatar is shown in its own world: its sky behind it and what it reflects round it, not the studio's.
+    if (built.sky) stage.setSky(built.sky);
+    if (built.environment) scene.environment = built.environment;
     if (item.kind === 'sky') { stage.setSky(built.canvas); stage.setRoom(built.canvas); }
     if (item.kind === 'room') stage.setRoom(built.canvas);
     if (item.kind === 'mood') { stage.setMood(item.mood); syncLights(); }

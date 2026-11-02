@@ -367,7 +367,7 @@ export function glowTexels(data, cols, rows, {
  * laid over the rest — and the tile of grain the whole is dithered with.
  * Without it, those are left out.
  */
-export function paintSky(ctx, width, height, { random = Math.random, layer = null } = {}) {
+export function paintCloudSea(ctx, width, height, { random = Math.random, layer = null } = {}) {
   /** Texels per radian, up the canvas and round it at the equator alike. */
   const k = height / Math.PI;
   const yAt = (lat) => (Math.PI / 2 - lat) * k;
@@ -516,9 +516,22 @@ export function createSkyTexture(GFX, { width = 4096, random = Math.random } = {
   const canvas = makeCanvas(width, width / 2);
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
-  paintSky(ctx, canvas.width, canvas.height, { random, layer: makeCanvas });
+  paintCloudSea(ctx, canvas.width, canvas.height, { random, layer: makeCanvas });
   const texture = new GFX.CanvasTexture(canvas);
   texture.colorSpace = GFX.SRGBColorSpace;
   texture.anisotropy = 8;
   return texture;
+}
+
+/**
+ * Alan's night as a sky like the others: an equirectangular canvas `width`
+ * across, stars over the cloud sea with the sun overhead. Null without a canvas.
+ */
+export function paintSky(width = 2048, { random = Math.random } = {}) {
+  if (typeof document === 'undefined') return null;
+  const canvas = makeCanvas(width, width / 2);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  paintCloudSea(ctx, canvas.width, canvas.height, { random, layer: makeCanvas });
+  return canvas;
 }

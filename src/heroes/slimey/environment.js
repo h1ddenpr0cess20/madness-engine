@@ -1,23 +1,7 @@
+import { reflect } from '../reflect.js';
+import { paintRoom } from '../../textures/rooms/softbox.js';
+
+/** What the glossy skin reflects: the softbox room (`textures/rooms/softbox.js`), two soft lights high up. */
 export function buildEnvironment({ stage, GFX }) {
-  try {
-    const c = document.createElement('canvas');
-    c.width = 64; c.height = 32;
-    const ctx = c.getContext('2d');
-    const g = ctx.createLinearGradient(0, 0, 0, 32);
-    g.addColorStop(0, '#dfe6ff'); g.addColorStop(0.45, '#8f9bb8');
-    g.addColorStop(0.5, '#3a4152'); g.addColorStop(1, '#0d0f15');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 32);
-    ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath();
-    ctx.ellipse(20, 8, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(160,210,255,0.8)'; ctx.beginPath();
-    ctx.ellipse(48, 12, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
-    const tex = new GFX.Texture(c);
-    tex.mapping = GFX.EquirectangularReflectionMapping;
-    tex.colorSpace = GFX.SRGBColorSpace;
-    tex.needsUpdate = true;
-    const pmrem = new GFX.PMREMGenerator(stage._renderer);
-    stage._scene.environment = pmrem.fromEquirectangular(tex).texture;
-    pmrem.dispose(); tex.dispose();
-  } catch {
-  }
+  reflect(stage, GFX, paintRoom());
 }

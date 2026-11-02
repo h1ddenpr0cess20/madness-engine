@@ -1,5 +1,5 @@
 import { createIrisTexture, RINGS } from './iris.js';
-import { createSkyTexture, skyColour } from './sky.js';
+import { createSkyTexture, skyColour } from '../../textures/skies/cloudsea.js';
 
 /** The eye, in metres of nothing in particular: the stage frames whatever size it is. */
 export const RADIUS = 0.8;
@@ -91,7 +91,7 @@ export function createEye(GFX, { random } = {}) {
  * What the glass has to refract. Left to itself a transmissive surface over a
  * transparent canvas shows a flat half-white — the renderer's stand-in for
  * "nothing behind" — and clear glass comes out milky. A night sky round the
- * whole of the scene (`sky.js`) gives it something true to bend instead.
+ * whole of the scene (`textures/skies/cloudsea.js`) gives it something true to bend instead.
  * Where there is no canvas to paint that on, just its plain ramp, horizon and all.
  */
 export function createBackdrop(GFX, { random } = {}) {

@@ -1,4 +1,4 @@
-import { cosmosColour, createCosmosTexture } from './cosmos.js';
+import { cosmosColour, createCosmosTexture } from '../../textures/skies/cosmos.js';
 import { createVisionMaterial } from './vision.js';
 
 /** The ball, in metres of nothing in particular: the stage frames whatever size it is. */
@@ -168,7 +168,7 @@ export function createTable(GFX) {
 
 /**
  * What the glass has to refract, and what is round the whole scene: the
- * night (`cosmos.js`). Without it a transmissive surface shows the renderer's
+ * night (`textures/skies/cosmos.js`). Without it a transmissive surface shows the renderer's
  * flat half-white stand-in for "nothing behind", and clear glass comes out
  * milky. Where there is no canvas to paint on, just its plain ramp.
  */

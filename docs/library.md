@@ -230,7 +230,7 @@ The balls the games are played as, each with what it is made of.
 |---|---|---|
 | `heroes/tater` | `tater` (debater) | The Tater: a potato with a debater's opinions, rough-skinned, stepping about the pan (`createPotato({ GFX })`). |
 | `heroes/debater-egg` | `debater-egg` (debater) | The Egg: Marc, smooth and speckled, rocking and rolling (`createEgg({ GFX })`). |
-| `heroes/alan` | `alan` (alan) | Alan's eye: a sphere of clear glass with an iris painted deep inside it, the marble's original (`createEye(GFX)`), its sky and its attention. |
+| `heroes/alan` | `alan` (alan) | Alan's eye: a sphere of clear glass with an iris painted deep inside it, the marble's original (`createEye(GFX)`), its attention, hung in its sky (`textures/skies/cloudsea`). |
 | `heroes/vibey` | `vibey` (vibey) | Vibey: a glowing five-pointed star that swells and pulses with its mood (`createStar({ stage, GFX })`; `standIn` gives it a stage anywhere). |
 | `heroes/slimey` | `slimey` (slimey) | Slimey: a glassy green orb of slime that deforms in lobes as it talks (`createSlimeOrb({ stage, GFX })`). |
 | `heroes/krystal` | `krystal` (krystal) | Krystal, an animated prop: a crystal ball on a gold stand, a cloud of colour turning and churning inside it (`createKrystal({ stage, GFX })`). |
@@ -275,10 +275,14 @@ Painted on canvases at startup. `painters` is the toolkit and the floors and wal
 | `textures/blubber` | `blubber` (blubber) | Every surface's texture, painted on a canvas at startup, as Dungeon Roller's stone is: a colour map near white (the tile's colour comes from the vertex colours under it) and a bump map that raises what stands out. |
 | `textures/bog` | `bog` (blubber) | The bog: something green brewing in the witch's clearings and round the edge of her wood. |
 | `textures/rooms/house` | `house` (catroller) | A room, as an equirectangular canvas: cream walls warm with lamplight, a dark window with the moon in it, a wooden floor. |
+| `textures/rooms/parlour` | `parlour` (krystal) | The fortune teller's parlour, as Krystal's brass and glass see it: the night of `skies/cosmos` with a couple of warm lamps low in the dark and a violet glow off the cloth below. |
+| `textures/rooms/softbox` | `softbox` (vibey, slimey) | A photographer's softbox room: pale above, grey to a dark floor, and two soft lights high up, one white and one cool blue. What Vibey's and Slimey's glossy skins reflect. |
 | `textures/rooms/studio` | `studio` (madness) | The studio, as an equirectangular canvas: a dark room, lighter overhead, with a broad softbox above, a warm strip on one side and a cool one on the other. |
 | `textures/rooms/town` | `town` (metrlol, petroll) | What the chrome, the paint and the puddles reflect: the night, and the sodium and neon of the town round them. |
 | `textures/rooms/vault` | `vault` (dungeon-roller) | The vault, as an equirectangular canvas: dark stone all round, a little warm light low down from torches somewhere, a cold grey shaft from above. |
 | `textures/rooms/venue` | `venue` (rocknroller, rocknroller-ii, rocknroller-iii)<br>`venue.metroll` (metroll) | The room the reflections come from, as an equirectangular canvas: a dark ceiling, the venue's colours in a ring of lights round the walls, and a bright rig overhead. |
+| `textures/skies/cloudsea` | `cloudsea` (alan) | Alan's night: stars over a sea of cloud seen from so high up the horizon has dropped below level, a few towns lit through the gaps, and the sun straight overhead. |
+| `textures/skies/cosmos` | `cosmos` (krystal) | Krystal's night: deep indigo going to black overhead, drifts of nebula in violet, rose and teal, and stars, a handful with a glint of colour. |
 | `textures/skies/embers` | `embers` (dungeon-roller) | The dark round the dungeon: black above, a faint ember-red haze far below. |
 | `textures/skies/haze` | `haze` (madness) | The sky round the scene: a deep blue haze at the horizon, dark above and below. |
 | `textures/skies/horizons` | `horizons` (metroll) | The sky round each track, painted on a canvas: a gradient from `sky`, stars if it is night, and along the horizon (`horizon`, in `skyline`'s colour, with a `glow` of its own colour where the place … |
