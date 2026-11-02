@@ -56,10 +56,8 @@ const base = person({
       }
     },
   },
-  extras(s) {
+  extras(s, J, { pose }) {
     beret(s, { color: '#14141a' });
-    s.part('kit', () => {
-    });
     // Two wheels, each a rigid mesh of its own on its own bone (or the frame and the feet beside it would drag at
     // it as it turns): a black tyre round a silver rim, a hub, and spokes from the hub to the rim.
     for (const [c, bone] of [[FRONT, 'wheelF'], [BACK, 'wheelB']]) {
@@ -106,8 +104,11 @@ const base = person({
       // The basket on the front, wicker, open at the top, and the baguette standing up out of it.
       s.box([0, 0.42, 0.25], [0.058, 0.04, 0.048], 0.008, { color: '#b08a4a', mat: 'leather', bone: 'root', k: 0.003, bump: [0.0012, 140] });
       s.box([0, 0.448, 0.25], [0.05, 0.04, 0.04], 0.006, { op: 'sub', k: 0.002 });
-      s.limb([0.012, 0.395, 0.24], [0.028, 0.57, 0.275], 0.016, 0.014, { color: '#d8a050', mat: 'paper', bone: 'root', k: 0.004 });
     });
+    // The baguette, rigid, so the build's stretch from the knees to the chest doesn't bend it where it stands up out of the basket.
+    pose.hold(s, 'root', () => s.part('kit', () => {
+      s.limb([0.012, 0.395, 0.24], [0.028, 0.57, 0.275], 0.016, 0.014, { color: '#d8a050', mat: 'paper', bone: 'root', k: 0.004, bump: [0.0012, 120] });
+    }), [0.02, 0.42, 0.25]);
     // A string of onions round his neck: a twisted cord, and the onions hanging from it on the jumper, each with
     // its stalk up to the cord and its papery skin striped.
     const loop = [[0, 0.556, -0.04], [0.036, 0.553, -0.03], [0.06, 0.52, 0.03], [0.04, 0.47, 0.075], [0, 0.455, 0.085], [-0.04, 0.47, 0.075], [-0.06, 0.52, 0.03], [-0.036, 0.553, -0.03]];
