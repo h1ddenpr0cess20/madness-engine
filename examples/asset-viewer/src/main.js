@@ -282,11 +282,17 @@ function animGroup(built) {
 /** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
-  if (pal.kind === 'dice') return [
-    ['Resin', pal.color, c.color, (v) => { c.color = v; }, () => { delete c.color; }],
-    ['Numbers / dots', pal.markingColor, c.markingColor, (v) => { c.markingColor = v; }, () => { delete c.markingColor; }],
-    ['D20 highlight', pal.highlightColor, c.highlightColor, (v) => { c.highlightColor = v; }, () => { delete c.highlightColor; }],
-  ];
+  if (pal.kind === 'dice') {
+    const rows = [
+      ['Resin', pal.color, c.color, (v) => { c.color = v; }, () => { delete c.color; }],
+      ['Numbers / dots', pal.markingColor, c.markingColor, (v) => { c.markingColor = v; }, () => { delete c.markingColor; }],
+    ];
+    if (pal.highlightColor) {
+      rows.push(['D20 highlight', pal.highlightColor, c.highlightColor,
+        (v) => { c.highlightColor = v; }, () => { delete c.highlightColor; }]);
+    }
+    return rows;
+  }
   const rows = [
     ['Skin', pal.skin, c.skin, (v) => { c.skin = v; }, () => { delete c.skin; }],
     ['Hair', pal.hair ?? '#3a2a20', c.hair, (v) => { c.hair = v; }, () => { delete c.hair; delete c.brow; }],
