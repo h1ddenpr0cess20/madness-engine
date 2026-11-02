@@ -1,5 +1,5 @@
 import { paintRoom } from '../textures/rooms/venue.js';
-import { paintSky } from '../textures/skies/skyline.rocknroller-ii.js';
+import { paintSky } from '../textures/skies/skyline.js';
 
 /**
  * Scene 8: The Swashbuckler. A galleon built full size in the studio's big
@@ -70,7 +70,7 @@ const mood = {
 };
 
 /** Its sky and what its chrome reflects, painted on canvases, as `stage.setSky` and `stage.setRoom` take them. */
-mood.paintSky = (options) => paintSky({ ...mood.sky, ...options });
+mood.paintSky = (options) => paintSky({ cloudy: false, ...mood.sky, ...options });
 mood.paintRoom = (options) => paintRoom({ ...mood.room, ...options });
 
 export default mood;

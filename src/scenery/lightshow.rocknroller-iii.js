@@ -1,4 +1,4 @@
-import { canvas, cached, copyOf, glowTexture, random, texture } from '../textures/venue.rocknroller-iii.js';
+import { canvas, cached, copyOf, glowTexture, random, texture } from '../textures/venue.js';
 
 /**
  * The light show. Every set is lit by a rig, and the rig keeps the beat:

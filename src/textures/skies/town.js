@@ -10,9 +10,11 @@ const SKY = [[0, '#03040c'], [0.3, '#070a1c'], [0.44, '#121a36'], [0.5, '#2a2a44
  * moon, a sky going to a dirty orange at the horizon where the refineries
  * light it from below, and on the horizon the silhouettes of cracking
  * towers and flare stacks burning, derricks with red lights on top, and
- * the lights of the next town.
+ * the lights of the next town. On Metrlol's horizon (`on: 'city'`) the next
+ * city's towers stand there instead, with data centres and their status
+ * lights and wind turbines with red lights on top.
  */
-export function paintSky(u, { width = 2048, ridge = true, scale = 2 } = {}) {
+export function paintSky(u, { width = 2048, ridge = true, on = 'refineries', scale = 2 } = {}) {
   const height = width / 2;
   const c = document.createElement('canvas');
   // Painted at `scale` times its layout: the same picture, sharp on a big screen.
@@ -27,7 +29,7 @@ export function paintSky(u, { width = 2048, ridge = true, scale = 2 } = {}) {
   const horizon = height / 2;
   let s = 11;
   const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  // The glow off the refineries, low along the horizon, strongest in two places.
+  // The glow off the refineries (or the cities), low along the horizon, strongest in two places.
   for (const [cx, w, a] of [[0.15, 0.25, 0.32], [0.62, 0.2, 0.26], [0.88, 0.12, 0.16]]) {
     for (const ox of [-width, 0, width]) {
       const glow = ctx.createRadialGradient(cx * width + ox, horizon, 0, cx * width + ox, horizon, w * width);
@@ -66,38 +68,79 @@ export function paintSky(u, { width = 2048, ridge = true, scale = 2 } = {}) {
   for (let x = 0; x <= width; x += 2) ctx.lineTo(x, horizon - 4 - 6 * (0.5 + 0.5 * Math.sin(x / 70)) - 4 * Math.sin(x / 19 + 1) ** 2);
   ctx.lineTo(width, height); ctx.lineTo(0, height);
   ctx.fill();
-  // Refineries: towers, columns, stacks with flames, and their lights.
-  const refinery = (x0, w) => {
-    ctx.fillStyle = ink;
-    for (let x = x0; x < x0 + w; x += 4 + r() * 8) {
-      const h = 6 + r() * 26, bw = 3 + r() * 6;
-      ctx.fillRect(x, horizon - 8 - h, bw, h + 10);
-      if (r() < 0.3) { ctx.beginPath(); ctx.arc(x + bw / 2, horizon - 8, 6 + r() * 6, Math.PI, 0); ctx.fill(); }
-    }
-    for (let k = 0; k < 3; k++) {
-      const x = x0 + r() * w, h = 36 + r() * 30;
+  if (on === 'city') {
+    // A city on the horizon: towers, their windows lit, a red light on the tallest.
+    const skyline = (x0, w) => {
+      for (let x = x0; x < x0 + w; x += 3 + r() * 7) {
+        const h = 8 + r() * 34 * Math.sin(Math.PI * (x - x0) / w), bw = 4 + r() * 7;
+        ctx.fillStyle = ink;
+        ctx.fillRect(x, horizon - 6 - h, bw, h + 8);
+        for (let k = 0; k < h * bw * 0.06; k++) {
+          ctx.fillStyle = `rgba(255,${200 + r() * 55},${140 + r() * 80},${0.35 + r() * 0.5})`;
+          ctx.fillRect(x + 1 + r() * (bw - 2), horizon - 4 - r() * h, 1.1, 1.1);
+        }
+        if (h > 30) { ctx.fillStyle = 'rgba(255,40,30,0.95)'; ctx.fillRect(x + bw / 2 - 1, horizon - 8 - h, 2, 2); }
+      }
+    };
+    skyline(width * 0.08, width * 0.14);
+    skyline(width * 0.56, width * 0.12);
+    // Data centres: long low sheds, rows of blue and green lights along them.
+    for (const [x0, w] of [[0.33, 0.07], [0.78, 0.09]]) {
       ctx.fillStyle = ink;
-      ctx.fillRect(x, horizon - 8 - h, 3, h);
-      const f = ctx.createRadialGradient(x + 1.5, horizon - 12 - h, 0, x + 1.5, horizon - 12 - h, 14);
-      f.addColorStop(0, 'rgba(255,230,160,1)'); f.addColorStop(0.3, 'rgba(255,140,40,0.8)'); f.addColorStop(1, 'rgba(255,90,20,0)');
-      ctx.fillStyle = f;
-      ctx.fillRect(x - 14, horizon - 30 - h, 32, 32);
+      ctx.fillRect(width * x0, horizon - 14, width * w, 16);
+      for (let x = width * x0 + 2; x < width * (x0 + w) - 2; x += 3) {
+        ctx.fillStyle = r() < 0.7 ? 'rgba(90,200,255,0.9)' : 'rgba(154,255,184,0.9)';
+        ctx.fillRect(x, horizon - 10, 1.2, 1.2);
+      }
     }
-    for (let k = 0; k < w * 0.6; k++) {
-      ctx.fillStyle = `rgba(255,${190 + r() * 60},${110 + r() * 80},${0.5 + r() * 0.5})`;
-      ctx.fillRect(x0 + r() * w, horizon - 10 - r() * 34, 1.5, 1.5);
+    // Wind turbines across the fields, each with a red light on top.
+    for (let k = 0; k < 22; k++) {
+      const x = r() * width, h = 16 + r() * 16, base = horizon - 6, a = r() * Math.PI * 2;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x, base); ctx.lineTo(x, base - h); ctx.stroke();
+      ctx.lineWidth = 1;
+      for (let b = 0; b < 3; b++) {
+        const t = a + b * (Math.PI * 2 / 3);
+        ctx.beginPath(); ctx.moveTo(x, base - h); ctx.lineTo(x + Math.cos(t) * h * 0.4, base - h + Math.sin(t) * h * 0.4); ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,40,30,0.95)';
+      ctx.fillRect(x - 1, base - h - 2, 2, 2);
     }
-  };
-  refinery(width * 0.08, width * 0.14);
-  refinery(width * 0.56, width * 0.12);
-  // Derricks across the fields, each with a red light on top.
-  for (let k = 0; k < 22; k++) {
-    const x = r() * width, h = 14 + r() * 16, base = horizon - 6;
-    ctx.strokeStyle = ink;
-    ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.moveTo(x - 5, base); ctx.lineTo(x, base - h); ctx.lineTo(x + 5, base); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,40,30,0.95)';
-    ctx.fillRect(x - 1, base - h - 2, 2, 2);
+  } else {
+    // Refineries: towers, columns, stacks with flames, and their lights.
+    const refinery = (x0, w) => {
+      ctx.fillStyle = ink;
+      for (let x = x0; x < x0 + w; x += 4 + r() * 8) {
+        const h = 6 + r() * 26, bw = 3 + r() * 6;
+        ctx.fillRect(x, horizon - 8 - h, bw, h + 10);
+        if (r() < 0.3) { ctx.beginPath(); ctx.arc(x + bw / 2, horizon - 8, 6 + r() * 6, Math.PI, 0); ctx.fill(); }
+      }
+      for (let k = 0; k < 3; k++) {
+        const x = x0 + r() * w, h = 36 + r() * 30;
+        ctx.fillStyle = ink;
+        ctx.fillRect(x, horizon - 8 - h, 3, h);
+        const f = ctx.createRadialGradient(x + 1.5, horizon - 12 - h, 0, x + 1.5, horizon - 12 - h, 14);
+        f.addColorStop(0, 'rgba(255,230,160,1)'); f.addColorStop(0.3, 'rgba(255,140,40,0.8)'); f.addColorStop(1, 'rgba(255,90,20,0)');
+        ctx.fillStyle = f;
+        ctx.fillRect(x - 14, horizon - 30 - h, 32, 32);
+      }
+      for (let k = 0; k < w * 0.6; k++) {
+        ctx.fillStyle = `rgba(255,${190 + r() * 60},${110 + r() * 80},${0.5 + r() * 0.5})`;
+        ctx.fillRect(x0 + r() * w, horizon - 10 - r() * 34, 1.5, 1.5);
+      }
+    };
+    refinery(width * 0.08, width * 0.14);
+    refinery(width * 0.56, width * 0.12);
+    // Derricks across the fields, each with a red light on top.
+    for (let k = 0; k < 22; k++) {
+      const x = r() * width, h = 14 + r() * 16, base = horizon - 6;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x - 5, base); ctx.lineTo(x, base - h); ctx.lineTo(x + 5, base); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,40,30,0.95)';
+      ctx.fillRect(x - 1, base - h - 2, 2, 2);
+    }
   }
   // A town's lights in the distance.
   for (let k = 0; k < 260; k++) {

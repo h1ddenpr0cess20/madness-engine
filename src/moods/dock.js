@@ -1,5 +1,5 @@
 import { paintRoom } from '../textures/rooms/venue.js';
-import { paintSky } from '../textures/skies/skyline.rocknroller.js';
+import { paintSky } from '../textures/skies/skyline.js';
 
 /**
  * Act 5: The Loading Dock. The back of the house, where the gear comes in
@@ -62,7 +62,7 @@ const mood = {
 };
 
 /** Its sky and what its chrome reflects, painted on canvases, as `stage.setSky` and `stage.setRoom` take them. */
-mood.paintSky = (options) => paintSky({ ...mood.sky, ...options });
+mood.paintSky = (options) => paintSky({ cloudy: false, ...mood.sky, ...options });
 mood.paintRoom = (options) => paintRoom({ ...mood.room, ...options });
 
 export default mood;

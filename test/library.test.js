@@ -42,7 +42,7 @@ test('every other version stands beside a default of the same thing, and exports
     assert.ok(shared.length > 0, `${f} and ${def} have nothing in common`);
   }
   // Where a version was only the default again by another name it has gone; these are the ones that differ.
-  assert.ok(versions > 20, `${versions} versions`);
+  assert.ok(versions > 10, `${versions} versions`);
 });
 
 test('where every game\'s file went is recorded, and is there', () => {

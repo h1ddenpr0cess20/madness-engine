@@ -10,10 +10,30 @@ export const cached = (key, make) => {
 
 // ———————————————————————————————————————————————————————————— walls
 
-/** Names, for the gig posters on the walls: the bands on the bill. */
-const BILLS = ['IRON GOSPEL', 'BLACK COUNTRY', 'NIGHT MARE', 'DIRGE', 'SLAUGHTER BAY', 'CORPSE GRINDER', 'WALL OF DEATH', 'FROSTBITE', 'GRAVEYARD', 'LAST STAND', 'HELL YEAH', 'LOUDER'];
+/**
+ * What the posters on the walls and the stencil on the shutters say: each
+ * game's own. `bands` are the names on the bill; `headline` tops the big
+ * flyer (null for a band off the bill), in one of `colours`; the bill's flyer
+ * is in one of `billColours`, lettered in `billInk`; `badge` is stamped on the
+ * small one; `shutter` is the two words stencilled on a roll-up door. As
+ * Metroll has them, until a game says otherwise with `bill()`.
+ */
+const BILL = {
+  bands: ['IRON GOSPEL', 'BLACK COUNTRY', 'NIGHT MARE', 'DIRGE', 'SLAUGHTER BAY', 'CORPSE GRINDER', 'WALL OF DEATH', 'FROSTBITE', 'GRAVEYARD', 'LAST STAND', 'HELL YEAH', 'LOUDER'],
+  headline: 'LIVE · LOUD',
+  colours: ['#c8302a', '#2a4a8a', '#e8a020'],
+  billColours: ['#1a1a20', '#3a5a3a', '#6a2a6a'],
+  billInk: '#f0d070',
+  badge: 'SOLD OUT',
+  shutter: ['CLOSED', 'SET'],
+};
 
-/** Bricks, a tile wide and a tile high: four courses, each set half a brick over from the last. With `posters`, papered with gig posters. */
+/** Sets what a game's posters and shutters say (see BILL); call it before anything is painted, since what is painted is kept. */
+export function bill(words) {
+  Object.assign(BILL, words);
+}
+
+/** Bricks, a tile wide and a tile high: four courses, each set half a brick over from the last. With `posters`, papered with posters (BILL). */
 function brick(GFX, { posters = false } = {}) {
   const size = 256;
   const rnd = random(5);
@@ -72,9 +92,9 @@ function brick(GFX, { posters = false } = {}) {
       ctx.fillRect(w / 2 - 13, -h / 2 - 3, 18, 8);
       ctx.restore();
     };
-    flyer(10, 18, 104, 138, pick(['#c8302a', '#2a4a8a', '#e8a020']), '#ffffff', 'LIVE · LOUD', 'sun', -0.05);
-    flyer(134, 96, 112, 142, pick(['#1a1a20', '#3a5a3a', '#6a2a6a']), '#f0d070', pick(BILLS), 'bolt', 0.04);
-    flyer(150, 8, 80, 78, '#f5f0e6', '#d9232f', 'SOLD OUT', 'rings', 0.06);
+    flyer(10, 18, 104, 138, pick(BILL.colours), '#ffffff', BILL.headline ?? pick(BILL.bands), 'sun', -0.05);
+    flyer(134, 96, 112, 142, pick(BILL.billColours), BILL.billInk, pick(BILL.bands.filter((b) => b !== BILL.headline)), 'bolt', 0.04);
+    flyer(150, 8, 80, 78, '#f5f0e6', '#d9232f', BILL.badge, 'rings', 0.06);
   };
   return {
     map: texture(GFX, paint(posters ? '#b8a89a' : '#e2ddd4', '#3a342e', true, posters ? poster : null)),
@@ -166,7 +186,7 @@ export function gaffTexture(GFX) {
   });
 }
 
-/** A roll-up shutter: ribbed steel, scuffed, with CLOSED SET stencilled across it and hazard stripes at the foot. */
+/** A roll-up shutter: ribbed steel, scuffed, with two words stencilled across it (BILL.shutter: CLOSED SET, STAFF ONLY) and hazard stripes at the foot. */
 export function shutterTexture(GFX) {
   return cached('shutter', () => {
     const size = 256;
@@ -189,8 +209,8 @@ export function shutterTexture(GFX) {
         ctx.fillStyle = '#c8261d';
         ctx.font = '800 54px Impact, "Arial Narrow", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('CLOSED', size / 2, 98);
-        ctx.fillText('SET', size / 2, 156);
+        ctx.fillText(BILL.shutter[0], size / 2, 98);
+        ctx.fillText(BILL.shutter[1], size / 2, 156);
         // Hazard stripes along the bottom rail.
         for (let x = -20; x < size; x += 32) {
           ctx.fillStyle = '#f0c020';

@@ -1,4 +1,4 @@
-import { paintRoom } from '../textures/rooms/venue.metroll.js';
+import { paintRoom } from '../textures/rooms/venue.js';
 import { paintSky } from '../textures/skies/horizons.js';
 
 /**
@@ -87,6 +87,6 @@ const mood = {
 
 /** Its sky and what its chrome reflects, painted on canvases, as `stage.setSky` and `stage.setRoom` take them. */
 mood.paintSky = (options) => paintSky({ ...mood.sky, ...options });
-mood.paintRoom = (options) => paintRoom({ ...mood.room, ...options });
+mood.paintRoom = (options) => paintRoom({ strips: true, ...mood.room, ...options });
 
 export default mood;

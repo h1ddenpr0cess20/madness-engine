@@ -1,4 +1,4 @@
-import { mix } from '../venue.rocknroller-iii.js';
+import { mix } from '../venue.js';
 import { finishSky, grain, seeded } from '../skyfinish.js';
 
 /**
@@ -9,9 +9,10 @@ import { finishSky, grain, seeded } from '../skyfinish.js';
  * them; a `city` of towers and blocks, two deep, lit window by window;
  * snow-capped `peaks`, the snow lying in the gullies and lit on one side;
  * `dunes` with the pyramids on them; the flat `sea` with the moon's or the
- * sun's path on it; or a city at the foot of Mount Fuji (`fuji`).
+ * sun's path on it; or a city at the foot of Mount Fuji (`fuji`). A venue's
+ * dark (`cloudy: false`) has no clouds in it, day or not.
  */
-export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#2a0f06'], stars = false, skyline = null, horizon = 'hills', width = 1024, scale = 4 } = {}) {
+export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#2a0f06'], stars = false, skyline = null, horizon = 'hills', cloudy = true, width = 1024, scale = 4 } = {}) {
   const height = width / 2;
   const c = document.createElement('canvas');
   // Painted at `scale` times its layout: the same picture, sharp on a big screen.
@@ -24,7 +25,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, width, height);
   const base = height * 0.5;
-  finishSky(ctx, width, height, sky, { stars, base, moonAt: horizon === 'sea' ? [width * 0.55, base * 0.55] : null });
+  finishSky(ctx, width, height, sky, { stars, base, cloudy, moonAt: horizon === 'sea' ? [width * 0.55, base * 0.55] : null });
   const done = () => { grain(ctx, c); return c; };
   if (!skyline) return done();
   const rnd = seeded(7);

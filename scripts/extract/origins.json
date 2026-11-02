@@ -76,11 +76,11 @@
     "src/models/props/record.js": "props/record.js",
     "src/models/props/tape.js": "props/tape.js",
     "src/stage.js#paintRoom": "textures/rooms/venue.js",
-    "src/stage.js#paintBackdrop": "textures/skies/skyline.rocknroller.js",
+    "src/stage.js#paintBackdrop": "textures/skies/skyline.js",
     "src/rock.js": "heroes/rock.js",
     "src/boulder.js": "heroes/rock.js",
     "src/lightshow.js": "scenery/lightshow.rocknroller.js",
-    "src/textures.js": "textures/venue.rocknroller.js",
+    "src/textures.js": "textures/venue.js",
     "src/music.js": "music/band.rocknroller.js"
   },
   "rocknroller-ii": {
@@ -128,11 +128,11 @@
     "src/models/props/reel.js": "props/reel.js",
     "src/models/props/tape.js": "props/tape.js",
     "src/stage.js#paintRoom": "textures/rooms/venue.js",
-    "src/stage.js#paintBackdrop": "textures/skies/skyline.rocknroller-ii.js",
+    "src/stage.js#paintBackdrop": "textures/skies/skyline.js",
     "src/rock.js": "heroes/rock.js",
     "src/boulder.js": "heroes/rock.js",
     "src/lightshow.js": "scenery/lightshow.rocknroller-ii.js",
-    "src/textures.js": "textures/venue.rocknroller-ii.js",
+    "src/textures.js": "textures/venue.js",
     "src/music.js": "music/band.rocknroller-ii.js"
   },
   "rocknroller-iii": {
@@ -210,7 +210,7 @@
     "src/rock.js": "heroes/rock.js",
     "src/boulder.js": "heroes/rock.js",
     "src/lightshow.js": "scenery/lightshow.rocknroller-iii.js",
-    "src/textures.js": "textures/venue.rocknroller-iii.js",
+    "src/textures.js": "textures/venue.js",
     "src/music.js": "music/band.rocknroller-iii.js"
   },
   "metroll": {
@@ -301,7 +301,7 @@
     "src/lightshow.js": "scenery/lightshow.js",
     "src/textures.js": "textures/venue.js",
     "src/music.js": "music/band.js",
-    "src/stage.js#paintRoom": "textures/rooms/venue.metroll.js",
+    "src/stage.js#paintRoom": "textures/rooms/venue.js",
     "src/horizons.js#paintBackdrop": "textures/skies/horizons.js"
   },
   "metrlol": {
@@ -384,14 +384,14 @@
     "src/cast/zinekid.js": "characters/zinekid.js",
     "src/cast/zombie.js": "characters/zombie.js",
     "src/stage.js#paintRoom": "textures/rooms/town.js",
-    "src/stage.js#paintSky": "textures/skies/town.metrlol.js",
+    "src/stage.js#paintSky": "textures/skies/town.js",
     "src/models/civic.js": "scenery/civic.js",
     "src/models/discourse.js": "scenery/discourse.js",
     "src/models/street.js": "scenery/street.metrlol.js",
     "src/models/vehicles.js": "scenery/vehicles.metrlol.js",
     "src/paint.js": "textures/town/paint.js",
-    "src/surfaces.js": "textures/town/surfaces.metrlol.js",
-    "src/textures.js": "textures/town/textures.metrlol.js",
+    "src/surfaces.js": "textures/town/surfaces.js",
+    "src/textures.js": "textures/town/textures.js",
     "src/ball.js": "heroes/mace.js",
     "src/mace.js": "heroes/mace.js",
     "src/morningstar.js": "heroes/morningstar.js",
