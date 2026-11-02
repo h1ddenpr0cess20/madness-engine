@@ -36,8 +36,8 @@ export default {
   name: 'orc',
   scale: 1.18,
   cell: 0.0072,
-  budget: 13500,
-  cells: { eyes: 0.0025, irises: 0.0016, tusks: 0.0028, armor: 0.0045, club: 0.0045, hair: 0.0045 },
+  budget: 50000,
+  cells: { eyes: 0.0016, irises: 0.0016, tusks: 0.0024, armor: 0.0045, club: 0.0045, hair: 0.0045, gear: 0.004 },
   bones: bones(B),
   materials: {
     skin: { roughness: 0.68, sheen: 0.35, sheenColor: '#b0c890', sheenRoughness: 0.7 },
@@ -77,19 +77,26 @@ export default {
     const H = { ...K, bone: 'head' };
     s.ellipsoid([0, 0.625, 0.01], [0.068, 0.072, 0.07], { ...H, k: 0.03 });
     s.ellipsoid([0, 0.585, 0.04], [0.074, 0.05, 0.06], { ...H, k: 0.035 });
-    s.ellipsoid([0, 0.645, 0.062], [0.068, 0.016, 0.026], { ...H, k: 0.02 });
-    s.ellipsoid([0, 0.615, 0.078], [0.022, 0.018, 0.02], { ...H, k: 0.015 });
+    // A heavy brow in two ridges, cheekbones, a broad flat nose, and an underbite: the lower jaw and lip out past the upper.
     for (const m of [1, -1]) {
-      s.ellipsoid([m * 0.07, 0.625, -0.005], [0.012, 0.024, 0.016], { ...H, k: 0.01, rot: [0.3, m * 0.6, m * -0.5] });
-      // Small eyes under the brow, glowing a little.
-      const c = [m * 0.032, 0.632, 0.07];
-      s.ellipsoid(c, [0.016, 0.011, 0.012], { op: 'sub', k: 0.004 });
-      s.part('eyes', () => s.ellipsoid(c, [0.0155, 0.0105, 0.011], { color: '#3a0a04', mat: 'eye', bone: 'head', k: 0 }));
-      s.part('irises', () => s.ellipsoid([c[0], c[1], c[2] + 0.008], [0.0085, 0.0085, 0.004], { color: '#ffb040', mat: 'eye', bone: 'head', k: 0 }));
-      // Tusks up out of the lower jaw.
-      s.part('tusks', () => s.limb([m * 0.035, 0.57, 0.085], [m * 0.045, 0.612, 0.1], 0.0095, 0.002, { color: tusk, mat: 'tusk', bone: 'head', k: 0.002 }));
+      s.ellipsoid([m * 0.03, 0.649, 0.066], [0.036, 0.014, 0.024], { ...H, k: 0.014, rot: [0, 0, m * -0.22] });
+      s.ellipsoid([m * 0.046, 0.616, 0.058], [0.026, 0.018, 0.022], { ...H, k: 0.016 });
     }
-    s.paint((p) => Math.max(Math.abs(p[1] - 0.586) - 0.0035, Math.abs(p[0]) - 0.04, 0.07 - p[2]), '#2a1a12', 0.003);
+    s.ellipsoid([0, 0.613, 0.084], [0.025, 0.02, 0.02], { ...H, k: 0.012 });
+    for (const m of [1, -1]) s.ellipsoid([m * 0.011, 0.604, 0.101], [0.006, 0.004, 0.006], { op: 'sub', k: 0.003 });
+    s.ellipsoid([0, 0.578, 0.066], [0.064, 0.032, 0.042], { ...H, k: 0.022 });
+    s.ellipsoid([0, 0.586, 0.093], [0.042, 0.011, 0.013], { ...H, k: 0.008 });
+    for (const m of [1, -1]) {
+      // Ears: pointed, out and back.
+      s.flake([m * 0.066, 0.628, 0.004], [m * 0.112, 0.662, -0.03], [m * 0.3, 0.2, 1], 0.017, 0.003, 0.35, { ...H, k: 0.008 });
+      // Small eyes deep under the brow, glowing: an orange iris, a black pupil.
+      const c = [m * 0.031, 0.633, 0.066];
+      s.sphere([c[0], c[1], c[2] + 0.004], 0.0135, { op: 'sub', k: 0.004 });
+      s.part('eyes', () => s.sphere(c, 0.011, { color: (p) => { const d = Math.hypot(p[0] - c[0], p[1] - c[1]); return p[2] < c[2] + 0.004 ? rgb('#2a0804') : d < 0.0028 ? rgb('#100302') : d < 0.0075 ? rgb('#ffa030') : rgb('#5a1006'); }, mat: 'eye', bone: 'head', k: 0 }));
+      // Tusks up out of the lower jaw, past the lip, curving out.
+      s.part('tusks', () => s.chain([[m * 0.031, 0.58, 0.088], [m * 0.036, 0.604, 0.098], [m * 0.045, 0.625, 0.1]], [0.0105, 0.0075, 0.002], { color: tusk, mat: 'tusk', bone: 'head', k: 0.002 }));
+    }
+    s.paint((p) => Math.max(Math.abs(p[1] - 0.595) - 0.0025, Math.abs(p[0]) - 0.036, 0.085 - p[2]), '#2a1a12', 0.002);
     // A black topknot.
     s.part('hair', () => {
       s.ellipsoid([0, 0.69, -0.03], [0.022, 0.022, 0.022], { color: hairColor, mat: 'hair', bone: 'head', k: 0.01 });
@@ -105,8 +112,12 @@ export default {
         for (const a of [-0.6, 0, 0.6]) s.sphere([c[0] + m * 0.03, c[1] + 0.022, c[2] + a * 0.05], 0.007, { color: iron, mat: 'iron', bone: `arm${side(m)}`, k: 0.002 });
       }
     });
-    s.flake([0.13, 0.52, 0.06], [-0.1, 0.36, 0.085], [0, 0.3, 1], 0.022, 0.022, 0.25, { color: leather, mat: 'cloth', bone: 'chest', k: 0.008 });
-    s.flake([0.13, 0.52, -0.06], [-0.1, 0.36, -0.085], [0, 0.3, -1], 0.022, 0.022, 0.25, { color: leather, mat: 'cloth', bone: 'chest', k: 0.008 });
+    // The strap across the chest and back: its own piece lying on the body, with an iron ring where it crosses the front.
+    s.part('gear', () => {
+      s.flake([0.13, 0.525, 0.066], [-0.1, 0.36, 0.094], [0, 0.3, 1], 0.02, 0.02, 0.22, { color: leather, mat: 'cloth', bone: 'chest', k: 0.004 });
+      s.flake([0.13, 0.525, -0.066], [-0.1, 0.36, -0.094], [0, 0.3, -1], 0.02, 0.02, 0.22, { color: leather, mat: 'cloth', bone: 'chest', k: 0.004 });
+      s.torus([0.012, 0.444, 0.098], 0.012, 0.0035, { color: iron, mat: 'iron', bone: 'chest', k: 0.001, rot: [Math.PI / 2 - 0.2, 0, 0] });
+    });
     // The kilt: a wrap at the waist and flaps of leather hanging from it, each going with the leg behind it.
     s.limb([0, 0.35, 0.004], [0, 0.305, 0.006], 0.104, 0.112, { color: leather, mat: 'cloth', bone: 'hips', k: 0.025 });
     for (let i = 0; i < 8; i++) {
@@ -114,7 +125,7 @@ export default {
       const flapBone = Math.abs(x) < 0.4 ? 'hips' : x > 0 ? 'thighL' : 'thighR';
       s.flake([x * 0.1, 0.32, z * 0.1], [x * 0.125, 0.215, z * 0.125], [x, 0.15, z], 0.04, 0.034, 0.18, { color: leather, mat: 'cloth', bone: flapBone, k: 0.006 });
     }
-    s.torus([0, 0.345, 0.004], 0.106, 0.012, { color: leather, mat: 'cloth', bone: 'hips', k: 0.006 });
+    s.part('gear', () => s.torus([0, 0.345, 0.004], 0.11, 0.012, { color: leather, mat: 'cloth', bone: 'hips', k: 0.004 }));
     s.part('armor', () => {
       for (let i = 0; i < 10; i++) {
         const a = (i / 10) * Math.PI * 2;
