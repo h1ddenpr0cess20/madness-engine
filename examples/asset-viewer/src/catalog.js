@@ -327,9 +327,9 @@ function diceItems() {
     source: 'props/dice',
     kind: 'object',
     dieType: id,
-    palette: { kind: 'dice', color: '#3a3350' },
+    palette: { kind: 'dice', color: '#3a3350', markingColor: '#e7e0f7', highlightColor: '#ffd479' },
     build({ colours = {} } = {}) {
-      const made = createDieProp(GFX, id, { color: colours.color ?? '#3a3350' });
+      const made = createDieProp(GFX, id, colours);
       return {
         object: made.group,
         info: { Source: 'props/dice', Shape: label, Faces: faceCount, Values: range, Material: 'resin' },
