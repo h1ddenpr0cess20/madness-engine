@@ -299,7 +299,11 @@ export async function loadCatalog(onProgress = () => {}) {
         if (seen.has(def)) continue;
         seen.add(def);
         const direct = value === def;
-        const label = direct && key === 'default' ? file : direct ? (file.startsWith(key) || key === def.name ? file : `${file} · ${key}`) : `${file} · ${k}`;
+        // Its own name: the file's, for a file of one thing (or its default); the export's, for one of several
+        // things in a file (halloween.js has a haybale, a scarecrow, a coffin...), with the file's name only where
+        // the export's is no name of its own.
+        const own = (name) => (name === def.name || file === name || file.startsWith(`${name}.`) ? (file.startsWith(`${name}.`) ? file : name) : `${file} · ${name}`);
+        const label = direct && key === 'default' ? file : own(direct ? key : k);
         const source = `${where(path)}${direct && key === 'default' ? '' : `#${direct ? key : `${key}.${k}`}`}`;
         items.push(sculptedItem(rooted(def), CATEGORY[folder], folder === 'characters' ? kindOf(def) : group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
       }
@@ -308,6 +312,8 @@ export async function loadCatalog(onProgress = () => {}) {
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...buildingItems());
 
+  // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
+  const painted = new Set();
   for (const [path, load] of Object.entries(textures)) {
     onProgress(++n / total);
     let mod;
@@ -318,7 +324,8 @@ export async function loadCatalog(onProgress = () => {}) {
     for (const [key, value] of Object.entries(mod)) {
       if (!/^[A-Z_]+$/.test(key) || !value || typeof value !== 'object') continue;
       for (const [k, fn] of Object.entries(value)) {
-        if (typeof fn !== 'function') continue;
+        if (typeof fn !== 'function' || painted.has(fn)) continue;
+        painted.add(fn);
         items.push(textureItem(`textures/${file}#${key}.${k}`, `${k} (${key.toLowerCase()})`, where(path), () => fn(GFX)));
       }
     }
