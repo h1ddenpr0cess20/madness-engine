@@ -39,7 +39,7 @@ export default quadruped({
     // The knobbly knees and a pad on each foot.
     for (const n of ['FL', 'FR', 'BL', 'BR']) {
       const L = P.legs[n];
-      s.sphere(L.knee, 0.026, { ...H, bone: `shin${n}`, k: 0.012 });
+      s.sphere(n[0] === 'F' ? L.ankle : L.knee, 0.026, { ...H, bone: n[0] === 'F' ? `foot${n}` : `shin${n}`, k: 0.012 });
       s.cylinder([L.foot[0], 0.01, L.foot[2] + 0.012], 0.03, 0.01, { color: '#a07a4a', mat: 'hide', bone: `foot${n}`, k: 0.008, round: 0.008 });
     }
     // The split upper lip, hanging.

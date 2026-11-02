@@ -71,10 +71,14 @@ export function frame({ hip, len, girth, stance, neck, head, tail }) {
   const T0 = [0, hip + gy * 0.45, -len - gy * 0.55];
   const T1 = add(T0, [0, Math.sin(tail.rise), -Math.cos(tail.rise)], tail.len * 0.5);
   const T2 = add(T1, [0, Math.sin(tail.rise + tail.curl), -Math.cos(tail.rise + tail.curl)], tail.len * 0.5);
+  // The legs as an animal's are: the foreleg from the shoulder back a little to the elbow, down to the wrist and the
+  // foot; the hind leg from the hip forward to the knee, back to the hock, and down to the foot.
   const legs = {};
   for (const [n, m, f] of LEGS) {
-    const z = f > 0 ? len * 0.78 : -len * 0.82;
-    legs[n] = { top: [m * stance, hip - gy * 0.25, z], knee: [m * stance, hip * 0.5, z + (f > 0 ? 0 : -0.012)], foot: [m * stance, 0, z + (f > 0 ? 0.004 : 0)] };
+    const z = f > 0 ? len * 0.78 : -len * 0.82, x = m * stance;
+    legs[n] = f > 0
+      ? { top: [x, hip - gy * 0.25, z], knee: [x, hip * 0.56, z - gy * 0.14], ankle: [x, hip * 0.17, z + gy * 0.02], foot: [x, 0, z + gy * 0.06] }
+      : { top: [x, hip - gy * 0.25, z], knee: [x, hip * 0.6, z + gy * 0.32], ankle: [x, hip * 0.27, z - gy * 0.28], foot: [x, 0, z - gy * 0.16] };
   }
   return { N0, N1, H, S0, S1, fwd, T0, T1, T2, legs };
 }
@@ -83,7 +87,7 @@ export function quadruped({
   name, scale = 1.5, cell = 0.0065, cells = {}, budget = 18000, k = 0.03,
   hip = 0.26, len = 0.15, girth = [0.08, 0.08], stance = 0.055, leg = [0.038, 0.026, 0.022],
   neck = {}, head = {}, tail = {}, ears = { kind: 'prick', size: 1 }, feet = 'paw',
-  paint = {}, mats = {}, materials = {}, extras = null, sculptHead = true, style = {},
+  paint = {}, mats = {}, materials = {}, extras = null, sculptHead = true, style = {}, eye = {},
 }) {
   const N = { len: 0.08, rise: 0.9, r: 0.045, ...neck };
   const Hd = { r: 0.055, snout: 0.06, sr: 0.03, drop: 0.25, jaw: true, ...head };
@@ -116,7 +120,7 @@ export function quadruped({
     ...LEGS.flatMap(([n, , f]) => [
       [`thigh${n}`, f > 0 ? 'front' : 'rear', P.legs[n].top],
       [`shin${n}`, `thigh${n}`, P.legs[n].knee],
-      [`foot${n}`, `shin${n}`, add(P.legs[n].foot, [0, leg[2] * 1.2, 0])],
+      [`foot${n}`, `shin${n}`, P.legs[n].ankle],
     ]),
   ];
   return {
@@ -146,7 +150,7 @@ export function quadruped({
         noseOn(s, P, Hd, { color: C.nose, mat: 'nose', bone: 'head' });
         mouthOn(s, P, Hd, C.mouth);
         earsOn(s, P, Hd, ears, { color: C.ears, mat: M.ears }, C.inner);
-        eyesOn(s, P, Hd, { color: C.eye, lid: { color: C.head, mat: M.head } });
+        eyesOn(s, P, Hd, { color: C.eye, lid: { color: C.head, mat: M.head }, ...eye });
       }
       // The tail, in two.
       s.limb(P.T0, P.T1, T.r, (T.r + T.tip) / 2, { color: C.tail, mat: M.tail, bone: 'tail', k: k * 0.5 });
@@ -160,8 +164,10 @@ export function quadruped({
         // The muscle of the shoulder or the haunch: flat to the side, full fore and aft, tapering to the knee.
         const upper = L.top[1] + gy * 0.3 - L.knee[1];
         s.ellipsoid(add(L.top, [0, -upper * 0.22, f > 0 ? top * 0.1 : -top * 0.15]), [top * 1.02, upper * 0.42, top * (f > 0 ? 1.25 : 1.45)], { ...Lg, bone: `thigh${n}`, k: k * 0.6 });
-        // The shin: slim and clean down to the foot, with no knob at the knee.
-        s.limb(L.knee, add(L.foot, [0, leg[2] * 1.2, 0]), leg[1] * 0.92, leg[2] * 0.85, { ...Lg, bone: `shin${n}`, k: k * 0.2 });
+        // The shin to the wrist or hock (the hock with the point of its heel behind), then the slim cannon down to the foot.
+        s.limb(L.knee, L.ankle, leg[1] * 0.92, leg[2] * 0.95, { ...Lg, bone: `shin${n}`, k: k * 0.2 });
+        if (f < 0) s.sphere(add(L.ankle, [0, leg[2] * 0.2, -leg[2] * 0.55]), leg[2] * 0.75, { ...Lg, bone: `shin${n}`, k: k * 0.15 });
+        s.limb(L.ankle, add(L.foot, [0, leg[2] * 1.2, 0]), leg[2] * 0.95, leg[2] * 0.82, { ...Lg, bone: `foot${n}`, k: k * 0.15 });
         footOn(s, L.foot, n, feet, leg[2], { color: C.feet, mat: M.feet });
       }
       extras?.(s, P, { C, Hd, N, T, hip, len, girth, stance, leg });
@@ -210,8 +216,16 @@ function footOn(s, at, n, kind, r, o) {
     s.box(add(at, [0, r * 0.7, r * 1.15]), [r * 0.1, r * 0.8, r * 0.25], 0.001, { op: 'sub', k: 0.002 });
     s.box(add(at, [0, -r, 0]), [r * 3, r, r * 3], 0, { op: 'sub', k: 0.001 });
   } else if (kind === 'claw') {
-    s.ellipsoid(add(at, [0, r * 0.55, r * 0.6]), [r * 1.3, r * 0.55, r * 1.4], { ...o, bone, k: 0.008 });
-    for (const t of [-1, 0, 1]) s.cone(add(at, [t * r * 0.7, r * 0.3, r * 2.4]), r * 0.22, r * 0.7, { color: '#e8e0c8', mat: 'tooth', bone, k: 0.002, rot: [-Math.PI / 2 + 0.3, 0, 0] });
+    // A flat foot with its toes splayed out from it, and a claw on the end of each, growing out of the toe.
+    s.ellipsoid(add(at, [0, r * 0.5, r * 0.4]), [r * 1.25, r * 0.5, r * 1.2], { ...o, bone, k: 0.008 });
+    const toes = n[0] === 'F' ? [-1, -0.5, 0, 0.5, 1] : [-0.75, -0.25, 0.25, 0.75];
+    for (const t of toes) {
+      const a = t * 0.75, root = add(at, [Math.sin(a) * r * 0.5, r * 0.45, r * 0.6]);
+      const end = add(root, [Math.sin(a) * r * 1.5, -r * 0.15, Math.cos(a) * r * 1.5 * (1 - Math.abs(t) * 0.25)]);
+      s.limb(root, end, r * 0.32, r * 0.24, { ...o, bone, k: r * 0.25 });
+      const d = [Math.sin(a), -0.35, Math.cos(a)], dl = Math.hypot(...d), u = d.map((v) => v / dl);
+      s.cone(add(end, u, r * 0.55), r * 0.17, r * 0.65, { color: '#d8d0b8', mat: 'tooth', bone, k: r * 0.08, rot: [Math.acos(u[1]), Math.atan2(u[0], u[2]), 0] });
+    }
   } else {
     s.ellipsoid(add(at, [0, r * 0.75, r * 0.45]), [r * 1.2, r * 0.8, r * 1.45], { ...o, bone, k: 0.008 });
     // Four toes across the front, a crease between each.
@@ -242,25 +256,90 @@ function mouthOn(s, P, Hd, color) {
 }
 
 /**
- * The eyes, set half out of the head where it is: the eyeball the colour of
- * the eye, a pupil on it, a catch-light, and a lid over the top of each.
+ * The eyes, set into the head where it is: the iris painted on the eyeball
+ * with the pupil in it (round, or a goat's bar), a catch-light, and a lid of
+ * the head's own skin over the top of each. `look` is which way the left
+ * one looks (a dog's forward, a horse's out to the side); `size` its
+ * radius, as a share of the head's.
  */
-function eyesOn(s, P, Hd, { color, lid }) {
-  const r = Hd.r * 0.2;
+function eyesOn(s, P, Hd, { color, lid, look = [0.5, 0.12, 0.86], size = 0.19, pupil = 'round' }) {
+  const r = Hd.r * size;
   for (const m of [1, -1]) {
-    const c = seat(s, P.H, add(P.H, [m * Hd.r * 0.55, Hd.r * 0.2, Hd.r * 0.62]), r);
-    const d = [c[0] - P.H[0], c[1] - P.H[1], c[2] - P.H[2]], l = Math.hypot(...d);
-    // Looking out to the side and forward.
-    const n = [d[0] / l, d[1] / l * 0.3, Math.max(0.35, d[2] / l)], nl = Math.hypot(...n);
-    for (let i = 0; i < 3; i++) n[i] /= nl;
-    const rot = [-Math.asin(n[1]), Math.atan2(n[0], n[2]), 0];
-    s.part('eyes', () => s.sphere(c, r, { color, mat: 'eye', bone: 'head', k: 0 }));
-    s.part('pupils', () => s.ellipsoid(add(c, n, r * 0.84), [r * 0.46, r * 0.5, r * 0.2], { color: '#050405', mat: 'eye', bone: 'head', k: 0, rot }));
-    const hl = add(add(c, n, r * 1.02), [m * -r * 0.18, r * 0.25, 0]);
-    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - r * 0.17, '#ffffff', r * 0.05);
-    // The upper lid: a fold of the head's own skin over the top of the eye.
-    s.ellipsoid(add(add(c, [0, r * 0.62, 0]), n, -r * 0.12), [r * 1.08, r * 0.5, r * 1.02], { ...lid, bone: 'head', k: r * 0.25, rot });
+    const d = unit([m * look[0], look[1], look[2]]);
+    const c = add(seat(s, P.H, add(P.H, [m * Hd.r * 0.55, Hd.r * 0.2, Hd.r * 0.62]), r), d, -r * 0.18);
+    s.sphere(add(c, d, r * 0.25), r * 1.04, { op: 'sub', k: r * 0.08 });
+    s.part('eyes', () => s.sphere(c, r, { color: eyeColor(c, d, color, pupil), mat: 'eye', bone: 'head', k: 0 }));
+    const hl = add(c, unit(add(d, [m * -0.3, 0.55, 0.2])), r);
+    s.paint((p) => Math.hypot(p[0] - hl[0], p[1] - hl[1], p[2] - hl[2]) - r * 0.16, '#ffffff', r * 0.06);
+    // The upper lid: a fold of the head's own skin over the top of the eye; and a lower one, smaller.
+    const rot = [-Math.asin(d[1]), Math.atan2(d[0], d[2]), 0];
+    s.ellipsoid(add(add(c, [0, r * 0.6, 0]), d, r * 0.05), [r * 1.1, r * 0.48, r * 1.0], { ...lid, bone: 'head', k: r * 0.3, rot });
+    s.ellipsoid(add(add(c, [0, -r * 0.72, 0]), d, -r * 0.05), [r * 1.0, r * 0.36, r * 0.92], { ...lid, bone: 'head', k: r * 0.3, rot });
   }
+}
+
+/** An eye's colour: dark at the rim, the iris lighter toward a pupil that is round or a sideways bar. */
+function eyeColor(c, d, iris, pupil) {
+  const I = typeof iris === 'string' ? rgb(iris) : iris, deep = I.map((v) => v * 0.35), bright = I.map((v) => Math.min(1, v * 1.5 + 0.02));
+  const black = rgb('#050404'), up = unit([0, 1, 0].map((v, i) => v - d[i] * d[1]));
+  return (p) => {
+    const v = unit([p[0] - c[0], p[1] - c[1], p[2] - c[2]]);
+    const a = Math.acos(Math.max(-1, Math.min(1, v[0] * d[0] + v[1] * d[1] + v[2] * d[2]))) / 0.95;
+    if (a > 1) return deep;
+    let col = mix(bright, I, Math.min(1, a / 0.6));
+    col = mix(col, deep, Math.max(0, (a - 0.8) / 0.2));
+    const vy = v[0] * up[0] + v[1] * up[1] + v[2] * up[2];
+    const inPupil = pupil === 'bar' ? a < 0.62 && Math.abs(vy) < 0.13 : a < 0.42;
+    return inPupil ? black : col;
+  };
+}
+
+const unit = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+
+/**
+ * A collar that fits: a flat strap round the neck `at` that far from its
+ * root to the head, lying on the fur all the way round (found by feeling
+ * for it), with a ring and a tag hanging at the front, and `studs` if it
+ * has them. Its own mesh, its own colour.
+ */
+export function collar(s, P, { at = 0.3, ...o } = {}) {
+  const c = [0, 1, 2].map((i) => P.N0[i] + (P.N1[i] - P.N0[i]) * at);
+  return band(s, c, [P.N1[0] - P.N0[0], P.N1[1] - P.N0[1], P.N1[2] - P.N0[2]], o);
+}
+
+/**
+ * A flat strap round whatever is at `c`, square to `axis` (a neck, a
+ * muzzle, a leg), lying on its surface all the way round; a ring and a tag
+ * at its lowest front point if `tag`. Gives the points round it and that one.
+ */
+export function band(s, c, axis, { color = '#c8242c', width = 0.012, thick = 0.0035, sink = 0.35, tag = '#e8c050', studs = null, mat = 'leather', bone = 'neck', part = 'kit', count = 28, arc = null, reach = 0 } = {}) {
+  const ax = unit(axis);
+  const e1 = [1, 0, 0], e2 = unit([0, ax[2], -ax[1]]);
+  const ring = [];
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2, dir = [e1[0] * Math.cos(a) + e2[0] * Math.sin(a), e1[1] * Math.cos(a) + e2[1] * Math.sin(a), e1[2] * Math.cos(a) + e2[2] * Math.sin(a)];
+    if (arc && !arc(dir)) continue;
+    const hit = s.cast(add(c, dir, 0.3), dir.map((v) => -v), 0.3);
+    if (hit && (!reach || Math.hypot(hit.p[0] - c[0], hit.p[1] - c[1], hit.p[2] - c[2]) < reach)) ring.push({ p: add(hit.p, dir, thick * (0.5 - sink)), n: dir });
+  }
+  let low = ring[0];
+  for (const q of ring) if (q.p[1] - q.p[2] * 0.6 < low.p[1] - low.p[2] * 0.6) low = q;
+  s.part(part, () => {
+    for (let i = 0; i < ring.length - (arc ? 1 : 0); i++) {
+      const A = ring[i], B = ring[(i + 1) % ring.length], n = unit(add(A.n, B.n));
+      if (Math.hypot(A.p[0] - B.p[0], A.p[1] - B.p[1], A.p[2] - B.p[2]) > width * 3) continue;
+      s.flake(A.p, B.p, n, width / 2, width / 2, thick / width, { color, mat, bone, k: 0.0015 });
+    }
+    // The ring and the tag, at the front and low.
+    if (tag) {
+      const ringAt = add(low.p, low.n, thick + width * 0.25);
+      s.torus(ringAt, width * 0.42, width * 0.09, { color: '#b8b8c0', mat: 'metal', bone, k: 0.0008, rot: [0, 0, Math.PI / 2] });
+      const disc = add(ringAt, [0, -width * 0.95, 0.0015]);
+      s.cylinder(disc, width * 0.55, width * 0.08, { color: tag, mat: 'gold', bone, k: 0.0008, round: width * 0.06, rot: [Math.PI / 2 - 0.25, 0, 0] });
+    }
+    if (studs) for (let i = 0; i < ring.length; i += 2) s.cone(add(ring[i].p, ring[i].n, thick * 0.4), width * 0.22, width * 0.45, { color: studs, mat: 'metal', bone, k: 0.0006, rot: [Math.acos(ring[i].n[1]), Math.atan2(ring[i].n[0], ring[i].n[2]), 0] });
+  });
+  return { ring, front: low };
 }
 
 /**

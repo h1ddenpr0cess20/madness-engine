@@ -1,6 +1,6 @@
 import { coat } from '../models/skins.js';
 import { fbm } from '../models/sdf.js';
-import { quadruped } from './quadruped.js';
+import { collar, quadruped } from './quadruped.js';
 
 /**
  * The St Bernard: off the Great St Bernard Pass, enormous and kind and
@@ -32,6 +32,7 @@ const FACE = (p, n) => {
 export default quadruped({
   name: 'stbernard',
   scale: 1.55,
+  budget: 36000,
   hip: 0.27,
   len: 0.17,
   girth: [0.1, 0.1],
@@ -54,13 +55,17 @@ export default quadruped({
     }
     // A ruff of white down the chest.
     s.ellipsoid([0, 0.25, 0.22], [0.07, 0.08, 0.05], { color: WHITE, mat: 'fur', bone: 'front', k: 0.03, bump: [0.003, 70] });
+    // A broad leather collar with a brass buckle-plate at the front, and the cask hanging from its ring under the chin.
+    const { front } = collar(s, P, { at: 0.28, color: '#5a2a14', width: 0.02, thick: 0.006, tag: null, studs: '#c8a050' });
     s.part('kit', () => {
-      // The collar, and the cask hanging from it under the chin, hooped.
-      s.torus([0, P.N0[1] + 0.03, P.N0[2] + 0.015], 0.074, 0.008, { color: '#5a2a14', mat: 'leather', bone: 'neck', k: 0.002, rot: [1.1, 0, 0] });
-      const c = [0, P.N0[1] - 0.05, P.N0[2] + 0.07];
-      s.cylinder(c, 0.032, 0.04, { color: '#a87038', mat: 'wood', bone: 'neck', k: 0.004, round: 0.01, rot: [0, 0, Math.PI / 2] });
-      for (const x of [-0.028, 0.028]) s.cylinder([x, c[1], c[2]], 0.034, 0.003, { color: '#8a8a90', mat: 'metal', bone: 'neck', k: 0.001, round: 0.002, rot: [0, 0, Math.PI / 2] });
-      s.cylinder([0, c[1] + 0.034, c[2]], 0.006, 0.006, { color: '#3a2010', mat: 'wood', bone: 'neck', k: 0.001 });
+      const ring = [front.p[0], front.p[1] - 0.012, front.p[2] + 0.012];
+      s.torus(ring, 0.009, 0.0022, { color: '#c8a050', mat: 'gold', bone: 'neck', k: 0.001, rot: [0, 0, Math.PI / 2] });
+      // The cask, crosswise, on a short strap from the ring, hooped at each end, with its bung on top.
+      const c = [0, ring[1] - 0.042, ring[2] + 0.004];
+      s.box([0, (ring[1] + c[1] + 0.03) / 2, ring[2]], [0.006, (ring[1] - c[1] - 0.03) / 2 + 0.002, 0.0018], 0.001, { color: '#5a2a14', mat: 'leather', bone: 'neck', k: 0.001 });
+      s.cylinder(c, 0.03, 0.036, { color: '#a87038', mat: 'wood', bone: 'neck', k: 0.004, round: 0.01, rot: [0, 0, Math.PI / 2] });
+      for (const x of [-0.026, 0.026]) s.cylinder([x, c[1], c[2]], 0.0315, 0.003, { color: '#8a8a90', mat: 'metal', bone: 'neck', k: 0.001, round: 0.002, rot: [0, 0, Math.PI / 2] });
+      s.cylinder([0, c[1] + 0.031, c[2]], 0.006, 0.005, { color: '#3a2010', mat: 'wood', bone: 'neck', k: 0.001 });
     });
   },
 });
