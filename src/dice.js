@@ -1,5 +1,5 @@
 /**
- * Seven standalone roleplaying dice, drawn in the style of Nat's d20.
+ * Eight standalone roleplaying dice, drawn in the style of Nat's d20.
  *
  * These are props, not game actors: no physics state, character rig or
  * animation is involved. Each factory returns a group ready to add to a
@@ -278,7 +278,7 @@ function labelsFor(faces, labels, pairOpposite = true) {
   return assigned;
 }
 
-function glyphTexture(GFX, label, highlighted, pips = false) {
+function glyphTexture(GFX, label, inkColor = INK, pips = false) {
   if (typeof document === 'undefined') return null;
   const size = 256;
   const canvas = document.createElement('canvas');
@@ -286,7 +286,7 @@ function glyphTexture(GFX, label, highlighted, pips = false) {
   const context = canvas.getContext('2d');
   if (!context) return null;
   context.clearRect(0, 0, size, size);
-  context.fillStyle = highlighted ? HIGHLIGHT : INK;
+  context.fillStyle = inkColor;
   const fontSize = label.length > 1 ? (label.length > 2 ? 88 : 112) : 132;
   if (pips) {
     const arrangements = {
@@ -326,7 +326,23 @@ function dataFor(GFX, type) {
   if (type === 'd4') return polygonGeometry(GFX, ...Object.values(tetrahedron()));
   if (type === 'd6' || type === 'd6-pips') return polygonGeometry(GFX, ...Object.values(cube()));
   if (type === 'd8') return polygonGeometry(GFX, ...Object.values(octahedron()));
-  if (type === 'd10' || type === 'd100') return polygonGeometry(GFX, ...Object.values(trapezohedron()));
+  if (type === 'd10' || type === 'd100') {
+    const solid = trapezohedron();
+    const data = polygonGeometry(GFX, solid.vertices, solid.faces);
+    if (type === 'd100') {
+      // Girdle-even percentile markings: the top of each numeral points to
+      // the nearest tip, rather than using the same world-up direction on all faces.
+      const tips = [
+        new GFX.Vector3(...solid.vertices[0]),
+        new GFX.Vector3(...solid.vertices[11]),
+      ];
+      data.faces.forEach((face, index) => {
+        const tip = tips[index % 2 === 0 ? 0 : 1];
+        face.labelUp = tip.clone().sub(face.centroid).projectOnPlane(face.normal).normalize();
+      });
+    }
+    return data;
+  }
   if (type === 'd12') {
     const solid = dodecahedron(GFX);
     return polygonGeometry(GFX, solid.vertices, solid.faces);
@@ -346,7 +362,8 @@ function labelsForType(type) {
  *
  * @param {object} GFX Madness Engine's gfx namespace.
  * @param {'d4'|'d6'|'d8'|'d10'|'d%'|'d100'|'d12'|'d20'} type
- * @param {{ color?: string|object }} options Resin colour; defaults to Nat's purple.
+ * @param {{ color?: string|object, markingColor?: string, numberColor?: string, pipColor?: string, highlightColor?: string }} options
+ *   Resin colour, shared number/pip ink, optional per-marking overrides, and the D20's 20-face accent.
  * @returns {{ group: object, body: object, die: object, dieMat: object, edges: object, faces: object[], numbers: (number|string)[] }}
  */
 export function createDieProp(GFX, type, options = {}) {
@@ -356,6 +373,9 @@ export function createDieProp(GFX, type, options = {}) {
     throw new RangeError('dice: unsupported die type ' + type);
   }
   const resin = options.color ?? DEFAULT_RESIN;
+  const numberColor = options.numberColor ?? options.markingColor ?? INK;
+  const pipColor = options.pipColor ?? options.markingColor ?? INK;
+  const highlightColor = options.highlightColor ?? HIGHLIGHT;
   const data = dataFor(GFX, canonical);
   const labels = labelsForType(canonical);
   const numbers = labelsFor(data.faces, labels, canonical !== 'd4');
@@ -399,8 +419,9 @@ export function createDieProp(GFX, type, options = {}) {
     const label = String(numbers[index]);
     // The gold accent belongs to Nat's original D20 treatment only.
     const highlighted = canonical === 'd20' && label === '20';
+    const inkColor = highlighted ? highlightColor : (usePips ? pipColor : numberColor);
     const material = new GFX.MeshBasicMaterial({
-      map: glyphTexture(GFX, label, highlighted, usePips),
+      map: glyphTexture(GFX, label, inkColor, usePips),
       transparent: true,
       depthWrite: false,
       toneMapped: false,
@@ -412,7 +433,9 @@ export function createDieProp(GFX, type, options = {}) {
 
     const reference = Math.abs(face.normal.y) > 0.98
       ? new GFX.Vector3(0, 0, 1) : up;
-    const upDirection = reference.clone().projectOnPlane(face.normal).normalize();
+    const upDirection = face.labelUp
+      ? face.labelUp.clone().projectOnPlane(face.normal).normalize()
+      : reference.clone().projectOnPlane(face.normal).normalize();
     const right = new GFX.Vector3().crossVectors(upDirection, face.normal).normalize();
     glyph.quaternion.setFromRotationMatrix(
       new GFX.Matrix4().makeBasis(right, upDirection, face.normal),
@@ -421,6 +444,7 @@ export function createDieProp(GFX, type, options = {}) {
     face.mesh = glyph;
     face.number = numbers[index];
     face.highlighted = highlighted;
+    face.markingColor = inkColor;
   });
 
   return {
