@@ -104,7 +104,7 @@ scene.add(plate);
 
 // ———————————————————————————————————————————————— the viewer's state
 
-const view = { item: null, colours: {}, coloursFor: null, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
+const view = { item: null, colours: {}, draft: {}, coloursFor: null, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
 const options = { level: 1, variant: 0, construction: 0, detail: 1 };
 
 const VIEWS = [
@@ -143,7 +143,7 @@ async function show(item) {
   const token = ++view.token;
   view.item = item;
   // Another person starts in their own colours.
-  if (view.coloursFor !== item.id) { view.colours = {}; view.coloursFor = item.id; view.seed = 0; }
+  if (view.coloursFor !== item.id) { view.colours = {}; view.draft = {}; view.coloursFor = item.id; view.seed = 0; }
   $('busy').style.display = 'grid';
   $('err').textContent = '';
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
@@ -279,9 +279,9 @@ function animGroup(built) {
 
 // ———————————————————————————————————————————————— colours
 
-/** What a person's colours are now: what has been chosen, or what they come in. */
+/** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
-  const pal = item.palette, c = view.colours;
+  const pal = item.palette, c = view.draft;
   const rows = [
     ['Skin', pal.skin, c.skin, (v) => { c.skin = v; }, () => { delete c.skin; }],
     ['Hair', pal.hair ?? '#3a2a20', c.hair, (v) => { c.hair = v; }, () => { delete c.hair; delete c.brow; }],
@@ -298,7 +298,10 @@ function colourRows(item) {
   return rows;
 }
 
-/** The colour pickers for the person on show; nothing for what is not a person. */
+/** Whether what is chosen in the pickers is not what is on show. */
+const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colours);
+
+/** The colour pickers for the person on show; nothing for what is not a person. Choosing changes nothing on show until Apply. */
 function colourGroup(item) {
   const group = $('colourgroup');
   group.style.display = item.palette ? '' : 'none';
@@ -307,20 +310,24 @@ function colourGroup(item) {
     const input = el('input', { type: 'color', value: now ?? was });
     const undo = el('button', { title: 'Back to how they come', textContent: '×' });
     const row = el('div', { className: `swatchrow${now ? ' changed' : ''}` }, el('label', { title: label }, label), input, undo);
-    // Baking takes a moment: when the picker is closed, not as it is dragged.
-    input.onchange = () => { set(input.value); show(item); };
-    undo.onclick = () => { clear(); show(item); };
+    input.onchange = () => { set(input.value); colourGroup(item); };
+    undo.onclick = () => { clear(); colourGroup(item); };
     return row;
   }));
+  const dirty = colourDirty();
+  $('colourapply').disabled = !dirty;
+  $('colourapply').classList.toggle('on', dirty);
+  $('colourapply').textContent = dirty ? 'Apply changes' : 'Applied';
 }
 
+$('colourapply').onclick = () => { view.colours = structuredClone(view.draft); show(view.item); };
 $('colourdiverse').onclick = () => {
-  const keep = view.colours.look;
-  view.colours = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
-  if (keep) view.colours.look = keep;
-  show(view.item);
+  const keep = view.draft.look;
+  view.draft = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
+  if (keep) view.draft.look = keep;
+  colourGroup(view.item);
 };
-$('colourreset').onclick = () => { view.colours = {}; show(view.item); };
+$('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
 $('colourcopy').onclick = async () => {
   const name = view.item.name.replace(/[^a-z0-9]/gi, '');
   const code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;
