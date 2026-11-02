@@ -176,7 +176,7 @@ export function paintCosmos(ctx, width, height, { random = Math.random } = {}) {
 }
 
 /** The painted night as a texture, or null where there is no canvas (tests under Node). */
-export function createCosmosTexture(GFX, { width = 4096, height = 2048, random } = {}) {
+export function createCosmosTexture(GFX, { width = 4096, height = width / 2, random } = {}) {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
   canvas.width = width;

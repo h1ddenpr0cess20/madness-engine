@@ -172,9 +172,9 @@ export function createTable(GFX) {
  * flat half-white stand-in for "nothing behind", and clear glass comes out
  * milky. Where there is no canvas to paint on, just its plain ramp.
  */
-export function createBackdrop(GFX, { random } = {}) {
+export function createBackdrop(GFX, { random, width = 4096 } = {}) {
   const geometry = new GFX.SphereGeometry(BACKDROP_RADIUS, 128, 64);
-  const map = createCosmosTexture(GFX, { random });
+  const map = createCosmosTexture(GFX, { random, width });
   if (!map) {
     const position = geometry.attributes.position;
     const colors = new Float32Array(position.count * 3);

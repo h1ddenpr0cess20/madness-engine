@@ -125,6 +125,9 @@ export function materialsOf(GFX, def) {
   return byDef.get(def);
 }
 
+/** Whether `def` is baked at `detail` already (here, or adopted from a worker). */
+export const hasBake = (def, detail = 1) => bakesOf(def).has(detail);
+
 /** A mesh baked elsewhere (a worker: see library.js), to be used as if baked here. */
 export function adopt(def, detail, data) {
   bakesOf(def).set(detail, data);

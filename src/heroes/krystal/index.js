@@ -63,11 +63,12 @@ function approachHue(value, target, rate, dt) {
  * set how fast the mist swirls, how hard it twists, how bright it burns and
  * which colours it runs to.
  */
-export function createKrystal({ stage, GFX, random = Math.random }) {
+export function createKrystal({ stage, GFX, random = Math.random, sky = 4096 }) {
   const R = RADIUS;
   const { ball, glass, vision, visionMaterial } = createBall(GFX);
   const uniforms = visionMaterial.uniforms;
-  const backdrop = createBackdrop(GFX, { random });
+  // `sky`: how wide the night is painted, in texels; it takes a while, at the full width.
+  const backdrop = createBackdrop(GFX, { random, width: sky });
   buildEnvironment({ stage, GFX, sky: backdrop.material.map?.image });
   candlelight(stage);
 

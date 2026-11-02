@@ -94,9 +94,9 @@ export function createEye(GFX, { random } = {}) {
  * whole of the scene (`textures/skies/cloudsea.js`) gives it something true to bend instead.
  * Where there is no canvas to paint that on, just its plain ramp, horizon and all.
  */
-export function createBackdrop(GFX, { random } = {}) {
+export function createBackdrop(GFX, { random, width = 4096 } = {}) {
   const geometry = new GFX.SphereGeometry(BACKDROP_RADIUS, 128, 64);
-  const map = createSkyTexture(GFX, { random });
+  const map = createSkyTexture(GFX, { random, width });
   if (!map) {
     const position = geometry.attributes.position;
     const colors = new Float32Array(position.count * 3);

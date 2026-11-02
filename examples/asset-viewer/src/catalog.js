@@ -8,7 +8,7 @@
  * returns { object, pose?, clips?, info } for the viewer to stand up.
  */
 import * as GFX from '../../../src/gfx/index.js';
-import { bake, createModel, createStatic } from '../../../src/models/model.js';
+import { adopt, bake, createModel, createStatic, hasBake } from '../../../src/models/model.js';
 import { createBuildings, FOOTPRINTS } from '../../../src/buildings/index.js';
 import { CALIFORNIA_FOOTPRINTS } from '../../../src/buildings/california.js';
 import { MOODS } from '../../../src/moods/index.js';
@@ -69,11 +69,46 @@ const shelf = (path) => {
   return `${dir ? `${dir} ` : ''}${base}${game ? ` (${game})` : ''}`;
 };
 
-/** A sculpted definition: animated if it has `animate`, a still prop if not. */
-function sculptedItem(def, category, group, name, source) {
+/**
+ * Bakes off the page's thread (bake.worker.js), so that a big model never freezes the page: one worker, kept, its
+ * jobs taken in turn. Resolves to the mesh's arrays, to `adopt`.
+ */
+let baker = null, jobs = 0;
+const pending = new Map();
+function bakeElsewhere(job) {
+  if (typeof Worker === 'undefined') return Promise.reject(new Error('no workers here'));
+  if (!baker) {
+    baker = new Worker(new URL('./bake.worker.js', import.meta.url), { type: 'module' });
+    baker.onmessage = ({ data: { id, data, error } }) => {
+      const p = pending.get(id);
+      pending.delete(id);
+      if (error) p?.reject(new Error(error));
+      else p?.resolve(data);
+    };
+    baker.onerror = (e) => {
+      for (const p of pending.values()) p.reject(new Error(e.message || 'the bake worker failed'));
+      pending.clear();
+      baker = null;
+    };
+  }
+  const id = ++jobs;
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    baker.postMessage({ id, ...job });
+  });
+}
+
+/**
+ * A sculpted definition: animated if it has `animate`, a still prop if not. `job` says where it is found ({ path,
+ * key, sub }), for the worker to bake it; if it can't, it is baked here.
+ */
+function sculptedItem(def, category, group, name, source, job = null) {
   return {
     id: source, category, group, name, source, kind: 'object',
-    build({ detail = 1 }) {
+    async build({ detail = 1 }) {
+      if (job && !hasBake(def, detail)) {
+        try { adopt(def, detail, await bakeElsewhere({ ...job, detail })); } catch (err) { console.warn(`${source}: baked here instead (${err.message})`); }
+      }
       const data = bake(def, { detail });
       const info = {
         Source: source,
@@ -124,7 +159,8 @@ const avatars = import.meta.glob('../../../src/heroes/{vibey,slimey,krystal,alan
 async function avatar(path, fn) {
   const [{ standIn }, mod] = await Promise.all([import('../../../src/heroes/standin.js'), avatars[path]()]);
   const { group, stage } = standIn(GFX, globalThis.assetViewer?.renderer ?? null);
-  const made = mod[fn]({ stage, GFX });
+  // Its night painted at half the width the app paints it: a quarter of the work, and still sharp behind it here.
+  const made = mod[fn]({ stage, GFX, sky: 2048 });
   // Shown where it lives: what it reflects is what it set for its own stage, and its sky is its backdrop's.
   let sky = null;
   stage._scene.traverse((o) => { if (o.name === 'backdrop' && o.material?.map?.image) sky = o.material.map.image; });
@@ -305,7 +341,7 @@ export async function loadCatalog(onProgress = () => {}) {
         const own = (name) => (name === def.name || file === name || file.startsWith(`${name}.`) ? (file.startsWith(`${name}.`) ? file : name) : `${file} · ${name}`);
         const label = direct && key === 'default' ? file : own(direct ? key : k);
         const source = `${where(path)}${direct && key === 'default' ? '' : `#${direct ? key : `${key}.${k}`}`}`;
-        items.push(sculptedItem(rooted(def), CATEGORY[folder], folder === 'characters' ? kindOf(def) : group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source));
+        items.push(sculptedItem(rooted(def), CATEGORY[folder], folder === 'characters' ? kindOf(def) : group, folder === 'scenery' ? `${file}${direct && key !== 'default' ? ` · ${key}` : direct ? '' : ` · ${k}`}` : label, source, { path, key, sub: direct ? null : k }));
       }
     }
   }

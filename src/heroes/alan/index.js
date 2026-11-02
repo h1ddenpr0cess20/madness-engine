@@ -71,10 +71,11 @@ function radialTexture(GFX, stops) {
  * `events` is where pointer movement is listened for — the window, unless a
  * test hands in something else.
  */
-export function createAlan({ stage, GFX, random = Math.random, events = globalThis }) {
+export function createAlan({ stage, GFX, random = Math.random, events = globalThis, sky = 4096 }) {
   const R = RADIUS;
   const { eye, glass, pupil, irisMaterial } = createEye(GFX, { random });
-  const backdrop = createBackdrop(GFX, { random });
+  // `sky`: how wide the night is painted, in texels; it takes a while, at the full width.
+  const backdrop = createBackdrop(GFX, { random, width: sky });
   buildEnvironment({ stage, GFX, sky: backdrop.material.map?.image });
   sunlight(stage);
 

@@ -154,8 +154,9 @@ async function show(item) {
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
-    // A flyer's origin is its middle: lift it clear of the floor rather than half under it.
-    if (!built.noFloor && !built.frame && item.kind === 'object') {
+    // A flyer's origin is its middle: lift it clear of the floor rather than half under it. Only characters fly: a
+    // building's footings, a tree's roots and a river's bed go below the ground on purpose, and stay there.
+    if (!built.noFloor && !built.frame && item.kind === 'object' && item.category === 'Characters') {
       const lo = boundsOf(built.object).min[1];
       if (lo < -0.005) built.object.position.y += -lo + 0.08;
     }
