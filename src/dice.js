@@ -397,9 +397,8 @@ export function createDieProp(GFX, type, options = {}) {
   const up = new GFX.Vector3(0, 1, 0);
   data.faces.forEach((face, index) => {
     const label = String(numbers[index]);
-    const highlighted = canonical === 'd100' ? label === '00'
-      : canonical === 'd10' ? label === '9'
-        : Number(label) === labels.length;
+    // The gold accent belongs to Nat's original D20 treatment only.
+    const highlighted = canonical === 'd20' && label === '20';
     const material = new GFX.MeshBasicMaterial({
       map: glyphTexture(GFX, label, highlighted, usePips),
       transparent: true,
@@ -421,6 +420,7 @@ export function createDieProp(GFX, type, options = {}) {
     body.add(glyph);
     face.mesh = glyph;
     face.number = numbers[index];
+    face.highlighted = highlighted;
   });
 
   return {
