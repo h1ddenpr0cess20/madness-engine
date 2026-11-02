@@ -324,10 +324,11 @@ export const isCore = (part, core = CORE) => core.includes(part) || part.startsW
  * waist at `top` to the hem at `hem`, `flare` times as wide at the hem as a
  * straight drop from the hips, with a rolled hem. Each half moves with its
  * leg as well as the hips, so a stride swings it rather than coming through
- * it. `slit` opens it down the front (a coat's skirts). `at` is the trunk's
+ * it. `slit` opens it down the front (a coat's skirts); `follow` is how much of each leg's swing its half takes (0 to 1; 0.45
+ * if not given). `at` is the trunk's
  * section at a height.
  */
-export function skirt(s, at, { top = 0.372, hem = 0.16, flare = 1.25, color, mat = 'cloth', b = 1, k = 0.004, part = 'bottoms', slit = 0, bump = null }) {
+export function skirt(s, at, { top = 0.372, hem = 0.16, flare = 1.25, color, mat = 'cloth', b = 1, k = 0.004, part = 'bottoms', slit = 0, bump = null, follow = null }) {
   // Over the hips, clear of the tops of the thighs (which stand out past the hips a little), then out to the hem:
   // wide enough there to hold the legs (at ±0.06, about 0.035 round) with room to stride.
   const hip = at(0.3), hw = Math.max(hip[0], 0.1 * Math.sqrt(b)) + 0.008, hd = Math.max(hip[1], 0.064) + 0.008;
@@ -350,7 +351,8 @@ export function skirt(s, at, { top = 0.372, hem = 0.16, flare = 1.25, color, mat
   };
   for (const m of [1, -1]) {
     const S = side(m);
-    const bone = [['hips', 0.55], [`thigh${S}`, 0.45]];
+    // (`follow`: how much of the leg's swing it takes, 0.45 if not said; a longer coat keeps clear of the legs by taking more.)
+    const bone = follow === null ? [['hips', 0.55], [`thigh${S}`, 0.45]] : [['hips', 1 - follow], [`thigh${S}`, follow]];
     // This half only (the other is the other leg's), meeting it down the middle.
     // This half only, and (a coat's skirts) open down the front by `slit` either side of the middle.
     s.part(part, () => loft(s, section, hem, top, { color, mat, bone, k, bump }, 0, 0.004, (p) => Math.max(-m * p[0], slit ? Math.min(slit - Math.abs(p[0]), p[2] - 0.02) : -1)));
@@ -1075,13 +1077,16 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
  * Hair's colour (a function or hex) in strands: lighter and darker streaks
  * running down from the crown `at`, fine ones over broad ones.
  */
-function strands(color, at) {
-  const base = typeof color === 'function' ? color : () => rgb(color);
-  return (p, n) => {
+export function strands(color, at = [0, 0.695, -0.006]) {
+  const base = typeof color === 'function' ? color : (() => { const c = typeof color === 'string' ? rgb(color) : color; return () => c; })();
+  const fn = (p, n) => {
     const a = Math.atan2(p[0] - at[0], p[2] - at[2]), x = Math.cos(a), z = Math.sin(a);
     const v = noise(x * 5.5, z * 5.5, p[1] * 4) * 0.5 + noise(x * 10 + 40, z * 10, p[1] * 6) * 0.5;
     return base(p, n).map((c) => c * (0.66 + v * 0.62));
   };
+  // The same strands in another colour (see person.js `variant`).
+  fn.retint = (other) => strands(other, at);
+  return fn;
 }
 
 /**

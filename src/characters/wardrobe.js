@@ -14,11 +14,14 @@ const HEAD = { bone: 'head' };
 
 /** Hair's colour in strands running along x (a moustache) or down (a beard): lighter and darker hairs. */
 function hairy(color, across = true) {
-  const base = typeof color === 'function' ? color : (() => { const c = rgb(color); return () => c; })();
-  return (p, n) => {
+  const base = typeof color === 'function' ? color : (() => { const c = typeof color === 'string' ? rgb(color) : color; return () => c; })();
+  const fn = (p, n) => {
     const v = across ? noise(p[0] * 30, p[1] * 420, p[2] * 30) : noise(p[0] * 300, p[1] * 40, p[2] * 300);
     return base(p, n).map((c) => c * (0.72 + v * 0.5));
   };
+  // The same hairs in another colour (see person.js `variant`).
+  fn.retint = (other) => hairy(other, across);
+  return fn;
 }
 
 /** A fedora: a brim, a pinched crown, a band round it. Tilted a little forward, as they are worn. */

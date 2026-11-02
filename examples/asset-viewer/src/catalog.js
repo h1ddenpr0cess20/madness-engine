@@ -103,29 +103,34 @@ function bakeElsewhere(job) {
  * key, sub }), for the worker to bake it; if it can't, it is baked here.
  */
 function sculptedItem(def, category, group, name, source, job = null) {
+  // A person can be shown in other colours (characters/person.js `variant`): `palette` says which, and `colours` is the
+  // viewer's choice of them, { skin, hair, eyes, brow, look: { torso, ... }, colors }.
+  const people = typeof def.variant === 'function' && typeof def.palette === 'function';
   return {
     id: source, category, group, name, source, kind: 'object',
-    async build({ detail = 1 }) {
-      if (job && !hasBake(def, detail)) {
-        try { adopt(def, detail, await bakeElsewhere({ ...job, detail })); } catch (err) { console.warn(`${source}: baked here instead (${err.message})`); }
+    palette: people ? def.palette() : null,
+    async build({ detail = 1, colours = null }) {
+      const shown = people && colours && Object.keys(colours).length ? def.variant(colours) : def;
+      if (job && !hasBake(shown, detail)) {
+        try { adopt(shown, detail, await bakeElsewhere({ ...job, detail, colours })); } catch (err) { console.warn(`${source}: baked here instead (${err.message})`); }
       }
-      const data = bake(def, { detail });
+      const data = bake(shown, { detail });
       const info = {
         Source: source,
         Vertices: data.count,
         Triangles: data.index.length / 3,
-        'Vertex budget': `${def.budget ?? 9000} (${Math.round((data.count / (def.budget ?? 9000)) * 100)}% used)`,
-        Materials: Object.keys(def.materials).join(', '),
-        Bones: def.bones.length,
-        Scale: def.scale ?? 1,
+        'Vertex budget': `${shown.budget ?? 9000} (${Math.round((data.count / (shown.budget ?? 9000)) * 100)}% used)`,
+        Materials: Object.keys(shown.materials).join(', '),
+        Bones: shown.bones.length,
+        Scale: shown.scale ?? 1,
       };
-      if (typeof def.animate === 'function') {
-        const m = createModel(GFX, def, { detail });
+      if (typeof shown.animate === 'function') {
+        const m = createModel(GFX, shown, { detail });
         const pose = (s) => m.pose(s);
         pose({ clip: 'idle', t: 0, time: 0, seed: 1, speed: 1 });
         return { object: m.group, pose, clips: CLIPS, info };
       }
-      return { object: createStatic(GFX, def, { detail }), info };
+      return { object: createStatic(GFX, shown, { detail }), info };
     },
   };
 }

@@ -217,6 +217,11 @@ export class Sculpt {
      * bigger-headed without a coordinate in it changing.
      */
     this.warp = null;
+    /**
+     * A tint: `tint(color, mat, part)` is asked for the colour of every shape and paint added from now on (`mat` is
+     * null for a paint) and gives the colour to use in its place. null leaves colours as they are given.
+     */
+    this.tint = null;
   }
 
   /**
@@ -282,6 +287,7 @@ export class Sculpt {
    * `locks` ([size, height, axis, stretch]: fur or scales, see `shingles`).
    */
   shape(d, box, { op = 'add', k = 0.03, color = '#c0c0c0', bone = 'root', mat = 'skin', bump = null, locks = null } = {}) {
+    if (this.tint) color = this.tint(color, mat, this.current);
     ({ d, box, color } = this.warped(d, box, color));
     const s = { id: shapeId++, d, box, op, k, bone, mat, bump, part: this.current, color: typeof color === 'string' ? rgb(color) : color };
     if (locks) {
@@ -502,6 +508,7 @@ export class Sculpt {
    * is painted `color`, softened over `soft`.
    */
   paint(inside, color, soft = 0.01) {
+    if (this.tint) color = this.tint(color, null, this.current);
     if (this.warp) {
       const w = this.warp, was = inside, fn = color;
       inside = (p) => {

@@ -14,6 +14,7 @@ import { createStage } from '../../../src/stage.js';
 import { texture } from '../../../src/textures/painters.js';
 import { paintRoom } from '../../../src/textures/rooms/studio.js';
 import { MOODS } from '../../../src/moods/index.js';
+import { diverse } from '../../../src/characters/person.js';
 import { boundsOf, loadCatalog } from './catalog.js';
 
 const $ = (id) => document.getElementById(id);
@@ -103,7 +104,7 @@ scene.add(plate);
 
 // ———————————————————————————————————————————————— the viewer's state
 
-const view = { item: null, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
+const view = { item: null, colours: {}, draft: {}, coloursFor: null, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
 const options = { level: 1, variant: 0, construction: 0, detail: 1 };
 
 const VIEWS = [
@@ -141,6 +142,8 @@ function clearStage() {
 async function show(item) {
   const token = ++view.token;
   view.item = item;
+  // Another person starts in their own colours.
+  if (view.coloursFor !== item.id) { view.colours = {}; view.draft = {}; view.coloursFor = item.id; view.seed = 0; }
   $('busy').style.display = 'grid';
   $('err').textContent = '';
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
@@ -150,7 +153,7 @@ async function show(item) {
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
   try {
-    const built = await item.build({ ...options, lights: stage.fixtureLights, stage });
+    const built = await item.build({ ...options, colours: view.colours, lights: stage.fixtureLights, stage });
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
@@ -189,6 +192,7 @@ async function show(item) {
     view.clock = 0;
     view.clipStart = 0;
     animGroup(built);
+    colourGroup(item);
     frame(0.7, 0.3);
   } catch (err) {
     console.error(err);
@@ -272,6 +276,63 @@ function animGroup(built) {
     $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, name), select));
   }
 }
+
+// ———————————————————————————————————————————————— colours
+
+/** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
+function colourRows(item) {
+  const pal = item.palette, c = view.draft;
+  const rows = [
+    ['Skin', pal.skin, c.skin, (v) => { c.skin = v; }, () => { delete c.skin; }],
+    ['Hair', pal.hair ?? '#3a2a20', c.hair, (v) => { c.hair = v; }, () => { delete c.hair; delete c.brow; }],
+    ['Eyes', pal.eyes, c.eyes, (v) => { c.eyes = v; }, () => { delete c.eyes; }],
+    ['Brows', pal.brow, c.brow, (v) => { c.brow = v; }, () => { delete c.brow; }],
+  ];
+  // Clothes that are one colour change together, so a suit stays a suit.
+  for (const slots of pal.groups) {
+    const was = pal.look[slots[0]], now = c.look?.[slots[0]];
+    rows.push([slots.join(' · '), was, now,
+      (v) => { c.look = { ...c.look, ...Object.fromEntries(slots.map((s) => [s, v])) }; },
+      () => { for (const s of slots) delete c.look?.[s]; if (c.look && !Object.keys(c.look).length) delete c.look; }]);
+  }
+  return rows;
+}
+
+/** Whether what is chosen in the pickers is not what is on show. */
+const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colours);
+
+/** The colour pickers for the person on show; nothing for what is not a person. Choosing changes nothing on show until Apply. */
+function colourGroup(item) {
+  const group = $('colourgroup');
+  group.style.display = item.palette ? '' : 'none';
+  if (!item.palette) return;
+  $('colourrows').replaceChildren(...colourRows(item).map(([label, was, now, set, clear]) => {
+    const input = el('input', { type: 'color', value: now ?? was });
+    const undo = el('button', { title: 'Back to how they come', textContent: '×' });
+    const row = el('div', { className: `swatchrow${now ? ' changed' : ''}` }, el('label', { title: label }, label), input, undo);
+    input.onchange = () => { set(input.value); colourGroup(item); };
+    undo.onclick = () => { clear(); colourGroup(item); };
+    return row;
+  }));
+  const dirty = colourDirty();
+  $('colourapply').disabled = !dirty;
+  $('colourapply').classList.toggle('on', dirty);
+  $('colourapply').textContent = dirty ? 'Apply changes' : 'Applied';
+}
+
+$('colourapply').onclick = () => { view.colours = structuredClone(view.draft); show(view.item); };
+$('colourdiverse').onclick = () => {
+  const keep = view.draft.look;
+  view.draft = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
+  if (keep) view.draft.look = keep;
+  colourGroup(view.item);
+};
+$('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
+$('colourcopy').onclick = async () => {
+  const name = view.item.name.replace(/[^a-z0-9]/gi, '');
+  const code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;
+  try { await navigator.clipboard.writeText(code); flash($('colourcopy'), 'Copied'); } catch { flash($('colourcopy'), 'Copy failed'); }
+};
 
 // ———————————————————————————————————————————————— marked areas
 

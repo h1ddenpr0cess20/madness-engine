@@ -65,7 +65,7 @@ which games it came from.**
 
 | Import | What is there |
 |---|---|
-| `madness-engine/characters/<name>` | 163 people, creatures and monsters: the gig crowd, the tourists, the metalheads, the dungeon's goblins, orcs, skeletons and dragon, the cats and the mouse. Each is a sculpted definition for `createModel` (`import punk from …`). `madness-engine/characters` is all of them by name (`CHARACTERS`). `humanoid`, `quadruped`, `person` and `wardrobe` are the bodies and clothes they are built on. |
+| `madness-engine/characters/<name>` | 173 people, creatures and monsters: the gig crowd, the tourists, the metalheads, the dungeon's goblins, orcs, skeletons and dragon, the cats and the mouse. Each is a sculpted definition for `createModel` (`import punk from …`). `madness-engine/characters` is all of them by name (`CHARACTERS`). `humanoid`, `quadruped`, `person` and `wardrobe` are the bodies and clothes they are built on. |
 | `madness-engine/props/<name>` | 20 things to pick up: picks, tape, lighters, passes, records, gold, keys, chests, potions and more, for `createStatic`. `madness-engine/props` is all of them (`PROPS`). |
 | `madness-engine/heroes/<name>` | The balls the games are played as: `marble` (the glass marble), `die` and `nat/geometry` (the d20), `yarn/…` (the ball of yarn), `hamster`, `morningstar` (the spiked ball) and `mace` (it rolling, and the town games' player), and `rock` (Rock, and `createBoulder`, the stone alone). |
 | `madness-engine/scenery/<name>` | The town's `street`, `vehicles` (each with its `body` and the `wheel` it rolls on, which `mountWheels` stands on the body to roll and steer), `civic`, `discourse`, `odds` and `oil`, and the `dungeon`'s walls, torches and exit; and the `lightshow`: the rig that lights a venue and keeps the beat, with `createLightshow(GFX, venue)` and a fixture for every light the Rock 'n' Roller and Metroll sets have: bulbs, PAR cans, moving heads, strobes and lightning, the mirror ball, lasers, chandeliers, festoons, neon, marquees, klieg lights, blinds and streetlamps. Hand `update` the beat and `stage.fixtureLights` (`createStage(host, { fixtures: 5 })`) and the fixtures nearest the ball get real lights. `lightshow.rocknroller`, `.rocknroller-ii` and `.rocknroller-iii` are each game's. |
@@ -85,6 +85,38 @@ newest game's. Each other version sits beside it as
 was only the default again under another name (or another character in
 all but name, as the Agent was the A&R Suit) is gone, and the games that
 had it use the default.
+
+### The same people in other colours
+
+Every `person` (the 140 or so people of `characters/`) can be dressed in other colours without a new model:
+`variant(changes)` gives a definition of its own to hand to `createModel`, and nothing is changed that is not
+given, so a game that never calls it draws exactly what it always has.
+
+```js
+import punk from 'madness-engine/characters/punk';
+import cop from 'madness-engine/characters/cop';
+import { diverse } from 'madness-engine/characters/person';
+
+createModel(GFX, punk.variant({ skin: '#8d5524', hair: '#b0502a', eyes: '#3a6a3a', look: { legs: '#224466' } }));
+createModel(GFX, cop.variant({ look: { torso: '#7a1020', sleeve: '#7a1020', cuff: '#7a1020', legs: '#7a1020' } }));
+createModel(GFX, cop.variant(diverse(seed)));      // a skin tone, hair and eyes from the palettes, the same for the same seed
+```
+
+- `skin`: skin, the bare arms and legs too. `eyes`, `brow`: irises and brows. `hair`: hair, and the beard, moustache,
+  crest or braids that are hair too (fur worn over the shoulders is not); brows follow it, a little darker, unless
+  `brow` is given.
+- `look`: what they wear, by part (`torso`, `sleeve`, `cuff`, `hand` for gloves, `legs`, `boot`, `belt`, `buckle`,
+  `sole`, `shin`, `sandals`), only those a person has. A part that was cloth stays cloth (mottled, lighter on top). Where
+  several parts are one colour (a suit) and all are given a new one, whatever else is made in that colour (a coat's
+  skirts) goes with them.
+- `colors`: any other colour, such as a hat's: `{ '#1e2a4e': '#102a6a' }` draws everything the person is made of
+  in the first colour in the second. A `Map` also takes the colour functions a character's own file draws in.
+- `name`. Variants chain, and asking twice for the same colours gives the same definition (so it is baked once).
+
+`punk.palette()` says what can be changed and what it is now: `{ skin, eyes, brow, hair, look: { torso, … }, groups }`
+(`groups` are the parts that are one colour, best changed together). `SKIN_TONES`, `HAIR_COLORS` and `EYE_COLORS` are
+the palettes `diverse` draws from. The asset viewer has a Colours panel on every person: pick a colour, or Randomise,
+and Copy code gives the `variant(…)` call.
 
 ## The games still work as they did
 
