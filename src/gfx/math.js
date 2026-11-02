@@ -1004,12 +1004,17 @@ export class Color {
         );
       }
     }
-    m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(\d*\.?\d+)\s*)?\)$/.exec(style);
-    if (m) {
+    // Split rather than one big pattern: with `\s*` between every part, a long run of
+    // spaces could be matched in quadratic time.
+    m = /^rgba?\(([^()]*)\)$/.exec(style);
+    const parts = m && m[1].split(',').map((part) => part.trim());
+    if (parts && (parts.length === 3 || parts.length === 4)
+      && parts.slice(0, 3).every((part) => /^\d+$/.test(part))
+      && (parts.length === 3 || /^(?:\d+\.)?\d+$/.test(parts[3]) || /^\.\d+$/.test(parts[3]))) {
       return this.setRGB(
-        SRGBToLinear(Math.min(255, parseInt(m[1], 10)) / 255),
-        SRGBToLinear(Math.min(255, parseInt(m[2], 10)) / 255),
-        SRGBToLinear(Math.min(255, parseInt(m[3], 10)) / 255),
+        SRGBToLinear(Math.min(255, parseInt(parts[0], 10)) / 255),
+        SRGBToLinear(Math.min(255, parseInt(parts[1], 10)) / 255),
+        SRGBToLinear(Math.min(255, parseInt(parts[2], 10)) / 255),
       );
     }
     throw new Error(`gfx: unsupported colour ${style}`);

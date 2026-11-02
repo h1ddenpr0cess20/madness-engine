@@ -247,6 +247,11 @@ const ABOUT = {
   music: 'Made on the spot with Web Audio. `band` is a whole band with its songs (`THEMES`), `theory` its scales, forms and effects; `score` a smaller orchestra with its own themes.',
 };
 
+/** Text for a markdown table cell: a backslash is escaped first, so the one the pipe gets is not undone. */
+function cell(text) {
+  return text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+}
+
 /**
  * What a thing is, in a sentence: the first of the comment at the head of the
  * game's file, or, for a painter lifted out of one, of the painter's own.
@@ -279,7 +284,7 @@ function contents(places, moods) {
     for (const [place, versions] of [...places].filter(([p]) => p.startsWith(`${kind}/`)).sort(([a], [b]) => a.localeCompare(b))) {
       const ranked = [...versions.values()].sort((a, b) => (a.path === place ? -1 : b.path === place ? 1 : a.path.localeCompare(b.path)));
       const which = ranked.map((v) => `\`${posix.basename(v.path, '.js')}\` (${v.games.map(title).join(', ')})`).join('<br>');
-      lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${blurb([...versions.values()].find((v) => v.path === place).files[0]).replace(/\|/g, '\\|')} |`);
+      lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${cell(blurb([...versions.values()].find((v) => v.path === place).files[0]))} |`);
     }
     lines.push('');
   }
@@ -291,7 +296,7 @@ function contents(places, moods) {
   for (const m of moods.moods) byName.set(m.name, [...(byName.get(m.name) ?? []), m]);
   for (const [name, ms] of [...byName].sort(([a], [b]) => a.localeCompare(b))) {
     const which = ms.map((m) => `\`${m.key}\` (${m.games.join(', ')})`).join('<br>');
-    lines.push(`| \`moods/${name}\` | ${which} | ${moodLine(ms.find((m) => m.key === name)).replace(/\|/g, '\\|')} |`);
+    lines.push(`| \`moods/${name}\` | ${which} | ${cell(moodLine(ms.find((m) => m.key === name)))} |`);
   }
   lines.push('');
   return `${lines.join('\n')}\n`;
