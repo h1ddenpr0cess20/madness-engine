@@ -42,7 +42,7 @@ export default quadruped({
   head: { r: 0.075, snout: 0.045, sr: 0.046, drop: 0.35 },
   tail: { len: 0.2, rise: -0.7, r: 0.026, tip: 0.016, curl: 0.5 },
   ears: { kind: 'flop', size: 1.0 },
-  paint: { body: PATCHED, head: FACE, snout: WHITE, legs: WHITE, feet: WHITE, tail: PATCHED, ears: BROWN, nose: '#1a1210' },
+  paint: { body: PATCHED, head: FACE, snout: WHITE, legs: WHITE, feet: WHITE, tail: PATCHED, ears: BROWN, inner: '#7a3a1c', nose: '#1a1210', countershade: 0.25 },
   style: { rate: 7, wag: 0.3, lift: 0.6, after(k, { clip }, T) {
     // Panting, and the slow sweep of the tail.
     if (clip !== 'ko') k.turn('jaw', 0.12 + Math.sin(T * 7) * 0.04, 0, 0);
@@ -50,8 +50,10 @@ export default quadruped({
   extras(s, P, { Hd }) {
     // The dark mask round each eye, the jowls hanging either side of the jaw.
     for (const m of [1, -1]) {
-      s.ellipsoid([m * Hd.r * 0.55, P.H[1] + Hd.r * 0.18, P.H[2] + Hd.r * 0.5], [0.026, 0.022, 0.016], { color: '#3a1e10', mat: 'fur', bone: 'head', k: 0.012 });
-      s.ellipsoid([m * 0.032, P.S1[1] - 0.04, P.S1[2] - 0.02], [0.022, 0.032, 0.03], { color: WHITE, mat: 'fur', bone: 'jaw', k: 0.012 });
+      // The mask: dark round each eye, painted on, not stuck on.
+      const e = [m * Hd.r * 0.55, P.H[1] + Hd.r * 0.2, P.H[2] + Hd.r * 0.6];
+      s.paint((p) => Math.hypot(p[0] - e[0], (p[1] - e[1]) * 1.2, p[2] - e[2]) - Hd.r * 0.34, '#3a1e10', Hd.r * 0.1);
+      s.ellipsoid([m * 0.03, P.S1[1] - 0.036, P.S1[2] - 0.024], [0.02, 0.028, 0.026], { color: WHITE, mat: 'fur', bone: 'jaw', k: 0.014 });
     }
     // A ruff of white down the chest.
     s.ellipsoid([0, 0.25, 0.22], [0.07, 0.08, 0.05], { color: WHITE, mat: 'fur', bone: 'front', k: 0.03, bump: [0.003, 70] });
