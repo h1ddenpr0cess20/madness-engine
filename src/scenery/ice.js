@@ -142,6 +142,10 @@ function materials(GFX) {
     flatShading: true,
     transparent: true,
     opacity: 0.16,
+    // A cloud of light in the ice, not a thing in it: added to what shows through, never darkening it, never hiding
+    // what is behind it. Drawn as a lit solid, at any opacity it reads as a dark lump.
+    blending: GFX.AdditiveBlending,
+    depthWrite: false,
   });
   const bubble = new GFX.MeshPhysicalMaterial({
     name: 'air_bubble',
