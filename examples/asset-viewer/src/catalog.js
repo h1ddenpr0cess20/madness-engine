@@ -96,7 +96,7 @@ function sculptedItem(def, category, group, name, source) {
 }
 
 /** Heroes are made by functions; each returns something with the group to draw somewhere inside it. */
-const objectOf = (r) => (r?.isObject3D ? r : r?.group ?? r?.player ?? r?.marble ?? r?.hamster ?? r?.mesh ?? r);
+const objectOf = (r) => (r?.isObject3D ? r : r?.group ?? r?.player ?? r?.marble ?? r?.hamster ?? r?.root ?? r?.mesh ?? r);
 const HEROES = [
   ['marble', () => import('../../../src/heroes/marble.js').then((m) => m.createMarble(GFX))],
   ['die (d20)', () => import('../../../src/heroes/die.js').then((m) => m.dieModel(GFX))],
@@ -113,6 +113,8 @@ function heroItem([name, make]) {
     id: `heroes/${name}`, category: 'Heroes', group: 'heroes', name, source: 'heroes', kind: 'object',
     async build() {
       const made = await make();
+      // Those that are posed by how far they have come (the yarn ball, its strand laid out behind it) are shown a little way along.
+      made?.pose?.(1.2);
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
       return { object, info: { Source: 'heroes', ...countOf(object) } };
