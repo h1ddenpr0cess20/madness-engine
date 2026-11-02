@@ -48,8 +48,10 @@ export default {
     ['fl2R', 'fl1R', [-0.075, 0.075, 0.13]],
     ['hl1L', 'body', [0.1, 0.16, -0.1]],
     ['hl2L', 'hl1L', [0.11, 0.08, -0.14]],
+    ['hl3L', 'hl2L', [0.106, 0.016, -0.146]],
     ['hl1R', 'body', [-0.1, 0.16, -0.1]],
     ['hl2R', 'hl1R', [-0.11, 0.08, -0.14]],
+    ['hl3R', 'hl2R', [-0.106, 0.016, -0.146]],
     ['tail1', 'body', [0, 0.15, -0.22]],
     ['tail2', 'tail1', [0, 0.12, -0.34]],
     ['tail3', 'tail2', [0.02, 0.075, -0.47]],
@@ -129,8 +131,9 @@ export default {
 
       s.ellipsoid([m * 0.1, 0.14, -0.105], [0.05, 0.08, 0.085], { ...F, bone: `hl1${b}`, k: 0.04, rot: [0.35, 0, 0] });
       s.limb([m * 0.11, 0.085, -0.15], [m * 0.106, 0.026, -0.138], 0.03, 0.017, { ...F, bone: `hl2${b}`, k: 0.02 });
-      s.limb([m * 0.106, 0.014, -0.148], [m * 0.1, 0.011, -0.05], 0.016, 0.013, { color: pink, mat: 'skin', bone: `hl2${b}`, k: 0.016 });
-      for (const t of [-1, 0, 1]) s.limb([m * 0.1 + t * 0.011, 0.009, -0.055], [m * 0.1 + t * 0.017, 0.006, -0.03], 0.007, 0.005, { color: pink, mat: 'skin', bone: `hl2${b}`, k: 0.006 });
+      // The long hind foot on a heel of its own, so it stays flat through the stride instead of swinging up with the shin.
+      s.limb([m * 0.106, 0.014, -0.148], [m * 0.1, 0.011, -0.05], 0.016, 0.013, { color: pink, mat: 'skin', bone: `hl3${b}`, k: 0.016 });
+      for (const t of [-1, 0, 1]) s.limb([m * 0.1 + t * 0.011, 0.009, -0.055], [m * 0.1 + t * 0.017, 0.006, -0.03], 0.007, 0.005, { color: pink, mat: 'skin', bone: `hl3${b}`, k: 0.006 });
     });
 
     // A long, bare, scaly tail.
@@ -171,10 +174,16 @@ export default {
       k.turn('fl1R', -g2 * 0.6 * speed, 0, 0);
       k.turn('fl2L', Math.max(0, g2) * 0.6 * speed, 0, 0);
       k.turn('fl2R', Math.max(0, g2) * 0.5 * speed, 0, 0);
-      k.turn('hl1L', g * 0.65 * speed, 0, 0);
-      k.turn('hl1R', g * 0.55 * speed, 0, 0);
-      k.turn('hl2L', -Math.max(0, -g) * 0.6 * speed, 0, 0);
-      k.turn('hl2R', -Math.max(0, -g) * 0.5 * speed, 0, 0);
+      const thighL = g * 0.65 * speed, thighR = g * 0.55 * speed;
+      const shinL = -Math.max(0, -g) * 0.6 * speed, shinR = -Math.max(0, -g) * 0.5 * speed;
+      k.turn('hl1L', thighL, 0, 0);
+      k.turn('hl1R', thighR, 0, 0);
+      k.turn('hl2L', shinL, 0, 0);
+      k.turn('hl2R', shinR, 0, 0);
+      // The feet stay level, as the thigh and the shin take them through the stride, the toes dipping as they leave the floor.
+      const toe = Math.max(0, -g) * 0.25 * speed;
+      k.turn('hl3L', -(thighL + shinL) + toe, 0, 0);
+      k.turn('hl3R', -(thighR + shinR) + toe, 0, 0);
       for (let i = 1; i <= 4; i++) k.turn(`tail${i}`, -0.1 * speed, sway(0.15, 15, -i), 0);
     } else if (clip === 'attack') {
       // Rear back, then lunge and snap.
