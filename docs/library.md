@@ -215,6 +215,7 @@ What lies about to be picked up: sculpted, still, for `createStatic`.
 | `props/tape` | `tape` (rocknroller-ii, rocknroller-iii, rocknroller) | A roll of gaffer tape: silver cloth tape wound on a card core, a hole clean through the middle, the turns of it showing on each side, and the loose end peeled up off it and curling away. |
 | `props/vinyl` | `vinyl` (metroll) | A crate of vinyl: a slatted wooden record crate with VINYL stencilled on its front and a hand hole in each end, packed with records in their sleeves standing face out and leaning back, the way you flip through them; the front one's cover a sunburst with the band's name across it, the ones behind in the colours the labels could afford; and one record pulled halfway up out of its sleeve to be shown off. |
 | `props/whetstone` | `whetstone` (metroll) | A whetstone: a two-sided sharpening stone, the coarse brown grit under the fine grey, its edges chamfered, its top worn into a shallow dish and dark and wet down the middle with grey slurry where the blade has been, a few beads of water standing on it; set in a walnut block with a tray cut for it and rubber feet under. |
+| `props/pan` | `pan` (debater) | The debate's set: a cast iron frying pan, seen from inside it, its handle cast on as one piece (`buildPan(GFX)`). |
 | `props/halloween` | `halloween` (blubber) | October's scenery: hay bales, dead trees, a scarecrow, gravestones and stone crosses, an obelisk, coffins, heaps of bones, glowing toadstools and the witch's cauldron. |
 | `props/harvest` | `harvest` (blubber) | November's: the harvest lantern — a white pumpkin with rings of holes punched through it and a candle inside (`gourd`; dark, `whitepumpkin`) — corn shocks, barrels, a haystack with a pitchfork in it, and the feast table. |
 | `props/pumpkin` | `pumpkin` (blubber) | Pumpkins: a fat one of eight ribs, squat, its crown sunk round a crooked stalk, waxy orange deepening into the grooves. |
@@ -227,6 +228,13 @@ The balls the games are played as, each with what it is made of.
 
 | Path | Versions (games) | What it is |
 |---|---|---|
+| `heroes/tater` | `tater` (debater) | The Tater: a potato with a debater's opinions, rough-skinned, stepping about the pan (`createPotato({ GFX })`). |
+| `heroes/debater-egg` | `debater-egg` (debater) | The Egg: Marc, smooth and speckled, rocking and rolling (`createEgg({ GFX })`). |
+| `heroes/alan` | `alan` (alan) | Alan's eye: a sphere of clear glass with an iris painted deep inside it, the marble's original (`createEye(GFX)`), its sky and its attention. |
+| `heroes/vibey` | `vibey` (vibey) | Vibey: a glowing five-pointed star that swells and pulses with its mood (`createStar({ stage, GFX })`; `standIn` gives it a stage anywhere). |
+| `heroes/slimey` | `slimey` (slimey) | Slimey: a glassy green orb of slime that deforms in lobes as it talks (`createSlimeOrb({ stage, GFX })`). |
+| `heroes/krystal` | `krystal` (krystal) | Krystal, an animated prop: a crystal ball on a gold stand, a cloud of colour turning and churning inside it (`createKrystal({ stage, GFX })`). |
+| `heroes/standin` | `standin` | A stand-in for the stage the avatar apps were written for, so Vibey, Slimey and Krystal stand anywhere. |
 | `heroes/die` | `die` (dungeon-roller) | The party rolls through the dungeon as Nat's d20 (`nat/geometry.js`): the same purple resin, the same inked edges, the same numbers, scaled down to a little under a tile across. |
 | `heroes/hamster` | `hamster` (petroll) | The player, made the way the marble in Madness is: two parts. |
 | `heroes/mace` | `mace` (metroll, metrlol) | Metroll. |

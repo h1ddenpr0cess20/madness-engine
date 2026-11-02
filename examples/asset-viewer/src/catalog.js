@@ -106,7 +106,41 @@ const HEROES = [
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
+  ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],
+  ['egg (debater)', () => import('../../../src/heroes/debater-egg/index.js').then((m) => m.createEgg({ GFX }))],
+  ["alan's eye", () => import('../../../src/heroes/alan/model.js').then((m) => m.createEye(GFX).eye)],
+  ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
+  ['slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createSlimeOrb')],
 ];
+
+/** The avatar apps' models, made on a stand-in for their stage (heroes/standin.js). */
+const avatars = import.meta.glob('../../../src/heroes/{vibey,slimey,krystal}/index.js');
+async function avatar(path, fn) {
+  const [{ standIn }, mod] = await Promise.all([import('../../../src/heroes/standin.js'), avatars[path]()]);
+  const { group, stage } = standIn(GFX, globalThis.assetViewer?.renderer ?? null);
+  const made = mod[fn]({ stage, GFX });
+  return { group, made };
+}
+
+/**
+ * Props that move as a part of what they are: Krystal, the crystal ball, its cloud turning and churning inside it.
+ * And the debate's frying pan, which is a prop but not a sculpt.
+ */
+const MOVING = [
+  ['krystal', 'Animated props', 'crystal ball', () => avatar('../../../src/heroes/krystal/index.js', 'createKrystal')],
+  ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
+];
+function movingItem([name, category, group, make]) {
+  return {
+    id: `${category === 'Props' ? 'props' : 'animated'}/${name}`, category, group, name, source: category === 'Props' ? 'props/pan' : `heroes/${name}`, kind: 'object',
+    async build() {
+      const made = await make();
+      const object = objectOf(made);
+      if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
+      return { object, info: { Source: category === 'Props' ? 'props/pan' : `heroes/${name}`, ...countOf(object) } };
+    },
+  };
+}
 
 function heroItem([name, make]) {
   return {
@@ -252,7 +286,7 @@ export async function loadCatalog(onProgress = () => {}) {
       }
     }
   }
-  items.push(...HEROES.map(heroItem));
+  items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...buildingItems());
 
   for (const [path, load] of Object.entries(textures)) {
@@ -273,7 +307,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['Characters', 'Props', 'Animated props', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   // By category, and within one by shelf, so that each shelf's things are together under its heading.
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }

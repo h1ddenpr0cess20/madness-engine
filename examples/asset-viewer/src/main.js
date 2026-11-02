@@ -586,7 +586,7 @@ addEventListener('keydown', (e) => {
   else if (/^[1-8]$/.test(k)) frame(VIEWS[k - 1][1], VIEWS[k - 1][2]);
 });
 
-window.assetViewer = { catalog, show, options };
+window.assetViewer = { catalog, show, options, renderer };
 applyFilter();
 const start = catalog.find((i) => i.id === decodeURIComponent(location.hash.slice(1))) ?? filtered[0];
 if (start) show(start);
