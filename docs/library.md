@@ -139,6 +139,9 @@ The people, creatures and monsters. Most are sculpted definitions (the default e
 | `characters/roadie` | `roadie` (metroll, metrlol, rocknroller) | The Roadie: huge, bald under a bandana, a black T-shirt that has done four hundred shows, shorts with a tool pouch, a keyring on the belt and a flight case on his shoulder. |
 | `characters/robot` | `robot` (rocknroller-iii, petroll, metroll, metrlol, rocknroller-ii) | The Robot Waiter: from the robot restaurant in Shinjuku, which is a man in a costume made out of a boiler. |
 | `characters/tinbot` | `tinbot` | The Tin Robot, hands free: the robot waiter's tin-can body, dryer-hose limbs, pincers and toaster boots, with nothing in its pincers. |
+| `characters/hand` | `hand` (blubber) | A hand up out of a grave: a grey-green forearm in a ragged cuff, the hand wide open, grasping at the air and clutching shut. |
+| `characters/snowman` | `snowman` (blubber) | The snowman, December's chaser: three snowballs, a coal smile and coal eyes, a carrot nose, twig arms, a battered top hat and a long striped scarf. |
+| `characters/turkey` | `turkey` (blubber) | The turkey: November's chaser. |
 | `characters/barista` | `barista` | The Barista: has opinions about your order and will make it anyway. |
 | `characters/crossingguard` | `crossingguard` | The Crossing Guard: on the corner by the school every morning and every afternoon, rain or shine, and takes it seriously. |
 | `characters/mailcarrier` | `mailcarrier` | The Mail Carrier: the same round every day for twenty years and knows every dog on it by name. |
@@ -212,6 +215,11 @@ What lies about to be picked up: sculpted, still, for `createStatic`.
 | `props/tape` | `tape` (rocknroller-ii, rocknroller-iii, rocknroller) | A roll of gaffer tape: silver cloth tape wound on a card core, a hole clean through the middle, the turns of it showing on each side, and the loose end peeled up off it and curling away. |
 | `props/vinyl` | `vinyl` (metroll) | A crate of vinyl: a slatted wooden record crate with VINYL stencilled on its front and a hand hole in each end, packed with records in their sleeves standing face out and leaning back, the way you flip through them; the front one's cover a sunburst with the band's name across it, the ones behind in the colours the labels could afford; and one record pulled halfway up out of its sleeve to be shown off. |
 | `props/whetstone` | `whetstone` (metroll) | A whetstone: a two-sided sharpening stone, the coarse brown grit under the fine grey, its edges chamfered, its top worn into a shallow dish and dark and wet down the middle with grey slurry where the blade has been, a few beads of water standing on it; set in a walnut block with a tray cut for it and rubber feet under. |
+| `props/halloween` | `halloween` (blubber) | October's scenery: hay bales, dead trees, a scarecrow, gravestones and stone crosses, an obelisk, coffins, heaps of bones, glowing toadstools and the witch's cauldron. |
+| `props/harvest` | `harvest` (blubber) | November's: the harvest lantern — a white pumpkin with rings of holes punched through it and a candle inside (`gourd`; dark, `whitepumpkin`) — corn shocks, barrels, a haystack with a pitchfork in it, and the feast table. |
+| `props/pumpkin` | `pumpkin` (blubber) | Pumpkins: a fat one of eight ribs, squat, its crown sunk round a crooked stalk, waxy orange deepening into the grooves. |
+| `props/sweets` | `sweets` (blubber) | The sweets, from October to December. |
+| `props/winter` | `winter` (blubber) | December's: the snow lantern — a cone of snowballs heaped in rings with a candle inside, glowing out between them (`snowlantern`; unlit, `snowheap`) — the big snowball that rolls down the halls, snowy pines, rocks under snow, and clusters of ice crystals. |
 
 ## heroes
 
@@ -240,6 +248,9 @@ The world round the ball: the town's street furniture and vehicles (`bakeData` i
 | `scenery/civic` | `civic` (metrlol) | The machinery of the city, sculpted (same conventions as `street.js`): the charging posts on the Brussels forecourt, the rubber stamps of the stamping hall (their gantry standing still, the stamp i… |
 | `scenery/discourse` | `discourse` (metrlol) | What there is to find in the discourse, sculpted the same way as the rest (see `street.js`): the whetstone stand (Metroll's whetstone on a bench, where the spikes get sharpened back and the ball is… |
 | `scenery/dungeon` | `dungeon` (dungeon-roller) | The dungeon as it is drawn: flagstone floors, brick walls falling away into the dark, the lava (lava.js), torches with live flames, and the stairs down — a ring of runes on the floor under a stone … |
+| `scenery/ice` | `ice` (blubber) | The Ice Cube avatar, as it is, brought onto this engine: the same rounded block (a sphere pulled out to a superellipsoid, edges as sharp as its mood says), the same frozen-in facets, the same dished top, the same clear ice with its frost rim, cloudy core … |
+| `scenery/maze` | `maze` (blubber) | The mazes. |
+| `scenery/mazepieces` | `mazepieces` (blubber) | The pieces a maze night is dressed in: the candles and lamps on its walls, with live flames, and the moon gate out — a stone arch with a crescent over it and a swirl in it that wakes when every lantern is lit. |
 | `scenery/lightshow` | `lightshow` (metroll)<br>`lightshow.rocknroller-ii` (rocknroller-ii)<br>`lightshow.rocknroller-iii` (rocknroller-iii)<br>`lightshow.rocknroller` (rocknroller) | The light show. |
 | `scenery/odds` | `odds` (petroll) | Odds and ends for the jobs and for knocking flying: lawn flamingos, yard signs, crates, survey flags, and the things a job has the hamster carry (a jar of pickled eggs, dynamite, a film reel). |
 | `scenery/oil` | `oil` (petroll) | The gas station's and the oil field's machinery, sculpted: the pumps and the air pump, the pumpjack (its frame standing still, its walking beam and horsehead nodding), oil drums, a wellhead, a flar… |
@@ -253,6 +264,8 @@ Painted on canvases at startup. `painters` is the toolkit and the floors and wal
 | Path | Versions (games) | What it is |
 |---|---|---|
 | `textures/lava` | `lava` (dungeon-roller) | Lava, as a shader of its own (GLSL for WebGL 2, WGSL for WebGPU, the same picture from each). |
+| `textures/blubber` | `blubber` (blubber) | Every surface's texture, painted on a canvas at startup, as Dungeon Roller's stone is: a colour map near white (the tile's colour comes from the vertex colours under it) and a bump map that raises what stands out. |
+| `textures/bog` | `bog` (blubber) | The bog: something green brewing in the witch's clearings and round the edge of her wood. |
 | `textures/rooms/house` | `house` (catroller) | A room, as an equirectangular canvas: cream walls warm with lamplight, a dark window with the moon in it, a wooden floor. |
 | `textures/rooms/studio` | `studio` (madness) | The studio, as an equirectangular canvas: a dark room, lighter overhead, with a broad softbox above, a warm strip on one side and a cool one on the other. |
 | `textures/rooms/town` | `town` (metrlol, petroll) | What the chrome, the paint and the puddles reflect: the night, and the sodium and neon of the town round them. |
