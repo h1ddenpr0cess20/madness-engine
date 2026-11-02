@@ -35,4 +35,6 @@ export default defineConfig({
   base: './',
   plugins: [flagStore()],
   server: { fs: { allow: ['../..'] } },
+  // The bake worker loads each model's file when it is asked for, so it is split into chunks: that needs ES modules.
+  worker: { format: 'es' },
 });
