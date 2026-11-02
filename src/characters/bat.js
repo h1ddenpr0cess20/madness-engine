@@ -1,10 +1,9 @@
 import { coat } from '../models/skins.js';
 
 /**
- * The Rubber Bat: from the horror picture, on a wire, mostly. A fat black
- * rubber body, big ears, red bead eyes, two white fangs, wings of black
- * oilcloth stretched over wire fingers, and the wire itself going up from
- * its back into the flies. It flaps, after a fashion. About 0.7 tiles
+ * The Rubber Bat: from the horror picture. A fat black rubber body, big
+ * ears, red bead eyes, two white fangs, and wings of black oilcloth
+ * stretched over wire fingers. It flaps, after a fashion. About 0.7 tiles
  * across the wings; a flyer, so its origin is its middle.
  */
 
@@ -64,8 +63,6 @@ export default {
         s.sphere([m * 0.018, 0.045, 0.088], 0.008, { color: '#ff2a2a', mat: 'eye', bone: 'head', k: 0 });
         s.cone([m * 0.008, 0.0, 0.098], 0.004, 0.014, { color: '#f4f2ea', mat: 'tooth', bone: 'head', k: 0, rot: [Math.PI, 0, 0] });
       }
-      // The wire, up into the flies.
-      s.limb([0, 0.04, -0.01], [0, 0.6, -0.01], 0.0035, 0.0035, { color: '#c8ccd4', mat: 'wire', bone: 'body', k: 0 });
     });
   },
   animate(k, { clip, t = 0, time, seed = 0 }) {

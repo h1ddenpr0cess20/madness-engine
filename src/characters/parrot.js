@@ -9,8 +9,8 @@ import { bird, plumed } from './bird.js';
  * ring round each orange glass eye, a grey hooked beak that opens and
  * shuts on a servo, red at the bend of the wing and a red flash in it,
  * blue-black wing tips, and a square tail tipped yellow. The screws show
- * at the shoulders and a seam runs round its neck, and it flies on a rod
- * out of its back. It squawks its lines, better than the leads. About 0.7
+ * at the shoulders and a seam runs round its neck. It squawks its lines,
+ * better than the leads. About 0.7
  * tiles across; a flyer, so its origin is its middle.
  */
 
@@ -59,7 +59,7 @@ export default bird({
     // The servo: the beak snapping open and shut on its lines, the head in jerks.
     if (clip === 'idle' || clip === 'walk') k.turn('jaw', Math.sin(T * 7) > 0.3 ? 0.3 : 0, 0, 0);
   } },
-  extras(s, F, { pl }) {
+  extras(s, F) {
     s.part('kit', () => {
       for (const m of [1, -1]) {
         // The screws at the shoulders: it is a machine.
@@ -67,12 +67,7 @@ export default bird({
         s.cylinder(at, 0.0045, 0.0018, { color: '#c8ccd4', mat: 'metal', bone: `arm${m > 0 ? 'L' : 'R'}`, k: 0.0004, round: 0.0008 });
         s.box(add3(at, [0, 0.0018, 0]), [0.0034, 0.0006, 0.0007], 0.0003, { op: 'sub', k: 0.0002, rot: [0, 0.6, 0] });
       }
-      // The rod it flies on, out of its back, and the eye at the top for the rig.
-      s.limb([0, F.B.r[1] * 0.6, -0.008], [0, 0.11, -0.012], 0.0028, 0.0024, { color: '#8a8c94', mat: 'metal', bone: 'body', k: 0.003 });
-      s.cylinder([0, F.B.r[1] * 0.92, -0.008], 0.008, 0.0025, { color: '#6a6c74', mat: 'metal', bone: 'body', k: 0.001, round: 0.001 });
-      s.torus([0, 0.12, -0.012], 0.007, 0.0018, { color: '#8a8c94', mat: 'metal', bone: 'body', k: 0.001, rot: [0, 0, Math.PI / 2] });
     });
-    void pl;
   },
 });
 

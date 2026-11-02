@@ -15,8 +15,10 @@ const B = 1.12;
 const TIN = grainy('#b8bcc4', 0.08, 50);
 const HOSE = grainy('#9aa0aa', 0.05, 30);
 
-export default {
-  name: 'robot',
+/** The robot: with the tray and the teapot on its left pincer, or (`tray: false`) its hands free. */
+export function tinRobot({ name = 'robot', tray = true } = {}) {
+  return {
+  name,
   scale: 1.55,
   cell: 0.0085,
   cells: { kit: 0.0045, fine: 0.003 },
@@ -57,7 +59,11 @@ export default {
       // A pincer.
       const h = J[`hand${S}`];
       s.cylinder(J[`wrist${S}`], 0.026, 0.012, { color: TIN, mat: 'tin', bone: `hand${S}`, k: 0.004 });
-      for (const z of [1, -1]) s.flake([h[0], h[1] + 0.01, h[2] + z * 0.01], [h[0], h[1] - 0.045, h[2] + z * 0.024], [0, 0, z], 0.012, 0.007, 0.4, { color: TIN, mat: 'tin', bone: `hand${S}`, k: 0.004 });
+      // The palm: a block from the wrist down to the pivot the two jaws hinge on, so the pincer is all one piece.
+      const w = J[`wrist${S}`], piv = [h[0], h[1] + 0.006, h[2]];
+      s.limb(w, piv, 0.016, 0.014, { color: TIN, mat: 'tin', bone: `hand${S}`, k: 0.006 });
+      s.cylinder(piv, 0.012, 0.022, { color: '#8a8e96', mat: 'tin', bone: `hand${S}`, k: 0.003, round: 0.004, rot: [0, 0, Math.PI / 2] });
+      for (const z of [1, -1]) s.flake([h[0], h[1] + 0.006, h[2] + z * 0.008], [h[0], h[1] - 0.045, h[2] + z * 0.024], [0, 0, z], 0.012, 0.007, 0.4, { color: TIN, mat: 'tin', bone: `hand${S}`, k: 0.006 });
       hose([J[`hip${S}`][0], 0.3, 0], J[`knee${S}`], 0.032, `thigh${S}`, 4);
       s.sphere(J[`knee${S}`], 0.036, { color: TIN, mat: 'tin', bone: `shin${S}`, k: 0.006 });
       hose(J[`knee${S}`], J[`ankle${S}`].map((v, i) => (i === 1 ? v + 0.03 : v)), 0.03, `shin${S}`, 4);
@@ -78,6 +84,7 @@ export default {
       // The face: a grille for a mouth, an aerial with a ball on it.
       for (let i = 0; i < 4; i++) s.box([0, 0.625 + i * 0.01, 0.09], [0.03, 0.003, 0.004], 0.001, { color: '#2a2c30', mat: 'dark', bone: 'head', k: 0.001 });
       s.limb([0.03, 0.74, 0], [0.04, 0.84, 0], 0.004, 0.003, { color: TIN, mat: 'tin', bone: 'head', k: 0.002 });
+      if (!tray) return;
       // The tray on the left pincer, and the teapot on it. The forearm is held out level, so what is up for
       // the tray is forward as sculpted.
       const h = J.handL, up = (d, x = 0, y = 0) => [h[0] + x, h[1] - 0.03 + y, h[2] + 0.03 + d];
@@ -113,3 +120,6 @@ export default {
     });
   },
 };
+}
+
+export default tinRobot();

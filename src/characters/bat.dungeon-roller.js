@@ -101,7 +101,7 @@ export default {
         s.limb(w.sh, w.el, 0.012, 0.008, { color: skin, mat: 'skin', bone: `arm${S}`, k: 0.006 });
         s.limb(w.el, w.wr, 0.008, 0.006, { color: skin, mat: 'skin', bone: `fore${S}`, k: 0.005 });
         // The thumb's hook at the wrist.
-        s.limb(w.wr, [w.wr[0] + m * 0.01, w.wr[1] + 0.03, w.wr[2] + 0.02], 0.005, 0.002, { color: '#1c1014', mat: 'fang', bone: `hand${S}`, k: 0.002 });
+        s.limb(w.wr, [w.wr[0] + m * 0.006, w.wr[1] + 0.005, w.wr[2] + 0.013], 0.0045, 0.0015, { color: '#1c1014', mat: 'fang', bone: `hand${S}`, k: 0.002 });
         const pts = [w.wr, ...w.tips];
         for (const tip of w.tips) s.limb(w.wr, tip, 0.005, 0.0025, { color: skin, mat: 'skin', bone: `hand${S}`, k: 0.004 });
         // Membrane panels: flat triangles of skin between each pair of fingers, and back to the body.
@@ -109,8 +109,8 @@ export default {
         const panel = (p0, p1, p2, bone) => s.panel(p0, p1, p2, 0.012, { color: membrane, mat: 'wing', bone, k: 0.004 });
         // Wrist to each pair of finger tips; the last finger back to the body's flank.
         for (let i = 1; i < pts.length - 1; i++) panel(pts[0], pts[i], pts[i + 1], `hand${S}`);
-        panel(w.wr, w.tips[3], [m * 0.04, -0.02, -0.07], `fore${S}`);
-        panel(w.wr, [m * 0.04, -0.02, -0.07], w.sh, `fore${S}`);
+        panel(w.wr, w.tips[3], [m * 0.03, -0.025, -0.06], `fore${S}`);
+        panel(w.wr, [m * 0.03, -0.025, -0.06], w.sh, `fore${S}`);
         panel(w.sh, w.el, w.wr, `arm${S}`);
       }
     });

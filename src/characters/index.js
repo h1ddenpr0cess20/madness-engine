@@ -116,6 +116,7 @@ import raver from './raver.js';
 import reveler from './reveler.js';
 import roadie from './roadie.js';
 import robot from './robot.js';
+import tinbot from './tinbot.js';
 import runner from './runner.js';
 import salaryman from './salaryman.js';
 import sambista from './sambista.js';
@@ -172,7 +173,7 @@ export const CHARACTERS = {
   makeup, mascot, matador, medic, merch, merchguy, metalhead, mime, mogul, mosher, mourner, mouse,
   mrbig, mummy, neighbour, newsie, ninja, nonna, nuguy, orc, pa, pallbearer, paparazzo, parrot,
   pauser, phone, pigeon, pirate, pizzaiolo, poet, poodle, poolball, poser, promoter, punk, purist,
-  rat, raver, reveler, roadie, robot, runner, salaryman, sambista, scalper, scarab, scenekid,
+  rat, raver, reveler, roadie, robot, tinbot, runner, salaryman, sambista, scalper, scarab, scenekid,
   screamer, security, shredder, skater, skeleton, skier, snowboarder, soundguy, stbernard, stoner,
   streetteam, stuntman, suit, sumo, superfan, surfer, tapetrader, toughguy, tourist, troll, usher,
   vendor, viking, waiter, welder, wizard, wolf, wraith, yeti, yodeler, yokozuna, zinekid, zombie,
