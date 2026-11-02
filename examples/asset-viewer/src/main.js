@@ -335,8 +335,14 @@ $('colourdiverse').onclick = () => {
 };
 $('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
 $('colourcopy').onclick = async () => {
-  const name = view.item.name.replace(/[^a-z0-9]/gi, '');
-  const code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;
+  let code;
+  if (view.item.palette?.kind === 'dice') {
+    const colour = view.colours.color ?? view.item.palette.color;
+    code = \`import * as GFX from 'madness-engine/gfx';\nimport { createDieProp } from 'madness-engine/props/dice';\n\nconst die = createDieProp(GFX, '\${view.item.dieType}', { color: '\${colour}' });\`;
+  } else {
+    const name = view.item.name.replace(/[^a-z0-9]/gi, '');
+    code = \`import \${name} from 'madness-engine/\${view.item.source.replace(/\\.js$/, '')}';\n\nconst \${name}Again = \${name}.variant(\${JSON.stringify(view.colours, null, 2)});\`;
+  }
   try { await navigator.clipboard.writeText(code); flash($('colourcopy'), 'Copied'); } catch { flash($('colourcopy'), 'Copy failed'); }
 };
 
