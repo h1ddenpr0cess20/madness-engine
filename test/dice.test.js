@@ -13,7 +13,7 @@ function labelsForType(type) {
 }
 
 test('the standalone catalog has seven solids with both numbered and pip D6 styles', () => {
-  assert.deepEqual(DICE_TYPES.map((die) => die.label), ['D4', 'D6 · numbered', 'D6 · pips', 'D8', 'D10', 'D%', 'D12', 'D20']);
+  assert.deepEqual(DICE_TYPES.map((die) => die.label), ['D4', 'D6 · numbered', 'D6 · pips', 'D8', 'D10', 'D% (00–90)', 'D12', 'D20']);
   assert.deepEqual(Object.keys(DICE), ['d4', 'd6', 'd6Pips', 'd8', 'd10', 'd%', 'd12', 'd20']);
 });
 
@@ -37,12 +37,9 @@ test('the standalone d20 copies Nat geometry and resin finish without sharing it
   assert.deepEqual(prop.numbers, nat.numbers);
   const a = prop.die.geometry.attributes.position;
   const b = nat.die.geometry.attributes.position;
-  assert.equal(a.count, b.count);
-  for (let i = 0; i < a.count; i++) {
-    assert.equal(a.getX(i), b.getX(i));
-    assert.equal(a.getY(i), b.getY(i));
-    assert.equal(a.getZ(i), b.getZ(i));
-  }
+  assert.ok(a.count > b.count, 'the standalone d20 has extra chamfer facets');
+  assert.equal(prop.faces.length, 20, 'the original twenty numbered faces are retained');
+  assert.deepEqual(prop.numbers, nat.numbers, 'face numbers retain Nat d20 ordering');
   assert.equal(prop.dieMat.color.getHexString(), '3a3350');
   assert.equal(prop.dieMat.roughness, 0.28);
   assert.equal(prop.dieMat.clearcoat, 0.9);
@@ -59,7 +56,10 @@ test('D10 and percentile faces use their conventional printed ranges', () => {
   assert.deepEqual(createDieProp(GFX, 'd10').numbers.slice().sort(), ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
   assert.deepEqual(createDieProp(GFX, 'd%').numbers.slice().sort(), ['00', '10', '20', '30', '40', '50', '60', '70', '80', '90']);
   assert.deepEqual(createDieProp(GFX, 'd6-pips').numbers.slice().sort((a, b) => a - b), [1, 2, 3, 4, 5, 6]);
-  assert.equal(createDieProp(GFX, 'd6-pips').die.geometry.attributes.position.count, createDieProp(GFX, 'd6').die.geometry.attributes.position.count);
+  const pips = createDieProp(GFX, 'd6-pips');
+  const numbered = createDieProp(GFX, 'd6');
+  assert.equal(pips.die.geometry.attributes.position.count, numbered.die.geometry.attributes.position.count);
+  assert.equal(pips.faces[0].mesh.geometry.parameters.width, 1.02, 'pip field fills most of the cube face');
 });
 
 test('unknown die types are rejected rather than silently creating a different solid', () => {

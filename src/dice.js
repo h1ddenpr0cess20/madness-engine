@@ -17,7 +17,7 @@ export const DICE_TYPES = Object.freeze([
   Object.freeze({ id: 'd6-pips', label: 'D6 · pips', faceCount: 6, range: '1–6' }),
   Object.freeze({ id: 'd8', label: 'D8', faceCount: 8, range: '1–8' }),
   Object.freeze({ id: 'd10', label: 'D10', faceCount: 10, range: '0–9' }),
-  Object.freeze({ id: 'd100', label: 'D%', faceCount: 10, range: '00–90' }),
+  Object.freeze({ id: 'd100', label: 'D% (00–90)', faceCount: 10, range: '00–90' }),
   Object.freeze({ id: 'd12', label: 'D12', faceCount: 12, range: '1–12' }),
   Object.freeze({ id: 'd20', label: 'D20', faceCount: 20, range: '1–20' }),
 ]);
@@ -132,13 +132,61 @@ function dodecahedron(GFX) {
 }
 
 /** Build flat-shaded polygon geometry and one line segment per real polyhedron edge. */
-function polygonGeometry(GFX, points, polygons) {
-  const vertices = points.map((p) => new GFX.Vector3(...p));
+/**
+ * Build the numbered faces, plus small clipped facets at every original vertex.
+ * The cut is a fraction of each incident edge, so it stays proportional across
+ * all of the differently-sized solids.
+ */
+function polygonGeometry(GFX, points, polygons, cornerCut = 0.045) {
+  const clippedPoints = [];
+  const clippedPointIds = new Map();
+  const neighbours = points.map(() => new Set());
+  const pointFor = (from, to) => {
+    const key = from + '>' + to;
+    if (!clippedPointIds.has(key)) {
+      const point = new GFX.Vector3(...points[from]).lerp(new GFX.Vector3(...points[to]), cornerCut);
+      clippedPointIds.set(key, clippedPoints.length);
+      clippedPoints.push(point.toArray());
+    }
+    return clippedPointIds.get(key);
+  };
+
+  const clippedFaces = polygons.map((polygon) => {
+    const clipped = [];
+    for (let i = 0; i < polygon.length; i++) {
+      const a = polygon[i], b = polygon[(i + 1) % polygon.length];
+      neighbours[a].add(b);
+      neighbours[b].add(a);
+      clipped.push(pointFor(a, b), pointFor(b, a));
+    }
+    return clipped;
+  });
+
+  // Each old vertex becomes a small flat chamfer face joining the clipped edges.
+  for (let vertex = 0; vertex < neighbours.length; vertex++) {
+    const around = [...neighbours[vertex]];
+    if (around.length < 3) continue;
+    const normal = new GFX.Vector3(...points[vertex]).normalize();
+    const reference = Math.abs(normal.y) > 0.9
+      ? new GFX.Vector3(1, 0, 0)
+      : new GFX.Vector3(0, 1, 0);
+    const tangentX = new GFX.Vector3().crossVectors(reference, normal).normalize();
+    const tangentY = new GFX.Vector3().crossVectors(normal, tangentX).normalize();
+    const cap = around.map((neighbour) => {
+      const pointId = pointFor(vertex, neighbour);
+      const delta = new GFX.Vector3(...clippedPoints[pointId]).sub(new GFX.Vector3(...points[vertex]));
+      return { pointId, angle: Math.atan2(delta.dot(tangentY), delta.dot(tangentX)) };
+    }).sort((a, b) => a.angle - b.angle).map((entry) => entry.pointId);
+    clippedFaces.push(cap);
+  }
+
+  const vertices = clippedPoints.map((p) => new GFX.Vector3(...p));
   const positions = [], normals = [], edgePositions = [], seenEdges = new Set();
   const faces = [];
 
-  for (const polygon of polygons) {
-    const indices = polygon.slice();
+  for (let polygonIndex = 0; polygonIndex < clippedFaces.length; polygonIndex++) {
+    const indices = clippedFaces[polygonIndex].slice();
+    if (indices.length < 3) continue;
     const centroid = indices.reduce((sum, index) => sum.add(vertices[index]), new GFX.Vector3())
       .divideScalar(indices.length);
     let normal = new GFX.Vector3().crossVectors(
@@ -171,7 +219,8 @@ function polygonGeometry(GFX, points, polygons) {
       edgePositions.push(vertices[b].x, vertices[b].y, vertices[b].z);
     }
 
-    faces.push({ centroid, normal });
+    // Only the original large facets carry numbers; the chamfer faces stay blank.
+    if (polygonIndex < polygons.length) faces.push({ centroid, normal });
   }
 
   const geometry = new GFX.BufferGeometry();
@@ -184,19 +233,27 @@ function polygonGeometry(GFX, points, polygons) {
 
 /** Faces of the d20 are taken from the very same GFX geometry as Nat's original. */
 function icosahedronGeometry(GFX) {
-  const geometry = new GFX.IcosahedronGeometry(1, 0);
-  geometry.computeVertexNormals();
-  const p = geometry.attributes.position;
-  const faces = [];
-  for (let i = 0; i < p.count; i += 3) {
-    const a = new GFX.Vector3().fromBufferAttribute(p, i);
-    const b = new GFX.Vector3().fromBufferAttribute(p, i + 1);
-    const c = new GFX.Vector3().fromBufferAttribute(p, i + 2);
-    const centroid = a.add(b).add(c).divideScalar(3);
-    faces.push({ centroid, normal: centroid.clone().normalize() });
+  const source = new GFX.IcosahedronGeometry(1, 0);
+  const position = source.attributes.position;
+  const points = [], polygons = [], pointIds = new Map();
+  const pointKey = (point) => point.map((value) => Math.round(value * 100000)).join(',');
+  for (let i = 0; i < position.count; i += 3) {
+    const face = [];
+    for (let j = 0; j < 3; j++) {
+      const point = new GFX.Vector3().fromBufferAttribute(position, i + j).toArray();
+      const key = pointKey(point);
+      let index = pointIds.get(key);
+      if (index === undefined) {
+        index = points.length;
+        pointIds.set(key, index);
+        points.push(point);
+      }
+      face.push(index);
+    }
+    polygons.push(face);
   }
-  const edges = new GFX.EdgesGeometry(new GFX.IcosahedronGeometry(1.004, 0), 1);
-  return { geometry, edges, faces };
+  source.dispose?.();
+  return polygonGeometry(GFX, points, polygons);
 }
 
 function labelsFor(faces, labels, pairOpposite = true) {
@@ -242,7 +299,7 @@ function glyphTexture(GFX, label, highlighted, pips = false) {
     };
     for (const [x, y] of arrangements[Number(label)]) {
       context.beginPath();
-      context.arc(size / 2 + x * 58, size / 2 + y * 58, 17, 0, Math.PI * 2);
+      context.arc(size / 2 + x * 72, size / 2 + y * 72, 25, 0, Math.PI * 2);
       context.fill();
     }
   } else {
@@ -332,8 +389,9 @@ export function createDieProp(GFX, type, options = {}) {
   body.add(edges);
 
   const glyphSize = canonical === 'd20' ? 0.62
-    : canonical === 'd4' ? 0.4
-      : canonical === 'd6' || canonical === 'd6-pips' || canonical === 'd8' ? 0.46
+    : canonical === 'd6-pips' ? 1.02
+      : canonical === 'd4' ? 0.4
+        : canonical === 'd6' || canonical === 'd8' ? 0.46
         : canonical === 'd10' || canonical === 'd100' ? 0.38 : 0.4;
   const glyphGeometry = new GFX.PlaneGeometry(glyphSize, glyphSize);
   const up = new GFX.Vector3(0, 1, 0);

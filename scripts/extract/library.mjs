@@ -287,7 +287,7 @@ function contents(places, moods) {
       lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${cell(blurb([...versions.values()].find((v) => v.path === place).files[0]))} |`);
     }
     if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Seven colourable roleplaying dice: D4, D6, D8, D10, percentile D%, D12 and D20. Each is a standalone resin prop, separate from the dungeon roller’s d20 character. |');
-    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone resin dice props: D4, numbered and pip D6, D8, D10, percentile D%, D12 and D20. Each has a colourable resin finish. |');
+    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone resin dice props: D4, numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90), D12 and D20. Each has a colourable resin finish. |');
     lines.push('');
   }
   lines.push('## moods', '', ABOUT.moods, '', '| Path | Versions (games) | What it is |', '|---|---|---|');
