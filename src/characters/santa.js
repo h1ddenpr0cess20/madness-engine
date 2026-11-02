@@ -1,4 +1,4 @@
-import { cloth, hold, person, shell, skirt, trunk } from './person.js';
+import { cloth, hold, onBody, person, shell, skirt, trunk } from './person.js';
 import { longHair } from './metalwear.js';
 import { beard, moustache } from './wardrobe.js';
 
@@ -40,25 +40,38 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    // The coat's skirts, from the belt to the thigh, as the Flatfoot's.
-    skirt(s, trunk(1.28, 1.7), { top: 0.33, hem: 0.235, flare: 1.04, color: RED, part: 'outer', b: 1.28 });
-    // White fur: down the front of the coat, round its hem, and at the collar.
+    // The coat's skirts, from the belt to above the knee: fuller than the Flatfoot's and taking more of each leg's swing,
+    // so the trousers stay inside them in a stride.
+    skirt(s, trunk(1.28, 1.7), { top: 0.33, hem: 0.22, flare: 1.24, color: RED, part: 'outer', b: 1.28, follow: 0.95 });
+    // White fur: down the front of the coat (above the belt and below it), round its hem, and at the collar.
     const fur = { color: FUR, mat: 'cloth', part: 'outer2', thick: 0.008, lift: 0.0015, k: 0.004 };
-    shell(s, (p) => Math.max(Math.abs(p[0]) - 0.02, 0.236 - p[1], p[1] - 0.545, 0.02 - p[2]), { ...fur, over: ['top', 'outer'], bone: 'chest' });
-    shell(s, (p) => Math.max(0.236 - p[1], p[1] - 0.27), { ...fur, over: ['outer'], bone: 'hips' });
+    shell(s, (p) => Math.max(Math.abs(p[0]) - 0.02, 0.376 - p[1], p[1] - 0.545, 0.02 - p[2]), { ...fur, over: ['top', 'outer'], bone: 'chest' });
+    shell(s, (p) => Math.max(Math.abs(p[0]) - 0.02, 0.22 - p[1], p[1] - 0.328, 0.02 - p[2]), { ...fur, over: ['top', 'outer'], bone: 'hips' });
+    shell(s, (p) => Math.max(0.22 - p[1], p[1] - 0.254), { ...fur, over: ['outer'], bone: 'hips' });
     shell(s, (p) => Math.max(Math.abs(p[1] - 0.536) - 0.014, -p[2] - 0.045), { ...fur, over: ['top', 'head'], bone: 'neck' });
+    // The belt: wide and black, over the coat (the fur stops either side of it), with a square gold buckle on the front.
+    const BELT = '#0e0e12', GOLD = '#e0be50';
+    shell(s, (p) => Math.abs(p[1] - 0.352) - 0.02, { color: BELT, mat: 'leather', part: 'outer2', thick: 0.009, lift: 0.001, over: ['top', 'outer', 'bottoms'], bone: 'hips', k: 0.003 });
+    const at = onBody(s, [0, 0.352, 0.12], ['top', 'outer', 'bottoms']);
+    s.part('outer2', () => {
+      const front = at.p.map((v, i) => v + at.n[i] * 0.0085);
+      s.box(front, [0.036, 0.03, 0.0055], 0.004, { color: GOLD, mat: 'metal', bone: 'hips', k: 0.001 });
+      s.box(front.map((v, i) => v + at.n[i] * 0.003), [0.024, 0.019, 0.0045], 0.003, { color: BELT, mat: 'leather', bone: 'hips', k: 0.001 });
+    });
     // The beard to the belt, and a bushy moustache over the mouth.
     beard(s, { color: '#f6f6f8', long: 1.7, thick: 0.01 });
     moustache(s, { color: '#f6f6f8', wide: 1.2, droop: 0.5 });
-    // The cap: red, fitted over the head and the hair, its fur band at the brows, the point falling back over his
-    // shoulder with a bobble on the end.
-    shell(s, (p) => 0.73 - p[1], { color: RED, mat: 'cloth', part: 'outer', thick: 0.012, lift: 0.002, over: ['head', 'hair'], bone: 'head', k: 0.004 });
+    // The cap: red, fitted over the head and the hair down to under its band, the point falling back over his
+    // shoulder with a bobble on the end. The fur band is laid over the foot of the cap, higher at the brows than at
+    // the nape, as a cap sits.
+    const foot = (p) => 0.715 - 0.12 * Math.max(0, 0.05 - p[2]);
+    shell(s, (p) => foot(p) + 0.012 - p[1], { color: RED, mat: 'cloth', part: 'outer', thick: 0.012, lift: 0.002, over: ['head', 'hair'], bone: 'head', k: 0.004 });
+    shell(s, (p) => Math.max(foot(p) - p[1], p[1] - foot(p) - 0.04), { color: FUR, mat: 'cloth', part: 'outer2', thick: 0.014, lift: 0.001, over: ['head', 'hair', 'outer'], bone: 'head', k: 0.006 });
     s.part('outer2', () => {
       const C = { color: RED, mat: 'cloth', bone: 'head', k: 0.008 };
       const pts = [[0, 0.74, -0.006], [0, 0.805, -0.024], [0, 0.86, -0.056], [0, 0.882, -0.1], [0, 0.868, -0.146]];
       const rad = [0.095, 0.08, 0.058, 0.04, 0.028];
       for (let i = 0; i < pts.length - 1; i++) s.limb(pts[i], pts[i + 1], rad[i], rad[i + 1], C);
-      s.torus([0, 0.735, -0.006], 0.102, 0.0155, { color: FUR, mat: 'cloth', bone: 'head', k: 0.004 });
       s.sphere([0, 0.852, -0.172], 0.027, { color: FUR, mat: 'cloth', bone: 'head', k: 0.006 });
     });
     // The sack of presents, its neck through the left fist and the cord tied round it.
