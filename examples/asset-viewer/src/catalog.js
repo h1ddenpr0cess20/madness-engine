@@ -136,7 +136,7 @@ function buildingItems() {
         g.setAttribute('position', new GFX.BufferAttribute(p.pos, 3));
         g.setAttribute('normal', new GFX.BufferAttribute(p.nor, 3));
         g.setAttribute('color', new GFX.BufferAttribute(p.col, 3));
-        const m = new GFX.Mesh(g, new GFX.MeshStandardMaterial({ name: mat, vertexColors: true, roughness: 0.85, side: GFX.DoubleSide }));
+        const m = new GFX.Mesh(g, new GFX.MeshStandardMaterial({ name: mat, vertexColors: true, roughness: 0.85 }));
         m.castShadow = m.receiveShadow = true;
         group.add(m);
       }

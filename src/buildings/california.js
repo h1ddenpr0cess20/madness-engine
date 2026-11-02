@@ -398,7 +398,7 @@ export function techpark(m, v) {
 /** The police station: a blue-trimmed civic block, a flagpole and cruisers out front. */
 export function police(m) {
   const F = slabBlock(m, -0.8, -0.8, 0.8, 0.3, 0, 0.8, '#e8e4dc', { parapet: 0.08 });
-  panel(m, 'plain', F.front, 0, 0.62, 1.6, 0.74, 0.04, '#24408a');
+  for (const [u0, u1] of [[0, 0.58], [1.02, 1.6]]) panel(m, 'plain', F.front, u0, 0.38, u1, 0.46, 0.04, '#24408a');
   doorOn(m, F.front, 0.8, 0.3, 0.42, '#24408a');
   windowRows(m, F, 2, 0.4, { gap: 0.42, skipDoor: 0.8, frame: '#24408a' });
   m.cylinder('metal', -0.7, 0, 0.75, 0.01, 0.015, 1.3, 5, '#d8d8d8');

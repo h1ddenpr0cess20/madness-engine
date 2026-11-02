@@ -11,29 +11,84 @@ import { cart, gabled, wheel } from './parts.js';
 const HIDES = ['#6a4a32', '#e8e0d0', '#3a2e26', '#a8743e', '#d8c8a8'];
 const FLEECE = ['#efe8d8', '#e4dccb', '#d8cfbd', '#3a3330'];
 
-/** A beast standing in a field, its head toward `yaw`: a cow, or with `small` a sheep. */
+/**
+ * A beast standing in a field, its head toward `yaw` (+x): a cow — a deep
+ * body, a neck down to a broad head with a pale muzzle, ears and short horns,
+ * four legs with dark hooves, an udder and a tail with a tuft, a patch or
+ * two of white — or with `small` a sheep: a round, lumpy fleece on thin dark
+ * legs, a dark face and ears poking out of it, a stub of a tail.
+ */
 function beast(m, x, z, yaw, col, { small = false } = {}) {
-  const s = small ? 0.55 : 1;
   m.at(x, 0, z, () => {
-    m.box('plain', -0.1 * s, 0.09 * s, -0.05 * s, 0.1 * s, 0.2 * s, 0.05 * s, col, { skip: ['bottom'] });
-    m.box('plain', 0.1 * s, 0.13 * s, -0.03 * s, 0.17 * s, 0.21 * s, 0.03 * s, small ? '#2a2420' : col, { skip: ['bottom'] });
-    for (const [lx, lz] of [[-0.07, -0.03], [-0.07, 0.03], [0.07, -0.03], [0.07, 0.03]]) {
-      m.box('plain', lx * s - 0.012, 0, lz * s - 0.012, lx * s + 0.012, 0.09 * s, lz * s + 0.012, small ? '#2a2420' : '#3a2e26', { skip: ['bottom'] });
+    if (small) {
+      const face = col === '#3a3330' ? '#1a1614' : '#2a2420';
+      for (const [lx, lz] of [[-0.035, -0.022], [-0.035, 0.022], [0.035, -0.022], [0.035, 0.022]]) m.cylinder('plain', lx, 0, lz, 0.007, 0.008, 0.07, 5, face);
+      m.sphere('cloth', 0, 0.1, 0, 0.068, 0.05, 0.05, col, { detail: 1, jitter: 0.18, seed: 3 });
+      for (const [dx, dy, dz] of [[-0.03, 0.03, 0.02], [0.02, 0.035, -0.02], [-0.04, 0.02, -0.025], [0.03, 0.025, 0.025]]) m.sphere('cloth', dx, 0.1 + dy, dz, 0.034, 0.03, 0.032, col, { detail: 0, jitter: 0.25, seed: 7 });
+      m.sphere('plain', 0.075, 0.11, 0, 0.03, 0.026, 0.022, face, { detail: 1 });
+      m.sphere('cloth', 0.058, 0.125, 0, 0.024, 0.022, 0.026, col, { detail: 0, jitter: 0.2 });
+      for (const s of [-1, 1]) m.sphere('plain', 0.07, 0.122, s * 0.026, 0.014, 0.006, 0.01, face, { detail: 0 });
+      m.sphere('cloth', -0.07, 0.11, 0, 0.012, 0.016, 0.012, col, { detail: 0 });
+      return;
     }
+    const pale = col === '#e8e0d0' || col === '#d8c8a8' ? '#4a3a2e' : '#efe8dc';
+    // Legs and hooves.
+    for (const [lx, lz] of [[-0.075, -0.035], [-0.075, 0.035], [0.075, -0.035], [0.075, 0.035]]) {
+      m.cylinder('plain', lx, 0.012, lz, 0.012, 0.016, 0.11, 6, col, { smooth: true });
+      m.cylinder('plain', lx, 0, lz, 0.016, 0.017, 0.014, 6, '#2a2420');
+    }
+    // The body, deep and long, the hips standing up a little at the back.
+    m.sphere('plain', 0, 0.165, 0, 0.12, 0.062, 0.058, col, { detail: 1 });
+    m.sphere('plain', -0.075, 0.18, 0, 0.05, 0.05, 0.052, col, { detail: 1 });
+    m.sphere('plain', 0.07, 0.17, 0, 0.055, 0.058, 0.054, col, { detail: 1 });
+    // A white patch on the flank, the udder.
+    m.sphere('plain', -0.01, 0.17, 0.03, 0.05, 0.04, 0.03, pale, { detail: 1 });
+    m.sphere('plain', -0.04, 0.105, 0, 0.026, 0.02, 0.024, '#e8a8a0', { detail: 0 });
+    // The neck down to the head; the muzzle, ears and horns.
+    m.beam('plain', [0.1, 0.19, 0], [0.155, 0.165, 0], 0.03, col);
+    m.sphere('plain', 0.17, 0.16, 0, 0.038, 0.034, 0.03, col, { detail: 1 });
+    m.sphere('plain', 0.2, 0.145, 0, 0.022, 0.02, 0.025, pale === '#efe8dc' ? '#d8b8a8' : '#8a6a5a', { detail: 1 });
+    for (const s of [-1, 1]) {
+      m.sphere('plain', 0.158, 0.185, s * 0.035, 0.012, 0.007, 0.018, col, { detail: 0 });
+      m.beam('plain', [0.165, 0.19, s * 0.018], [0.17, 0.215, s * 0.03], 0.005, '#e8dcc0');
+    }
+    // The tail, down from the hips to a tuft.
+    m.beam('plain', [-0.12, 0.2, 0], [-0.13, 0.1, 0], 0.006, col);
+    m.sphere('plain', -0.13, 0.095, 0, 0.012, 0.018, 0.012, '#2a2420', { detail: 0 });
   }, yaw);
 }
 
-/** Rows of a crop across a strip of ground: furrows of earth and lines of green, or gold late in the year. */
-function strip(m, rnd, x0, z0, x1, z1, { rows = 5, col = '#6f9a3c', alongX = false } = {}) {
+/**
+ * Rows of a crop across a strip of ground: the earth ridged into furrows,
+ * and along each ridge the plants — `kind` 'veg', a row of leafy heads, or
+ * 'grain', tufts of blades with a seed head on each, green or gone gold.
+ */
+function strip(m, rnd, x0, z0, x1, z1, { rows = 5, col = '#6f9a3c', alongX = false, kind = 'veg' } = {}) {
   m.box('plain', x0, 0, z0, x1, 0.022, z1, '#5a432c', { skip: ['bottom'] });
+  const ripe = col === '#a8a048';
   for (let i = 0; i < rows; i++) {
     const t = (i + 0.5) / rows;
-    if (alongX) {
-      const z = z0 + (z1 - z0) * t, hw = (z1 - z0) / rows * 0.28;
-      m.box('hedge', x0 + 0.03, 0.02, z - hw, x1 - 0.03, 0.06 + rnd() * 0.02, z + hw, col, { skip: ['bottom'] });
-    } else {
-      const x = x0 + (x1 - x0) * t, hw = (x1 - x0) / rows * 0.28;
-      m.box('hedge', x - hw, 0.02, z0 + 0.03, x + hw, 0.06 + rnd() * 0.02, z1 - 0.03, col, { skip: ['bottom'] });
+    const across = alongX ? z0 + (z1 - z0) * t : x0 + (x1 - x0) * t;
+    const [a0, a1] = alongX ? [x0 + 0.03, x1 - 0.03] : [z0 + 0.03, z1 - 0.03];
+    const hw = (alongX ? z1 - z0 : x1 - x0) / rows * 0.22;
+    // The ridge.
+    if (alongX) m.box('plain', a0, 0.022, across - hw, a1, 0.032, across + hw, '#6a4e32', { skip: ['bottom'] });
+    else m.box('plain', across - hw, 0.022, a0, across + hw, 0.032, a1, '#6a4e32', { skip: ['bottom'] });
+    const n = Math.max(2, Math.round((a1 - a0) / (kind === 'veg' ? 0.09 : 0.07)));
+    for (let k = 0; k <= n; k++) {
+      const along = a0 + ((a1 - a0) * k) / n + (rnd() - 0.5) * 0.015;
+      const [x, z] = alongX ? [along, across] : [across, along];
+      if (kind === 'veg') {
+        const r = 0.026 + rnd() * 0.01;
+        m.sphere('hedge', x, 0.032 + r * 0.6, z, r, r * 0.75, r, col, { detail: 0, jitter: 0.3, seed: k + i * 31 });
+      } else {
+        const h = 0.07 + rnd() * 0.03, stem = ripe ? '#b8a858' : '#6f9a3c';
+        for (let b = 0; b < 3; b++) {
+          const a = b * 2.1 + k;
+          m.beam('hedge', [x, 0.03, z], [x + Math.cos(a) * 0.012, 0.03 + h, z + Math.sin(a) * 0.012], 0.0045, stem);
+        }
+        m.sphere('hedge', x, 0.03 + h + 0.008, z, 0.008, 0.016, 0.008, ripe ? '#d8c060' : '#8ab048', { detail: 0 });
+      }
     }
   }
 }
@@ -70,7 +125,7 @@ export function croft(m, v) {
     doors: [{ face: 'front', u: 0.3, w: 0.2, h: 0.38 }], windows: [{ face: 'front', u: 0.72, shutters: rnd() < 0.5 ? pickFrom(rnd, PALETTE.shutter) : null }, { face: s > 0 ? 'left' : 'right', u: 0.35 }],
   });
   const top = chimney(m, s > 0 ? -0.7 : 0.7, 0.28, 0.4, 1.0, { w: 0.15 });
-  strip(m, rnd, -0.9, -0.92, 0.9, -0.22, { rows: 6, col: pickFrom(rnd, ['#6f9a3c', '#7fa848', '#a8a048']) });
+  strip(m, rnd, -0.9, -0.92, 0.9, -0.22, { rows: 6, col: pickFrom(rnd, ['#6f9a3c', '#7fa848', '#a8a048']), kind: 'grain' });
   fenceRun(m, [-0.95, 0, -0.95], [0.95, 0, -0.95], { h: 0.16 });
   fenceRun(m, [-0.95, 0, -0.95], [-0.95, 0, 0.9], { h: 0.16, first: false });
   fenceRun(m, [0.95, 0, -0.95], [0.95, 0, 0.9], { h: 0.16, first: false });
@@ -98,7 +153,8 @@ export function smallholding(m, v) {
   for (let i = 0; i < 4; i++) beast(m, 0.3 + (i % 2) * 0.35, -1.2 + Math.floor(i / 2) * 0.4, rnd() * 6.28, pickFrom(rnd, FLEECE), { small: true });
   // The plot by the lane: beans on poles and rows of greens.
   strip(m, rnd, 0.12, 0.0, 0.92, 0.9, { rows: 4, col: '#5f8a34', alongX: true });
-  m.box('plain', -0.9, 0, -1.45, -0.1, 0.02, -0.75, '#4a3a26', { skip: ['bottom'] });
+  // The kitchen garden behind the house, dug and planted.
+  strip(m, rnd, -0.9, -1.45, -0.1, -0.75, { rows: 3, col: '#7aa848', alongX: true });
   haystack(m, -0.6, 0, -1.1, 0.18);
   haystack(m, -0.3, 0, -1.25, 0.13);
   cart(m, 0.45, 0, 1.25, 0.2);
@@ -129,7 +185,34 @@ export function grange(m, v) {
   }
   haystack(m, 0.7, 0, -0.25, 0.17);
   beast(m, 0.62, 0.15, 1.2, pickFrom(rnd, HIDES));
+  beast(m, 0.85, -0.45, 2.6, pickFrom(rnd, FLEECE), { small: true });
+  beast(m, 1.0, -0.2, 0.4, pickFrom(rnd, FLEECE), { small: true });
   for (let i = 0; i < 3; i++) sack(m, -0.7 + i * 0.13, 0, 0.12, pickFrom(rnd, ['#cbb68a', '#d8c394']));
+  // A drystone wall along the lane with a gap at the door, a trough, hens about the yard, a pump by the house.
+  for (const [a, b] of [[[-1.0, 0, 1.45], [-0.2, 0, 1.45]], [[0.2, 0, 1.45], [1.0, 0, 1.45]]]) {
+    const n = Math.round(Math.abs(b[0] - a[0]) / 0.11);
+    for (let i = 0; i < n; i++) for (let row = 0; row < 2; row++) {
+      const x = a[0] + (i + 0.5 + (row ? 0.5 : 0)) * ((b[0] - a[0]) / n);
+      if ((row && i === n - 1)) continue;
+      m.rock('rock', x, 0.04 + row * 0.07, 1.45, 0.06, 0.04, 0.05, pickFrom(rnd, PALETTE.stone), { detail: 0, rough: 0.2, seed: i * 3 + row });
+    }
+  }
+  m.box('stone', 0.15, 0, -0.02, 0.45, 0.08, 0.1, '#8f887a', { skip: ['bottom'] });
+  m.box('glass', 0.17, 0.06, 0.0, 0.43, 0.07, 0.08, '#2f5a70', { skip: ['bottom'] });
+  for (let i = 0; i < 4; i++) {
+    const hx = -0.6 + i * 0.28 + (rnd() - 0.5) * 0.1, hz = 0.2 + (rnd() - 0.5) * 0.12, col = pickFrom(rnd, ['#a8643a', '#f0ece4', '#3a2e26']);
+    m.at(hx, 0, hz, () => {
+      for (const s of [-1, 1]) m.beam('plain', [0, 0, s * 0.008], [0, 0.03, s * 0.008], 0.003, '#d8a040');
+      m.sphere('cloth', 0, 0.045, 0, 0.03, 0.022, 0.02, col, { detail: 0 });
+      m.sphere('cloth', 0.026, 0.07, 0, 0.012, 0.013, 0.011, col, { detail: 0 });
+      m.sphere('cloth', 0.027, 0.084, 0, 0.005, 0.006, 0.003, '#d83a2a', { detail: 0 });
+      m.beam('plain', [0.036, 0.07, 0], [0.046, 0.068, 0], 0.003, '#e8b040');
+      m.sphere('cloth', -0.03, 0.06, 0, 0.012, 0.016, 0.006, col, { detail: 0 });
+    }, rnd() * 6.28);
+  }
+  m.box('metal', -0.72, 0, 1.36, -0.66, 0.3, 1.42, '#3a3a3e', { skip: ['bottom'] });
+  m.beam('metal', [-0.69, 0.28, 1.39], [-0.6, 0.33, 1.39], 0.01, '#3a3a3e');
+  m.beam('metal', [-0.69, 0.22, 1.42], [-0.69, 0.2, 1.5], 0.012, '#3a3a3e');
   return { smoke: [top], height: 1.8 };
 }
 
@@ -144,7 +227,9 @@ export function workshop(m, v) {
   sign(m, F.front, 1.4, 0.55, pickFrom(rnd, ['#c9a227', '#7a3a2a', '#3f5a40']));
   const top = chimney(m, -0.6, -0.7, 0.5, 1.15, { w: 0.15 });
   // The lean-to over the bench, on two posts.
-  for (const x of [-0.7, 0.5]) m.box('wood', x - 0.025, 0, 0.5 - 0.025, x + 0.025, 0.46, 0.5 + 0.025, PALETTE.wood[1], { skip: ['bottom'] });
+  // The roof runs from 0.48 at the front (z 0.58) to 0.62 at the wall: at the posts (z 0.5) it is at 0.5.
+  for (const x of [-0.7, 0.5]) m.box('wood', x - 0.025, 0, 0.5 - 0.025, x + 0.025, 0.5, 0.5 + 0.025, PALETTE.wood[1], { skip: ['bottom'] });
+  m.box('wood', -0.75, 0.465, 0.475, 0.55, 0.495, 0.525, PALETTE.wood[0], { skip: [] });
   m.quad('wood', [-0.82, 0.48, 0.58], [0.62, 0.48, 0.58], [0.62, 0.62, 0.06], [-0.82, 0.62, 0.06], PALETTE.wood[0]);
   m.quad('wood', [-0.82, 0.62, 0.06], [0.62, 0.62, 0.06], [0.62, 0.48, 0.58], [-0.82, 0.48, 0.58], PALETTE.wood[0]);
   m.box('wood', -0.55, 0.2, 0.18, 0.25, 0.24, 0.38, PALETTE.wood[2], { skip: ['bottom'] });
