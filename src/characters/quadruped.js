@@ -84,7 +84,7 @@ export function frame({ hip, len, girth, stance, neck, head, tail }) {
 }
 
 export function quadruped({
-  name, scale = 1.5, cell = 0.0065, cells = {}, budget = 18000, k = 0.03,
+  name, scale = 1.5, cell = 0.0048, cells = {}, budget = 60000, k = 0.03,
   hip = 0.26, len = 0.15, girth = [0.08, 0.08], stance = 0.055, leg = [0.038, 0.026, 0.022],
   neck = {}, head = {}, tail = {}, ears = { kind: 'prick', size: 1 }, feet = 'paw',
   paint = {}, mats = {}, materials = {}, extras = null, sculptHead = true, style = {}, eye = {},
@@ -97,7 +97,7 @@ export function quadruped({
   const C = {
     body: coat({ over: '#a07040', under: '#d8c0a0', vary: 0.12, freq: 12 }),
     head: null, snout: null, legs: null, feet: '#2a2018', tail: null, ears: null, nose: '#141010', eye: '#4a2c14',
-    inner: null, mouth: '#1a1012',
+    inner: null, mouth: '#1a1012', rim: null,
     ...paint,
   };
   for (const part of ['head', 'snout', 'legs', 'tail', 'ears']) C[part] ??= C.body;
@@ -128,29 +128,45 @@ export function quadruped({
     scale,
     cell,
     // The small things on the head get grids of their own, as fine as the head is small.
-    cells: { eyes: 0.0024, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, nose: Hd.sr * 0.09, ears: Hd.r * 0.06, ...cells },
+    cells: { head: Hd.r * 0.036, eyes: Hd.r * 0.022, fine: 0.0026, kit: 0.004, pupils: Hd.r * 0.03, nose: Hd.sr * 0.07, ears: Hd.r * 0.045, ...cells },
     budget,
     bones,
     materials: { ...ANIMAL, ...materials },
     sculpt(s) {
       const B = { color: C.body, mat: M.body };
-      // The barrel, in two halves, with the chest deeper at the front and the haunch round at the back.
-      s.ellipsoid([0, hip, len * 0.35], [gx, gy, len * 0.85], { ...B, bone: 'front', k });
-      s.ellipsoid([0, hip, -len * 0.35], [gx * 0.96, gy * 0.96, len * 0.85], { ...B, bone: 'rear', k });
-      s.ellipsoid([0, hip - gy * 0.12, len * 0.85], [gx * 0.88, gy * 0.92, gy * 0.75], { ...B, bone: 'front', k });
-      s.ellipsoid([0, hip + gy * 0.04, -len * 0.9], [gx * 0.92, gy * 0.88, gy * 0.72], { ...B, bone: 'rear', k });
-      // The neck.
+      // The trunk, built as an animal's is: a deep ribcage behind the shoulders, the loin narrower behind it and the
+      // belly tucked up under it, the haunches round over the hind legs, the brisket out in front between the
+      // forelegs, and the shoulder blades either side of the withers.
+      s.ellipsoid([0, hip - gy * 0.02, len * 0.36], [gx, gy * 1.02, len * 0.74], { ...B, bone: 'front', k });
+      s.ellipsoid([0, hip + gy * 0.08, -len * 0.3], [gx * 0.86, gy * 0.82, len * 0.64], { ...B, bone: 'rear', k });
+      s.ellipsoid([0, hip - gy * 0.38, -len * 0.08], [gx * 0.76, gy * 0.5, len * 0.56], { ...B, bone: 'rear', k });
+      s.ellipsoid([0, hip + gy * 0.04, -len * 0.9], [gx * 0.95, gy * 0.9, gy * 0.78], { ...B, bone: 'rear', k });
+      s.ellipsoid([0, hip - gy * 0.2, len * 0.9], [gx * 0.82, gy * 0.84, gy * 0.64], { ...B, bone: 'front', k });
+      for (const m of [1, -1]) s.ellipsoid([m * gx * 0.58, hip + gy * 0.5, len * 0.72], [gx * 0.4, gy * 0.62, gy * 0.5], { ...B, bone: 'front', k, rot: [0.45, 0, 0] });
+      // The neck, up from between the shoulders, the scruff over it.
       s.limb(P.N0, P.N1, N.r, N.r * 0.85, { color: C.body, mat: M.body, bone: 'neck', k });
+      s.ellipsoid(add(P.N0, [0, N.r * 0.55, -N.r * 0.1]), [N.r * 0.8, N.r * 0.6, N.r * 1.2], { color: C.body, mat: M.body, bone: 'neck', k, rot: [-N.rise * 0.6, 0, 0] });
       if (sculptHead) {
-        // The skull, the snout and the jaw under it, the nose on the end.
+        // The head on a grid of its own, as fine as the head is small, so the face comes out clean.
         const Hc = { color: C.head, mat: M.head, bone: 'head', k: k * 0.7 };
-        s.ellipsoid(P.H, [Hd.r * 0.92, Hd.r * 0.85, Hd.r], Hc);
-        s.limb(P.S0, P.S1, Hd.sr, Hd.sr * 0.82, { ...Hc, color: C.snout, mat: M.snout });
-        if (Hd.jaw) s.limb(add(P.S0, [0, -Hd.sr * 0.55, -Hd.r * 0.1]), add(P.S1, [0, -Hd.sr * 0.7, -Hd.sr * 0.4]), Hd.sr * 0.62, Hd.sr * 0.5, { color: C.snout, mat: M.snout, bone: 'jaw', k: k * 0.4 });
+        s.part('head', () => {
+          // The top of the neck, so the head grows out of it; the skull; the cheekbones; the stop between the eyes.
+          s.limb(add(P.N1, P.N1.map((v, i) => (P.N0[i] - v) * 0.25)), P.N1, N.r * 0.85, N.r * 0.8, { ...Hc, bone: 'neck' });
+          s.ellipsoid(P.H, [Hd.r * 0.92, Hd.r * 0.85, Hd.r], Hc);
+          for (const m of [1, -1]) s.ellipsoid(add(P.H, [m * Hd.r * 0.58, -Hd.r * 0.22, Hd.r * 0.22]), [Hd.r * 0.42, Hd.r * 0.4, Hd.r * 0.55], { ...Hc, k: k * 0.5 });
+          s.ellipsoid(add(P.S0, [0, Hd.sr * 0.55, 0]), [Hd.sr * 0.9, Hd.sr * 0.55, Hd.sr * 0.9], { ...Hc, k: k * 0.5 });
+          // The muzzle, and the jaw under it; the pads of the lip either side, and the chin.
+          s.limb(P.S0, P.S1, Hd.sr, Hd.sr * 0.82, { ...Hc, color: C.snout, mat: M.snout });
+          for (const m of [1, -1]) s.ellipsoid(add(P.S1, [m * Hd.sr * 0.5, -Hd.sr * 0.35, -Hd.sr * 0.25]), [Hd.sr * 0.5, Hd.sr * 0.48, Hd.sr * 0.62], { ...Hc, color: C.snout, mat: M.snout, k: k * 0.3 });
+          if (Hd.jaw) {
+            s.limb(add(P.S0, [0, -Hd.sr * 0.55, -Hd.r * 0.1]), add(P.S1, [0, -Hd.sr * 0.7, -Hd.sr * 0.4]), Hd.sr * 0.62, Hd.sr * 0.5, { color: C.snout, mat: M.snout, bone: 'jaw', k: k * 0.4 });
+            s.ellipsoid(add(P.S1, [0, -Hd.sr * 0.85, -Hd.sr * 0.55]), [Hd.sr * 0.42, Hd.sr * 0.3, Hd.sr * 0.42], { color: C.snout, mat: M.snout, bone: 'jaw', k: k * 0.3 });
+          }
+          eyesOn(s, P, Hd, { color: C.eye, lid: { color: C.head, mat: M.head }, rim: C.rim, ...eye });
+        });
         noseOn(s, P, Hd, { color: C.nose, mat: 'nose', bone: 'head' });
         mouthOn(s, P, Hd, C.mouth);
         earsOn(s, P, Hd, ears, { color: C.ears, mat: M.ears }, C.inner);
-        eyesOn(s, P, Hd, { color: C.eye, lid: { color: C.head, mat: M.head }, ...eye });
       }
       // The tail, in two.
       s.limb(P.T0, P.T1, T.r, (T.r + T.tip) / 2, { color: C.tail, mat: M.tail, bone: 'tail', k: k * 0.5 });
@@ -262,7 +278,7 @@ function mouthOn(s, P, Hd, color) {
  * one looks (a dog's forward, a horse's out to the side); `size` its
  * radius, as a share of the head's.
  */
-function eyesOn(s, P, Hd, { color, lid, look = [0.5, 0.12, 0.86], size = 0.19, pupil = 'round' }) {
+function eyesOn(s, P, Hd, { color, lid, rim = null, look = [0.5, 0.12, 0.86], size = 0.19, pupil = 'round' }) {
   const r = Hd.r * size;
   for (const m of [1, -1]) {
     const d = unit([m * look[0], look[1], look[2]]);
@@ -275,6 +291,9 @@ function eyesOn(s, P, Hd, { color, lid, look = [0.5, 0.12, 0.86], size = 0.19, p
     const rot = [-Math.asin(d[1]), Math.atan2(d[0], d[2]), 0];
     s.ellipsoid(add(add(c, [0, r * 0.6, 0]), d, r * 0.05), [r * 1.1, r * 0.48, r * 1.0], { ...lid, bone: 'head', k: r * 0.3, rot });
     s.ellipsoid(add(add(c, [0, -r * 0.72, 0]), d, -r * 0.05), [r * 1.0, r * 0.36, r * 0.92], { ...lid, bone: 'head', k: r * 0.3, rot });
+    // The brow over it, and a dark rim round it, as an animal's eye has.
+    s.ellipsoid(add(add(c, [m * -r * 0.15, r * 1.25, 0]), d, -r * 0.35), [r * 1.35, r * 0.5, r * 0.9], { ...lid, bone: 'head', k: r * 0.45, rot: [rot[0], rot[1], m * -0.2] });
+    s.paint((p) => Math.abs(Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]) - r * 1.08) - r * 0.09, rim ?? '#1e1612', r * 0.05);
   }
 }
 

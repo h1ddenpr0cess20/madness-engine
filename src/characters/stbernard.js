@@ -32,7 +32,7 @@ const FACE = (p, n) => {
 export default quadruped({
   name: 'stbernard',
   scale: 1.55,
-  budget: 36000,
+  budget: 84000,
   hip: 0.27,
   len: 0.17,
   girth: [0.1, 0.1],

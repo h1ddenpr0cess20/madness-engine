@@ -19,6 +19,7 @@ const HORN = (p) => {
 
 export default quadruped({
   name: 'bull',
+  budget: 90000,
   scale: 1.55,
   hip: 0.31,
   len: 0.18,

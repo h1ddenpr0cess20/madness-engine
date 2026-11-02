@@ -14,6 +14,7 @@ const BLANKET = bands(2, 0.03, '#c82a2a', '#f0c030', 0.45, 0.15);
 
 export default quadruped({
   name: 'camel',
+  budget: 90000,
   scale: 1.55,
   hip: 0.44,
   len: 0.16,
