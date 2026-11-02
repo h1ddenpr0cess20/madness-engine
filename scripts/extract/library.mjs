@@ -239,7 +239,7 @@ function catalog(kind, name, places, about) {
 
 const ABOUT = {
   characters: 'The people, creatures and monsters. Most are sculpted definitions (the default export) for `createModel`; `humanoid`, `quadruped`, `person` and `wardrobe` are the bodies and clothes they are built from; `slime`, `egg` and `boulder` are built from their own geometry.',
-  props: 'What lies about to be picked up: sculpted, still, for `createStatic`.',
+  props: 'What lies about to be picked up: sculpted, still, for `createStatic`, and the colourable roleplaying dice (`DICE`) in `props/dice`.',
   heroes: 'The balls the games are played as, each with what it is made of.',
   scenery: 'The world round the ball: the town\'s street furniture and vehicles (`bakeData` in models/legacy-bake), the dungeon\'s walls, torches and exit, and the light show that lights a venue (`lightshow`: createLightshow(GFX, venue)).',
   textures: 'Painted on canvases at startup. `painters` is the toolkit and the floors and walls; `venue` the rock clubs\' floors, walls, belts, grilles, tape, shutters, panels and glows; `town/` the town\'s; `lava` a material; `rooms/` what shiny things reflect (each `paintRoom`) and `skies/` what is round the scene (each `paintSky`).',
@@ -286,6 +286,8 @@ function contents(places, moods) {
       const which = ranked.map((v) => `\`${posix.basename(v.path, '.js')}\` (${v.games.map(title).join(', ')})`).join('<br>');
       lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${cell(blurb([...versions.values()].find((v) => v.path === place).files[0]))} |`);
     }
+    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Seven colourable roleplaying dice: D4, D6, D8, D10, percentile D%, D12 and D20. Each is a standalone resin prop, separate from the dungeon roller’s d20 character. |');
+    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone resin dice props: D4, numbered and pip D6, D8, D10, percentile D%, D12 and D20. Each has a colourable resin finish. |');
     lines.push('');
   }
   lines.push('## moods', '', ABOUT.moods, '', '| Path | Versions (games) | What it is |', '|---|---|---|');
@@ -355,9 +357,9 @@ export async function build(dirs) {
     'Every sculpted character in the library, by name: the default version of',
     'each. Hand one to `createModel` (models/model.js) or a bake library.',
   ]));
-  out.set('props/index.js', catalog('props', 'PROPS', places, [
+  out.set('props/index.js', `${catalog('props', 'PROPS', places, [
     'Every sculpted prop in the library, by name: the default version of each.',
-  ]));
+  ])}\nexport { DICE, DICE_TYPES, createDieProp, createD4, createD6, createD6Pips, createD8, createD10, createDPercentile, createD12, createD20 } from '../dice.js';\n`);
 
   for (const [path, text] of Object.entries(moods.files)) out.set(path, text);
 

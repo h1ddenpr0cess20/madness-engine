@@ -282,6 +282,7 @@ function animGroup(built) {
 /** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
+  if (pal.kind === 'dice') return [[ 'Resin', pal.color, c.color, (v) => { c.color = v; }, () => { delete c.color; } ]];
   const rows = [
     ['Skin', pal.skin, c.skin, (v) => { c.skin = v; }, () => { delete c.skin; }],
     ['Hair', pal.hair ?? '#3a2a20', c.hair, (v) => { c.hair = v; }, () => { delete c.hair; delete c.brow; }],
@@ -306,6 +307,11 @@ function colourGroup(item) {
   const group = $('colourgroup');
   group.style.display = item.palette ? '' : 'none';
   if (!item.palette) return;
+  const isDice = item.palette.kind === 'dice';
+  $('colourdiverse').style.display = isDice ? 'none' : '';
+  $('colourhint').textContent = isDice
+    ? 'Change the resin colour of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
+    : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
   $('colourrows').replaceChildren(...colourRows(item).map(([label, was, now, set, clear]) => {
     const input = el('input', { type: 'color', value: now ?? was });
     const undo = el('button', { title: 'Back to how they come', textContent: '×' });

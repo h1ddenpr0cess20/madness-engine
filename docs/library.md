@@ -192,7 +192,7 @@ The people, creatures and monsters. Most are sculpted definitions (the default e
 
 ## props
 
-What lies about to be picked up: sculpted, still, for `createStatic`.
+What lies about to be picked up: sculpted, still, for `createStatic`, and the colourable roleplaying dice (`DICE`) in `props/dice`.
 
 | Path | Versions (games) | What it is |
 |---|---|---|
@@ -222,6 +222,7 @@ What lies about to be picked up: sculpted, still, for `createStatic`.
 | `props/pumpkin` | `pumpkin` (blubber) | Pumpkins: a fat one of eight ribs, squat, its crown sunk round a crooked stalk, waxy orange deepening into the grooves. |
 | `props/sweets` | `sweets` (blubber) | The sweets, from October to December. |
 | `props/winter` | `winter` (blubber) | December's: the snow lantern — a cone of snowballs heaped in rings with a candle inside, glowing out between them (`snowlantern`; unlit, `snowheap`) — the big snowball that rolls down the halls, snowy pines, rocks under snow, and clusters of ice crystals. |
+| `props/dice` | `DICE` (engine) | Eight standalone resin dice props: D4, numbered and pip D6, D8, D10, percentile D%, D12 and D20. Each has a colourable resin finish. |
 
 ## heroes
 
