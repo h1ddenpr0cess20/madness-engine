@@ -20,6 +20,7 @@ import vinyl from './vinyl.js';
 import whetstone from './whetstone.js';
 import { bones, cauldron, coffin, cross, deadtree, haybale, mushrooms, obelisk, scarecrow, tombstone } from './halloween.js';
 import { barrel, cornshock, gourd, haystack, table, whitepumpkin } from './harvest.js';
+import { GROCERIES } from './groceries.js';
 import { bigpumpkin, jack, pumpkin, pumpkinpile } from './pumpkin.js';
 import { candycane, candycorn, caramelapple, gumdrop, lollipop, peppermint, sweet } from './sweets.js';
 import { crystals, pine, snowball, snowheap, snowlantern, snowrock } from './winter.js';
@@ -35,5 +36,7 @@ export const PROPS = {
   sweet, candycorn, lollipop, caramelapple, peppermint, gumdrop, candycane,
   haybale, deadtree, scarecrow, tombstone, cross, obelisk, coffin, bones, mushrooms, cauldron,
   snowheap, snowlantern, snowball, pine, snowrock, crystals,
+  // Bodega's: the corner store's stock, and the carton it comes in.
+  ...GROCERIES,
 };
 export { DICE, DICE_TYPES, createDieProp, createD4, createD6, createD6Pips, createD8, createD10, createDPercentile, createD12, createD20 } from '../dice.js';
