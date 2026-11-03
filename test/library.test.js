@@ -195,3 +195,31 @@ test('a person in the sit clip is let down onto the floor-standing feet, and the
   assert.ok(Math.abs(start.top - stand.top) < 0.03, 'it starts from standing');
   assert.ok(sat.low > -0.01, `the feet stay on the floor, not ${(sat.low * 1000).toFixed(1)} thousandths under it`);
 });
+
+test('skipping the shapes too far off to matter leaves the field as it was, everywhere near the surface', async () => {
+  const { Sculpt } = await import('../src/models/sdf.js');
+  for (const name of ['punk', 'nonna']) {
+    const def = (await import(`../src/characters/${name}.js`)).default;
+    const s = new Sculpt();
+    def.sculpt(s);
+    const [lo, hi] = s.bounds(0.03);
+    s.prepare(lo, hi, 0.07);
+    const boxes = s.shapes.map((sh) => sh.box);
+    // Every shape's box taken to be everywhere: nothing is skipped, so this is the field the long way.
+    const everywhere = [[-1e9, -1e9, -1e9], [1e9, 1e9, 1e9]];
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+    let checked = 0, worst = 0;
+    for (let i = 0; i < 40000; i++) {
+      const p = [lo[0] + rnd() * (hi[0] - lo[0]), lo[1] + rnd() * (hi[1] - lo[1]), lo[2] + rnd() * (hi[2] - lo[2])];
+      s.shapes.forEach((sh) => { sh.box = everywhere; });
+      const long = s.field(p);
+      s.shapes.forEach((sh, k) => { sh.box = boxes[k]; });
+      if (Math.abs(long) > 0.03) continue;
+      checked++;
+      worst = Math.max(worst, Math.abs(s.field(p) - long));
+    }
+    assert.ok(checked > 500, `${name}: ${checked} points near the surface`);
+    assert.ok(worst < 1e-6, `${name}: the field is off by ${worst}`);
+  }
+});

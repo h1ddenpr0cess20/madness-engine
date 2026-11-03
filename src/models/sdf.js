@@ -218,6 +218,9 @@ const smin = (a, b, k) => {
 
 const smax = (a, b, k) => -smin(-a, -b, k);
 
+/** How much of its distance from a shape's box a shape's field is trusted to be at least (a field can run well under the true distance: a stretched ellipsoid's, a loft's, a warped shape's). */
+const CULL = 0.4;
+
 // ——————————————————————————————————————— the sculpt
 
 let shapeId = 0;
@@ -615,9 +618,16 @@ export class Sculpt {
   field(p) {
     let d = 1e9;
     const list = this.near(p);
+    const x = p[0], y = p[1], z = p[2];
     for (let i = 0; i < list.length; i++) {
       const s = list[i];
       if (s.op === 'add') {
+        // A shape further off than the surface so far, by more than it melts in over, can't change it: not worth its distance.
+        const lo = s.box[0], hi = s.box[1];
+        const gx = Math.max(lo[0] - x, 0, x - hi[0]), gy = Math.max(lo[1] - y, 0, y - hi[1]), gz = Math.max(lo[2] - z, 0, z - hi[2]);
+        const g2 = gx * gx + gy * gy + gz * gz;
+        // (Outside its box only: inside, a shape's distance can be anything, down to negative.)
+        if (g2 > 0 && Math.sqrt(g2) * CULL - d >= s.k) continue;
         d = smin(d, s.d(p), s.k);
       } else if (s.op === 'sub') {
         d = smax(d, -s.d(p), s.k);
