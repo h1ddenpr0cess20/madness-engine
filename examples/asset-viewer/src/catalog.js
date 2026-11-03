@@ -344,30 +344,6 @@ function diceItems() {
   }));
 }
 
-  return DICE_TYPES.map(({ id, label, faceCount, range }) => ({
-    id: 'props/dice/' + id,
-    category: 'Props',
-    group: 'dice',
-    name: label + ' — RPG die',
-    source: 'props/dice',
-    kind: 'object',
-    dieType: id,
-    palette: {
-      kind: 'dice',
-      color: '#3a3350',
-      markingColor: '#e7e0f7',
-      ...(id === 'd20' ? { highlightColor: '#ffd479' } : {}),
-    },
-    build({ colours = {} } = {}) {
-      const made = createDieProp(GFX, id, colours);
-      return {
-        object: made.group,
-        info: { Source: 'props/dice', Shape: label, Faces: faceCount, Values: range, Material: 'resin' },
-      };
-    },
-  }));
-}
-
 /** A standalone resin bowling ball, kept on the Props shelf beside the dice. */
 function bowlingBallItems() {
   return [{
