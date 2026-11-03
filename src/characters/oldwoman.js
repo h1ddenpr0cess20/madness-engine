@@ -21,7 +21,7 @@ export default person({
   shape: { legs: 0.9, girth: 1.12, hips: 1.18, head: 1.04 },
   belly: 0.6,
   skin: '#eec9b0',
-  look: { torso: CARDIGAN, sleeve: CARDIGAN, cuff: CARDIGAN, legs: SKIRT, shin: '#b9a08c', skirt: { hem: 0.085, flare: 1.12 }, boot: '#1c1a1e', sole: '#0c0a0e' },
+  look: { torso: CARDIGAN, sleeve: CARDIGAN, cuff: CARDIGAN, legs: SKIRT, shin: '#b9a08c', skirt: { hem: 0.115, flare: 1.12 }, boot: '#1c1a1e', sole: '#0c0a0e' },
   mats: { boot: 'leather' },
   face: { eyeColor: '#7a96a8', brow: '#c8c8c4', jaw: 1.0, blush: 0.5 },
   style: {
