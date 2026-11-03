@@ -113,7 +113,7 @@ export function joints(b = 1) {
   return J;
 }
 
-/** A colour (or a colour function) darkened, for a sole that wasn't given one. */
+/** A color (or a color function) darkened, for a sole that wasn't given one. */
 const darker = (color) => (typeof color === 'function' ? (p, n) => color(p, n).map((v) => v * 0.42) : rgb(color).map((v) => v * 0.42));
 
 /** A slab of sole: flat top and bottom, straight sides round an oval of radii `r`[0] by `r`[2], `r`[1] either side of `c` up and down, its edges rounded. */
@@ -262,12 +262,12 @@ export function band(s, y, r, thick, o, tilt = 0.03) {
   return c[2] + rz + thick * 0.5;
 }
 
-/** A belt buckle on the front of a belt at `front`: a frame round an open middle, and the tongue across it. */
-export function buckle(s, y, front, color, bone) {
+/** A belt buckle on the front of a belt at `front`: a frame round an open middle, and the tongue across it (`size` times as big). */
+export function buckle(s, y, front, color, bone, size = 1) {
   const B = { color, mat: 'metal', bone, k: 0.001 };
-  s.box([0, y, front + 0.0015], [0.0135, 0.0105, 0.0022], 0.0016, B);
-  s.box([0, y, front + 0.0035], [0.0085, 0.0058, 0.004], 0.001, { op: 'sub', k: 0.0008 });
-  s.box([0.002, y, front + 0.0018], [0.0062, 0.0016, 0.0016], 0.0008, B);
+  s.box([0, y, front + 0.0015 * size], [0.0135 * size, 0.0105 * size, 0.0022 * size], 0.0016 * size, B);
+  s.box([0, y, front + 0.0035 * size], [0.0085 * size, 0.0058 * size, 0.004 * size], 0.001 * size, { op: 'sub', k: 0.0008 });
+  s.box([0.002 * size, y, front + 0.0018 * size], [0.0062 * size, 0.0016 * size, 0.0016 * size], 0.0008 * size, B);
 }
 
 /** Skin: warm, rosier where it faces forward and down a little. */
@@ -309,9 +309,9 @@ export function tube(s, a, b, r1, r2, o) {
 /**
  * The parts a person's own body and clothes are meshed in, each on its own
  * so that where one garment meets another, or the skin, there is a clean
- * edge and no colour bleeding across it: the skin ('body'), the head, the
+ * edge and no color bleeding across it: the skin ('body'), the head, the
  * hands (with a bare forearm, or a glove), the shirt or jacket ('top'), its
- * sleeves where they are another colour ('sleeves', 'cuffs'), the trousers,
+ * sleeves where they are another color ('sleeves', 'cuffs'), the trousers,
  * shorts or skirt ('bottoms'), socks or tights ('hose'), the belt and the
  * shoes; and what is worn over them, fitted to them as it is made: a coat,
  * a vest, an apron, a cape ('outer', and 'outer2' over that) and straps,
@@ -368,7 +368,7 @@ export function skirt(s, at, { top = 0.372, hem = 0.16, flare = 1.25, color, mat
 }
 
 /**
- * The body, dressed: `look` gives the colours (functions or hex) of `skin`,
+ * The body, dressed: `look` gives the colors (functions or hex) of `skin`,
  * `torso`, `sleeve` (upper arm), `cuff` (forearm), `hand`, `legs`, `boot`,
  * and if they have them a `belt` (and its `buckle`) and a `sole` under the
  * shoes; and `mats` the materials of the same (default 'cloth', 'skin' for
@@ -377,11 +377,12 @@ export function skirt(s, at, { top = 0.372, hem = 0.16, flare = 1.25, color, mat
  * `tuck`), sleeves to the wrist with a cuff, or short with the arm coming
  * out of them, or none; a glove where a bare arm meets a covered hand.
  * The calf is the trousers (`legs`) down to the shoe unless `shin` says
- * otherwise: a colour (socks, tights) or 'skin', under shorts that end
+ * otherwise: a color (socks, tights) or 'skin', under shorts that end
  * above the knee, or under a `skirt` ({ hem, flare }: see `skirt`). `boots`
  * pulls a boot (in `boot`) up over the calf, to just under the knee or to
  * the height given; `shoeless` ('L' or 'R') leaves a foot bare of its shoe.
  * `b` is the breadth; `belly` (0 to 2 or so) how far a belly sticks out.
+ * `beltWide` makes the belt that many times as wide.
  */
 export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
   const J = joints(b);
@@ -429,8 +430,10 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
   // A belt, if they wear one: a strap round the top of the trousers, on them, and a buckle.
   if (look.belt) {
     s.part('belt', () => {
-      const front = band(s, 0.352, 0.0078, 0.0036, { color: look.belt, mat: 'leather', bone: 'hips' });
-      if (look.buckle) buckle(s, 0.352, front, look.buckle, 'hips');
+      // (`beltWide`: how many times as wide as an ordinary belt it is, with a buckle to match.)
+      const wide = look.beltWide ?? 1;
+      const front = band(s, 0.352, 0.0078 * wide, 0.0036 * Math.sqrt(wide), { color: look.belt, mat: 'leather', bone: 'hips' });
+      if (look.buckle) buckle(s, 0.352, front, look.buckle, 'hips', Math.sqrt(wide) * 1.2);
     });
   }
 
@@ -438,7 +441,7 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
     const S = side(mm), sh = J[`shoulder${S}`], el = J[`elbow${S}`], wr = J[`wrist${S}`];
     const along = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
     // The arm: a round shoulder grown out of the top of the trunk, the upper arm tapering to the elbow. In a
-    // long sleeve it is the shirt's (or, another colour, a sleeve of its own); in a short one it is bare under a
+    // long sleeve it is the shirt's (or, another color, a sleeve of its own); in a short one it is bare under a
     // tube of cloth open halfway to the elbow; bare, it is the skin's.
     const sleeved = !bare('sleeve'), cuffed = !bare('cuff');
     const shortSleeve = sleeved && !cuffed;
@@ -495,7 +498,7 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
       });
     }
     if (look.shoeless === S) continue;
-    // Bare feet: a foot, melted into the leg, with its toes; no shoe. In sandals (`sandals`, their colour), the
+    // Bare feet: a foot, melted into the leg, with its toes; no shoe. In sandals (`sandals`, their color), the
     // bare foot on a flat sole, a thong from between the first two toes over the top of the foot to either side.
     if (bare('boot') && (look.sandals || (!look.sole && !look.boots))) {
       s.part(legPart(shinMat, shin) === 'body' ? 'body' : 'shoes', () => bareFoot(s, a, mm, { color: c('boot'), mat: 'skin', bone: `foot${S}` }));
@@ -838,14 +841,22 @@ export function strap(s, path, { width = 0.014, thick = 0.004, lift = 0.0008, co
  * a distance, or near enough): a vest, a waistcoat, a coat's body, a bib,
  * an apron, a tabard. Below `hang` it hangs straight down from the most
  * that stands out above it, rather than following the legs in. In part
- * `part`, on the bones of what it lies on (or `bone`).
+ * `part`, on the bones of what it lies on (or `bone`). With `taper` it thins to
+ * nothing over that distance in from its edge (hair growing out of skin).
  */
-export function shell(s, region, { thick = 0.006, lift = 0.001, color, mat = 'cloth', part = 'outer', over = CORE, keep = () => true, bone = null, k = 0.003, bones = null } = {}) {
+export function shell(s, region, { thick = 0.006, lift = 0.001, color, mat = 'cloth', part = 'outer', over = CORE, keep = () => true, bone = null, k = 0.003, bones = null, taper = 0 } = {}) {
   const field = bodyField(s, over, keep);
   built(s, (w) => {
     const from = (p) => (w ? w.from(p) : p);
     const [lo, hi] = field.bounds(thick + lift + 0.01);
-    const d = (p) => roundMax(field.field(p) - lift - thick, region(from(p)), Math.min(0.004, thick * 0.6));
+    // `taper`: over that distance in from its edge the shell thins to nothing, so it grows out of what it lies on (hair
+    // out of skin) rather than stopping in a step.
+    const d = taper
+      ? (p) => {
+        const r = region(from(p)), t = Math.max(0, Math.min(1, -r / taper));
+        return roundMax(field.field(p) - lift - thick * t * t * (3 - 2 * t), r, Math.min(0.004, thick * 0.6));
+      }
+      : (p) => roundMax(field.field(p) - lift - thick, region(from(p)), Math.min(0.004, thick * 0.6));
     if (bones) {
       // One shape for each bone it moves with, each where `bones[name](p)` (as sculpted) is negative.
       for (const [bn, where] of Object.entries(bones)) s.part(part, () => s.shape((p) => Math.max(d(p), where(from(p))), [lo, hi], { color, mat, bone: bn, k }));
@@ -964,9 +975,9 @@ function outside(p, c, R, r) {
 }
 
 /**
- * A head: skull and cheeks, a nose, ears, big eyes (white, a coloured iris,
+ * A head: skull and cheeks, a nose, ears, big eyes (white, a colored iris,
  * a black pupil and a catch-light) under lids, a mouth, brows. `brow` is
- * the brows' colour; `ears` false hides them (under a hood or a helmet);
+ * the brows' color; `ears` false hides them (under a hood or a helmet);
  * `mood` 1 sets the brows in a frown and the mouth firm. The head and the
  * neck are a mesh of their own, finer than the body's, so the face is
  * crisp, and the neck goes into the collar on a clean line.
@@ -1082,7 +1093,7 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
 }
 
 /**
- * Hair's colour (a function or hex) in strands: lighter and darker streaks
+ * Hair's color (a function or hex) in strands: lighter and darker streaks
  * running down from the crown `at`, fine ones over broad ones.
  */
 export function strands(color, at = [0, 0.695, -0.006]) {
@@ -1092,7 +1103,7 @@ export function strands(color, at = [0, 0.695, -0.006]) {
     const v = noise(x * 5.5, z * 5.5, p[1] * 4) * 0.5 + noise(x * 10 + 40, z * 10, p[1] * 6) * 0.5;
     return base(p, n).map((c) => c * (0.66 + v * 0.62));
   };
-  // The same strands in another colour (see person.js `variant`).
+  // The same strands in another color (see person.js `variant`).
   fn.retint = (other) => strands(other, at);
   return fn;
 }
@@ -1359,12 +1370,102 @@ export function cover(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'bro
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const window_ = (t, a, b) => ease((t - a) / (b - a));
+/** How far the hips are raised for a run (the planted foot just reaches the floor as they bob). */
+const RUN_LIFT = 0.02;
+/** The length of the thigh and the shin, and the size of the body for what it does up and down (1 for the sculpt as drawn), as built. */
+const legsOf = (k) => {
+  const y = (name) => k.pivots[k.index.get(name)]?.[1] ?? 0;
+  const thigh = Math.max(0.05, y('thighL') - y('shinL')), shin = Math.max(0.05, y('shinL') - y('footL'));
+  return { thigh, shin, size: (thigh + shin) / 0.26 };
+};
+
+/**
+ * A jump, over about a second from its start (`t` in seconds): a crouch with the arms swung back, a drive up off both
+ * feet with the arms thrown overhead, the knees drawn up at the top, and a landing that gives at the knees before the
+ * body straightens. `leap` is the same from a run: a longer, flatter arc with one leg reaching forward and the other
+ * trailing, the arms flung out against them. `weapon` leaves the right arm on its weapon. The body is lifted by the
+ * root, so in the air it is off the ground by `height`.
+ */
+export function jump(k, t, { leap = false, weapon = false } = {}) {
+  const t0 = leap ? 0.18 : 0.24, drive = 0.1, air = leap ? 0.56 : 0.44, land = leap ? 0.36 : 0.3;
+  const liftoff = t0 + drive, touchdown = liftoff + air;
+  // How far into each part of it: the crouch (down, then driving up), the flight, and the landing's give.
+  const down = window_(t, 0, t0) * (1 - window_(t, t0, liftoff));
+  const flight = window_(t, t0 + 0.02, liftoff + 0.08) * (1 - window_(t, touchdown - 0.1, touchdown));
+  const arc = Math.sin(Math.max(0, Math.min(1, (t - liftoff) / air)) * Math.PI);
+  const give = window_(t, touchdown - 0.04, touchdown + 0.08) * (1 - window_(t, touchdown + 0.08, touchdown + land));
+  const bent = Math.max(down, give * 0.75);
+  // Off the ground along the arc; down into the crouch and the landing, as far as the knees bending takes the hips (so the
+  // feet stay on the floor whatever the length of the legs).
+  const { thigh: L1, shin: L2, size } = legsOf(k);
+  k.move('root', 0, (leap ? 0.1 : 0.14) * size * arc, 0);
+  k.move('hips', 0, -(L1 * (1 - Math.cos(1.05 * bent)) + L2 * (1 - Math.cos(0.75 * bent))), 0);
+  // Crouched, the knees forward and the feet flat; in the air, drawn up (or, leaping, the legs split) with the toes pointed.
+  const tuck = flight * (1 - bent);
+  for (const [S, lead] of [['L', 1], ['R', 0]]) {
+    const thigh = -1.05 * bent + (leap ? (lead ? -1.25 : 0.75) : -0.6) * tuck;
+    const shin = 1.8 * bent + (leap ? (lead ? 0.15 : 1.5) : 1.15) * tuck;
+    k.turn(`thigh${S}`, thigh, 0, 0);
+    k.turn(`shin${S}`, shin, 0, 0);
+    // The foot flat on the floor while crouched; toes pointed in the air.
+    k.turn(`foot${S}`, -0.75 * bent + 0.35 * tuck * Math.min(1, size), 0, 0);
+  }
+  k.turn('spine', 0.3 * bent + (leap ? 0.18 : -0.05) * tuck, 0, 0);
+  k.turn('chest', 0.12 * bent - 0.08 * tuck, 0, 0);
+  k.turn('head', -0.2 * bent - 0.12 * tuck, 0, 0);
+  // The arms: swung back for the crouch, up and out in the air (against the legs, leaping), forward to balance the landing.
+  const back = bent * (1 - give) , fwd = give * 0.75;
+  k.turn('armL', 0.9 * back - 0.55 * fwd + (leap ? -1.4 : -2.5) * tuck, 0, 0.35 * tuck);
+  k.turn('foreL', -0.3 * back - 0.5 * fwd - 0.2 * tuck, 0, 0);
+  if (weapon) {
+    k.turn('armR', -0.35 + 0.3 * back - 0.5 * tuck, 0, -0.1);
+    k.turn('foreR', -0.6, 0, 0);
+  } else {
+    k.turn('armR', 0.9 * back - 0.55 * fwd + (leap ? 0.9 : -2.5) * tuck, 0, -0.35 * tuck);
+    k.turn('foreR', -0.3 * back - 0.5 * fwd - 0.2 * tuck, 0, 0);
+  }
+}
+
+/**
+ * The legs, trunk and arms of a run, over what every clip starts with: twice the cadence of a walk, a long
+ * stride with the knee of the swinging leg driven high and the foot kicked up behind it, the trunk leaning into
+ * it, and the arms bent to a right angle and pumping against the legs. The body bounces more than in a walk,
+ * lowest as the planted leg passes under it and highest in the air. `weapon` leaves the right arm ready for one
+ * (swinging a little, as in a walk) and pumps only the left.
+ */
+export function runCycle(k, T, { speed = 1, heavy = 0, weapon = false } = {}) {
+  const ph = T * (15 - heavy * 3) * Math.max(0.5, speed), g = Math.sin(ph), c = Math.cos(ph);
+  k.move('hips', 0, (RUN_LIFT - Math.abs(c) * 0.016) * legsOf(k).size, 0);
+  k.turn('hips', 0, g * 0.14, 0);
+  k.turn('spine', 0.14, 0, 0);
+  k.turn('chest', 0.1, -g * 0.22, 0);
+  k.turn('head', -0.16, -g * 0.06, 0);
+  for (const [S, m] of [['L', 1], ['R', -1]]) {
+    // Where this leg is in its stride (1 forward, -1 back) and whether it is swinging forward (c > 0) or driving back.
+    const a = m * g, swing = Math.max(0, m * c);
+    k.turn(`thigh${S}`, -a * 0.95, 0, 0);
+    k.turn(`shin${S}`, 0.25 + swing * 1.65, 0, 0);
+    // (The foot's pitch is less on short legs: the foot is as long as ever, and its toe or heel would go through the floor.)
+    k.turn(`foot${S}`, (-a * 0.16 + swing * 0.15) * Math.min(1, legsOf(k).size), 0, 0);
+  }
+  // The arms against the legs: elbows at a right angle, hands swinging from the hip to the chest.
+  k.turn('armL', g * 0.95, 0, 0.1);
+  k.turn('foreL', -1.2 + g * 0.2, 0, 0);
+  if (weapon) {
+    k.turn('armR', -0.35 - g * 0.25, 0, -0.1);
+    k.turn('foreR', -0.6, 0, 0);
+  } else {
+    k.turn('armR', -g * 0.95, 0, -0.1);
+    k.turn('foreR', -1.2 - g * 0.2, 0, 0);
+  }
+}
+
 
 /**
  * How a hero moves. `style.attack` is 'slash' (a sword across), 'chop' (an
  * axe from over the head), 'thrust' (a staff jabbed forward) or 'smite' (a
  * mace or staff brought down); `style.heavy` slows and deepens it all.
- * Clips: idle, walk, attack, cast, hit, ko, win, sit.
+ * Clips: idle, walk, run, jump, leap, attack, cast, hit, ko, win, sit.
  */
 export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 }, style = {}) {
   const T = time + seed;
@@ -1398,6 +1499,10 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('armL', g * 0.45, 0, 0);
     k.turn('armR', -0.35 - g * 0.2, 0, -0.1);
     k.turn('foreR', -0.6, 0, 0);
+  } else if (clip === 'run') {
+    runCycle(k, T, { speed, heavy, weapon: true });
+  } else if (clip === 'jump' || clip === 'leap') {
+    jump(k, t, { leap: clip === 'leap', weapon: true });
   } else if (clip === 'attack') {
     attack(k, t, style);
   } else if (clip === 'cast') {
@@ -1700,7 +1805,7 @@ export function reachFoot(k, S, sole, target, steps = 16) {
 /**
  * How a person moves: as a hero does (`moveHumanoid`), but with nothing to
  * hold ready, so at rest the hands hang easy and a walk swings both arms.
- * Clips: idle, walk, attack, cast, hit, ko, win, sit.
+ * Clips: idle, walk, run, jump, leap, attack, cast, hit, ko, win, sit.
  */
 export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1, aim = null, reach = null, step = null }, style = {}) {
   const T = time + seed;
@@ -1733,6 +1838,10 @@ export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed 
     k.turn('armR', -g * 0.4, 0, -0.04);
     k.turn('foreL', -0.2 + Math.min(0, g) * 0.3, 0, 0);
     k.turn('foreR', -0.2 - Math.max(0, g) * 0.3, 0, 0);
+  } else if (clip === 'run') {
+    runCycle(k, T, { speed, heavy });
+  } else if (clip === 'jump' || clip === 'leap') {
+    jump(k, t, { leap: clip === 'leap' });
   } else if (clip === 'attack') {
     attack(k, t, style);
   } else if (clip === 'cast') {

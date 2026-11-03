@@ -12,14 +12,14 @@ import { GLYPHS } from '../models/lettering.js';
 
 const HEAD = { bone: 'head' };
 
-/** Hair's colour in strands running along x (a moustache) or down (a beard): lighter and darker hairs. */
+/** Hair's color in strands running along x (a moustache) or down (a beard): lighter and darker hairs. */
 function hairy(color, across = true) {
   const base = typeof color === 'function' ? color : (() => { const c = typeof color === 'string' ? rgb(color) : color; return () => c; })();
   const fn = (p, n) => {
     const v = across ? noise(p[0] * 30, p[1] * 420, p[2] * 30) : noise(p[0] * 300, p[1] * 40, p[2] * 300);
     return base(p, n).map((c) => c * (0.72 + v * 0.5));
   };
-  // The same hairs in another colour (see person.js `variant`).
+  // The same hairs in another color (see person.js `variant`).
   fn.retint = (other) => hairy(other, across);
   return fn;
 }
@@ -125,13 +125,13 @@ export function glasses(s, { rim = '#16161a', round = true, dark = false, size =
   const eyes = s.eyes ?? [[0.041, 0.668, 0.089], [-0.041, 0.668, 0.089]];
   const F = { ...HEAD, color: rim, mat: round ? 'metal' : 'plastic', k: 0.0008 };
   const yaw = 0.16, half = round ? size + 0.0016 : size * 1.15;
-  const centres = [];
+  const centers = [];
   s.part('frames', () => {
     eyes.forEach((e, i) => {
       const m = i === 0 ? 1 : -1;
       // Clear of the lashes and the brow: a little in front of the eye's front.
       const c = [e[0] + m * 0.002, e[1] + 0.001, e[2] + 0.029];
-      centres.push(c);
+      centers.push(c);
       const rot = [Math.PI / 2, m * yaw, 0];
       if (dark) s.cylinder(c, size * 0.96, 0.0016, { ...HEAD, color: lens, mat: 'glass', k: 0.001, rot });
       if (round) s.torus(c, size, 0.0032, { ...F, rot });
@@ -143,7 +143,7 @@ export function glasses(s, { rim = '#16161a', round = true, dark = false, size =
       }
     });
     // The bridge, arched over the nose.
-    const [L, R] = centres, y = (L[1] + R[1]) / 2 + 0.006, z = (L[2] + R[2]) / 2 + 0.001;
+    const [L, R] = centers, y = (L[1] + R[1]) / 2 + 0.006, z = (L[2] + R[2]) / 2 + 0.001;
     s.limb([L[0] - size * 0.92, y - 0.004, z], [0, y, z + 0.002], 0.0026, 0.0026, F);
     s.limb([0, y, z + 0.002], [R[0] + size * 0.92, y - 0.004, z], 0.0026, 0.0026, F);
   });
@@ -159,7 +159,7 @@ export function glasses(s, { rim = '#16161a', round = true, dark = false, size =
     const { d, q, n } = clearance(p);
     return d >= r + gap ? p : q.map((v, i) => v + n[i] * (r + gap));
   };
-  centres.forEach((c, i) => {
+  centers.forEach((c, i) => {
     const m = i === 0 ? 1 : -1;
     // The hinge: a lug on the outside of the rim, pointing back.
     const h0 = [c[0] + m * half * Math.cos(yaw), c[1] + 0.0015, c[2] - half * Math.sin(yaw)];
@@ -274,7 +274,7 @@ export function moustache(s, { color = '#2a1a10', wide = 1, pencil = false, droo
   const mid = (x) => 0.6245 - x * x * (6 + droop * 18);
   const half = (x) => H * Math.max(0, 1 - (Math.abs(x) / W) ** 2) ** 0.55 + 0.0012;
   shell(s, (p) => Math.max(Math.abs(p[1] - mid(p[0])) - half(p[0]), Math.abs(p[0]) - W, 0.07 - p[2]), {
-    color: hairy(color), mat: 'hair', part: 'brows', thick: pencil ? 0.0025 : 0.0055, lift: -0.0008, over: ['head'], bone: 'head', k: 0.002,
+    color: hairy(color, false), mat: 'hair', part: 'brows', thick: pencil ? 0.0025 : 0.0055, lift: -0.0008, over: ['head'], bone: 'head', k: 0.002,
   });
   if (wide > 1.25) {
     // The handlebar's ends, waxed and curled up.
@@ -285,21 +285,43 @@ export function moustache(s, { color = '#2a1a10', wide = 1, pencil = false, droo
 /**
  * A beard over the jaw and chin, lying on the face from the sideburns in
  * front of the ears down round the chin, the mouth left clear. `long` lets
- * it hang down the chest; `full` 0 keeps it to the chin (a goatee).
+ * it hang down the chest; `full` 0 keeps it to the chin (a goatee); `high` is
+ * how far up the cheek it grows (0.668 as given; lower leaves the cheeks bare).
  */
-export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008 } = {}) {
+export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008, high = 0.668 } = {}) {
   const mouth = (p) => Math.hypot(p[0] / 1.5, (p[1] - 0.611) * 1.2) - 0.016;
-  shell(s, (p) => {
+  const smooth = (a, b, x) => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  // Where the beard is (negative inside), in the face's own coordinates.
+  const region = (p) => {
     // Below a line from the sideburns to under the cheekbones, round to the front.
     const side = Math.abs(p[0]);
-    const line = 0.668 - Math.max(0, 0.09 - side) * 0.55 - (full ? 0 : 0.05);
+    const line = high - Math.max(0, 0.09 - side) * 0.55 - (full ? 0 : 0.05);
     const width = full ? 0.2 : 0.034 - Math.max(0, 0.6 - p[1]) * 0.1;
-    return Math.max(p[1] - line, side - width, -mouth(p), -p[2] - 0.02, p[1] - (p[2] > 0.05 ? 0.632 : 1));
-  }, { color: hairy(color, false), mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004 });
+    // In front of the ear and no further back: the sideburn's back edge slants from in front of the ear's lobe down to
+    // the corner of the jaw, so it runs along the face and never over the ear or the neck.
+    const back = ((p[1] - 0.58) * 0.45 - p[2]) * 0.9;
+    // Clear of the cheek above the mouth: the cheek line eases up toward the ear rather than stepping.
+    const cheek = p[1] - (0.632 + (1 - smooth(0.02, 0.075, p[2])) * 0.1);
+    // Under the jaw it ends at the neck: lower at the chin, higher toward the back.
+    const under = 0.552 + Math.max(0, 0.05 - p[2]) - p[1];
+    return Math.max(p[1] - line, side - width, -mouth(p), back, cheek, under);
+  };
+  // Its color is the hair's all the way to its edge (the softness at the edge is the beard thinning out, not skin showing).
+  const hair = hairy(color, false);
+  shell(s, region, { color: hair, mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004, taper: Math.min(full ? 0.015 : 0.006, thick * 2.5) });
+  // The cheeks' blush is painted on the face where the beard's top edge is: paint the beard's own color back over it, so
+  // the top of the beard is hair, not skin. (A recolored person's hair color is applied to it as it is to the shell.)
+  s.paint((p) => region(p), s.tint ? s.tint(hair, 'hair', 'hair') : hair, 0.002);
   if (long) {
+    // A beard that hangs: a lobe under the chin, joined to the beard on the face. It stands out from the chin only as far as it
+    // hangs (a little beard is no bump), and keeps its own color rather than taking the skin's where it melts in.
+    const L = Math.min(long, 1.5);
     s.part('hair', () => {
-      const B = { color: hairy(color, false), mat: 'hair', bone: 'head', k: 0.018 };
-      s.ellipsoid([0, 0.585 - long * 0.03, 0.085], [0.04 * Math.min(1.3, 0.7 + long * 0.3), 0.03 + long * 0.035, 0.03], B);
+      const B = { color: hairy(color, false), mat: 'hair', bone: 'head', k: 0.008 };
+      s.ellipsoid([0, 0.585 - long * 0.03, 0.062 + 0.018 * L], [0.04 * Math.min(1.3, 0.7 + long * 0.3), 0.03 + long * 0.035, 0.02 + 0.012 * L], B);
     });
   }
 }
@@ -373,7 +395,7 @@ export function headphones(s, { color = '#16161a', pad = '#2a2a30', around = fal
 
 /**
  * Block capitals across the chest (`side` 1) or the back (−1), painted on whatever is worn there: `text` from the
- * letters below, `y` their foot, `size` their height, centred on the middle line. Read from behind, the back's
+ * letters below, `y` their foot, `size` their height, centered on the middle line. Read from behind, the back's
  * letters run the other way, so they read right.
  */
 export function print(s, text, { y = 0.45, size = 0.024, color = '#f4f2ee', side = -1, width = 0.0032 } = {}) {

@@ -452,7 +452,7 @@ renderer.setAnimationLoop((now) => {
     view.clock += dt * view.speed;
     const t = view.clock - view.clipStart;
     // The one-shot clips loop, so there is always something to see.
-    view.built.pose({ clip: view.clip, t: view.clip === 'idle' || view.clip === 'walk' ? t : t % 1.6, time: view.clock, seed: 1, speed: 1 });
+    view.built.pose({ clip: view.clip, t: view.clip === 'idle' || view.clip === 'walk' || view.clip === 'run' ? t : t % 1.6, time: view.clock, seed: 1, speed: 1 });
   }
   controls.update();
   key.position.copy(controls.target).addScaledVector(stage.keyFrom, 40);
@@ -680,7 +680,7 @@ addEventListener('keydown', (e) => {
   else if (/^[1-8]$/.test(k)) frame(VIEWS[k - 1][1], VIEWS[k - 1][2]);
 });
 
-window.assetViewer = { catalog, show, options, renderer, scene, camera, controls };
+window.assetViewer = { catalog, show, options, renderer, scene, camera, controls, view };
 applyFilter();
 const start = catalog.find((i) => i.id === decodeURIComponent(location.hash.slice(1))) ?? filtered[0];
 if (start) show(start);
