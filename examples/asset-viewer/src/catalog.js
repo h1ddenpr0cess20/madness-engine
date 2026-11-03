@@ -152,6 +152,13 @@ const HEROES = [
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
   ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
   ['slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createSlimeOrb')],
+  ['bowling ball', (colours = {}) => import('../../../src/heroes/bowling-ball.js').then((m) => m.createBowlingBall(GFX, { colors: colours })), {
+    kind: 'bowling-ball',
+    base: '#192d59',
+    swirl: '#d83b7c',
+    accent: '#f2ba64',
+    holes: '#090d18',
+  }],
   // Floating at its own height, framed on the berry rather than on its halos, which spread far wider.
   ['blubber', () => import('../../../src/heroes/blubber.js').then((m) => {
     const b = m.createBlubber(GFX, { size: 1 });
@@ -195,11 +202,11 @@ function movingItem([name, category, group, make]) {
   };
 }
 
-function heroItem([name, make]) {
+function heroItem([name, make, palette = null]) {
   return {
-    id: `heroes/${name}`, category: 'Heroes', group: 'heroes', name, source: 'heroes', kind: 'object',
-    async build() {
-      const made = await make();
+    id: `heroes/${name}`, category: 'Heroes', group: 'heroes', name, source: 'heroes', kind: 'object', palette,
+    async build({ colours = {} } = {}) {
+      const made = await make(colours);
       // Those that are posed by how far they have come (the yarn ball, its strand laid out behind it) are shown a little way along.
       made?.pose?.(1.2);
       const object = objectOf(made);

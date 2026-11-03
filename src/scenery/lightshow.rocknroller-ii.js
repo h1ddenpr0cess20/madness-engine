@@ -721,7 +721,7 @@ export function createLightshow(GFX, venue) {
     const centre = [f.x, y + high, f.z];
     const g = new GFX.Group();
     g.position.set(...centre);
-    const geometry = new GFX.IcosahedronGeometry(0.34, 2).toNonIndexed();
+    const geometry = new GFX.IcosahedronGeometry(0.34, 5).toNonIndexed();
     const rnd = random(Math.floor(f.x * 31 + f.z * 7));
     const colors = new Float32Array(geometry.attributes.position.count * 3);
     for (let i = 0; i < colors.length; i += 9) {

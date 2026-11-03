@@ -282,6 +282,14 @@ function animGroup(built) {
 /** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
+  if (pal.kind === 'bowling-ball') {
+    return [
+      ['Base resin', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
+      ['Swirl', pal.swirl, c.swirl, (v) => { c.swirl = v; }, () => { delete c.swirl; }],
+      ['Accent veins', pal.accent, c.accent, (v) => { c.accent = v; }, () => { delete c.accent; }],
+      ['Finger holes', pal.holes, c.holes, (v) => { c.holes = v; }, () => { delete c.holes; }],
+    ];
+  }
   if (pal.kind === 'dice') {
     const rows = [
       ['Resin', pal.color, c.color, (v) => { c.color = v; }, () => { delete c.color; }],
@@ -318,10 +326,13 @@ function colourGroup(item) {
   group.style.display = item.palette ? '' : 'none';
   if (!item.palette) return;
   const isDice = item.palette.kind === 'dice';
-  $('colourdiverse').style.display = isDice ? 'none' : '';
+  const isBowlingBall = item.palette.kind === 'bowling-ball';
+  $('colourdiverse').style.display = isDice || isBowlingBall ? 'none' : '';
   $('colourhint').textContent = isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
-    : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
+    : isBowlingBall
+      ? 'Change the bowling ball base resin, marbled swirl, accent veins, and finger-hole finish. Apply repaints the existing sphere.'
+      : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
   $('colourrows').replaceChildren(...colourRows(item).map(([label, was, now, set, clear]) => {
     const input = el('input', { type: 'color', value: now ?? was });
     const undo = el('button', { title: 'Back to how they come', textContent: '×' });
@@ -351,6 +362,11 @@ $('colourcopy').onclick = async () => {
       + "import { createDieProp } from 'madness-engine/props/dice';\n\n"
       + "const die = createDieProp(GFX, '" + view.item.dieType + "', "
       + JSON.stringify(view.colours, null, 2) + ");";
+  } else if (view.item.palette?.kind === 'bowling-ball') {
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { createBowlingBall } from 'madness-engine/heroes/bowling-ball';\n\n"
+      + "const bowlingBall = createBowlingBall(GFX, { colors: "
+      + JSON.stringify(view.colours, null, 2) + " });";
   } else {
     const name = view.item.name.replace(/[^a-z0-9]/gi, '');
     code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;

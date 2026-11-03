@@ -15,6 +15,13 @@ const files = KINDS.flatMap((k) => walk(join(src, k))).map((f) => relative(src, 
 /** `characters/punk.rocknroller-iii.js` is a version of `characters/punk.js`. */
 const VERSION = /^(.*)\.(madness|dungeon-roller|catroller|rocknroller|rocknroller-ii|rocknroller-iii|metroll|metrlol|petroll)\.js$/;
 
+test('the engine-owned bowling ball is preserved by extraction and listed in the library', () => {
+  const extraction = readFileSync(join(here, '../scripts/extract/library.mjs'), 'utf8');
+  const library = readFileSync(join(here, '../docs/library.md'), 'utf8');
+  assert.match(extraction, /ENGINE_OWNED/);
+  assert.ok(library.includes('heroes/bowling-ball'));
+});
+
 test('the library is laid out by what things are, and no game has a folder of its own', () => {
   for (const kind of KINDS) {
     for (const entry of readdirSync(join(src, kind))) {

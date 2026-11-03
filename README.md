@@ -37,6 +37,22 @@ it in that set's mood. Start a new game by copying it:
 cd examples/starter && npm install && npm run dev
 ```
 
+## Bowling ball
+
+The engine includes a glossy resin bowling ball with three finger holes and a flowing, three-colour marbled surface. Its palette can be changed at runtime without rebuilding the sphere:
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createBowlingBall } from 'madness-engine/heroes/bowling-ball';
+
+const bowlingBall = createBowlingBall(GFX, {
+  colors: { base: '#192d59', swirl: '#d83b7c', accent: '#f2ba64' },
+});
+scene.add(bowlingBall.group);
+
+bowlingBall.setColors({ base: '#153a31', swirl: '#78d6ad', accent: '#f4e28b' });
+```
+
 ## The engine
 
 | Import | What it is |
