@@ -3,7 +3,7 @@
  * The dark wells are recessed into the ball; there are no raised decorative rims.
  */
 export const BOWLING_BALL_RADIUS = 0.52;
-export const BOWLING_BALL_DESIGNS = Object.freeze(['marble', 'spiral', 'flame', 'split']);
+export const BOWLING_BALL_DESIGNS = Object.freeze(['marble', 'spiral', 'flame', 'split', 'blotch']);
 
 const DEFAULT_DESIGN = 'marble';
 const DEFAULTS = { base: '#192d59', swirl: '#d83b7c', accent: '#f2ba64', holes: '#090d18' };
@@ -20,6 +20,28 @@ function paletteOf(GFX, options) {
     accent: new GFX.Color(get('accent', 'accentColor', DEFAULTS.accent)),
     holes: new GFX.Color(get('holes', 'holeColor', DEFAULTS.holes)),
   };
+}
+
+/** Deterministic 3D value noise, sampled on the sphere surface so it has no UV seam. */
+function hash3(ix, iy, iz) {
+  let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263) ^ Math.imul(iz, 2147483647);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function noise3(x, y, z) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  const fx = x - ix, fy = y - iy, fz = z - iz;
+  const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), w = fz * fz * (3 - 2 * fz);
+  const l = (a, b, t) => a + (b - a) * t;
+  return l(
+    l(l(hash3(ix, iy, iz), hash3(ix + 1, iy, iz), u), l(hash3(ix, iy + 1, iz), hash3(ix + 1, iy + 1, iz), u), v),
+    l(l(hash3(ix, iy, iz + 1), hash3(ix + 1, iy, iz + 1), u), l(hash3(ix, iy + 1, iz + 1), hash3(ix + 1, iy + 1, iz + 1), u), v),
+    w,
+  );
+}
+function fbm(x, y, z) {
+  return noise3(x, y, z) * 0.55 + noise3(x * 2.1 + 5.2, y * 2.1 + 1.3, z * 2.1 + 9.7) * 0.30
+    + noise3(x * 4.3 + 2.8, y * 4.3 + 7.1, z * 4.3 + 3.9) * 0.15;
 }
 
 /**
@@ -55,6 +77,14 @@ function paint(GFX, geometry, radius, palette, attribute, design) {
       ribbon = 0.5 + (smooth(0.22, 0.78, flame) - 0.5) * polarFade;
       vein = Math.sin(phase * 2 - latitude * 6 + longitude * 2) * polarFade;
       accentPower = 12;
+    } else if (design === 'blotch') {
+      const wx = fbm(x * 1.5, y * 1.5 + 4, z * 1.5 + 8) - 0.5;
+      const wy = fbm(x * 1.5 + 6, y * 1.5, z * 1.5 + 2) - 0.5;
+      const wz = fbm(x * 1.5 + 1, y * 1.5 + 9, z * 1.5) - 0.5;
+      const t = fbm(x * 1.7 + wx * 2.4, y * 1.7 + wy * 2.4, z * 1.7 + wz * 2.4);
+      ribbon = smooth(-0.3, 0.3, Math.sin(t * 7.5));
+      vein = 0.9 * Math.exp(-((Math.sin(t * 15) / 0.1) ** 2));
+      accentPower = 1;
     } else if (design === 'split') {
       const seam = x * 0.66 + z * 0.42 - y * 0.28;
       ribbon = smooth(-0.045, 0.045, seam);
@@ -71,9 +101,10 @@ function paint(GFX, geometry, radius, palette, attribute, design) {
         + 0.45 * Math.sin(longitude * 5 + latitude * 3)) * polarFade;
     }
 
-    const swirlMix = design === 'split' ? ribbon : smooth(0.25, 0.75, ribbon);
-    const accentMix = design === 'split'
-      ? 0.82 * vein
+    const direct = design === 'split' || design === 'blotch';
+    const swirlMix = direct ? ribbon : smooth(0.25, 0.75, ribbon);
+    const accentMix = direct
+      ? (design === 'split' ? 0.82 : 0.85) * vein
       : 0.72 * Math.pow(Math.max(0, vein), accentPower);
     color.copy(palette.base).lerp(palette.swirl, swirlMix).lerp(palette.accent, accentMix);
     attribute.setXYZ(i, color.r, color.g, color.b);

@@ -18,7 +18,7 @@ test('the bowling ball is registered on the Props shelf, not Heroes', () => {
 test('the asset viewer exposes four palette channels, surface patterns and random palettes', () => {
   for (const key of ['base', 'swirl', 'accent', 'holes']) assert.ok(catalog.includes(key + ':'));
   for (const label of ['Base resin', 'Swirl', 'Accent veins', 'Finger holes']) assert.ok(viewer.includes(label));
-  for (const design of ['marble', 'spiral', 'flame', 'split']) assert.ok(html.includes('value="' + design + '"'));
+  for (const design of ['marble', 'spiral', 'flame', 'split', 'blotch']) assert.ok(html.includes('value="' + design + '"'));
   assert.ok(viewer.includes("madness-engine/props/bowling-ball"));
   assert.ok(viewer.includes("import { randomBowlingBallPalette } from './bowling-ball-palettes.js';"));
   assert.ok(viewer.includes("'Randomise colours'"));

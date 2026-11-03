@@ -36,7 +36,7 @@ test('repaints colours in place without replacing shell geometry', () => {
   ball.dispose();
 });
 
-test('all four surface designs are distinct and can be switched without replacing geometry', () => {
+test('all five surface designs are distinct and can be switched without replacing geometry', () => {
   const ball = createBowlingBall(GFX);
   const geometry = ball.shell.geometry;
   const initial = geometry.getAttribute('color').array.slice();
@@ -45,7 +45,7 @@ test('all four surface designs are distinct and can be switched without replacin
     assert.equal(ball.setDesign(design), design);
     assert.equal(ball.design, design);
     assert.equal(ball.shell.geometry, geometry);
-    signatures.add(Array.from(geometry.getAttribute('color').array).filter((_, i) => i % 3 === 0).slice(0, 150).join(','));
+    signatures.add(Array.from(geometry.getAttribute('color').array).filter((_, i) => i % 3 === 0 && (i / 3) % 331 === 0).join(','));
   }
   assert.equal(signatures.size, BOWLING_BALL_DESIGNS.length);
   assert.notDeepEqual(geometry.getAttribute('color').array, initial);
