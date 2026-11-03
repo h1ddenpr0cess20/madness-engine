@@ -323,14 +323,17 @@ export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008,
     return fn;
   };
   const hair = grown(color);
-  shell(s, region, { color: hair, mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004, taper: 0.015 });
+  shell(s, region, { color: hair, mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004, taper: Math.min(full ? 0.015 : 0.006, thick * 2.5) });
   // The cheeks' blush is painted on the face where the beard's top edge is: paint the beard's own color back over it, so
   // the top of the beard is hair, not skin. (A recolored person's hair color is applied to it as it is to the shell.)
   s.paint((p) => region(p), s.tint ? s.tint(hair, 'hair', 'hair') : hair, 0.003);
   if (long) {
+    // A beard that hangs: a lobe under the chin, joined to the beard on the face. It stands out from the chin only as far as it
+    // hangs (a little beard is no bump), and keeps its own color rather than taking the skin's where it melts in.
+    const L = Math.min(long, 1.5);
     s.part('hair', () => {
-      const B = { color: hairy(color, false), mat: 'hair', bone: 'head', k: 0.018 };
-      s.ellipsoid([0, 0.585 - long * 0.03, 0.085], [0.04 * Math.min(1.3, 0.7 + long * 0.3), 0.03 + long * 0.035, 0.03], B);
+      const B = { color: hairy(color, false), mat: 'hair', bone: 'head', k: 0.008 };
+      s.ellipsoid([0, 0.585 - long * 0.03, 0.062 + 0.018 * L], [0.04 * Math.min(1.3, 0.7 + long * 0.3), 0.03 + long * 0.035, 0.02 + 0.012 * L], B);
     });
   }
 }

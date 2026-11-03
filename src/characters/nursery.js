@@ -102,11 +102,13 @@ export function stroller(s, { baby, host, size = 0.8, bone = 'root', handle = [0
     s.box([0, 0.33, hz + 0.1], [0.082, 0.085, 0.01], 0.01, { ...FAB, rot: [-0.3, 0, 0] });
     for (const m of [1, -1]) s.box([m * 0.082, 0.29, hz + 0.19], [0.008, 0.035, 0.1], 0.006, FAB);
     s.box([0, 0.2, hz + 0.335], [0.075, 0.008, 0.028], 0.006, { ...FAB, rot: [0.3, 0, 0] });
-    // The canopy: a half-dome over the head of the seat, open to the front, its inside hollowed.
-    s.ellipsoid([0, 0.41, hz + 0.08], [0.1, 0.1, 0.085], { ...FAB, k: 0.01 });
-    s.ellipsoid([0, 0.41, hz + 0.08], [0.09, 0.09, 0.077], { op: 'sub', k: 0.004 });
-    s.box([0, 0.3, hz + 0.08], [0.2, 0.1, 0.2], 0, { op: 'sub', k: 0.001 });
-    s.box([0, 0.45, hz + 0.2], [0.2, 0.2, 0.1], 0, { op: 'sub', k: 0.001 });
+    // The canopy: a shallow shell over the head of the seat, a sunshade above the baby's head and no lower, open all round below it.
+    s.ellipsoid([0, 0.5, hz + 0.1], [0.1, 0.085, 0.085], { ...FAB, k: 0.01 });
+    s.ellipsoid([0, 0.5, hz + 0.1], [0.09, 0.075, 0.077], { op: 'sub', k: 0.004 });
+    s.box([0, 0.4, hz + 0.1], [0.2, 0.1, 0.2], 0, { op: 'sub', k: 0.001 });
+    s.box([0, 0.55, hz + 0.24], [0.2, 0.2, 0.1], 0, { op: 'sub', k: 0.001 });
+    // Two arms holding it up to the seat's back.
+    for (const m of [1, -1]) s.limb([m * 0.085, 0.31, hz + 0.1], [m * 0.095, 0.44, hz + 0.1], 0.006, 0.006, F);
     // The basket under the seat, between the wheels.
     s.box([0, 0.15, hz + 0.2], [0.07, 0.022, 0.09], 0.008, { color: '#40404a', mat: 'cloth', bone, k: 0.004 });
     // The blanket over its lap.
