@@ -1,6 +1,6 @@
 import { cloth, person } from './person.js';
 import { longHair } from './metalwear.js';
-import babyboy from './babyboy.js';
+import babyboyCharacter from './babyboy.js';
 import { graft, graftCells } from './nursery.js';
 
 /**
@@ -13,6 +13,8 @@ import { graft, graftCells } from './nursery.js';
 const SWEATER = cloth('#86a888', '#628464', { freq: 30, grain: 0.05 });
 const JEANS = cloth('#44649a', '#2e4a78');
 const SCALE = 1.42, BABY = 0.8;
+// The baby has his mother's skin, hair and eyes, and a romper in the green of her sweater.
+const babyboy = babyboyCharacter.variant({ skin: '#e6b394', hair: '#6a4428', eyes: '#6a4a2a', look: { torso: '#a4c0a6', sleeve: '#a4c0a6', legs: '#a4c0a6' } });
 
 export default person({
   name: 'motherholding',

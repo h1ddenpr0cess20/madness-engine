@@ -1,5 +1,5 @@
 import { cloth, person } from './person.js';
-import babygirl from './babygirl.js';
+import babygirlCharacter from './babygirl.js';
 import { graftCells, stroller } from './nursery.js';
 import { suitFront } from './wardrobe.js';
 
@@ -14,6 +14,8 @@ const CARDIGAN = cloth('#d4a438', '#a47e1e', { freq: 30, grain: 0.05 });
 const LEGGINGS = cloth('#26262c', '#141418');
 const HAIR = cloth('#2e1c12', '#160a06');
 const SCALE = 1.42, BABY = 0.8;
+// The baby has her mother's skin, hair and eyes, and a dress in the mustard of her cardigan.
+const babygirl = babygirlCharacter.variant({ skin: '#b07850', hair: '#2e1c12', eyes: '#2e1c10', look: { torso: '#e8c470', sleeve: '#e8c470', legs: '#e8c470' } });
 
 export default person({
   name: 'motherstroller',
