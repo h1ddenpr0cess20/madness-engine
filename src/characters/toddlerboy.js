@@ -17,5 +17,5 @@ export default child('toddler', {
   look: { torso: TEE, sleeve: TEE, cuff: SKIN, legs: JEANS, boot: '#f4f4f0', sole: '#c8c8c4' },
   mats: { cuff: 'skin', legs: 'denim', boot: 'rubber' },
   face: { eyeColor: '#6a4a2a', brow: '#5a3a1e', blush: 0.8 },
-  hair: { color: cloth('#6a4424', '#46280f'), cap: [0.108, 0.09, 0.108], locks: [[[0.03, 0.78, 0.04], [0.05, 0.75, 0.1], 0.03, 0.5], [[-0.04, 0.78, 0.03], [-0.06, 0.75, 0.1], 0.03, 0.5]] },
+  hair: { color: cloth('#6a4424', '#46280f'), cap: [0.108, 0.09, 0.108], locks: [[[0.02, 0.78, 0.04], [0.04, 0.745, 0.104], 0.034, 0.5]] },
 });

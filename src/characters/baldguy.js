@@ -24,7 +24,7 @@ export default person({
   style: { attack: 'punch' },
   extras(s) {
     const HAIR = '#2e2016';
-    beard(s, { color: HAIR, long: 0.3, thick: 0.01 });
+    beard(s, { color: HAIR, thick: 0.01 });
     moustache(s, { color: HAIR, wide: 1.1 });
   },
 });
