@@ -36,3 +36,4 @@ export const PROPS = {
   haybale, deadtree, scarecrow, tombstone, cross, obelisk, coffin, bones, mushrooms, cauldron,
   snowheap, snowlantern, snowball, pine, snowrock, crystals,
 };
+export { DICE, DICE_TYPES, createDieProp, createD4, createD6, createD6Pips, createD8, createD10, createDPercentile, createD12, createD20 } from '../dice.js';
