@@ -54,10 +54,11 @@ export default person({
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
       // The sack hangs from the left fist, the arm easy: it swings a little in a walk and is never flung up.
-      const ph = T * (9 - 0.35 * 2) * Math.max(0.5, speed);
-      if (clip === 'walk') {
-        hold(k, 'armL', Math.sin(ph) * 0.14, 0, 0.1);
-        hold(k, 'foreL', -0.2, 0, 0);
+      const run = clip === 'run', ph = T * ((run ? 15 : 9) - 0.35 * (run ? 3 : 2)) * Math.max(0.5, speed);
+      if (clip === 'walk' || run) {
+        // The sack swings a little more in a run, held close, the elbow bent.
+        hold(k, 'armL', Math.sin(ph) * (run ? 0.35 : 0.14), 0, 0.1);
+        hold(k, 'foreL', run ? -0.9 : -0.2, 0, 0);
         // A big man's roll: the shoulders and hips turning against each other, a little weight onto each foot.
         k.turn('hips', 0, 0, Math.sin(ph) * 0.05);
         k.turn('chest', 0, 0, -Math.sin(ph) * 0.04);

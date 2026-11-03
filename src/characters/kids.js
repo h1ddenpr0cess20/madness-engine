@@ -27,11 +27,13 @@ export const AGES = {
 export function toddle(k, { clip, time, seed }) {
   if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
   const T = time + seed;
-  if (clip === 'walk') {
-    k.turn('armL', -0.3, 0, 0.75);
-    k.turn('armR', -0.3, 0, -0.75);
-    k.turn('hips', 0, 0, Math.sin(T * 9) * 0.07);
-    k.turn('head', 0, 0, -Math.sin(T * 9) * 0.05);
+  if (clip === 'walk' || clip === 'run') {
+    // Arms out for balance and a rolling waddle: quicker, with the arms higher, as a toddler runs.
+    const run = clip === 'run', beat = run ? 14 : 9;
+    k.turn('armL', -0.3, 0, run ? 1.1 : 0.75);
+    k.turn('armR', -0.3, 0, run ? -1.1 : -0.75);
+    k.turn('hips', 0, 0, Math.sin(T * beat) * 0.07);
+    k.turn('head', 0, 0, -Math.sin(T * beat) * 0.05);
   } else {
     k.turn('hips', 0, 0, Math.sin(T * 1.4) * 0.05);
     k.turn('head', 0.08, Math.sin(T * 0.8) * 0.3, 0);

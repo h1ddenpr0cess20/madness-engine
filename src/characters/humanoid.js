@@ -1370,12 +1370,102 @@ export function cover(s, { core = CORE, skip = ['eyes', 'irises', 'pupils', 'bro
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const window_ = (t, a, b) => ease((t - a) / (b - a));
+/** How far the hips are raised for a run (the planted foot just reaches the floor as they bob). */
+const RUN_LIFT = 0.02;
+/** The length of the thigh and the shin, and the size of the body for what it does up and down (1 for the sculpt as drawn), as built. */
+const legsOf = (k) => {
+  const y = (name) => k.pivots[k.index.get(name)]?.[1] ?? 0;
+  const thigh = Math.max(0.05, y('thighL') - y('shinL')), shin = Math.max(0.05, y('shinL') - y('footL'));
+  return { thigh, shin, size: (thigh + shin) / 0.26 };
+};
+
+/**
+ * A jump, over about a second from its start (`t` in seconds): a crouch with the arms swung back, a drive up off both
+ * feet with the arms thrown overhead, the knees drawn up at the top, and a landing that gives at the knees before the
+ * body straightens. `leap` is the same from a run: a longer, flatter arc with one leg reaching forward and the other
+ * trailing, the arms flung out against them. `weapon` leaves the right arm on its weapon. The body is lifted by the
+ * root, so in the air it is off the ground by `height`.
+ */
+export function jump(k, t, { leap = false, weapon = false } = {}) {
+  const t0 = leap ? 0.18 : 0.24, drive = 0.1, air = leap ? 0.56 : 0.44, land = leap ? 0.36 : 0.3;
+  const liftoff = t0 + drive, touchdown = liftoff + air;
+  // How far into each part of it: the crouch (down, then driving up), the flight, and the landing's give.
+  const down = window_(t, 0, t0) * (1 - window_(t, t0, liftoff));
+  const flight = window_(t, t0 + 0.02, liftoff + 0.08) * (1 - window_(t, touchdown - 0.1, touchdown));
+  const arc = Math.sin(Math.max(0, Math.min(1, (t - liftoff) / air)) * Math.PI);
+  const give = window_(t, touchdown - 0.04, touchdown + 0.08) * (1 - window_(t, touchdown + 0.08, touchdown + land));
+  const bent = Math.max(down, give * 0.75);
+  // Off the ground along the arc; down into the crouch and the landing, as far as the knees bending takes the hips (so the
+  // feet stay on the floor whatever the length of the legs).
+  const { thigh: L1, shin: L2, size } = legsOf(k);
+  k.move('root', 0, (leap ? 0.1 : 0.14) * size * arc, 0);
+  k.move('hips', 0, -(L1 * (1 - Math.cos(1.05 * bent)) + L2 * (1 - Math.cos(0.75 * bent))), 0);
+  // Crouched, the knees forward and the feet flat; in the air, drawn up (or, leaping, the legs split) with the toes pointed.
+  const tuck = flight * (1 - bent);
+  for (const [S, lead] of [['L', 1], ['R', 0]]) {
+    const thigh = -1.05 * bent + (leap ? (lead ? -1.25 : 0.75) : -0.6) * tuck;
+    const shin = 1.8 * bent + (leap ? (lead ? 0.15 : 1.5) : 1.15) * tuck;
+    k.turn(`thigh${S}`, thigh, 0, 0);
+    k.turn(`shin${S}`, shin, 0, 0);
+    // The foot flat on the floor while crouched; toes pointed in the air.
+    k.turn(`foot${S}`, -0.75 * bent + 0.35 * tuck * Math.min(1, size), 0, 0);
+  }
+  k.turn('spine', 0.3 * bent + (leap ? 0.18 : -0.05) * tuck, 0, 0);
+  k.turn('chest', 0.12 * bent - 0.08 * tuck, 0, 0);
+  k.turn('head', -0.2 * bent - 0.12 * tuck, 0, 0);
+  // The arms: swung back for the crouch, up and out in the air (against the legs, leaping), forward to balance the landing.
+  const back = bent * (1 - give) , fwd = give * 0.75;
+  k.turn('armL', 0.9 * back - 0.55 * fwd + (leap ? -1.4 : -2.5) * tuck, 0, 0.35 * tuck);
+  k.turn('foreL', -0.3 * back - 0.5 * fwd - 0.2 * tuck, 0, 0);
+  if (weapon) {
+    k.turn('armR', -0.35 + 0.3 * back - 0.5 * tuck, 0, -0.1);
+    k.turn('foreR', -0.6, 0, 0);
+  } else {
+    k.turn('armR', 0.9 * back - 0.55 * fwd + (leap ? 0.9 : -2.5) * tuck, 0, -0.35 * tuck);
+    k.turn('foreR', -0.3 * back - 0.5 * fwd - 0.2 * tuck, 0, 0);
+  }
+}
+
+/**
+ * The legs, trunk and arms of a run, over what every clip starts with: twice the cadence of a walk, a long
+ * stride with the knee of the swinging leg driven high and the foot kicked up behind it, the trunk leaning into
+ * it, and the arms bent to a right angle and pumping against the legs. The body bounces more than in a walk,
+ * lowest as the planted leg passes under it and highest in the air. `weapon` leaves the right arm ready for one
+ * (swinging a little, as in a walk) and pumps only the left.
+ */
+export function runCycle(k, T, { speed = 1, heavy = 0, weapon = false } = {}) {
+  const ph = T * (15 - heavy * 3) * Math.max(0.5, speed), g = Math.sin(ph), c = Math.cos(ph);
+  k.move('hips', 0, (RUN_LIFT - Math.abs(c) * 0.016) * legsOf(k).size, 0);
+  k.turn('hips', 0, g * 0.14, 0);
+  k.turn('spine', 0.14, 0, 0);
+  k.turn('chest', 0.1, -g * 0.22, 0);
+  k.turn('head', -0.16, -g * 0.06, 0);
+  for (const [S, m] of [['L', 1], ['R', -1]]) {
+    // Where this leg is in its stride (1 forward, -1 back) and whether it is swinging forward (c > 0) or driving back.
+    const a = m * g, swing = Math.max(0, m * c);
+    k.turn(`thigh${S}`, -a * 0.95, 0, 0);
+    k.turn(`shin${S}`, 0.25 + swing * 1.65, 0, 0);
+    // (The foot's pitch is less on short legs: the foot is as long as ever, and its toe or heel would go through the floor.)
+    k.turn(`foot${S}`, (-a * 0.16 + swing * 0.15) * Math.min(1, legsOf(k).size), 0, 0);
+  }
+  // The arms against the legs: elbows at a right angle, hands swinging from the hip to the chest.
+  k.turn('armL', g * 0.95, 0, 0.1);
+  k.turn('foreL', -1.2 + g * 0.2, 0, 0);
+  if (weapon) {
+    k.turn('armR', -0.35 - g * 0.25, 0, -0.1);
+    k.turn('foreR', -0.6, 0, 0);
+  } else {
+    k.turn('armR', -g * 0.95, 0, -0.1);
+    k.turn('foreR', -1.2 - g * 0.2, 0, 0);
+  }
+}
+
 
 /**
  * How a hero moves. `style.attack` is 'slash' (a sword across), 'chop' (an
  * axe from over the head), 'thrust' (a staff jabbed forward) or 'smite' (a
  * mace or staff brought down); `style.heavy` slows and deepens it all.
- * Clips: idle, walk, attack, cast, hit, ko, win, sit.
+ * Clips: idle, walk, run, jump, leap, attack, cast, hit, ko, win, sit.
  */
 export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 }, style = {}) {
   const T = time + seed;
@@ -1409,6 +1499,10 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('armL', g * 0.45, 0, 0);
     k.turn('armR', -0.35 - g * 0.2, 0, -0.1);
     k.turn('foreR', -0.6, 0, 0);
+  } else if (clip === 'run') {
+    runCycle(k, T, { speed, heavy, weapon: true });
+  } else if (clip === 'jump' || clip === 'leap') {
+    jump(k, t, { leap: clip === 'leap', weapon: true });
   } else if (clip === 'attack') {
     attack(k, t, style);
   } else if (clip === 'cast') {
@@ -1711,7 +1805,7 @@ export function reachFoot(k, S, sole, target, steps = 16) {
 /**
  * How a person moves: as a hero does (`moveHumanoid`), but with nothing to
  * hold ready, so at rest the hands hang easy and a walk swings both arms.
- * Clips: idle, walk, attack, cast, hit, ko, win, sit.
+ * Clips: idle, walk, run, jump, leap, attack, cast, hit, ko, win, sit.
  */
 export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1, aim = null, reach = null, step = null }, style = {}) {
   const T = time + seed;
@@ -1744,6 +1838,10 @@ export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed 
     k.turn('armR', -g * 0.4, 0, -0.04);
     k.turn('foreL', -0.2 + Math.min(0, g) * 0.3, 0, 0);
     k.turn('foreR', -0.2 - Math.max(0, g) * 0.3, 0, 0);
+  } else if (clip === 'run') {
+    runCycle(k, T, { speed, heavy });
+  } else if (clip === 'jump' || clip === 'leap') {
+    jump(k, t, { leap: clip === 'leap' });
   } else if (clip === 'attack') {
     attack(k, t, style);
   } else if (clip === 'cast') {

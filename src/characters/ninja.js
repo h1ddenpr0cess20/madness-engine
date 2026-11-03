@@ -35,7 +35,7 @@ export default person({
         hold(k, `arm${S}`, -0.7, 0, m * 0.3);
         hold(k, `fore${S}`, -1.0, 0, 0);
       }
-      if (clip === 'walk') k.move('root', 0, Math.abs(Math.sin(T * 6)) * 0.01, 0);
+      if (clip === 'walk' || clip === 'run') k.move('root', 0, Math.abs(Math.sin(T * (clip === 'run' ? 11 : 6))) * 0.01, 0);
       k.turn('head', -0.2, Math.round(Math.sin(T * 0.7) * 2) * 0.3, 0);
     },
   },
