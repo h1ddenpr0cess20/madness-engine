@@ -6,7 +6,7 @@ import { PROPS } from '../src/props/index.js';
 import { GROCERIES } from '../src/props/groceries.js';
 
 test('the corner store stock is in the prop library, one prop for every line it sells', () => {
-  const names = ['apples', 'bananas', 'tomatoes', 'lettuce', 'potatoes', 'milk', 'yogurt', 'cheddar', 'butter', 'eggs', 'chicken', 'beef', 'turkey', 'bread', 'rice', 'spaghetti', 'cereal', 'beans', 'coffee', 'cola', 'water', 'pizza', 'icecream', 'carton'];
+  const names = ['apples', 'bananas', 'tomatoes', 'lettuce', 'potatoes', 'oranges', 'carrots', 'onions', 'peppers', 'grapes', 'milk', 'yogurt', 'cheddar', 'butter', 'eggs', 'chicken', 'beef', 'turkey', 'orangejuice', 'bacon', 'sourcream', 'bread', 'rice', 'spaghetti', 'cereal', 'beans', 'coffee', 'flour', 'sugar', 'oats', 'peanutbutter', 'chips', 'cookies', 'candybar', 'cola', 'water', 'pizza', 'icecream', 'carton'];
   assert.deepEqual(Object.keys(GROCERIES).sort(), [...names].sort());
   for (const name of names) assert.equal(PROPS[name], GROCERIES[name], name);
 });
