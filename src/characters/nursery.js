@@ -1,86 +1,119 @@
+import { rotation, Sculpt } from '../models/sdf.js';
 import { cloth } from './person.js';
 
 /**
- * What goes with a baby: the baby, and the stroller it is pushed in. Both are
- * sculpted into a person's `extras`, on a bone of theirs (the chest for a baby
- * held in the arms, the root for a stroller), and marked as held so they stay
- * where they are put.
+ * What goes with a baby: a baby (one of the baby characters, grafted into whoever holds it) and the stroller it is
+ * pushed in. Both are sculpted into a person's `extras`, on a bone of theirs (the chest for a baby held in the arms,
+ * the root for a stroller), and marked as held so they stay where they are put.
  */
 
-const unit = (v) => {
-  const l = Math.hypot(...v);
-  return v.map((x) => x / l);
-};
-const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const mark = (s, from) => {
   for (const x of s.shapes.slice(from)) x.held = true;
 };
 
+/** How big the grafted `def` is, in its host's sculpt (as `graft`'s `size` of 1: its height in the world over the host's scale). */
+export const graftScale = (def, host, size = 1) => (def.scale / host) * size;
+
 /**
- * A baby asleep, wrapped in a blanket to the chin: its head at `head`, its feet at `foot`, its face turned out along
- * `face`; carried by `bone`.
+ * The cell sizes for the parts of a character grafted in (named `baby…`: every part of it, on its own finer grid
+ * as it is drawn small), for the host's `cells`.
  */
-export function infant(s, { head, foot, face, bone = 'chest', skin = '#f0c4a0', blanket = cloth('#f6efdc', '#d8cfb4'), hair = '#7a5a34' }) {
-  const from = s.shapes.length;
-  const dir = unit(head.map((v, i) => v - foot[i]));
-  const out = unit(face), side = unit(cross(dir, out));
-  const at = (t, u = 0, o = 0) => head.map((v, i) => v + dir[i] * t + side[i] * u + out[i] * o);
-  const SK = { color: skin, mat: 'skin', bone, k: 0.01 };
-  s.part('kit', () => {
-    // The bundle: a blanket from the feet to under the chin, a little fuller at the chest.
-    s.limb(foot, at(-0.05), 0.04, 0.05, { color: blanket, mat: 'cloth', bone, k: 0.014 });
-    // The head: round, a cheek each side, a tuft of hair, a button nose, and eyes shut.
-    s.sphere(head, 0.05, SK);
-    for (const m of [1, -1]) s.sphere(at(-0.008, m * 0.028, 0.034), 0.017, { ...SK, k: 0.012 });
-    s.sphere(at(0.012, 0, 0.049), 0.0075, { ...SK, k: 0.006 });
-    s.sphere(at(0.046, 0, 0.0), 0.02, { color: hair, mat: 'hair', bone, k: 0.01 });
-    for (const m of [1, -1]) s.limb(at(0.018, m * 0.012, 0.045), at(0.017, m * 0.03, 0.036), 0.0028, 0.0028, { color: '#3a2218', mat: 'plastic', bone, k: 0.001 });
-    // A fist by its chin, out of the blanket.
-    s.sphere(at(-0.055, -0.03, 0.04), 0.014, SK);
-  });
+export function graftCells(def, host, size = 1) {
+  const sc = graftScale(def, host, size), cells = {};
+  for (const part of ['body', 'head', 'hands', 'shoes', 'soles', 'top', 'sleeves', 'cuffs', 'bottoms', 'hose', 'belt', 'outer', 'outer2', 'straps', 'hair', 'eyes', 'irises', 'pupils', 'brows', 'kit', 'fine', 'frames']) {
+    cells[`baby${part}`] = (def.cells[part] ?? def.cell) * sc;
+  }
+  return cells;
+}
+
+/**
+ * Another character's whole sculpt put into the host's (`s`): `def` as it stands at rest, its feet at `at` (as the host
+ * is sculpted), turned by `rot` (Euler angles) and made `size` times the size it is in the world (`host`, the host's
+ * scale, says how big that is in the host's sculpt), carried by `bone` and held rigid. `clip(q)`, if given, cuts off
+ * what is not negative at a point `q` of the character's own sculpt (below the hips, for one sitting down).
+ */
+export function graft(s, def, { at, rot = [0, 0, 0], size = 1, host, bone = 'chest', clip = null }) {
+  const from = s.shapes.length, sc = graftScale(def, host, size), R = rotation(rot);
+  const it = new Sculpt();
+  def.sculpt(it);
+  // A point of the character's sculpt in the host's, and back; a direction back.
+  const out = (q) => [0, 1, 2].map((i) => at[i] + sc * (R[i][0] * q[0] + R[i][1] * q[1] + R[i][2] * q[2]));
+  const back = (v) => [0, 1, 2].map((j) => R[0][j] * v[0] + R[1][j] * v[1] + R[2][j] * v[2]);
+  const into = (p) => back([(p[0] - at[0]) / sc, (p[1] - at[1]) / sc, (p[2] - at[2]) / sc]);
+  const bounds = (box) => {
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (let c = 0; c < 8; c++) {
+      const q = out([c & 1 ? box[1][0] : box[0][0], c & 2 ? box[1][1] : box[0][1], c & 4 ? box[1][2] : box[0][2]]);
+      for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], q[i]); hi[i] = Math.max(hi[i], q[i]); }
+    }
+    return [lo, hi];
+  };
+  const hue = (c) => (typeof c === 'function' ? (p, n) => c(into(p), back(n)) : c);
+  for (const x of it.shapes) {
+    const d = clip ? (p) => { const q = into(p); return sc * Math.max(x.d(q), clip(q)); } : (p) => sc * x.d(into(p));
+    s.part(`baby${x.part}`, () => s.shape(d, bounds(x.box), { op: x.op, k: x.k * sc, color: hue(x.color), bone, mat: x.mat }));
+  }
+  // What it is painted with: its eyes, its lips, its cheeks.
+  for (const p of it.paints) s.paint((q) => sc * p.inside(into(q)), hue(p.color), p.soft * sc);
   mark(s, from);
 }
 
 /**
- * A stroller on the ground in front of whoever pushes it, its handle at `handle` (a point at its middle) and a baby in
- * the seat. Carried by `bone` (the root, so it rolls along with them).
+ * A stroller on the ground in front of whoever pushes it, its handle at `handle` (a point at its middle), a baby
+ * (`baby`, a character, `host` the pusher's scale) sitting in the seat facing forward with a blanket over its lap.
+ * Carried by `bone` (the root, so it rolls along with them).
  */
-export function stroller(s, { bone = 'root', handle = [0, 0.36, 0.22], frame = '#2c2c34', fabric = cloth('#4a8a9a', '#356a78') } = {}) {
+export function stroller(s, { baby, host, size = 0.8, bone = 'root', handle = [0, 0.36, 0.22], frame = '#34343c', fabric = cloth('#4a8a9a', '#356a78'), blanket = cloth('#f6efdc', '#d8cfb4') } = {}) {
   const from = s.shapes.length;
   const [hx, hy, hz] = handle;
   const F = { color: frame, mat: 'plastic', bone, k: 0.002 };
-  const FAB = { color: fabric, mat: 'cloth', bone, k: 0.01 };
+  const FAB = { color: fabric, mat: 'cloth', bone, k: 0.008 };
+  const rail = (a, b, r = 0.0075) => s.limb(a, b, r, r, F);
   s.part('kit', () => {
-    // The handle bar, with a rubber grip each side for the hands.
-    s.limb([hx - 0.085, hy, hz], [hx + 0.085, hy, hz], 0.0065, 0.0065, F);
-    for (const m of [1, -1]) s.limb([hx + m * 0.05, hy, hz], [hx + m * 0.085, hy, hz], 0.0085, 0.0085, { ...F, color: '#16161a', mat: 'rubber' });
+    // The handle: a bar with a rubber grip each side, its ends turning down into the push tubes.
+    rail([hx - 0.085, hy, hz], [hx + 0.085, hy, hz]);
     for (const m of [1, -1]) {
-      const x = m * 0.085;
-      // The handle's post down to the seat's frame, the legs to the wheels, the rail along the seat.
-      s.limb([x, hy, hz], [x, 0.215, hz + 0.12], 0.0062, 0.0062, F);
-      s.limb([x, 0.215, hz + 0.12], [m * 0.1, 0.055, hz + 0.05], 0.0062, 0.0062, F);
-      s.limb([x, 0.215, hz + 0.12], [x, 0.215, hz + 0.27], 0.0062, 0.0062, F);
-      s.limb([x, 0.215, hz + 0.27], [m * 0.1, 0.045, hz + 0.3], 0.0062, 0.0062, F);
+      s.limb([hx + m * 0.04, hy, hz], [hx + m * 0.085, hy, hz], 0.0095, 0.0095, { ...F, color: '#16161a', mat: 'rubber' });
+      const x = m * 0.088;
+      // The push tube down to the seat's rail and on down to the big rear wheel.
+      rail([x, hy, hz], [x, 0.27, hz + 0.09]);
+      rail([x, 0.27, hz + 0.09], [m * 0.1, 0.06, hz + 0.07]);
+      // The seat's rail along each side to the front, the front leg down to the small wheel, the chassis tube along the bottom.
+      rail([x, 0.27, hz + 0.09], [x, 0.24, hz + 0.3]);
+      rail([x, 0.24, hz + 0.3], [m * 0.095, 0.05, hz + 0.33]);
+      rail([m * 0.1, 0.12, hz + 0.08], [m * 0.095, 0.1, hz + 0.32], 0.0065);
+      // The footrest's bar and the front bumper bar's posts.
+      rail([x, 0.24, hz + 0.3], [x, 0.2, hz + 0.33]);
+      rail([x, 0.24, hz + 0.3], [x, 0.325, hz + 0.28], 0.0065);
       // The wheels: big at the back, small at the front, each a tire, a disc and a hub.
-      for (const [z, r] of [[hz + 0.05, 0.052], [hz + 0.3, 0.042]]) {
+      for (const [z, r] of [[hz + 0.07, 0.062], [hz + 0.33, 0.049]]) {
         const c = [m * 0.1, r + 0.003, z], rot = [0, 0, Math.PI / 2];
-        s.torus(c, r - 0.008, 0.009, { color: '#16161a', mat: 'rubber', bone, k: 0.002, rot });
-        s.cylinder(c, r - 0.012, 0.004, { color: '#a8acb4', mat: 'metal', bone, k: 0.002, rot });
-        s.cylinder(c.map((v, i) => v + [m * 0.005, 0, 0][i]), 0.009, 0.006, { ...F, rot });
+        s.torus(c, r - 0.011, 0.012, { color: '#16161a', mat: 'rubber', bone, k: 0.002, rot });
+        s.cylinder(c, r - 0.016, 0.006, { color: '#b4b8c0', mat: 'metal', bone, k: 0.002, rot });
+        s.cylinder(c.map((v, i) => v + [m * 0.008, 0, 0][i]), 0.011, 0.006, { ...F, rot });
       }
     }
-    // The seat: a shallow tub of fabric between the rails, and a basket under it.
-    const seat = [0, 0.235, hz + 0.18];
-    s.box(seat, [0.082, 0.026, 0.105], 0.022, FAB);
-    s.box([seat[0], seat[1] + 0.03, seat[2]], [0.068, 0.03, 0.092], 0.018, { op: 'sub', k: 0.004 });
-    s.box([0, 0.12, hz + 0.17], [0.065, 0.026, 0.08], 0.01, { color: '#3a3a42', mat: 'cloth', bone, k: 0.004 });
-    // The hood: a half-dome over the back of the seat, open to the front.
-    s.ellipsoid([0, 0.29, hz + 0.1], [0.096, 0.085, 0.09], { ...FAB, k: 0.012 });
-    s.ellipsoid([0, 0.29, hz + 0.1], [0.086, 0.076, 0.082], { op: 'sub', k: 0.004 });
-    s.box([0, 0.18, hz + 0.1], [0.2, 0.1, 0.2], 0, { op: 'sub', k: 0.001 });
-    s.box([0, 0.3, hz + 0.28], [0.2, 0.2, 0.1], 0, { op: 'sub', k: 0.001 });
+    // The bumper bar across the front, and a cross bar between the wheels at the back and the front.
+    rail([hx - 0.088, 0.325, hz + 0.28], [hx + 0.088, 0.325, hz + 0.28], 0.007);
+    rail([-0.1, 0.12, hz + 0.08], [0.1, 0.12, hz + 0.08], 0.006);
+    rail([-0.095, 0.1, hz + 0.32], [0.095, 0.1, hz + 0.32], 0.006);
+    // The seat: a base, a back reclined toward the one pushing, a wing up each side, and a footrest in front.
+    s.box([0, 0.255, hz + 0.19], [0.082, 0.012, 0.1], 0.01, FAB);
+    s.box([0, 0.33, hz + 0.1], [0.082, 0.085, 0.01], 0.01, { ...FAB, rot: [-0.3, 0, 0] });
+    for (const m of [1, -1]) s.box([m * 0.082, 0.29, hz + 0.19], [0.008, 0.035, 0.1], 0.006, FAB);
+    s.box([0, 0.2, hz + 0.335], [0.075, 0.008, 0.028], 0.006, { ...FAB, rot: [0.3, 0, 0] });
+    // The canopy: a half-dome over the head of the seat, open to the front, its inside hollowed.
+    s.ellipsoid([0, 0.41, hz + 0.08], [0.1, 0.1, 0.085], { ...FAB, k: 0.01 });
+    s.ellipsoid([0, 0.41, hz + 0.08], [0.09, 0.09, 0.077], { op: 'sub', k: 0.004 });
+    s.box([0, 0.3, hz + 0.08], [0.2, 0.1, 0.2], 0, { op: 'sub', k: 0.001 });
+    s.box([0, 0.45, hz + 0.2], [0.2, 0.2, 0.1], 0, { op: 'sub', k: 0.001 });
+    // The basket under the seat, between the wheels.
+    s.box([0, 0.15, hz + 0.2], [0.07, 0.022, 0.09], 0.008, { color: '#40404a', mat: 'cloth', bone, k: 0.004 });
+    // The blanket over its lap.
+    s.box([0, 0.285, hz + 0.21], [0.07, 0.014, 0.075], 0.012, { color: blanket, mat: 'cloth', bone, k: 0.006 });
   });
   mark(s, from);
-  // The baby, asleep in the seat with its blanket to its chin.
-  infant(s, { head: [0, 0.285, hz + 0.19], foot: [0, 0.245, hz + 0.265], face: [0, 0.7, 0.7], bone });
+  // The baby: sitting up against the back of the seat, facing forward, cut off at the hips under the blanket.
+  const sc = graftScale(baby, host, size), hip = 0.15;
+  graft(s, baby, { at: [0, 0.285 + 0.01 - hip * sc, hz + 0.155], rot: [-0.15, 0, 0], size, host, bone, clip: (q) => hip - q[1] });
 }
