@@ -323,7 +323,7 @@ export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008,
     return fn;
   };
   const hair = grown(color);
-  shell(s, region, { color: hair, mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004, taper: 0.006 });
+  shell(s, region, { color: hair, mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004, taper: 0.015 });
   // The cheeks' blush is painted on the face where the beard's top edge is: paint the beard's own color back over it, so
   // the top of the beard is hair, not skin. (A recolored person's hair color is applied to it as it is to the shell.)
   s.paint((p) => region(p), s.tint ? s.tint(hair, 'hair', 'hair') : hair, 0.003);
