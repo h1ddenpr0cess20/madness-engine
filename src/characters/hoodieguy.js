@@ -2,7 +2,7 @@ import { cloth, person } from './person.js';
 import { hoodDown } from './metalwear.js';
 
 /**
- * The Hoodie Guy: twenty-something, in a grey hooded top with the hood down,
+ * The Hoodie Guy: twenty-something, in a gray hooded top with the hood down,
  * dark jeans and white trainers, messy brown hair that has not met a comb
  * today. Carries nothing, so he will do for any game. About 0.95 tiles tall.
  */

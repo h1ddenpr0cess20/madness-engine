@@ -66,10 +66,10 @@ export default person({
         hold(k, 'foreL', -0.22, 0, 0);
       }
       if (clip === 'idle') {
-        // The right hand up beside his head and waving: the forearm rocking side to side from the elbow.
+        // The right arm out at the shoulder, the elbow bent and the forearm straight up, the hand waving beside his head.
         const wave = Math.sin(T * 5);
-        hold(k, 'armR', -1.35, 0, -0.45 + wave * 0.12);
-        hold(k, 'foreR', -1.5, 0, 0);
+        hold(k, 'armR', -0.3, 0, -1.6 + wave * 0.1);
+        hold(k, 'foreR', -1.2, -1.5, 0);
         hold(k, 'handR', 0, 0, wave * 0.3);
       }
       // Ho, ho, ho: his head back and the whole of him bouncing, in a burst every few seconds, at rest and winning.

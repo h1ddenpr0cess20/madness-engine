@@ -113,7 +113,7 @@ export function joints(b = 1) {
   return J;
 }
 
-/** A colour (or a colour function) darkened, for a sole that wasn't given one. */
+/** A color (or a color function) darkened, for a sole that wasn't given one. */
 const darker = (color) => (typeof color === 'function' ? (p, n) => color(p, n).map((v) => v * 0.42) : rgb(color).map((v) => v * 0.42));
 
 /** A slab of sole: flat top and bottom, straight sides round an oval of radii `r`[0] by `r`[2], `r`[1] either side of `c` up and down, its edges rounded. */
@@ -301,9 +301,9 @@ export function tube(s, a, b, r1, r2, o) {
 /**
  * The parts a person's own body and clothes are meshed in, each on its own
  * so that where one garment meets another, or the skin, there is a clean
- * edge and no colour bleeding across it: the skin ('body'), the head, the
+ * edge and no color bleeding across it: the skin ('body'), the head, the
  * hands (with a bare forearm, or a glove), the shirt or jacket ('top'), its
- * sleeves where they are another colour ('sleeves', 'cuffs'), the trousers,
+ * sleeves where they are another color ('sleeves', 'cuffs'), the trousers,
  * shorts or skirt ('bottoms'), socks or tights ('hose'), the belt and the
  * shoes; and what is worn over them, fitted to them as it is made: a coat,
  * a vest, an apron, a cape ('outer', and 'outer2' over that) and straps,
@@ -360,7 +360,7 @@ export function skirt(s, at, { top = 0.372, hem = 0.16, flare = 1.25, color, mat
 }
 
 /**
- * The body, dressed: `look` gives the colours (functions or hex) of `skin`,
+ * The body, dressed: `look` gives the colors (functions or hex) of `skin`,
  * `torso`, `sleeve` (upper arm), `cuff` (forearm), `hand`, `legs`, `boot`,
  * and if they have them a `belt` (and its `buckle`) and a `sole` under the
  * shoes; and `mats` the materials of the same (default 'cloth', 'skin' for
@@ -369,7 +369,7 @@ export function skirt(s, at, { top = 0.372, hem = 0.16, flare = 1.25, color, mat
  * `tuck`), sleeves to the wrist with a cuff, or short with the arm coming
  * out of them, or none; a glove where a bare arm meets a covered hand.
  * The calf is the trousers (`legs`) down to the shoe unless `shin` says
- * otherwise: a colour (socks, tights) or 'skin', under shorts that end
+ * otherwise: a color (socks, tights) or 'skin', under shorts that end
  * above the knee, or under a `skirt` ({ hem, flare }: see `skirt`). `boots`
  * pulls a boot (in `boot`) up over the calf, to just under the knee or to
  * the height given; `shoeless` ('L' or 'R') leaves a foot bare of its shoe.
@@ -433,7 +433,7 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
     const S = side(mm), sh = J[`shoulder${S}`], el = J[`elbow${S}`], wr = J[`wrist${S}`];
     const along = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
     // The arm: a round shoulder grown out of the top of the trunk, the upper arm tapering to the elbow. In a
-    // long sleeve it is the shirt's (or, another colour, a sleeve of its own); in a short one it is bare under a
+    // long sleeve it is the shirt's (or, another color, a sleeve of its own); in a short one it is bare under a
     // tube of cloth open halfway to the elbow; bare, it is the skin's.
     const sleeved = !bare('sleeve'), cuffed = !bare('cuff');
     const shortSleeve = sleeved && !cuffed;
@@ -490,7 +490,7 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
       });
     }
     if (look.shoeless === S) continue;
-    // Bare feet: a foot, melted into the leg, with its toes; no shoe. In sandals (`sandals`, their colour), the
+    // Bare feet: a foot, melted into the leg, with its toes; no shoe. In sandals (`sandals`, their color), the
     // bare foot on a flat sole, a thong from between the first two toes over the top of the foot to either side.
     if (bare('boot') && (look.sandals || (!look.sole && !look.boots))) {
       s.part(legPart(shinMat, shin) === 'body' ? 'body' : 'shoes', () => bareFoot(s, a, mm, { color: c('boot'), mat: 'skin', bone: `foot${S}` }));
@@ -959,9 +959,9 @@ function outside(p, c, R, r) {
 }
 
 /**
- * A head: skull and cheeks, a nose, ears, big eyes (white, a coloured iris,
+ * A head: skull and cheeks, a nose, ears, big eyes (white, a colored iris,
  * a black pupil and a catch-light) under lids, a mouth, brows. `brow` is
- * the brows' colour; `ears` false hides them (under a hood or a helmet);
+ * the brows' color; `ears` false hides them (under a hood or a helmet);
  * `mood` 1 sets the brows in a frown and the mouth firm. The head and the
  * neck are a mesh of their own, finer than the body's, so the face is
  * crisp, and the neck goes into the collar on a clean line.
@@ -1077,7 +1077,7 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
 }
 
 /**
- * Hair's colour (a function or hex) in strands: lighter and darker streaks
+ * Hair's color (a function or hex) in strands: lighter and darker streaks
  * running down from the crown `at`, fine ones over broad ones.
  */
 export function strands(color, at = [0, 0.695, -0.006]) {
@@ -1087,7 +1087,7 @@ export function strands(color, at = [0, 0.695, -0.006]) {
     const v = noise(x * 5.5, z * 5.5, p[1] * 4) * 0.5 + noise(x * 10 + 40, z * 10, p[1] * 6) * 0.5;
     return base(p, n).map((c) => c * (0.66 + v * 0.62));
   };
-  // The same strands in another colour (see person.js `variant`).
+  // The same strands in another color (see person.js `variant`).
   fn.retint = (other) => strands(other, at);
   return fn;
 }

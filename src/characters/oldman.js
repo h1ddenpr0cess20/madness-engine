@@ -3,7 +3,7 @@ import { suitFront } from './wardrobe.js';
 
 /**
  * The Old Man: nobody in particular, just old. A green knitted cardigan over
- * a cream shirt, grey slacks on a brown belt, polished brown shoes, thin
+ * a cream shirt, gray slacks on a brown belt, polished brown shoes, thin
  * white hair round the sides and back of a bald crown, a little stooped and
  * slow on his feet. Carries nothing, so he will do for any game. About 0.88
  * tiles tall.

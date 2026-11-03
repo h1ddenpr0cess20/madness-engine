@@ -4,7 +4,7 @@ import { longHair } from './metalwear.js';
 /**
  * The Beauty: tall and slim-waisted in a fitted burgundy dress to the knee
  * with bare arms, black shoes, long auburn hair falling past her shoulders,
- * green eyes and a touch of colour on her lips. Carries nothing, so she will
+ * green eyes and a touch of color on her lips. Carries nothing, so she will
  * do for any game. About 0.95 tiles tall.
  */
 
