@@ -254,12 +254,12 @@ export function band(s, y, r, thick, o, tilt = 0.03) {
   return c[2] + rz + thick * 0.5;
 }
 
-/** A belt buckle on the front of a belt at `front`: a frame round an open middle, and the tongue across it. */
-export function buckle(s, y, front, color, bone) {
+/** A belt buckle on the front of a belt at `front`: a frame round an open middle, and the tongue across it (`size` times as big). */
+export function buckle(s, y, front, color, bone, size = 1) {
   const B = { color, mat: 'metal', bone, k: 0.001 };
-  s.box([0, y, front + 0.0015], [0.0135, 0.0105, 0.0022], 0.0016, B);
-  s.box([0, y, front + 0.0035], [0.0085, 0.0058, 0.004], 0.001, { op: 'sub', k: 0.0008 });
-  s.box([0.002, y, front + 0.0018], [0.0062, 0.0016, 0.0016], 0.0008, B);
+  s.box([0, y, front + 0.0015 * size], [0.0135 * size, 0.0105 * size, 0.0022 * size], 0.0016 * size, B);
+  s.box([0, y, front + 0.0035 * size], [0.0085 * size, 0.0058 * size, 0.004 * size], 0.001 * size, { op: 'sub', k: 0.0008 });
+  s.box([0.002 * size, y, front + 0.0018 * size], [0.0062 * size, 0.0016 * size, 0.0016 * size], 0.0008 * size, B);
 }
 
 /** Skin: warm, rosier where it faces forward and down a little. */
@@ -374,6 +374,7 @@ export function skirt(s, at, { top = 0.372, hem = 0.16, flare = 1.25, color, mat
  * pulls a boot (in `boot`) up over the calf, to just under the knee or to
  * the height given; `shoeless` ('L' or 'R') leaves a foot bare of its shoe.
  * `b` is the breadth; `belly` (0 to 2 or so) how far a belly sticks out.
+ * `beltWide` makes the belt that many times as wide.
  */
 export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
   const J = joints(b);
@@ -421,8 +422,10 @@ export function body(s, { look, mats = {}, b = 1, k = 0.03, belly = 0 }) {
   // A belt, if they wear one: a strap round the top of the trousers, on them, and a buckle.
   if (look.belt) {
     s.part('belt', () => {
-      const front = band(s, 0.352, 0.0078, 0.0036, { color: look.belt, mat: 'leather', bone: 'hips' });
-      if (look.buckle) buckle(s, 0.352, front, look.buckle, 'hips');
+      // (`beltWide`: how many times as wide as an ordinary belt it is, with a buckle to match.)
+      const wide = look.beltWide ?? 1;
+      const front = band(s, 0.352, 0.0078 * wide, 0.0036 * Math.sqrt(wide), { color: look.belt, mat: 'leather', bone: 'hips' });
+      if (look.buckle) buckle(s, 0.352, front, look.buckle, 'hips', Math.sqrt(wide) * 1.2);
     });
   }
 

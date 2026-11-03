@@ -285,14 +285,15 @@ export function moustache(s, { color = '#2a1a10', wide = 1, pencil = false, droo
 /**
  * A beard over the jaw and chin, lying on the face from the sideburns in
  * front of the ears down round the chin, the mouth left clear. `long` lets
- * it hang down the chest; `full` 0 keeps it to the chin (a goatee).
+ * it hang down the chest; `full` 0 keeps it to the chin (a goatee); `high` is
+ * how far up the cheek it grows (0.668 as given; lower leaves the cheeks bare).
  */
-export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008 } = {}) {
+export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008, high = 0.668 } = {}) {
   const mouth = (p) => Math.hypot(p[0] / 1.5, (p[1] - 0.611) * 1.2) - 0.016;
   shell(s, (p) => {
     // Below a line from the sideburns to under the cheekbones, round to the front.
     const side = Math.abs(p[0]);
-    const line = 0.668 - Math.max(0, 0.09 - side) * 0.55 - (full ? 0 : 0.05);
+    const line = high - Math.max(0, 0.09 - side) * 0.55 - (full ? 0 : 0.05);
     const width = full ? 0.2 : 0.034 - Math.max(0, 0.6 - p[1]) * 0.1;
     return Math.max(p[1] - line, side - width, -mouth(p), -p[2] - 0.02, p[1] - (p[2] > 0.05 ? 0.632 : 1));
   }, { color: hairy(color, false), mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004 });

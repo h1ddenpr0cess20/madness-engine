@@ -165,6 +165,16 @@ import yodeler from './yodeler.js';
 import yokozuna from './yokozuna.js';
 import zinekid from './zinekid.js';
 import zombie from './zombie.js';
+import baldguy from './baldguy.js';
+import beauty from './beauty.js';
+import casualwoman from './casualwoman.js';
+import fatman from './fatman.js';
+import fatwoman from './fatwoman.js';
+import hoodieguy from './hoodieguy.js';
+import officeguy from './officeguy.js';
+import officewoman from './officewoman.js';
+import oldman from './oldman.js';
+import oldwoman from './oldwoman.js';
 import { CAT_DEFS } from './cat.js';
 
 /**
@@ -186,5 +196,7 @@ export const CHARACTERS = {
   screamer, security, shredder, skater, skeleton, skier, snowboarder, soundguy, stbernard, stoner,
   streetteam, stuntman, suit, sumo, superfan, surfer, tapetrader, toughguy, tourist, troll, usher,
   vendor, viking, waiter, welder, wizard, wolf, wraith, yeti, yodeler, yokozuna, zinekid, zombie,
+  // Ten ordinary people, carrying nothing, for any game: five men, five women.
+  oldman, fatman, baldguy, hoodieguy, officeguy, oldwoman, fatwoman, beauty, casualwoman, officewoman,
   ...CAT_DEFS,
 };
