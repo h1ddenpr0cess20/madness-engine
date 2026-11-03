@@ -26,11 +26,17 @@ function pointedEars(s, skin) {
   const from = s.shapes.length;
   for (const m of [1, -1]) {
     s.part('head', () => {
-      const S = { color: skin, mat: 'skin', bone: 'head', k: 0.012 };
-      // A thick leaf, broad at the root and narrowing to a rounded tip (not thinner than the head's grid can hold, or it tears
-      // into holes), and a lower fold along its inside edge for the shape of an ear.
-      s.flake([m * 0.086, 0.636, -0.004], [m * 0.19, 0.696, -0.03], [0, 0, 1], 0.03, 0.009, 0.55, S);
-      s.limb([m * 0.092, 0.628, -0.012], [m * 0.17, 0.688, -0.032], 0.007, 0.005, { ...S, k: 0.006 });
+      const S = { color: skin, mat: 'skin', bone: 'head', k: 0.01 };
+      const root = [m * 0.086, 0.636, -0.004], tip = [m * 0.19, 0.698, -0.03];
+      // The ear: a flat leaf facing forward, broad at its root and drawn out to a point, thick enough for the head's grid (a
+      // thinner one tears into holes).
+      s.flake(root, tip, [0, 0, 1], 0.036, 0.012, 0.4, S);
+      // Its bowl: hollowed into the front face, shallow: only a couple of millimeters of a leaf twelve thick (cut right through, it would be a hole).
+      s.ellipsoid([m * 0.126, 0.659, -0.0013], [0.036, 0.013, 0.007], { op: 'sub', k: 0.005, rot: [0, 0, m * 0.52] });
+      // The rim: a ridge round the front edge of the leaf, from the root over the top to the tip, and the lobe at the root.
+      s.limb([m * 0.092, 0.652, -0.003], [m * 0.14, 0.683, -0.012], 0.0055, 0.0045, { ...S, k: 0.006 });
+      s.limb([m * 0.14, 0.683, -0.012], [m * 0.182, 0.698, -0.024], 0.0045, 0.0045, { ...S, k: 0.006 });
+      s.sphere([m * 0.092, 0.622, -0.004], 0.0115, { ...S, k: 0.01 });
     });
   }
   // Marked, so the cap is not fitted over them.
