@@ -1356,7 +1356,7 @@ const window_ = (t, a, b) => ease((t - a) / (b - a));
  * How a hero moves. `style.attack` is 'slash' (a sword across), 'chop' (an
  * axe from over the head), 'thrust' (a staff jabbed forward) or 'smite' (a
  * mace or staff brought down); `style.heavy` slows and deepens it all.
- * Clips: idle, walk, attack, cast, hit, ko, win.
+ * Clips: idle, walk, attack, cast, hit, ko, win, sit.
  */
 export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 }, style = {}) {
   const T = time + seed;
@@ -1427,6 +1427,8 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('armL', -0.4 * up, 0, 1.1 * fall);
     k.turn('armR', -0.4 * up, 0, -1.1 * fall);
     k.turn('foreL', -0.3 * fall, 0, 0);
+  } else if (clip === 'sit') {
+    sit(k, t, T);
   } else if (clip === 'win') {
     // The weapon up, a little hop.
     const up = window_(t, 0, 0.3);
@@ -1690,7 +1692,7 @@ export function reachFoot(k, S, sole, target, steps = 16) {
 /**
  * How a person moves: as a hero does (`moveHumanoid`), but with nothing to
  * hold ready, so at rest the hands hang easy and a walk swings both arms.
- * Clips: idle, walk, attack, cast, hit, ko, win.
+ * Clips: idle, walk, attack, cast, hit, ko, win, sit.
  */
 export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1, aim = null, reach = null, step = null }, style = {}) {
   const T = time + seed;
@@ -1760,6 +1762,8 @@ export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed 
     k.turn('armL', -0.4 * up, 0, 1.1 * fall);
     k.turn('armR', -0.4 * up, 0, -1.1 * fall);
     k.turn('foreL', -0.3 * fall, 0, 0);
+  } else if (clip === 'sit') {
+    sit(k, t, T);
   } else if (clip === 'win') {
     // The weapon up, a little hop.
     const up = window_(t, 0, 0.3);
@@ -1774,6 +1778,29 @@ export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed 
   }
   // Whatever is particular to this one, on top of all that.
   style.after?.(k, { clip, t, time, seed, speed, aim, reach, step }, T);
+}
+
+/**
+ * Sitting on a seat about as high as the knee: the hips let down until the
+ * thighs lie level, the shins straight down to the floor, the back easy, the
+ * hands resting on the knees. `t` eases it in (a one-shot sit down, then held);
+ * `T` is the clock for the small idle fidgets.
+ */
+function sit(k, t, T) {
+  const s = window_(t, 0, 0.45);
+  const breathe = Math.sin(T * 2.2);
+  k.move('hips', 0, -0.138 * s, -0.015 * s);
+  k.turn('hips', 0, Math.sin(T * 0.6) * 0.03 * s, 0);
+  k.turn('thighL', -1.52 * s, 0, 0.07 * s); k.turn('shinL', 1.52 * s, 0, 0);
+  k.turn('thighR', -1.52 * s, 0, -0.07 * s); k.turn('shinR', 1.52 * s, 0, 0);
+  k.turn('footL', 0, 0, 0); k.turn('footR', 0, 0, 0);
+  // Hips tipped under, the spine a little forward.
+  k.turn('spine', 0.1 * s, 0, 0);
+  k.turn('chest', 0.04 * s + breathe * 0.01, 0, 0);
+  k.turn('head', -0.06 * s + Math.sin(T * 0.5) * 0.04, Math.sin(T * 0.37) * 0.2, 0);
+  // Hands resting on the thighs.
+  k.turn('armL', -0.55 * s, 0, 0.12 * s); k.turn('foreL', -0.75 * s, 0, 0);
+  k.turn('armR', -0.55 * s, 0, -0.12 * s); k.turn('foreR', -0.75 * s, 0, 0);
 }
 
 function attack(k, t, style) {

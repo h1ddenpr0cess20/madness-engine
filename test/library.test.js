@@ -173,3 +173,25 @@ test('two definitions under one name are baked apart', async () => {
   assert.notEqual(a, b);
   assert.notEqual(a.count, b.count);
 });
+
+test('a person in the sit clip is let down onto the floor-standing feet, and the chair prop is there to take them', async () => {
+  const GFX = await import('../src/gfx/index.js');
+  const { createModel } = await import('../src/models/model.js');
+  const { PROPS } = await import('../src/props/index.js');
+  assert.ok(PROPS.chair, 'the chair is in PROPS');
+  const chair = createModel(GFX, PROPS.chair, { detail: 0.5 });
+  assert.ok(chair.mesh.geometry.attributes.position.count > 100, 'the chair has a mesh');
+  const def = (await import('../src/characters/punk.js')).default;
+  const model = createModel(GFX, def, { detail: 0.5 });
+  const extent = (clip, t) => {
+    model.pose({ clip, t, time: 1, seed: 0, speed: 1 });
+    const p = model.mesh.geometry.attributes.position.array;
+    let low = Infinity, top = -Infinity;
+    for (let i = 1; i < p.length; i += 3) { low = Math.min(low, p[i]); top = Math.max(top, p[i]); }
+    return { low, top };
+  };
+  const stand = extent('idle', 1), sat = extent('sit', 1), start = extent('sit', 0);
+  assert.ok(sat.top < stand.top - 0.1, 'sitting is lower than standing');
+  assert.ok(Math.abs(start.top - stand.top) < 0.03, 'it starts from standing');
+  assert.ok(sat.low > -0.01, `the feet stay on the floor, not ${(sat.low * 1000).toFixed(1)} thousandths under it`);
+});

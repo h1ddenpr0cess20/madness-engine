@@ -24,7 +24,7 @@ const isDef = (v) => v && typeof v === 'object' && typeof v.sculpt === 'function
 const rooted = (def) => (def.bones ? def : { ...def, bones: [['root', null, [0, 0, 0]]] });
 const where = (path) => path.replace('../../../src/', '');
 const stem = (path) => where(path).split('/').pop().replace(/\.js$/, '');
-const CLIPS = ['idle', 'walk', 'attack', 'cast', 'hit', 'ko', 'win'];
+const CLIPS = ['idle', 'walk', 'attack', 'cast', 'hit', 'ko', 'win', 'sit'];
 const CATEGORY = { characters: 'Characters', props: 'Props', scenery: 'Scenery & vehicles' };
 
 /** The bounding box of everything drawn in `object`, in its own units, as { min, max, size }. */
