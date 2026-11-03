@@ -82,3 +82,21 @@ test('the children carry nothing; the mothers carry a baby, and a stroller with 
   assert.ok(held('motherstroller').some((x) => x.bone === 'root'));
   assert.ok(held('motherholding').every((x) => x.bone === 'chest'));
 });
+
+const ELVES = ['elfbabyboy', 'elfbabygirl', 'elftoddlerboy', 'elftoddlergirl', 'elfboy', 'elfgirl', 'elfpreteenboy', 'elfpreteengirl', 'elfteenboy', 'elfteengirl'];
+
+test('Santa has an elf for each of the children: the same build and height, pointed ears, a long cap, and curled toes', () => {
+  const same = { elfbabyboy: 'babyboy', elfbabygirl: 'babygirl', elftoddlerboy: 'toddlerboy', elftoddlergirl: 'toddlergirl', elfboy: 'boy', elfgirl: 'girl', elfpreteenboy: 'preteenboy', elfpreteengirl: 'preteengirl', elfteenboy: 'teenboy', elfteengirl: 'teengirl' };
+  for (const name of ELVES) {
+    const elf = CHARACTERS[name], kid = CHARACTERS[same[name]];
+    assert.ok(elf && kid, name);
+    assert.equal(elf.scale, kid.scale, `${name} is as tall as the ${same[name]}`);
+    // Against the same child: the ears stand further out from the head, the cap rises above anything on the child's head,
+    // and the toes reach further forward.
+    const reach = (def, part, axis, hi = true) => Math.max(...sculpted(def).shapes.filter((x) => x.op === 'add' && x.part === part).map((x) => (hi ? x.box[1][axis] : -x.box[0][axis])));
+    assert.ok(reach(elf, 'head', 0) > reach(kid, 'head', 0) + 0.02, `${name} has pointed ears`);
+    assert.ok(reach(elf, 'outer2', 1) > Math.max(reach(kid, 'head', 1), reach(kid, 'hair', 1)) + 0.1, `${name} has a long cap`);
+    assert.ok(reach(elf, 'shoes', 2) > reach(kid, 'shoes', 2) + 0.03, `${name} has curled toes`);
+    assert.equal(sculpted(elf).shapes.filter((x) => x.held).length, 0, `${name} carries nothing`);
+  }
+});
