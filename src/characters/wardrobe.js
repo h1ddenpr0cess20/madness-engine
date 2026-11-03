@@ -274,7 +274,7 @@ export function moustache(s, { color = '#2a1a10', wide = 1, pencil = false, droo
   const mid = (x) => 0.6245 - x * x * (6 + droop * 18);
   const half = (x) => H * Math.max(0, 1 - (Math.abs(x) / W) ** 2) ** 0.55 + 0.0012;
   shell(s, (p) => Math.max(Math.abs(p[1] - mid(p[0])) - half(p[0]), Math.abs(p[0]) - W, 0.07 - p[2]), {
-    color: hairy(color), mat: 'hair', part: 'brows', thick: pencil ? 0.0025 : 0.0055, lift: -0.0008, over: ['head'], bone: 'head', k: 0.002,
+    color: hairy(color, false), mat: 'hair', part: 'brows', thick: pencil ? 0.0025 : 0.0055, lift: -0.0008, over: ['head'], bone: 'head', k: 0.002,
   });
   if (wide > 1.25) {
     // The handlebar's ends, waxed and curled up.
@@ -295,7 +295,7 @@ export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008,
     return t * t * (3 - 2 * t);
   };
   // Where the beard is (negative inside), in the face's own coordinates.
-  const region = (p) => {
+  const region = (p, mouthOut = true) => {
     // Below a line from the sideburns to under the cheekbones, round to the front.
     const side = Math.abs(p[0]);
     const line = high - Math.max(0, 0.09 - side) * 0.55 - (full ? 0 : 0.05);
@@ -307,7 +307,7 @@ export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008,
     const cheek = p[1] - (0.632 + (1 - smooth(0.02, 0.075, p[2])) * 0.1);
     // Under the jaw it ends at the neck: lower at the chin, higher toward the back.
     const under = 0.552 + Math.max(0, 0.05 - p[2]) - p[1];
-    return Math.max(p[1] - line, side - width, -mouth(p), back, cheek, under);
+    return Math.max(p[1] - line, side - width, mouthOut ? -mouth(p) : -1, back, cheek, under);
   };
   // Its color: the hair's deep in, but toward the edge shading to the skin's, as stubble does, so it has no outline.
   const warp = s.warp, face = s.shapes.find((x) => x.part === 'head' && x.mat === 'skin' && x.op === 'add')?.color ?? '#d8a888';
@@ -315,7 +315,7 @@ export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008,
   const grown = (hair) => {
     const strands = hairy(hair, false);
     const fn = (p, n) => {
-      const t = 0.35 + 0.65 * smooth(0, 0.012, -region(warp ? warp.from(p) : p));
+      const t = 0.35 + 0.65 * smooth(0, 0.012, -region(warp ? warp.from(p) : p, false));
       const a = skin(p, n), b = strands(p, n);
       return a.map((v, i) => v + (b[i] - v) * t);
     };
