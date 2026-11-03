@@ -290,13 +290,42 @@ export function moustache(s, { color = '#2a1a10', wide = 1, pencil = false, droo
  */
 export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008, high = 0.668 } = {}) {
   const mouth = (p) => Math.hypot(p[0] / 1.5, (p[1] - 0.611) * 1.2) - 0.016;
-  shell(s, (p) => {
-    // Below a line from the sideburns to under the cheekbones, round to the front.
+  const smooth = (a, b, x) => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  // Where the beard is (negative inside), in the face's own coordinates.
+  const region = (p) => {
+    // Below a line across the cheek: up at the cheekbone by the ear, curving down to the mouth, its edge a little ragged as
+    // hair's is. (A goatee's is lower.)
     const side = Math.abs(p[0]);
-    const line = high - Math.max(0, 0.09 - side) * 0.55 - (full ? 0 : 0.05);
+    const ragged = 0.003 * Math.sin(p[1] * 170 + p[2] * 120) * Math.sin(p[0] * 150 + p[2] * 90);
+    const line = high - 0.056 * (1 - Math.min(1, (side / 0.09) ** 2)) - (full ? 0 : 0.05) + ragged;
     const width = full ? 0.2 : 0.034 - Math.max(0, 0.6 - p[1]) * 0.1;
-    return Math.max(p[1] - line, side - width, -mouth(p), -p[2] - 0.02, p[1] - (p[2] > 0.05 ? 0.632 : 1));
-  }, { color: hairy(color, false), mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004 });
+    // In front of the ear and no further back: the sideburn's back edge slants from in front of the ear's lobe down to
+    // the corner of the jaw, so it runs along the face and never over the ear or the neck.
+    const back = ((p[1] - 0.58) * 0.45 - p[2]) * 0.9;
+    // Never up to the eyes: the cheek line is capped at the cheekbone in front, easing up toward the ear rather than stepping.
+    const cheek = p[1] - (0.658 + (1 - smooth(0.02, 0.075, p[2])) * 0.1);
+    // Under the jaw it ends at the neck: lower at the chin, higher toward the back.
+    const under = 0.552 + Math.max(0, 0.05 - p[2]) - p[1];
+    // (Grown a little, so the edge that fades out is beyond where the beard used to stop, not inside it.)
+    return Math.max(p[1] - line, side - width, -mouth(p), back, cheek, under) - 0.01;
+  };
+  // Its color: the hair's deep in, but toward the edge shading to the skin's, as stubble does, so it has no outline.
+  const warp = s.warp, face = s.shapes.find((x) => x.part === 'head' && x.mat === 'skin' && x.op === 'add')?.color ?? '#d8a888';
+  const skin = typeof face === 'function' ? face : (() => { const c = typeof face === 'string' ? rgb(face) : face; return () => c; })();
+  const grown = (hair) => {
+    const strands = hairy(hair, false);
+    const fn = (p, n) => {
+      const t = 0.25 + 0.75 * smooth(0, 0.016, -region(warp ? warp.from(p) : p));
+      const a = skin(p, n), b = strands(p, n);
+      return a.map((v, i) => v + (b[i] - v) * t);
+    };
+    fn.retint = (other) => grown(other);
+    return fn;
+  };
+  shell(s, region, { color: grown(color), mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004, taper: 0.018 });
   if (long) {
     s.part('hair', () => {
       const B = { color: hairy(color, false), mat: 'hair', bone: 'head', k: 0.018 };

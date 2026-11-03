@@ -833,14 +833,22 @@ export function strap(s, path, { width = 0.014, thick = 0.004, lift = 0.0008, co
  * a distance, or near enough): a vest, a waistcoat, a coat's body, a bib,
  * an apron, a tabard. Below `hang` it hangs straight down from the most
  * that stands out above it, rather than following the legs in. In part
- * `part`, on the bones of what it lies on (or `bone`).
+ * `part`, on the bones of what it lies on (or `bone`). With `taper` it thins to
+ * nothing over that distance in from its edge (hair growing out of skin).
  */
-export function shell(s, region, { thick = 0.006, lift = 0.001, color, mat = 'cloth', part = 'outer', over = CORE, keep = () => true, bone = null, k = 0.003, bones = null } = {}) {
+export function shell(s, region, { thick = 0.006, lift = 0.001, color, mat = 'cloth', part = 'outer', over = CORE, keep = () => true, bone = null, k = 0.003, bones = null, taper = 0 } = {}) {
   const field = bodyField(s, over, keep);
   built(s, (w) => {
     const from = (p) => (w ? w.from(p) : p);
     const [lo, hi] = field.bounds(thick + lift + 0.01);
-    const d = (p) => roundMax(field.field(p) - lift - thick, region(from(p)), Math.min(0.004, thick * 0.6));
+    // `taper`: over that distance in from its edge the shell thins to nothing, so it grows out of what it lies on (hair
+    // out of skin) rather than stopping in a step.
+    const d = taper
+      ? (p) => {
+        const r = region(from(p)), t = Math.max(0, Math.min(1, -r / taper));
+        return roundMax(field.field(p) - lift - thick * t * t * (3 - 2 * t), r, Math.min(0.004, thick * 0.6));
+      }
+      : (p) => roundMax(field.field(p) - lift - thick, region(from(p)), Math.min(0.004, thick * 0.6));
     if (bones) {
       // One shape for each bone it moves with, each where `bones[name](p)` (as sculpted) is negative.
       for (const [bn, where] of Object.entries(bones)) s.part(part, () => s.shape((p) => Math.max(d(p), where(from(p))), [lo, hi], { color, mat, bone: bn, k }));
