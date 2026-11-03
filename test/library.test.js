@@ -19,7 +19,8 @@ test('the engine-owned bowling ball is preserved by extraction and listed in the
   const extraction = readFileSync(join(here, '../scripts/extract/library.mjs'), 'utf8');
   const library = readFileSync(join(here, '../docs/library.md'), 'utf8');
   assert.match(extraction, /ENGINE_OWNED/);
-  assert.ok(library.includes('heroes/bowling-ball'));
+  assert.ok(library.includes('props/bowling-ball'));
+  assert.ok(extraction.includes("ENGINE_OWNED = ['props/bowling-ball.js']"));
 });
 
 test('the library is laid out by what things are, and no game has a folder of its own', () => {

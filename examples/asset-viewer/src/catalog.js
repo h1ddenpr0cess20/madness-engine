@@ -14,6 +14,7 @@ import { CALIFORNIA_FOOTPRINTS } from '../../../src/buildings/california.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { tiled } from '../../../src/textures/painters.js';
 import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
+import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
@@ -152,13 +153,6 @@ const HEROES = [
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
   ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
   ['slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createSlimeOrb')],
-  ['bowling ball', (colours = {}) => import('../../../src/heroes/bowling-ball.js').then((m) => m.createBowlingBall(GFX, { colors: colours })), {
-    kind: 'bowling-ball',
-    base: '#192d59',
-    swirl: '#d83b7c',
-    accent: '#f2ba64',
-    holes: '#090d18',
-  }],
   // Floating at its own height, framed on the berry rather than on its halos, which spread far wider.
   ['blubber', () => import('../../../src/heroes/blubber.js').then((m) => {
     const b = m.createBlubber(GFX, { size: 1 });
@@ -350,6 +344,33 @@ function diceItems() {
   }));
 }
 
+/** A standalone resin bowling ball, kept on the Props shelf beside the dice. */
+function bowlingBallItems() {
+  return [{
+    id: 'props/bowling-ball',
+    category: 'Props',
+    group: 'balls',
+    name: 'Bowling ball',
+    source: 'props/bowling-ball',
+    kind: 'object',
+    palette: {
+      kind: 'bowling-ball',
+      design: 'marble',
+      base: '#192d59',
+      swirl: '#d83b7c',
+      accent: '#f2ba64',
+      holes: '#090d18',
+    },
+    build({ colours = {} } = {}) {
+      const made = createBowlingBall(GFX, { colors: colours, design: colours.design ?? 'marble' });
+      return {
+        object: made.group,
+        info: { Source: 'props/bowling-ball', Design: made.design, ...countOf(made.group) },
+      };
+    },
+  }];
+}
+
 /** Walks the library and returns every item, in category order. */
 export async function loadCatalog(onProgress = () => {}) {
   const items = [];
@@ -386,7 +407,7 @@ export async function loadCatalog(onProgress = () => {}) {
     }
   }
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
-  items.push(...diceItems());
+  items.push(...diceItems(), ...bowlingBallItems());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.

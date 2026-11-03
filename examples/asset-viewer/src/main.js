@@ -16,6 +16,7 @@ import { paintRoom } from '../../../src/textures/rooms/studio.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { diverse } from '../../../src/characters/person.js';
 import { boundsOf, loadCatalog } from './catalog.js';
+import { randomBowlingBallPalette } from './bowling-ball-palettes.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => {
@@ -327,11 +328,17 @@ function colourGroup(item) {
   if (!item.palette) return;
   const isDice = item.palette.kind === 'dice';
   const isBowlingBall = item.palette.kind === 'bowling-ball';
-  $('colourdiverse').style.display = isDice || isBowlingBall ? 'none' : '';
+  $('colourdiverse').style.display = isDice ? 'none' : '';
+  $('colourdiverse').textContent = isBowlingBall ? 'Randomise colours' : 'Randomise';
+  $('colourdiverse').title = isBowlingBall
+    ? 'Pick a coordinated random bowling-ball palette'
+    : 'Randomise this character palette';
+  $('bowlingdesignrow').style.display = isBowlingBall ? '' : 'none';
+  if (isBowlingBall) $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? 'marble';
   $('colourhint').textContent = isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
     : isBowlingBall
-      ? 'Change the bowling ball base resin, marbled swirl, accent veins, and finger-hole finish. Apply repaints the existing sphere.'
+      ? 'Choose a surface design and change the base resin, swirl, accent veins, and recessed finger-hole colour. Apply updates the ball.'
       : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
   $('colourrows').replaceChildren(...colourRows(item).map(([label, was, now, set, clear]) => {
     const input = el('input', { type: 'color', value: now ?? was });
@@ -349,12 +356,23 @@ function colourGroup(item) {
 
 $('colourapply').onclick = () => { view.colours = structuredClone(view.draft); show(view.item); };
 $('colourdiverse').onclick = () => {
-  const keep = view.draft.look;
-  view.draft = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
-  if (keep) view.draft.look = keep;
+  if (view.item.palette?.kind === 'bowling-ball') {
+    const current = { ...view.item.palette, ...view.colours, ...view.draft };
+    const design = current.design ?? 'marble';
+    view.draft = { ...randomBowlingBallPalette(Math.random, current), design };
+  } else {
+    const keep = view.draft.look;
+    view.draft = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
+    if (keep) view.draft.look = keep;
+  }
   colourGroup(view.item);
 };
 $('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
+$('bowlingdesign').onchange = () => {
+  if (view.item?.palette?.kind !== 'bowling-ball') return;
+  view.draft.design = $('bowlingdesign').value;
+  colourGroup(view.item);
+};
 $('colourcopy').onclick = async () => {
   let code;
   if (view.item.palette?.kind === 'dice') {
@@ -364,9 +382,9 @@ $('colourcopy').onclick = async () => {
       + JSON.stringify(view.colours, null, 2) + ");";
   } else if (view.item.palette?.kind === 'bowling-ball') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
-      + "import { createBowlingBall } from 'madness-engine/heroes/bowling-ball';\n\n"
+      + "import { createBowlingBall } from 'madness-engine/props/bowling-ball';\n\n"
       + "const bowlingBall = createBowlingBall(GFX, { colors: "
-      + JSON.stringify(view.colours, null, 2) + " });";
+      + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'marble') + "' });";
   } else {
     const name = view.item.name.replace(/[^a-z0-9]/gi, '');
     code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;

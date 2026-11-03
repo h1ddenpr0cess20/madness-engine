@@ -35,7 +35,7 @@ import { split } from './split.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Engine-authored library assets are kept when the game-built library is regenerated.
-const ENGINE_OWNED = ['heroes/bowling-ball.js'];
+const ENGINE_OWNED = ['props/bowling-ball.js'];
 const SRC = join(HERE, '..', '..', 'src');
 export const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music'];
 export const ORIGINS = join(HERE, 'origins.json');
@@ -289,7 +289,7 @@ function contents(places, moods) {
       lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${cell(blurb([...versions.values()].find((v) => v.path === place).files[0]))} |`);
     }
     if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be coloured independently. |');
-    if (kind === 'heroes') lines.push('| `heroes/bowling-ball` | `bowling-ball` (engine) | A glossy resin bowling ball with three finger holes and a flowing marbled swirl; `createBowlingBall` builds it and `setColors` changes its base, swirl, accent and hole colours at runtime. |');
+    if (kind === 'props') lines.push('| `props/bowling-ball` | `createBowlingBall` (engine) | A high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs (marble, spiral, flame, split and blotch). Colors and designs are changeable at runtime. |');
     lines.push('');
   }
   lines.push('## moods', '', ABOUT.moods, '', '| Path | Versions (games) | What it is |', '|---|---|---|');
