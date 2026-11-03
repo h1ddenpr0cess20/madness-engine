@@ -124,7 +124,6 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
 
   const loops = directions.map(() => []);
   const adjacency = directions.map(() => new Map());
-  let boundaryEdgeCount = 0;
 
   for (const edge of edges.values()) {
     if (edge.count !== 1) continue;
@@ -145,7 +144,6 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
     if (!map.has(edge.to)) map.set(edge.to, []);
     map.get(edge.from).push(edge.to);
     map.get(edge.to).push(edge.from);
-    boundaryEdgeCount += 1;
   }
 
   for (let h = 0; h < directions.length; h++) {
