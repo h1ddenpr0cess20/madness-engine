@@ -168,11 +168,12 @@ export function trunk(b, belly) {
     let i = 0;
     while (i < n - 2 && y > TRUNK[i + 1][0]) i++;
     const t = Math.max(0, Math.min(1, (y - TRUNK[i][0]) / (TRUNK[i + 1][0] - TRUNK[i][0])));
-    const P = [TRUNK[Math.max(0, i - 1)], TRUNK[i], TRUNK[i + 1], TRUNK[Math.min(n - 1, i + 2)]];
-    const [w, d, zc, e] = [1, 2, 3, 4].map((j) => {
-      const [p0, p1, p2, p3] = P.map((s) => s[j]);
+    const P0 = TRUNK[Math.max(0, i - 1)], P1 = TRUNK[i], P2 = TRUNK[i + 1], P3 = TRUNK[Math.min(n - 1, i + 2)];
+    const spline = (j) => {
+      const p0 = P0[j], p1 = P1[j], p2 = P2[j], p3 = P3[j];
       return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
-    });
+    };
+    const w = spline(1), d = spline(2), zc = spline(3), e = spline(4);
     // The belly: a round swell forward of the waist, from under the ribs down over the belt, as tall as it is
     // deep; the bigger it is, the lower it hangs. Not a ring round the middle: the sides and the back only fill
     // out, and that gently, over the whole trunk from the chest to the seat, so the waist goes and the chest and

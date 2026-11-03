@@ -205,6 +205,14 @@ const smax = (a, b, k) => -smin(-a, -b, k);
 
 let shapeId = 0;
 
+const warpMemos = new WeakMap();
+/** The last point a warp was asked about, and where it put it (and how much it stretches things there). */
+function warpMemo(w) {
+  let m = warpMemos.get(w);
+  if (!m) warpMemos.set(w, (m = { x: NaN, y: NaN, z: NaN, q: null, s: 1 }));
+  return m;
+}
+
 export class Sculpt {
   constructor() {
     this.shapes = [];
@@ -243,10 +251,16 @@ export class Sculpt {
     for (let c = 0; c < 8; c++) corners.push(w.to([box[c & 1][0], box[(c >> 1) & 1][1], box[(c >> 2) & 1][2]]));
     const lo = [0, 1, 2].map((i) => Math.min(...corners.map((q) => q[i])));
     const hi = [0, 1, 2].map((i) => Math.max(...corners.map((q) => q[i])));
+    // Every shape asks about the same point in turn, so the warp is worked out once per point, not once per shape.
+    const memo = warpMemo(w);
     return {
       d: (p) => {
-        const q = w.from(p);
-        return d(q) * w.scale(q);
+        if (memo.x !== p[0] || memo.y !== p[1] || memo.z !== p[2]) {
+          memo.q = w.from(p);
+          memo.s = w.scale(memo.q);
+          memo.x = p[0]; memo.y = p[1]; memo.z = p[2];
+        }
+        return d(memo.q) * memo.s;
       },
       box: [lo, hi],
       color: typeof color === 'function' ? (p, n) => color(w.from(p), n) : color,
