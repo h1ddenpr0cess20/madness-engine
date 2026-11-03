@@ -162,6 +162,23 @@ function sdRoundCone(p, a, b, r1, r2) {
   return (Math.sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
 }
 
+/** `sdRoundCone` for a fixed capsule: what depends only on the capsule is worked out once, and nothing is allocated per point. */
+function roundCone(a, b, r1, r2) {
+  const ba0 = b[0] - a[0], ba1 = b[1] - a[1], ba2 = b[2] - a[2];
+  const l2 = ba0 * ba0 + ba1 * ba1 + ba2 * ba2, rr = r1 - r2, a2 = l2 - rr * rr, il2 = 1 / l2;
+  const a0 = a[0], a1 = a[1], a2_ = a[2];
+  return (p) => {
+    const pa0 = p[0] - a0, pa1 = p[1] - a1, pa2 = p[2] - a2_;
+    const y = pa0 * ba0 + pa1 * ba1 + pa2 * ba2, z = y - l2;
+    const xv0 = pa0 * l2 - ba0 * y, xv1 = pa1 * l2 - ba1 * y, xv2 = pa2 * l2 - ba2 * y;
+    const x2 = xv0 * xv0 + xv1 * xv1 + xv2 * xv2, y2 = y * y * l2, z2 = z * z * l2;
+    const k = Math.sign(rr) * rr * rr * x2;
+    if (Math.sign(z) * a2 * z2 > k) return Math.sqrt(x2 + z2) * il2 - r2;
+    if (Math.sign(y) * a2 * y2 < k) return Math.sqrt(x2 + y2) * il2 - r1;
+    return (Math.sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
+  };
+}
+
 function sdRoundBox(q, b, r) {
   const x = Math.abs(q[0]) - b[0] + r, y = Math.abs(q[1]) - b[1] + r, z = Math.abs(q[2]) - b[2] + r;
   return Math.hypot(Math.max(x, 0), Math.max(y, 0), Math.max(z, 0)) + Math.min(Math.max(x, y, z), 0) - r;
@@ -201,9 +218,20 @@ const smin = (a, b, k) => {
 
 const smax = (a, b, k) => -smin(-a, -b, k);
 
+/** How much of its distance from a shape's box a shape's field is trusted to be at least (a field can run well under the true distance: a stretched ellipsoid's, a loft's, a warped shape's). */
+const CULL = 0.4;
+
 // ——————————————————————————————————————— the sculpt
 
 let shapeId = 0;
+
+const warpMemos = new WeakMap();
+/** The last point a warp was asked about, and where it put it (and how much it stretches things there). */
+function warpMemo(w) {
+  let m = warpMemos.get(w);
+  if (!m) warpMemos.set(w, (m = { x: NaN, y: NaN, z: NaN, q: null, s: 1 }));
+  return m;
+}
 
 export class Sculpt {
   constructor() {
@@ -243,10 +271,16 @@ export class Sculpt {
     for (let c = 0; c < 8; c++) corners.push(w.to([box[c & 1][0], box[(c >> 1) & 1][1], box[(c >> 2) & 1][2]]));
     const lo = [0, 1, 2].map((i) => Math.min(...corners.map((q) => q[i])));
     const hi = [0, 1, 2].map((i) => Math.max(...corners.map((q) => q[i])));
+    // Every shape asks about the same point in turn, so the warp is worked out once per point, not once per shape.
+    const memo = warpMemo(w);
     return {
       d: (p) => {
-        const q = w.from(p);
-        return d(q) * w.scale(q);
+        if (memo.x !== p[0] || memo.y !== p[1] || memo.z !== p[2]) {
+          memo.q = w.from(p);
+          memo.s = w.scale(memo.q);
+          memo.x = p[0]; memo.y = p[1]; memo.z = p[2];
+        }
+        return d(memo.q) * memo.s;
       },
       box: [lo, hi],
       color: typeof color === 'function' ? (p, n) => color(w.from(p), n) : color,
@@ -322,7 +356,7 @@ export class Sculpt {
   /** A capsule from a (radius r1) to b (radius r2). */
   limb(a, b, r1, r2 = r1, o) {
     const m = Math.max(r1, r2);
-    return this.shape((p) => sdRoundCone(p, a, b, r1, r2),
+    return this.shape(roundCone(a, b, r1, r2),
       [[0, 1, 2].map((i) => Math.min(a[i], b[i]) - m), [0, 1, 2].map((i) => Math.max(a[i], b[i]) + m)], o);
   }
 
@@ -584,9 +618,16 @@ export class Sculpt {
   field(p) {
     let d = 1e9;
     const list = this.near(p);
+    const x = p[0], y = p[1], z = p[2];
     for (let i = 0; i < list.length; i++) {
       const s = list[i];
       if (s.op === 'add') {
+        // A shape further off than the surface so far, by more than it melts in over, can't change it: not worth its distance.
+        const lo = s.box[0], hi = s.box[1];
+        const gx = Math.max(lo[0] - x, 0, x - hi[0]), gy = Math.max(lo[1] - y, 0, y - hi[1]), gz = Math.max(lo[2] - z, 0, z - hi[2]);
+        const g2 = gx * gx + gy * gy + gz * gz;
+        // (Outside its box only: inside, a shape's distance can be anything, down to negative.)
+        if (g2 > 0 && Math.sqrt(g2) * CULL - d >= s.k) continue;
         d = smin(d, s.d(p), s.k);
       } else if (s.op === 'sub') {
         d = smax(d, -s.d(p), s.k);
@@ -742,22 +783,26 @@ export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, 
   const verts = [];
   const EDGES = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
   const corner = (c) => [c & 1, (c >> 1) & 1, (c >> 2) & 1];
+  // Where each of a cell's corners is, as a step in `values` from its first, and the same for the ends of its edges.
+  const stride = [0, 1, 2, 3, 4, 5, 6, 7].map((c) => { const [a, b, d] = corner(c); return a + sx * (b + sy * d); });
+  const ends = EDGES.map(([e0, e1]) => [corner(e0), corner(e1)]);
+  const v = new Array(8);
   for (let k = 0; k < nz; k++) {
     for (let j = 0; j < ny; j++) {
       for (let i = 0; i < nx; i++) {
-        const v = new Array(8);
+        const base = at(i, j, k);
         let inside = 0;
         for (let c = 0; c < 8; c++) {
-          const [a, b, d] = corner(c);
-          v[c] = values[at(i + a, j + b, k + d)];
+          v[c] = values[base + stride[c]];
           if (v[c] < 0) inside++;
         }
         if (inside === 0 || inside === 8) continue;
         let px = 0, py = 0, pz = 0, n = 0;
-        for (const [e0, e1] of EDGES) {
+        for (let e = 0; e < 12; e++) {
+          const e0 = EDGES[e][0], e1 = EDGES[e][1];
           if ((v[e0] < 0) === (v[e1] < 0)) continue;
           const t = v[e0] / (v[e0] - v[e1]);
-          const A = corner(e0), B = corner(e1);
+          const A = ends[e][0], B = ends[e][1];
           px += A[0] + (B[0] - A[0]) * t; py += A[1] + (B[1] - A[1]) * t; pz += A[2] + (B[2] - A[2]) * t;
           n++;
         }
