@@ -295,7 +295,7 @@ export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008,
     return t * t * (3 - 2 * t);
   };
   // Where the beard is (negative inside), in the face's own coordinates.
-  const region = (p, mouthOut = true) => {
+  const region = (p) => {
     // Below a line from the sideburns to under the cheekbones, round to the front.
     const side = Math.abs(p[0]);
     const line = high - Math.max(0, 0.09 - side) * 0.55 - (full ? 0 : 0.05);
@@ -307,26 +307,15 @@ export function beard(s, { color = '#2a1a10', long = 0, full = 1, thick = 0.008,
     const cheek = p[1] - (0.632 + (1 - smooth(0.02, 0.075, p[2])) * 0.1);
     // Under the jaw it ends at the neck: lower at the chin, higher toward the back.
     const under = 0.552 + Math.max(0, 0.05 - p[2]) - p[1];
-    return Math.max(p[1] - line, side - width, mouthOut ? -mouth(p) : -1, back, cheek, under);
+    return Math.max(p[1] - line, side - width, -mouth(p), back, cheek, under);
   };
-  // Its color: the hair's deep in, but toward the edge shading to the skin's, as stubble does, so it has no outline.
-  const warp = s.warp, face = s.shapes.find((x) => x.part === 'head' && x.mat === 'skin' && x.op === 'add')?.color ?? '#d8a888';
-  const skin = typeof face === 'function' ? face : (() => { const c = typeof face === 'string' ? rgb(face) : face; return () => c; })();
-  const grown = (hair) => {
-    const strands = hairy(hair, false);
-    const fn = (p, n) => {
-      const t = 0.6 + 0.4 * smooth(0, 0.008, -region(warp ? warp.from(p) : p, false));
-      const a = skin(p, n), b = strands(p, n);
-      return a.map((v, i) => v + (b[i] - v) * t);
-    };
-    fn.retint = (other) => grown(other);
-    return fn;
-  };
-  const hair = grown(color);
+  // Its color is the hair's all the way to its edge (the softness at the edge is the beard thinning out, not skin showing).
+  const hair = hairy(color, false);
   shell(s, region, { color: hair, mat: 'hair', part: 'hair', thick, lift: -0.001, over: ['head'], bone: 'head', k: 0.004, taper: Math.min(full ? 0.015 : 0.006, thick * 2.5) });
   // The cheeks' blush is painted on the face where the beard's top edge is: paint the beard's own color back over it, so
   // the top of the beard is hair, not skin. (A recolored person's hair color is applied to it as it is to the shell.)
-  s.paint((p) => region(p), s.tint ? s.tint(hair, 'hair', 'hair') : hair, 0.003);
+  // (It reaches a little past the beard's edge, where it is thin, so no skin color is left showing at it.)
+  s.paint((p) => region(p) - 0.003, s.tint ? s.tint(hair, 'hair', 'hair') : hair, 0.0025);
   if (long) {
     // A beard that hangs: a lobe under the chin, joined to the beard on the face. It stands out from the chin only as far as it
     // hangs (a little beard is no bump), and keeps its own color rather than taking the skin's where it melts in.
