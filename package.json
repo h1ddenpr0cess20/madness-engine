@@ -1,7 +1,7 @@
 {
   "name": "madness-engine",
   "version": "0.1.0",
-  "description": "An engine for rolling games: a WebGPU/WebGL2 renderer, ball physics, controls, camera, stage, sound, effects and the sculpting kit, with a library of every character, prop, hero, texture and song the games have made",
+  "description": "An engine for rolling games: a WebGPU/WebGL2 renderer, ball physics, controls, camera, stage, sound, effects and the sculpting kit, with a library of characters, props, standalone RPG dice, heroes, textures and songs",
   "type": "module",
   "private": true,
   "engines": {
@@ -11,6 +11,7 @@
     "./gfx": "./src/gfx/index.js",
     "./characters": "./src/characters/index.js",
     "./props": "./src/props/index.js",
+    "./props/dice": "./src/dice.js",
     "./buildings": "./src/buildings/index.js",
     "./moods": "./src/moods/index.js",
     "./*.js": "./src/*.js",

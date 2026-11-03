@@ -13,6 +13,7 @@ import { createBuildings, FOOTPRINTS } from '../../../src/buildings/index.js';
 import { CALIFORNIA_FOOTPRINTS } from '../../../src/buildings/california.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { tiled } from '../../../src/textures/painters.js';
+import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
@@ -315,6 +316,33 @@ function moodItem([name, mood]) {
   };
 }
 
+
+/** The RPG dice are still props, but use their own faceted geometry rather than the sculpt baker. */
+function diceItems() {
+  return DICE_TYPES.map(({ id, label, faceCount, range }) => ({
+    id: 'props/dice/' + id,
+    category: 'Props',
+    group: 'dice',
+    name: label + ' — RPG die',
+    source: 'props/dice',
+    kind: 'object',
+    dieType: id,
+    palette: {
+      kind: 'dice',
+      color: '#3a3350',
+      markingColor: '#e7e0f7',
+      ...(id === 'd20' ? { highlightColor: '#ffd479' } : {}),
+    },
+    build({ colours = {} } = {}) {
+      const made = createDieProp(GFX, id, colours);
+      return {
+        object: made.group,
+        info: { Source: 'props/dice', Shape: label, Faces: faceCount, Values: range, Material: 'resin' },
+      };
+    },
+  }));
+}
+
 /** Walks the library and returns every item, in category order. */
 export async function loadCatalog(onProgress = () => {}) {
   const items = [];
@@ -351,6 +379,7 @@ export async function loadCatalog(onProgress = () => {}) {
     }
   }
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
+  items.push(...diceItems());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
