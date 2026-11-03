@@ -7,13 +7,13 @@ test('creates a high-resolution glossy ball with three true recessed finger hole
   const ball = createBowlingBall(GFX);
   assert.equal(ball.group.name, 'bowling_ball');
   assert.equal(ball.shell.geometry.parameters.radius, BOWLING_BALL_RADIUS);
-  assert.equal(ball.shell.geometry.parameters.widthSegments, 256);
-  assert.equal(ball.shell.geometry.parameters.heightSegments, 192);
-  assert.ok(ball.shell.geometry.getAttribute('position').count >= 49000);
+  assert.equal(ball.shell.geometry.parameters.widthSegments, 512);
+  assert.equal(ball.shell.geometry.parameters.heightSegments, 384);
+  assert.ok(ball.shell.geometry.getAttribute('position').count >= 196000);
   assert.equal(ball.shell.material.vertexColors, true);
   assert.equal(ball.holes.length, 3);
   assert.ok(ball.removedHoleTriangles > 0);
-  assert.ok(ball.shell.geometry.getIndex().count < 256 * 192 * 6);
+  assert.ok(ball.shell.geometry.getIndex().count < 512 * 384 * 6);
   assert.ok(ball.holeBoundaryEdges > 60);
   assert.ok(ball.holes.every(({ mesh, boundaryVertices }) => mesh.isMesh && boundaryVertices > 20));
   assert.ok(ball.holes.every((hole) => !('rim' in hole)));

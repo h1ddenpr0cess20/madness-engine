@@ -28,7 +28,7 @@ function paletteOf(GFX, options) {
  */
 function paint(GFX, geometry, radius, palette, attribute, design) {
   const p = geometry.getAttribute('position');
-  const colour = new GFX.Color();
+  const color = new GFX.Color();
 
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i) / radius;
@@ -75,8 +75,8 @@ function paint(GFX, geometry, radius, palette, attribute, design) {
     const accentMix = design === 'split'
       ? 0.82 * vein
       : 0.72 * Math.pow(Math.max(0, vein), accentPower);
-    colour.copy(palette.base).lerp(palette.swirl, swirlMix).lerp(palette.accent, accentMix);
-    attribute.setXYZ(i, colour.r, colour.g, colour.b);
+    color.copy(palette.base).lerp(palette.swirl, swirlMix).lerp(palette.accent, accentMix);
+    attribute.setXYZ(i, color.r, color.g, color.b);
   }
 
   attribute.needsUpdate = true;
@@ -89,7 +89,7 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
   const limit = Math.sqrt(1 - (openingRadius / radius) ** 2);
   const kept = [];
   const edges = new Map();
-  const a = new GFX.Vector3(), b = new GFX.Vector3(), c = new GFX.Vector3(), centre = new GFX.Vector3();
+  const a = new GFX.Vector3(), b = new GFX.Vector3(), c = new GFX.Vector3(), center = new GFX.Vector3();
   let removedTriangles = 0;
 
   const addEdge = (from, to) => {
@@ -104,13 +104,13 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
     a.set(position.getX(ia), position.getY(ia), position.getZ(ia));
     b.set(position.getX(ib), position.getY(ib), position.getZ(ib));
     c.set(position.getX(ic), position.getY(ic), position.getZ(ic));
-    centre.set(
+    center.set(
       (a.x + b.x + c.x) / 3,
       (a.y + b.y + c.y) / 3,
       (a.z + b.z + c.z) / 3,
     ).normalize();
 
-    if (directions.some((normal) => centre.dot(normal) > limit)) {
+    if (directions.some((normal) => center.dot(normal) > limit)) {
       removedTriangles += 1;
       continue;
     }
@@ -121,8 +121,6 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
     addEdge(ic, ia);
   }
 
-  geometry.setIndex(kept);
-  geometry.computeVertexNormals();
 
   const loops = directions.map(() => []);
   const adjacency = directions.map(() => new Map());
@@ -133,11 +131,11 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
     const px = (position.getX(edge.from) + position.getX(edge.to)) / (2 * radius);
     const py = (position.getY(edge.from) + position.getY(edge.to)) / (2 * radius);
     const pz = (position.getZ(edge.from) + position.getZ(edge.to)) / (2 * radius);
-    centre.set(px, py, pz).normalize();
+    center.set(px, py, pz).normalize();
 
     let nearest = 0, nearestDot = -Infinity;
     for (let h = 0; h < directions.length; h++) {
-      const dot = centre.dot(directions[h]);
+      const dot = center.dot(directions[h]);
       if (dot > nearestDot) { nearestDot = dot; nearest = h; }
     }
     if (nearestDot < limit - 0.035) continue;
@@ -153,8 +151,8 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
   for (let h = 0; h < directions.length; h++) {
     const map = adjacency[h];
     if (!map.size) throw new Error('bowling-ball: opening ' + (h + 1) + ' has no boundary');
-    for (const [vertex, neighbours] of map) {
-      if (neighbours.length !== 2) {
+    for (const [vertex, neighbors] of map) {
+      if (neighbors.length !== 2) {
         throw new Error('bowling-ball: opening ' + (h + 1) + ' has a non-manifold boundary at vertex ' + vertex);
       }
     }
@@ -163,8 +161,8 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
     const loop = [start];
     let previous = -1, current = start;
     while (loop.length <= map.size) {
-      const neighbours = map.get(current);
-      const next = neighbours[0] === previous ? neighbours[1] : neighbours[0];
+      const neighbors = map.get(current);
+      const next = neighbors[0] === previous ? neighbors[1] : neighbors[0];
       if (next === start) break;
       if (loop.includes(next)) throw new Error('bowling-ball: opening ' + (h + 1) + ' boundary self-intersects');
       loop.push(next);
@@ -177,7 +175,96 @@ function cutFingerOpenings(GFX, geometry, radius, directions, openingRadius) {
     loops[h] = loop;
   }
 
-  return { loops, removedTriangles, boundaryEdgeCount };
+  // The grid rim is stair-stepped and coarse. Stitch each irregular rim loop to a fine, exactly
+  // circular ring that sits just inside it, so the opening is a smooth round edge at any zoom.
+  const RING = 160;
+  const outer = loops;
+  const ringStart = position.count;
+  const extra = [];
+  const rings = [];
+  const strips = [];
+  const radial = new GFX.Vector3();
+  for (let h = 0; h < directions.length; h++) {
+    const n = directions[h];
+    const u = new GFX.Vector3(0, 1, 0).addScaledVector(n, -n.y).normalize();
+    const w = new GFX.Vector3().crossVectors(n, u);
+    const azimuth = (v) => {
+      radial.set(position.getX(v), position.getY(v), position.getZ(v)).normalize();
+      return Math.atan2(radial.dot(w), radial.dot(u));
+    };
+    let theta = Infinity;
+    for (const v of outer[h]) {
+      radial.set(position.getX(v), position.getY(v), position.getZ(v)).normalize();
+      theta = Math.min(theta, Math.acos(clamp(radial.dot(n), -1, 1)));
+    }
+    theta *= 0.998;
+
+    // Order the rim loop by increasing azimuth, starting from its smallest.
+    let loop = outer[h].slice();
+    let angles = loop.map(azimuth);
+    let first = angles.indexOf(Math.min(...angles));
+    loop = loop.slice(first).concat(loop.slice(0, first));
+    const raw = loop.map(azimuth);
+    const forward = (raw[1] - raw[0] + Math.PI * 3) % (Math.PI * 2) - Math.PI < 0 ? false : true;
+    if (!forward) loop = [loop[0], ...loop.slice(1).reverse()];
+    const a0 = azimuth(loop[0]);
+    angles = loop.map((v) => { let d = azimuth(v) - a0; while (d < 0) d += Math.PI * 2; return d; });
+    for (let k = 1; k < angles.length; k++) angles[k] = Math.max(angles[k], angles[k - 1]);
+
+    const ring = [];
+    for (let j = 0; j < RING; j++) {
+      const phi = a0 + (j / RING) * Math.PI * 2;
+      const t = u.clone().multiplyScalar(Math.cos(phi)).addScaledVector(w, Math.sin(phi));
+      const p = n.clone().multiplyScalar(Math.cos(theta)).addScaledVector(t, Math.sin(theta)).multiplyScalar(radius);
+      ring.push(ringStart + extra.length / 3);
+      extra.push(p.x, p.y, p.z);
+    }
+    rings.push(ring);
+
+    const tri = [];
+    const m = loop.length, TAU = Math.PI * 2;
+    let i = 0, j = 0;
+    while (i < m || j < RING) {
+      const nextL = i + 1 < m ? angles[i + 1] : TAU;
+      const nextR = (j + 1) / RING * TAU;
+      if (i < m && (j >= RING || nextL <= nextR)) tri.push(loop[i], loop[(i + 1) % m], ring[j % RING]), i++;
+      else tri.push(loop[i % m], ring[(j + 1) % RING], ring[j]), j++;
+    }
+    strips.push(tri);
+  }
+
+  const grown = new Float32Array(position.count * 3 + extra.length);
+  grown.set(position.array);
+  grown.set(extra, position.count * 3);
+  const uvOld = geometry.getAttribute('uv');
+  const grownUv = new Float32Array(uvOld.count * 2 + (extra.length / 3) * 2);
+  grownUv.set(uvOld.array);
+  geometry.setAttribute('position', new GFX.BufferAttribute(grown, 3));
+  geometry.setAttribute('uv', new GFX.BufferAttribute(grownUv, 2));
+
+  // Match the winding of the existing sphere triangles (outward facing).
+  const grownPos = geometry.getAttribute('position');
+  for (const tri of strips) {
+    a.fromBufferAttribute(grownPos, tri[0]);
+    b.fromBufferAttribute(grownPos, tri[1]);
+    c.fromBufferAttribute(grownPos, tri[2]);
+    b.sub(a); c.sub(a);
+    if (b.cross(c).dot(a) < 0) {
+      for (let k = 0; k < tri.length; k += 3) { const t = tri[k + 1]; tri[k + 1] = tri[k + 2]; tri[k + 2] = t; }
+    }
+    for (const v of tri) kept.push(v);
+  }
+  geometry.setIndex(kept);
+  geometry.computeVertexNormals();
+  const normal = geometry.getAttribute('normal');
+  const rim = new Set([...outer.flat(), ...rings.flat()]);
+  for (const v of rim) {
+    radial.set(grownPos.getX(v), grownPos.getY(v), grownPos.getZ(v)).normalize();
+    normal.setXYZ(v, radial.x, radial.y, radial.z);
+  }
+  normal.needsUpdate = true;
+
+  return { loops: rings, removedTriangles, boundaryEdgeCount: rings.reduce((sum, ring) => sum + ring.length, 0) };
 }
 
 /** Build the dark recessed well directly on the shell's cut boundary. */
@@ -211,16 +298,16 @@ function makeFingerWell(GFX, shellGeometry, boundary, normal, depth, bottomRadiu
   }
 
   meanAxial /= count;
-  const centreIndex = count * 2;
-  positions[centreIndex * 3] = normal.x * (meanAxial - depth);
-  positions[centreIndex * 3 + 1] = normal.y * (meanAxial - depth);
-  positions[centreIndex * 3 + 2] = normal.z * (meanAxial - depth);
+  const centerIndex = count * 2;
+  positions[centerIndex * 3] = normal.x * (meanAxial - depth);
+  positions[centerIndex * 3 + 1] = normal.y * (meanAxial - depth);
+  positions[centerIndex * 3 + 2] = normal.z * (meanAxial - depth);
 
   for (let i = 0; i < count; i++) {
     const next = (i + 1) % count;
     const bottom = count + i, nextBottom = count + next;
     indices.push(i, next, bottom, next, nextBottom, bottom);
-    indices.push(centreIndex, bottom, nextBottom);
+    indices.push(centerIndex, bottom, nextBottom);
   }
 
   const geometry = new GFX.BufferGeometry();
@@ -234,9 +321,9 @@ export function createBowlingBall(GFX, options = {}) {
   const radius = options.radius ?? BOWLING_BALL_RADIUS;
   if (!Number.isFinite(radius) || radius <= 0) throw new RangeError('bowling-ball: radius must be a finite positive number');
 
-  // Dense vertex colour sampling keeps the resin swirls clean at close range.
-  const width = Number.isFinite(options.widthSegments) ? Math.max(64, Math.floor(options.widthSegments)) : 256;
-  const height = Number.isFinite(options.heightSegments) ? Math.max(48, Math.floor(options.heightSegments)) : 192;
+  // Dense vertex color sampling keeps the resin swirls clean at close range.
+  const width = Number.isFinite(options.widthSegments) ? Math.max(64, Math.floor(options.widthSegments)) : 512;
+  const height = Number.isFinite(options.heightSegments) ? Math.max(48, Math.floor(options.heightSegments)) : 384;
   const roughness = Number.isFinite(options.roughness) ? clamp(options.roughness, 0, 1) : 0.19;
   const metalness = Number.isFinite(options.metalness) ? clamp(options.metalness, 0, 1) : 0.035;
   let design = options.design ?? options.colors?.design ?? DEFAULT_DESIGN;

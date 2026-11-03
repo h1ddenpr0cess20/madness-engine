@@ -1,7 +1,7 @@
 /**
  * Curated resin palettes for the asset viewer's bowling-ball randomizer.
  * Each palette deliberately keeps a dark base and hole finish, with a clear
- * swirl colour and a smaller high-contrast accent vein.
+ * swirl color and a smaller high-contrast accent vein.
  */
 export const BOWLING_BALL_PALETTES = Object.freeze([
   { base: '#102b45', swirl: '#18b6b0', accent: '#f3d16b', holes: '#050d18' }, // Lagoon
