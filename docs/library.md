@@ -158,6 +158,18 @@ The people, creatures and monsters. Most are sculpted definitions (the default e
 | `characters/officewoman` | `officewoman` | The Office Woman: a navy jacket over a white blouse, a matching skirt, dark tights, black shoes, a dark bob. Carries nothing. |
 | `characters/oldman` | `oldman` | The Old Man: a green cardigan over a cream shirt, grey slacks, a bald crown ringed with white hair, a stoop. Carries nothing. |
 | `characters/oldwoman` | `oldwoman` | The Old Woman: a lilac cardigan over a white blouse, a navy skirt, tan tights, a white perm, glasses, a stoop. Carries nothing. |
+| `characters/babyboy` | `babyboy` | The Baby Boy: a year old, in a pale blue romper, bare feet, big eyes, a wisp of hair and a wobble. Carries nothing. |
+| `characters/babygirl` | `babygirl` | The Baby Girl: a year old, in a pink dress, bare feet, big eyes, a wisp of dark hair and a wobble. Carries nothing. |
+| `characters/toddlerboy` | `toddlerboy` | The Toddler Boy: two, in a green T-shirt, jeans and little white trainers, a short brown crop. Carries nothing. |
+| `characters/toddlergirl` | `toddlergirl` | The Toddler Girl: two, in a yellow dress, white tights and pink shoes, dark hair in two small bunches. Carries nothing. |
+| `characters/boy` | `boy` | The Boy: five or six, in a red T-shirt, jeans and white trainers, a short brown crop. Carries nothing. |
+| `characters/girl` | `girl` | The Girl: five or six, in a purple top, a denim skirt over white tights, pink trainers, a bunch of hair each side. Carries nothing. |
+| `characters/preteenboy` | `preteenboy` | The Preteen Boy: the Little Brother's build and clothes (striped shirt, turned-up jeans, red-toed trainers, a mop of brown hair) with nothing in his hands. |
+| `characters/preteengirl` | `preteengirl` | The Preteen Girl: a teal T-shirt, turned-up jeans, white trainers, a high ponytail. Carries nothing. |
+| `characters/teenboy` | `teenboy` | The Teen Boy: fifteen, in a navy T-shirt, black jeans and white trainers, a long side-swept fringe. Carries nothing. |
+| `characters/teengirl` | `teengirl` | The Teen Girl: fifteen, in a lavender hooded top (hood down), blue jeans, white trainers, long brown hair worn loose. Carries nothing. |
+| `characters/motherholding` | `motherholding` | The Mother Holding a Baby: a green sweater, jeans, flat shoes, brown hair to the shoulder, a sleeping baby in a blanket cradled in her arms. |
+| `characters/motherstroller` | `motherstroller` | The Mother with a Stroller: a mustard cardigan over a white top, black leggings, white trainers, a ponytail, pushing a stroller with a sleeping baby in it, both hands on the handle. |
 | `characters/runner` | `runner` (metrlol, rocknroller-iii) | The Bull Runner: in the whites of San Fermín, a red pañuelo knotted at the throat and a red sash round the waist, a rolled-up newspaper in his fist for the bull's nose, and the look over the should… |
 | `characters/salaryman` | `salaryman` (rocknroller-iii) | The Salaryman: missed the last train home from Shinjuku, found a karaoke bar instead, and has the microphone yet. |
 | `characters/sambista` | `sambista` (rocknroller-iii) | The Samba Dancer: off a float in the Sambódromo and not stopping for anybody, in gold sequins and not a lot else, a headdress of feathers twice her height, a back-piece of feathers fanned out behin… |

@@ -20,7 +20,7 @@ const mark = (s, from) => {
  * A baby asleep, wrapped in a blanket to the chin: its head at `head`, its feet at `foot`, its face turned out along
  * `face`; carried by `bone`.
  */
-export function infant(s, { head, foot, face, bone = 'chest', skin = '#f0c4a0', blanket = cloth('#f2e6a8', '#d0c47c'), hair = '#7a5a34' }) {
+export function infant(s, { head, foot, face, bone = 'chest', skin = '#f0c4a0', blanket = cloth('#f6efdc', '#d8cfb4'), hair = '#7a5a34' }) {
   const from = s.shapes.length;
   const dir = unit(head.map((v, i) => v - foot[i]));
   const out = unit(face), side = unit(cross(dir, out));
@@ -28,7 +28,7 @@ export function infant(s, { head, foot, face, bone = 'chest', skin = '#f0c4a0', 
   const SK = { color: skin, mat: 'skin', bone, k: 0.01 };
   s.part('kit', () => {
     // The bundle: a blanket from the feet to under the chin, a little fuller at the chest.
-    s.limb(foot, at(-0.05), 0.034, 0.045, { color: blanket, mat: 'cloth', bone, k: 0.012, bump: [0.002, 90] });
+    s.limb(foot, at(-0.05), 0.04, 0.05, { color: blanket, mat: 'cloth', bone, k: 0.014 });
     // The head: round, a cheek each side, a tuft of hair, a button nose, and eyes shut.
     s.sphere(head, 0.05, SK);
     for (const m of [1, -1]) s.sphere(at(-0.008, m * 0.028, 0.034), 0.017, { ...SK, k: 0.012 });

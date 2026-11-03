@@ -36,6 +36,6 @@ export default person({
   },
   extras(s) {
     // The baby lies across her arms, its head by her left shoulder, its face turned up and out.
-    infant(s, { head: [0.06, 0.5, 0.15], foot: [-0.04, 0.345, 0.175], face: [0.15, 0.5, 0.85], bone: 'chest' });
+    infant(s, { head: [0.06, 0.5, 0.15], foot: [-0.03, 0.375, 0.175], face: [0.15, 0.5, 0.85], bone: 'chest' });
   },
 });

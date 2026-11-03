@@ -56,3 +56,29 @@ test('Santa has one wide belt on the body, not a second one floating over it', (
   const belts = sculpted(CHARACTERS.santa).shapes.filter((x) => x.part === 'belt' && x.op === 'add' && x.mat === 'leather');
   assert.equal(belts.length, 1);
 });
+
+const KIDS = [['babyboy', 'babygirl'], ['toddlerboy', 'toddlergirl'], ['boy', 'girl'], ['preteenboy', 'preteengirl'], ['teenboy', 'teengirl']];
+
+/** The height of a person: the top of their head (as sculpted and built), times their scale. */
+const tall = (def) => def.warp.to([0, 0.79, 0])[1] * def.scale;
+
+test('children from a baby to a teenager, a boy and a girl at each age, each older one taller', () => {
+  for (const pair of KIDS) for (const name of pair) assert.ok(CHARACTERS[name], name);
+  for (let i = 1; i < KIDS.length; i++) for (const g of [0, 1]) assert.ok(tall(CHARACTERS[KIDS[i][g]]) > tall(CHARACTERS[KIDS[i - 1][g]]), `${KIDS[i][g]} is taller than ${KIDS[i - 1][g]}`);
+  // And all of them smaller than a grown person.
+  assert.ok(tall(CHARACTERS.teenboy) < tall(CHARACTERS.officeguy));
+  assert.ok(tall(CHARACTERS.teengirl) < tall(CHARACTERS.officewoman));
+  // A child's head is bigger for its body than a grown person's: the head's share of the height.
+  const share = (def) => (def.warp.to([0, 0.79, 0])[1] - def.warp.to([0, 0.585, 0])[1]) / def.warp.to([0, 0.79, 0])[1];
+  assert.ok(share(CHARACTERS.babyboy) > share(CHARACTERS.boy) && share(CHARACTERS.boy) > share(CHARACTERS.teenboy) && share(CHARACTERS.teenboy) >= share(CHARACTERS.officeguy) * 0.98);
+});
+
+test('the children carry nothing; the mothers carry a baby, and a stroller with a baby in it', () => {
+  for (const pair of KIDS) for (const name of pair) assert.equal(sculpted(CHARACTERS[name]).shapes.filter((x) => x.held).length, 0, name);
+  const held = (name) => sculpted(CHARACTERS[name]).shapes.filter((x) => x.held);
+  assert.ok(held('motherholding').length > 5);
+  assert.ok(held('motherstroller').length > held('motherholding').length);
+  // The stroller rides on the root, the baby in the arms on the chest.
+  assert.ok(held('motherstroller').some((x) => x.bone === 'root'));
+  assert.ok(held('motherholding').every((x) => x.bone === 'chest'));
+});
