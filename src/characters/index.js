@@ -175,6 +175,18 @@ import officeguy from './officeguy.js';
 import officewoman from './officewoman.js';
 import oldman from './oldman.js';
 import oldwoman from './oldwoman.js';
+import babyboy from './babyboy.js';
+import babygirl from './babygirl.js';
+import toddlerboy from './toddlerboy.js';
+import toddlergirl from './toddlergirl.js';
+import boy from './boy.js';
+import girl from './girl.js';
+import preteenboy from './preteenboy.js';
+import preteengirl from './preteengirl.js';
+import teenboy from './teenboy.js';
+import teengirl from './teengirl.js';
+import motherholding from './motherholding.js';
+import motherstroller from './motherstroller.js';
 import { CAT_DEFS } from './cat.js';
 
 /**
@@ -198,5 +210,7 @@ export const CHARACTERS = {
   vendor, viking, waiter, welder, wizard, wolf, wraith, yeti, yodeler, yokozuna, zinekid, zombie,
   // Ten ordinary people, carrying nothing, for any game: five men, five women.
   oldman, fatman, baldguy, hoodieguy, officeguy, oldwoman, fatwoman, beauty, casualwoman, officewoman,
+  // Children from a baby to a teenager, a boy and a girl at each age, and two mothers: one holding a baby, one pushing a stroller.
+  babyboy, babygirl, toddlerboy, toddlergirl, boy, girl, preteenboy, preteengirl, teenboy, teengirl, motherholding, motherstroller,
   ...CAT_DEFS,
 };
