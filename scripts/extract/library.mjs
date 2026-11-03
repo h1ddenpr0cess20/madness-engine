@@ -34,6 +34,8 @@ import { engineOf, ON_ENGINE, ORDER, SOURCES, SPLIT } from './sources.mjs';
 import { split } from './split.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+// Engine-authored library assets are kept when the game-built library is regenerated.
+const ENGINE_OWNED = ['heroes/bowling-ball.js'];
 const SRC = join(HERE, '..', '..', 'src');
 export const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music'];
 export const ORIGINS = join(HERE, 'origins.json');
@@ -287,6 +289,7 @@ function contents(places, moods) {
       lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${cell(blurb([...versions.values()].find((v) => v.path === place).files[0]))} |`);
     }
     if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be coloured independently. |');
+    if (kind === 'heroes') lines.push('| `heroes/bowling-ball` | `bowling-ball` (engine) | A glossy resin bowling ball with three finger holes and a flowing marbled swirl; `createBowlingBall` builds it and `setColors` changes its base, swirl, accent and hole colours at runtime. |');
     lines.push('');
   }
   lines.push('## moods', '', ABOUT.moods, '', '| Path | Versions (games) | What it is |', '|---|---|---|');
@@ -325,6 +328,11 @@ export async function planMoods(dirs, origins) {
 /** Writes the library into `src/`. */
 export async function build(dirs) {
   const { files, places, origins } = plan(dirs);
+  const engineOwned = Object.fromEntries(ENGINE_OWNED.map((path) => {
+    const file = join(SRC, path);
+    if (!existsSync(file)) throw new Error(`engine-owned asset is missing: ${path}`);
+    return [path, readFileSync(file, 'utf8')];
+  }));
   const moods = await planMoods(dirs, origins);
   // A core shared by a game on the engine is that game's as it is, so it is read before the library is cleared.
   const cores = Object.fromEntries([...CORES].filter((p) => existsSync(join(SRC, p))).map((p) => [p, readFileSync(join(SRC, p), 'utf8')]));
@@ -361,6 +369,7 @@ export async function build(dirs) {
   ])}\nexport { DICE, DICE_TYPES, createDieProp, createD4, createD6, createD6Pips, createD8, createD10, createDPercentile, createD12, createD20 } from '../dice.js';\n`);
 
   for (const [path, text] of Object.entries(moods.files)) out.set(path, text);
+  for (const [path, text] of Object.entries(engineOwned)) out.set(path, text);
 
   for (const [path, text] of out) {
     mkdirSync(dirname(join(SRC, path)), { recursive: true });

@@ -275,6 +275,8 @@ The balls the games are played as, each with what it is made of.
 | `heroes/yarn/path` | `path` (catroller) | Where the ball rolls: a gentle S on the diagonal, from the back of the room on the left toward the front on the right of the camera's usual seat — she comes forward to talk, and goes back when it i… |
 | `heroes/yarn/winding` | `winding` (catroller) | The ball, wound: one continuous strand, laid turn by turn round a hollow the size of two fingers, the way a hand winds a ball, until its surface averages `R_TARGET`. |
 
+| `heroes/bowling-ball` | `bowling-ball` (engine) | A glossy resin bowling ball with three finger holes and a flowing marbled swirl; `createBowlingBall` builds it and `setColors` changes its base, swirl, accent and hole colours at runtime. |
+
 ## scenery
 
 The world round the ball: the town's street furniture and vehicles (`bakeData` in models/legacy-bake), the dungeon's walls, torches and exit, and the light show that lights a venue (`lightshow`: createLightshow(GFX, venue)).
