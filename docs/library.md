@@ -248,6 +248,7 @@ What lies about to be picked up: sculpted, still, for `createStatic`, and the co
 | `props/sweets` | `sweets` (blubber) | The sweets, from October to December. |
 | `props/winter` | `winter` (blubber) | December's: the snow lantern — a cone of snowballs heaped in rings with a candle inside, glowing out between them (`snowlantern`; unlit, `snowheap`) — the big snowball that rolls down the halls, snowy pines, rocks under snow, and clusters of ice crystals. |
 | `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20's highlighted 20 can be coloured independently. |
+| `props/bowling-ball` | `createBowlingBall` (engine) | A high-resolution glossy resin bowling ball with three true recessed finger wells and four seamless surface designs (marble, spiral, flame and split). Colours and designs are changeable at runtime. |
 
 ## heroes
 
@@ -274,7 +275,6 @@ The balls the games are played as, each with what it is made of.
 | `heroes/yarn/model` | `model` (catroller) | Carol's body: the wound ball and the strand laid out behind it, as two tubes built once, and `pose(s)` — everything about how she looks follows from how far along the floor she has rolled. |
 | `heroes/yarn/path` | `path` (catroller) | Where the ball rolls: a gentle S on the diagonal, from the back of the room on the left toward the front on the right of the camera's usual seat — she comes forward to talk, and goes back when it i… |
 | `heroes/yarn/winding` | `winding` (catroller) | The ball, wound: one continuous strand, laid turn by turn round a hollow the size of two fingers, the way a hand winds a ball, until its surface averages `R_TARGET`. |
-| `heroes/bowling-ball` | `bowling-ball` (engine) | A glossy resin bowling ball with three finger holes and a flowing marbled swirl; `createBowlingBall` builds it and `setColors` changes its base, swirl, accent and hole colours at runtime. |
 
 ## scenery
 
