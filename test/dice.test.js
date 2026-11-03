@@ -50,7 +50,7 @@ test('the standalone d20 copies Nat geometry and resin finish without sharing it
   assert.equal(prop.dieMat.clearcoat, 0.9);
 });
 
-test('a custom resin colour changes the die and its edge ink', () => {
+test('a custom resin color changes the die and its edge ink', () => {
   const prop = createDieProp(GFX, 'd20', { color: '#123456' });
   assert.equal(prop.dieMat.color.getHexString(), '123456');
   assert.notEqual(prop.edges.material.color.getHexString(), '8d80b8');
@@ -80,6 +80,35 @@ test('percentile glyph tops point outward toward the nearest die tip', () => {
     assert.ok(face.labelUp.dot(towardTip) > 0.95, 'top of the numeral faces the nearest tip');
   }
   assert.ok(createDieProp(GFX, 'd10').faces.every((face) => !face.labelUp), 'the standard D10 layout is unchanged');
+});
+
+test('the d4 prints three corner numerals per face, readable at the top vertex', () => {
+  const die = createDieProp(GFX, 'd4');
+  assert.equal(die.faces.length, 4);
+  const cornerOf = new Map();
+  for (const face of die.faces) {
+    assert.equal(face.marks.length, 3, 'three numerals on each face');
+    const shown = face.marks.map((mark) => mark.name.split('_corner_')[1]);
+    assert.deepEqual(
+      [...shown, String(face.number)].sort(),
+      ['1', '2', '3', '4'],
+      'a face omits only the number of its opposite vertex',
+    );
+    face.marks.forEach((mark, i) => {
+      const label = shown[i];
+      const corner = face.corners[i].position;
+      assert.equal(face.corners[i].label, label);
+      const toCorner = corner.clone().sub(face.centroid).projectOnPlane(face.normal).normalize();
+      const textUp = new GFX.Vector3(0, 1, 0).applyQuaternion(mark.quaternion);
+      assert.ok(textUp.dot(toCorner) > 0.999, 'the top of each numeral points at its corner');
+      assert.ok(Math.abs(mark.position.clone().sub(face.centroid).dot(face.normal)) < 0.01, 'numeral lies on its face');
+      assert.ok(mark.position.clone().sub(face.centroid).length() < corner.clone().sub(face.centroid).length(), 'numeral stays inside the face');
+      const key = corner.toArray().map((n) => n.toFixed(3)).join(',');
+      assert.equal(cornerOf.get(key) ?? label, label, 'a vertex carries one number on all three faces');
+      cornerOf.set(key, label);
+    });
+  }
+  assert.equal(new Set(cornerOf.values()).size, 4, 'each vertex has its own number');
 });
 
 test('number, pip, and D20 highlight inks are configurable independently', () => {
