@@ -173,3 +173,53 @@ test('two definitions under one name are baked apart', async () => {
   assert.notEqual(a, b);
   assert.notEqual(a.count, b.count);
 });
+
+test('a person in the sit clip is let down onto the floor-standing feet, and the chair prop is there to take them', async () => {
+  const GFX = await import('../src/gfx/index.js');
+  const { createModel } = await import('../src/models/model.js');
+  const { PROPS } = await import('../src/props/index.js');
+  assert.ok(PROPS.chair, 'the chair is in PROPS');
+  const chair = createModel(GFX, PROPS.chair, { detail: 0.5 });
+  assert.ok(chair.mesh.geometry.attributes.position.count > 100, 'the chair has a mesh');
+  const def = (await import('../src/characters/punk.js')).default;
+  const model = createModel(GFX, def, { detail: 0.5 });
+  const extent = (clip, t) => {
+    model.pose({ clip, t, time: 1, seed: 0, speed: 1 });
+    const p = model.mesh.geometry.attributes.position.array;
+    let low = Infinity, top = -Infinity;
+    for (let i = 1; i < p.length; i += 3) { low = Math.min(low, p[i]); top = Math.max(top, p[i]); }
+    return { low, top };
+  };
+  const stand = extent('idle', 1), sat = extent('sit', 1), start = extent('sit', 0);
+  assert.ok(sat.top < stand.top - 0.1, 'sitting is lower than standing');
+  assert.ok(Math.abs(start.top - stand.top) < 0.03, 'it starts from standing');
+  assert.ok(sat.low > -0.01, `the feet stay on the floor, not ${(sat.low * 1000).toFixed(1)} thousandths under it`);
+});
+
+test('skipping the shapes too far off to matter leaves the field as it was, everywhere near the surface', async () => {
+  const { Sculpt } = await import('../src/models/sdf.js');
+  for (const name of ['punk', 'nonna']) {
+    const def = (await import(`../src/characters/${name}.js`)).default;
+    const s = new Sculpt();
+    def.sculpt(s);
+    const [lo, hi] = s.bounds(0.03);
+    s.prepare(lo, hi, 0.07);
+    const boxes = s.shapes.map((sh) => sh.box);
+    // Every shape's box taken to be everywhere: nothing is skipped, so this is the field the long way.
+    const everywhere = [[-1e9, -1e9, -1e9], [1e9, 1e9, 1e9]];
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+    let checked = 0, worst = 0;
+    for (let i = 0; i < 40000; i++) {
+      const p = [lo[0] + rnd() * (hi[0] - lo[0]), lo[1] + rnd() * (hi[1] - lo[1]), lo[2] + rnd() * (hi[2] - lo[2])];
+      s.shapes.forEach((sh) => { sh.box = everywhere; });
+      const long = s.field(p);
+      s.shapes.forEach((sh, k) => { sh.box = boxes[k]; });
+      if (Math.abs(long) > 0.03) continue;
+      checked++;
+      worst = Math.max(worst, Math.abs(s.field(p) - long));
+    }
+    assert.ok(checked > 500, `${name}: ${checked} points near the surface`);
+    assert.ok(worst < 1e-6, `${name}: the field is off by ${worst}`);
+  }
+});

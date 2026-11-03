@@ -1,5 +1,6 @@
 import bucket from './bucket.js';
 import caseModel from './case.js';
+import chair from './chair.js';
 import chest from './chest.js';
 import clapper from './clapper.js';
 import demo from './demo.js';
@@ -29,7 +30,7 @@ import { crystals, pine, snowball, snowheap, snowlantern, snowrock } from './win
  * Every sculpted prop in the library, by name: the default version of each.
  */
 export const PROPS = {
-  bucket, case: caseModel, chest, clapper, demo, globe, gold, key, lighter, pass, pick, popcorn,
+  bucket, case: caseModel, chair, chest, clapper, demo, globe, gold, key, lighter, pass, pick, popcorn,
   potion, record, reel, revive, suitcase, tape, vinyl, whetstone,
   // Blubber's: the pumpkins, the harvest, the sweets, the graveyard and the winter.
   pumpkin, jack, bigpumpkin, pumpkinpile, whitepumpkin, gourd, cornshock, barrel, haystack, table,

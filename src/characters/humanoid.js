@@ -164,15 +164,23 @@ const TRUNK = [
  */
 export function trunk(b, belly) {
   const n = TRUNK.length;
+  // Sampling goes along rows of equal height, so the same section is asked for again and again.
+  let lastY = NaN, last = null;
   return (y) => {
+    if (y === lastY) return last;
+    lastY = y;
+    return (last = section(y));
+  };
+  function section(y) {
     let i = 0;
     while (i < n - 2 && y > TRUNK[i + 1][0]) i++;
     const t = Math.max(0, Math.min(1, (y - TRUNK[i][0]) / (TRUNK[i + 1][0] - TRUNK[i][0])));
-    const P = [TRUNK[Math.max(0, i - 1)], TRUNK[i], TRUNK[i + 1], TRUNK[Math.min(n - 1, i + 2)]];
-    const [w, d, zc, e] = [1, 2, 3, 4].map((j) => {
-      const [p0, p1, p2, p3] = P.map((s) => s[j]);
+    const P0 = TRUNK[Math.max(0, i - 1)], P1 = TRUNK[i], P2 = TRUNK[i + 1], P3 = TRUNK[Math.min(n - 1, i + 2)];
+    const spline = (j) => {
+      const p0 = P0[j], p1 = P1[j], p2 = P2[j], p3 = P3[j];
       return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
-    });
+    };
+    const w = spline(1), d = spline(2), zc = spline(3), e = spline(4);
     // The belly: a round swell forward of the waist, from under the ribs down over the belt, as tall as it is
     // deep; the bigger it is, the lower it hangs. Not a ring round the middle: the sides and the back only fill
     // out, and that gently, over the whole trunk from the chest to the seat, so the waist goes and the chest and
@@ -181,7 +189,7 @@ export function trunk(b, belly) {
     const g = belly * Math.exp(-u * u * 1.7);
     const f = belly * Math.exp(-(((y - 0.39) / 0.15) ** 2));
     return [w * b + f * 0.0075 * b, d * (1 + (b - 1) * 0.6) + g * 0.022 + f * 0.005, zc + g * 0.022, Math.max(2, e - g * 0.25)];
-  };
+  }
 }
 
 /**
@@ -1356,7 +1364,7 @@ const window_ = (t, a, b) => ease((t - a) / (b - a));
  * How a hero moves. `style.attack` is 'slash' (a sword across), 'chop' (an
  * axe from over the head), 'thrust' (a staff jabbed forward) or 'smite' (a
  * mace or staff brought down); `style.heavy` slows and deepens it all.
- * Clips: idle, walk, attack, cast, hit, ko, win.
+ * Clips: idle, walk, attack, cast, hit, ko, win, sit.
  */
 export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 }, style = {}) {
   const T = time + seed;
@@ -1427,6 +1435,8 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('armL', -0.4 * up, 0, 1.1 * fall);
     k.turn('armR', -0.4 * up, 0, -1.1 * fall);
     k.turn('foreL', -0.3 * fall, 0, 0);
+  } else if (clip === 'sit') {
+    sit(k, t, T);
   } else if (clip === 'win') {
     // The weapon up, a little hop.
     const up = window_(t, 0, 0.3);
@@ -1439,8 +1449,8 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('chest', -0.1 * up, 0, 0);
     k.turn('head', -0.2 * up, 0, 0);
   }
-  // Whatever is particular to this one, on top of all that.
-  style.after?.(k, { clip, t, time, seed, speed }, T);
+  // Whatever is particular to this one, on top of all that (a sitter just sits: no hands full of cup or wrench).
+  if (clip !== 'sit') style.after?.(k, { clip, t, time, seed, speed }, T);
 }
 
 /** Where a posed point `q` was in the rest pose, as bone `name` carries it (the inverse of `Skeleton.point`). */
@@ -1690,7 +1700,7 @@ export function reachFoot(k, S, sole, target, steps = 16) {
 /**
  * How a person moves: as a hero does (`moveHumanoid`), but with nothing to
  * hold ready, so at rest the hands hang easy and a walk swings both arms.
- * Clips: idle, walk, attack, cast, hit, ko, win.
+ * Clips: idle, walk, attack, cast, hit, ko, win, sit.
  */
 export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1, aim = null, reach = null, step = null }, style = {}) {
   const T = time + seed;
@@ -1760,6 +1770,8 @@ export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed 
     k.turn('armL', -0.4 * up, 0, 1.1 * fall);
     k.turn('armR', -0.4 * up, 0, -1.1 * fall);
     k.turn('foreL', -0.3 * fall, 0, 0);
+  } else if (clip === 'sit') {
+    sit(k, t, T);
   } else if (clip === 'win') {
     // The weapon up, a little hop.
     const up = window_(t, 0, 0.3);
@@ -1772,8 +1784,22 @@ export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed 
     k.turn('chest', -0.1 * up, 0, 0);
     k.turn('head', -0.2 * up, 0, 0);
   }
-  // Whatever is particular to this one, on top of all that.
-  style.after?.(k, { clip, t, time, seed, speed, aim, reach, step }, T);
+  // Whatever is particular to this one, on top of all that (a sitter just sits: no hands full of cup or wrench).
+  if (clip !== 'sit') style.after?.(k, { clip, t, time, seed, speed, aim, reach, step }, T);
+}
+
+/**
+ * Sitting on a seat about as high as the knee: the hips let down until the
+ * thighs lie level and the shins go straight down to the floor. Nothing else
+ * is posed: the arms hang as they do at rest. `t` eases it in (a one-shot sit down, then held);
+ * `T` is the clock for the small idle fidgets.
+ */
+function sit(k, t, T) {
+  const s = window_(t, 0, 0.45);
+  k.move('hips', 0, -0.138 * s, -0.015 * s);
+  k.turn('thighL', -1.52 * s, 0, 0.07 * s); k.turn('shinL', 1.52 * s, 0, 0);
+  k.turn('thighR', -1.52 * s, 0, -0.07 * s); k.turn('shinR', 1.52 * s, 0, 0);
+  k.turn('head', Math.sin(T * 0.5) * 0.04, Math.sin(T * 0.37) * 0.2, 0);
 }
 
 function attack(k, t, style) {

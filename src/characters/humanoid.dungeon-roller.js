@@ -266,7 +266,7 @@ const window_ = (t, a, b) => ease((t - a) / (b - a));
  * How a hero moves. `style.attack` is 'slash' (a sword across), 'chop' (an
  * axe from over the head), 'thrust' (a staff jabbed forward) or 'smite' (a
  * mace or staff brought down); `style.heavy` slows and deepens it all.
- * Clips: idle, walk, attack, cast, hit, ko, win.
+ * Clips: idle, walk, attack, cast, hit, ko, win, sit.
  */
 export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 }, style = {}) {
   const T = time + seed;
@@ -337,6 +337,8 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('armL', -0.4 * up, 0, 1.1 * fall);
     k.turn('armR', -0.4 * up, 0, -1.1 * fall);
     k.turn('foreL', -0.3 * fall, 0, 0);
+  } else if (clip === 'sit') {
+    sit(k, t, T);
   } else if (clip === 'win') {
     // The weapon up, a little hop.
     const up = window_(t, 0, 0.3);
@@ -349,6 +351,20 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('chest', -0.1 * up, 0, 0);
     k.turn('head', -0.2 * up, 0, 0);
   }
+}
+
+/**
+ * Sitting on a seat about as high as the knee: the hips let down until the
+ * thighs lie level and the shins go straight down to the floor. Nothing else
+ * is posed: the arms hang as they do at rest. `t` eases it in (a one-shot sit down, then held);
+ * `T` is the clock for the small idle fidgets.
+ */
+function sit(k, t, T) {
+  const s = window_(t, 0, 0.45);
+  k.move('hips', 0, -0.138 * s, -0.015 * s);
+  k.turn('thighL', -1.52 * s, 0, 0.07 * s); k.turn('shinL', 1.52 * s, 0, 0);
+  k.turn('thighR', -1.52 * s, 0, -0.07 * s); k.turn('shinR', 1.52 * s, 0, 0);
+  k.turn('head', Math.sin(T * 0.5) * 0.04, Math.sin(T * 0.37) * 0.2, 0);
 }
 
 function attack(k, t, style) {
