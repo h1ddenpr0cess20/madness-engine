@@ -19,7 +19,7 @@ const SKIN = '#e8b490';
 
 /**
  * Long pointed ears in place of the head's round ones: each a leaf standing out from the side of the head and a little up,
- * with a scoop in its front. They come out below the cap's band (the cap is fitted over everything on the head above it,
+ * They come out below the cap's band (the cap is fitted over everything on the head above it,
  * and would cover them). `skin` is the person's skin.
  */
 function pointedEars(s, skin) {
@@ -27,9 +27,10 @@ function pointedEars(s, skin) {
   for (const m of [1, -1]) {
     s.part('head', () => {
       const S = { color: skin, mat: 'skin', bone: 'head', k: 0.012 };
-      s.flake([m * 0.086, 0.636, -0.004], [m * 0.19, 0.696, -0.03], [0, 0, 1], 0.026, 0.004, 0.32, S);
-      // The ear's bowl, hollowed a little.
-      s.ellipsoid([m * 0.104, 0.648, 0.0], [0.012, 0.024, 0.014], { op: 'sub', k: 0.006, rot: [0, 0, -m * 0.35] });
+      // A thick leaf, broad at the root and narrowing to a rounded tip (not thinner than the head's grid can hold, or it tears
+      // into holes), and a lower fold along its inside edge for the shape of an ear.
+      s.flake([m * 0.086, 0.636, -0.004], [m * 0.19, 0.696, -0.03], [0, 0, 1], 0.03, 0.009, 0.55, S);
+      s.limb([m * 0.092, 0.628, -0.012], [m * 0.17, 0.688, -0.032], 0.007, 0.005, { ...S, k: 0.006 });
     });
   }
   // Marked, so the cap is not fitted over them.
