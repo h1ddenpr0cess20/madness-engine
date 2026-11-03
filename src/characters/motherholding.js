@@ -27,7 +27,7 @@ export default person({
       if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
       const T = time + seed;
       // Both arms round the baby: the right under its bottom, the left behind its head and back.
-      reach?.(k, 'R', 'chest', [-0.03, 0.315, 0.15]);
+      reach?.(k, 'R', 'chest', [-0.02, 0.33, 0.2]);
       reach?.(k, 'L', 'chest', [0.075, 0.45, 0.125]);
       // A gentle rock, her head bent to the baby.
       k.turn('hips', 0, 0, Math.sin(T * 1.6) * 0.03);
@@ -36,6 +36,6 @@ export default person({
   },
   extras(s) {
     // The baby lies across her arms, its head by her left shoulder, its face turned up and out.
-    infant(s, { head: [0.06, 0.5, 0.15], foot: [-0.03, 0.375, 0.175], face: [0.15, 0.5, 0.85], bone: 'chest' });
+    infant(s, { head: [0.055, 0.5, 0.17], foot: [-0.045, 0.36, 0.2], face: [0.15, 0.5, 0.85], bone: 'chest' });
   },
 });
