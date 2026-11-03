@@ -18,16 +18,17 @@ const STRIPES = bands(1, 0.05, '#cf2a30', '#f4f0e8', 0.5, 0.15);
 const SHOE = '#b8282c';
 
 /**
- * Long pointed ears in place of the head's round ones: each a leaf standing out from the side of the head, up and a
- * little back, with a scoop in its front. `skin` is the person's skin.
+ * Long pointed ears in place of the head's round ones: each a leaf standing out from the side of the head and a little up,
+ * with a scoop in its front. They come out below the cap's band (the cap is fitted over everything on the head above it,
+ * and would cover them). `skin` is the person's skin.
  */
 export function pointedEars(s, skin) {
   for (const m of [1, -1]) {
     s.part('head', () => {
       const S = { color: skin, mat: 'skin', bone: 'head', k: 0.012 };
-      s.flake([m * 0.088, 0.655, -0.004], [m * 0.172, 0.77, -0.03], [0, 0, 1], 0.026, 0.004, 0.32, S);
+      s.flake([m * 0.086, 0.636, -0.004], [m * 0.19, 0.696, -0.03], [0, 0, 1], 0.026, 0.004, 0.32, S);
       // The ear's bowl, hollowed a little.
-      s.ellipsoid([m * 0.104, 0.672, 0.0], [0.012, 0.026, 0.014], { op: 'sub', k: 0.006, rot: [0, 0, -m * 0.35] });
+      s.ellipsoid([m * 0.104, 0.648, 0.0], [0.012, 0.024, 0.014], { op: 'sub', k: 0.006, rot: [0, 0, -m * 0.35] });
     });
   }
 }
