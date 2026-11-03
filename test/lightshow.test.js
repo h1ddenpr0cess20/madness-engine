@@ -98,6 +98,12 @@ test('every version of the light show loads and keeps the same fixtures', async 
     for (const kind of ['ball', 'laser', 'par', 'spot', 'strobe']) {
       const show = mod.createLightshow(GFX, venue([{ kind, x: 3.5, z: 3.5 }]));
       assert.equal(show.count, 1, `${file}: ${kind}`);
+      if (kind === 'ball') {
+        let mirrorBall;
+        show.group.traverse((object) => { if (object.material?.name === 'mirror-ball') mirrorBall = object; });
+        assert.ok(mirrorBall, `${file}: mirror-ball mesh is present`);
+        assert.ok(mirrorBall.geometry.attributes.position.count >= 2160, `${file}: mirror ball has a dense faceted surface`);
+      }
       kinds.add(kind);
     }
   }
