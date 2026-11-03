@@ -187,16 +187,7 @@ import teenboy from './teenboy.js';
 import teengirl from './teengirl.js';
 import motherholding from './motherholding.js';
 import motherstroller from './motherstroller.js';
-import elfbabyboy from './elfbabyboy.js';
-import elfbabygirl from './elfbabygirl.js';
-import elftoddlerboy from './elftoddlerboy.js';
-import elftoddlergirl from './elftoddlergirl.js';
-import elfboy from './elfboy.js';
-import elfgirl from './elfgirl.js';
-import elfpreteenboy from './elfpreteenboy.js';
-import elfpreteengirl from './elfpreteengirl.js';
-import elfteenboy from './elfteenboy.js';
-import elfteengirl from './elfteengirl.js';
+import elf from './elf.js';
 import { CAT_DEFS } from './cat.js';
 
 /**
@@ -222,7 +213,7 @@ export const CHARACTERS = {
   oldman, fatman, baldguy, hoodieguy, officeguy, oldwoman, fatwoman, beauty, casualwoman, officewoman,
   // Children from a baby to a teenager, a boy and a girl at each age, and two mothers: one holding a baby, one pushing a stroller.
   babyboy, babygirl, toddlerboy, toddlergirl, boy, girl, preteenboy, preteengirl, teenboy, teengirl, motherholding, motherstroller,
-  // Santa's elves: the ten children again, in an elf's costume and with pointed ears.
-  elfbabyboy, elfbabygirl, elftoddlerboy, elftoddlergirl, elfboy, elfgirl, elfpreteenboy, elfpreteengirl, elfteenboy, elfteengirl,
+  // Santa's elf: the Boy in an elf's costume and with pointed ears.
+  elf,
   ...CAT_DEFS,
 };
