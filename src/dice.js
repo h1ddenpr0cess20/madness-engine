@@ -3,13 +3,15 @@
  *
  * These are props, not game actors: no physics state, character rig or
  * animation is involved. Each factory returns a group ready to add to a
- * scene. The resin colour can be changed without changing the geometry.
+ * scene. The resin color can be changed without changing the geometry.
  */
 
 const DEFAULT_RESIN = '#3a3350';
 const DEFAULT_EDGE = '#8d80b8';
 const INK = '#e7e0f7';
 const HIGHLIGHT = '#ffd479';
+// How far along the centroid-to-corner line each d4 corner numeral sits.
+const D4_CORNER_REACH = 0.55;
 
 export const DICE_TYPES = Object.freeze([
   Object.freeze({ id: 'd4', label: 'D4', faceCount: 4, range: '1–4' }),
@@ -87,7 +89,7 @@ function trapezohedron() {
   return { vertices: normalizedVertices(points), faces };
 }
 
-/** The dodecahedron is the dual of an icosahedron: each triangle centre is a vertex. */
+/** The dodecahedron is the dual of an icosahedron: each triangle center is a vertex. */
 function dodecahedron(GFX) {
   const source = new GFX.IcosahedronGeometry(1, 0);
   const p = source.attributes.position;
@@ -140,7 +142,7 @@ function dodecahedron(GFX) {
 function polygonGeometry(GFX, points, polygons, cornerCut = 0.045) {
   const clippedPoints = [];
   const clippedPointIds = new Map();
-  const neighbours = points.map(() => new Set());
+  const neighbors = points.map(() => new Set());
   const pointFor = (from, to) => {
     const key = from + '>' + to;
     if (!clippedPointIds.has(key)) {
@@ -155,16 +157,16 @@ function polygonGeometry(GFX, points, polygons, cornerCut = 0.045) {
     const clipped = [];
     for (let i = 0; i < polygon.length; i++) {
       const a = polygon[i], b = polygon[(i + 1) % polygon.length];
-      neighbours[a].add(b);
-      neighbours[b].add(a);
+      neighbors[a].add(b);
+      neighbors[b].add(a);
       clipped.push(pointFor(a, b), pointFor(b, a));
     }
     return clipped;
   });
 
   // Each old vertex becomes a small flat chamfer face joining the clipped edges.
-  for (let vertex = 0; vertex < neighbours.length; vertex++) {
-    const around = [...neighbours[vertex]];
+  for (let vertex = 0; vertex < neighbors.length; vertex++) {
+    const around = [...neighbors[vertex]];
     if (around.length < 3) continue;
     const normal = new GFX.Vector3(...points[vertex]).normalize();
     const reference = Math.abs(normal.y) > 0.9
@@ -172,8 +174,8 @@ function polygonGeometry(GFX, points, polygons, cornerCut = 0.045) {
       : new GFX.Vector3(0, 1, 0);
     const tangentX = new GFX.Vector3().crossVectors(reference, normal).normalize();
     const tangentY = new GFX.Vector3().crossVectors(normal, tangentX).normalize();
-    const cap = around.map((neighbour) => {
-      const pointId = pointFor(vertex, neighbour);
+    const cap = around.map((neighbor) => {
+      const pointId = pointFor(vertex, neighbor);
       const delta = new GFX.Vector3(...clippedPoints[pointId]).sub(new GFX.Vector3(...points[vertex]));
       return { pointId, angle: Math.atan2(delta.dot(tangentY), delta.dot(tangentX)) };
     }).sort((a, b) => a.angle - b.angle).map((entry) => entry.pointId);
@@ -220,7 +222,7 @@ function polygonGeometry(GFX, points, polygons, cornerCut = 0.045) {
     }
 
     // Only the original large facets carry numbers; the chamfer faces stay blank.
-    if (polygonIndex < polygons.length) faces.push({ centroid, normal });
+    if (polygonIndex < polygons.length) faces.push({ centroid, normal, polygon: polygons[polygonIndex] });
   }
 
   const geometry = new GFX.BufferGeometry();
@@ -323,7 +325,23 @@ function edgeTint(GFX, color) {
 
 function dataFor(GFX, type) {
   if (type === 'd20') return icosahedronGeometry(GFX);
-  if (type === 'd4') return polygonGeometry(GFX, ...Object.values(tetrahedron()));
+  if (type === 'd4') {
+    // A real d4 has no top face. Each vertex carries one number, repeated on
+    // the three faces that meet there, and the roll is the number at the top
+    // vertex. A face therefore shows the three numbers except its own
+    // opposite vertex's, which is the number we report for the face.
+    const solid = tetrahedron();
+    const data = polygonGeometry(GFX, solid.vertices, solid.faces);
+    data.faces.forEach((face) => {
+      face.corners = face.polygon.map((vertex) => ({
+        label: String(vertex + 1),
+        position: new GFX.Vector3(...solid.vertices[vertex]),
+      }));
+      const opposite = solid.vertices.findIndex((_, vertex) => !face.polygon.includes(vertex));
+      face.value = opposite + 1;
+    });
+    return data;
+  }
   if (type === 'd6' || type === 'd6-pips') return polygonGeometry(GFX, ...Object.values(cube()));
   if (type === 'd8') return polygonGeometry(GFX, ...Object.values(octahedron()));
   if (type === 'd10' || type === 'd100') {
@@ -363,7 +381,7 @@ function labelsForType(type) {
  * @param {object} GFX Madness Engine's gfx namespace.
  * @param {'d4'|'d6'|'d8'|'d10'|'d%'|'d100'|'d12'|'d20'} type
  * @param {{ color?: string|object, markingColor?: string, numberColor?: string, pipColor?: string, highlightColor?: string }} options
- *   Resin colour, shared number/pip ink, optional per-marking overrides, and the D20's 20-face accent.
+ *   Resin color, shared number/pip ink, optional per-marking overrides, and the D20's 20-face accent.
  * @returns {{ group: object, body: object, die: object, dieMat: object, edges: object, faces: object[], numbers: (number|string)[] }}
  */
 export function createDieProp(GFX, type, options = {}) {
@@ -378,7 +396,9 @@ export function createDieProp(GFX, type, options = {}) {
   const highlightColor = options.highlightColor ?? HIGHLIGHT;
   const data = dataFor(GFX, canonical);
   const labels = labelsForType(canonical);
-  const numbers = labelsFor(data.faces, labels, canonical !== 'd4');
+  const numbers = canonical === 'd4'
+    ? data.faces.map((face) => face.value)
+    : labelsFor(data.faces, labels, true);
   const usePips = canonical === 'd6-pips';
   const group = new GFX.Group();
   group.name = 'rpg_dice_' + canonical + '_prop';
@@ -410,16 +430,13 @@ export function createDieProp(GFX, type, options = {}) {
 
   const glyphSize = canonical === 'd20' ? 0.62
     : canonical === 'd6-pips' ? 1.02
-      : canonical === 'd4' ? 0.4
+      : canonical === 'd4' ? 0.36
         : canonical === 'd6' || canonical === 'd8' ? 0.46
         : canonical === 'd10' || canonical === 'd100' ? 0.38 : 0.4;
   const glyphGeometry = new GFX.PlaneGeometry(glyphSize, glyphSize);
   const up = new GFX.Vector3(0, 1, 0);
-  data.faces.forEach((face, index) => {
-    const label = String(numbers[index]);
-    // The gold accent belongs to Nat's original D20 treatment only.
-    const highlighted = canonical === 'd20' && label === '20';
-    const inkColor = highlighted ? highlightColor : (usePips ? pipColor : numberColor);
+
+  const addGlyph = (face, label, inkColor, position, upDirection, name) => {
     const material = new GFX.MeshBasicMaterial({
       map: glyphTexture(GFX, label, inkColor, usePips),
       transparent: true,
@@ -428,20 +445,44 @@ export function createDieProp(GFX, type, options = {}) {
     });
     material.name = 'glyph_' + label;
     const glyph = new GFX.Mesh(glyphGeometry, material);
-    glyph.name = 'face_' + label;
-    glyph.position.copy(face.centroid).multiplyScalar(1.006);
-
-    const reference = Math.abs(face.normal.y) > 0.98
-      ? new GFX.Vector3(0, 0, 1) : up;
-    const upDirection = face.labelUp
-      ? face.labelUp.clone().projectOnPlane(face.normal).normalize()
-      : reference.clone().projectOnPlane(face.normal).normalize();
+    glyph.name = name;
+    glyph.position.copy(position);
     const right = new GFX.Vector3().crossVectors(upDirection, face.normal).normalize();
     glyph.quaternion.setFromRotationMatrix(
       new GFX.Matrix4().makeBasis(right, upDirection, face.normal),
     );
     body.add(glyph);
-    face.mesh = glyph;
+    return glyph;
+  };
+
+  data.faces.forEach((face, index) => {
+    const label = String(numbers[index]);
+    // The gold accent belongs to Nat's original D20 treatment only.
+    const highlighted = canonical === 'd20' && label === '20';
+    const inkColor = highlighted ? highlightColor : (usePips ? pipColor : numberColor);
+
+    if (face.corners) {
+      // D4: one numeral near each corner, its top pointing at that corner, so
+      // the number at the top vertex is the one read after a roll.
+      face.marks = face.corners.map((corner) => {
+        const toCorner = corner.position.clone().sub(face.centroid);
+        const upDirection = toCorner.clone().projectOnPlane(face.normal).normalize();
+        const position = face.centroid.clone()
+          .addScaledVector(toCorner, D4_CORNER_REACH)
+          .addScaledVector(face.normal, 0.003);
+        return addGlyph(face, corner.label, inkColor, position, upDirection,
+          'face_' + label + '_corner_' + corner.label);
+      });
+      face.mesh = face.marks[0];
+    } else {
+      const reference = Math.abs(face.normal.y) > 0.98
+        ? new GFX.Vector3(0, 0, 1) : up;
+      const upDirection = face.labelUp
+        ? face.labelUp.clone().projectOnPlane(face.normal).normalize()
+        : reference.clone().projectOnPlane(face.normal).normalize();
+      face.mesh = addGlyph(face, label, inkColor,
+        face.centroid.clone().multiplyScalar(1.006), upDirection, 'face_' + label);
+    }
     face.number = numbers[index];
     face.highlighted = highlighted;
     face.markingColor = inkColor;

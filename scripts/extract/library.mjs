@@ -286,7 +286,7 @@ function contents(places, moods) {
       const which = ranked.map((v) => `\`${posix.basename(v.path, '.js')}\` (${v.games.map(title).join(', ')})`).join('<br>');
       lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${cell(blurb([...versions.values()].find((v) => v.path === place).files[0]))} |`);
     }
-    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4, numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be coloured independently. |');
+    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be coloured independently. |');
     lines.push('');
   }
   lines.push('## moods', '', ABOUT.moods, '', '| Path | Versions (games) | What it is |', '|---|---|---|');
