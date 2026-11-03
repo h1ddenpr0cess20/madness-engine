@@ -164,7 +164,14 @@ const TRUNK = [
  */
 export function trunk(b, belly) {
   const n = TRUNK.length;
+  // Sampling goes along rows of equal height, so the same section is asked for again and again.
+  let lastY = NaN, last = null;
   return (y) => {
+    if (y === lastY) return last;
+    lastY = y;
+    return (last = section(y));
+  };
+  function section(y) {
     let i = 0;
     while (i < n - 2 && y > TRUNK[i + 1][0]) i++;
     const t = Math.max(0, Math.min(1, (y - TRUNK[i][0]) / (TRUNK[i + 1][0] - TRUNK[i][0])));
@@ -182,7 +189,7 @@ export function trunk(b, belly) {
     const g = belly * Math.exp(-u * u * 1.7);
     const f = belly * Math.exp(-(((y - 0.39) / 0.15) ** 2));
     return [w * b + f * 0.0075 * b, d * (1 + (b - 1) * 0.6) + g * 0.022 + f * 0.005, zc + g * 0.022, Math.max(2, e - g * 0.25)];
-  };
+  }
 }
 
 /**
