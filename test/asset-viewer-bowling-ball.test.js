@@ -16,4 +16,7 @@ test('the asset viewer exposes all four bowling ball colour controls', () => {
   for (const label of ['Base resin', 'Swirl', 'Accent veins', 'Finger holes']) assert.ok(viewer.includes(label), label);
   assert.match(viewer, /import \{ createBowlingBall \} from 'madness-engine\/heroes\/bowling-ball'/);
   assert.match(viewer, /kind === 'bowling-ball'/);
+  assert.ok(viewer.includes("import { randomBowlingBallPalette } from './bowling-ball-palettes.js';"));
+  assert.ok(viewer.includes("'Randomise colours'"));
+  assert.ok(viewer.includes('view.draft = randomBowlingBallPalette(Math.random, { ...view.item.palette, ...view.colours, ...view.draft });'));
 });

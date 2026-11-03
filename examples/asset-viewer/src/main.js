@@ -16,6 +16,7 @@ import { paintRoom } from '../../../src/textures/rooms/studio.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { diverse } from '../../../src/characters/person.js';
 import { boundsOf, loadCatalog } from './catalog.js';
+import { randomBowlingBallPalette } from './bowling-ball-palettes.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => {
@@ -327,7 +328,11 @@ function colourGroup(item) {
   if (!item.palette) return;
   const isDice = item.palette.kind === 'dice';
   const isBowlingBall = item.palette.kind === 'bowling-ball';
-  $('colourdiverse').style.display = isDice || isBowlingBall ? 'none' : '';
+  $('colourdiverse').style.display = isDice ? 'none' : '';
+  $('colourdiverse').textContent = isBowlingBall ? 'Randomise colours' : 'Randomise';
+  $('colourdiverse').title = isBowlingBall
+    ? 'Pick a coordinated random bowling-ball palette'
+    : 'Randomise this character palette';
   $('colourhint').textContent = isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
     : isBowlingBall
@@ -349,9 +354,13 @@ function colourGroup(item) {
 
 $('colourapply').onclick = () => { view.colours = structuredClone(view.draft); show(view.item); };
 $('colourdiverse').onclick = () => {
-  const keep = view.draft.look;
-  view.draft = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
-  if (keep) view.draft.look = keep;
+  if (view.item.palette?.kind === 'bowling-ball') {
+    view.draft = randomBowlingBallPalette(Math.random, { ...view.item.palette, ...view.colours, ...view.draft });
+  } else {
+    const keep = view.draft.look;
+    view.draft = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
+    if (keep) view.draft.look = keep;
+  }
   colourGroup(view.item);
 };
 $('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };

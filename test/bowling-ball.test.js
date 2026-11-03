@@ -7,6 +7,9 @@ test('creates a glossy marbled ball with three finger holes', () => {
   const ball = createBowlingBall(GFX);
   assert.equal(ball.group.name, 'bowling_ball');
   assert.equal(ball.shell.geometry.parameters.radius, BOWLING_BALL_RADIUS);
+  assert.equal(ball.shell.geometry.parameters.widthSegments, 256);
+  assert.equal(ball.shell.geometry.parameters.heightSegments, 192);
+  assert.ok(ball.shell.geometry.getAttribute('position').count >= 49000, 'high-resolution marbled shell');
   assert.equal(ball.material.vertexColors, true);
   assert.equal(ball.material.clearcoat, 0.96);
   assert.equal(ball.holes.length, 3);

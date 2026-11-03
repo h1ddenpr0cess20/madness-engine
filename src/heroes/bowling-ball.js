@@ -42,8 +42,9 @@ function paint(GFX, geometry, radius, palette, attribute) {
 export function createBowlingBall(GFX, options = {}) {
   const radius = options.radius ?? BOWLING_BALL_RADIUS;
   if (!Number.isFinite(radius) || radius <= 0) throw new RangeError('bowling-ball: radius must be a finite positive number');
-  const width = Number.isFinite(options.widthSegments) ? Math.max(32, Math.floor(options.widthSegments)) : 128;
-  const height = Number.isFinite(options.heightSegments) ? Math.max(24, Math.floor(options.heightSegments)) : 96;
+  // 256 × 192 gives the marbled vertex colours enough resolution to read as smooth resin up close.
+  const width = Number.isFinite(options.widthSegments) ? Math.max(32, Math.floor(options.widthSegments)) : 256;
+  const height = Number.isFinite(options.heightSegments) ? Math.max(24, Math.floor(options.heightSegments)) : 192;
   const roughness = Number.isFinite(options.roughness) ? clamp(options.roughness, 0, 1) : 0.19;
   const metalness = Number.isFinite(options.metalness) ? clamp(options.metalness, 0, 1) : 0.035;
   const palette = paletteOf(GFX, options);
