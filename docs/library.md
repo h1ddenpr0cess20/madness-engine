@@ -147,7 +147,17 @@ The people, creatures and monsters. Most are sculpted definitions (the default e
 | `characters/mailcarrier` | `mailcarrier` | The Mail Carrier: the same round every day for twenty years and knows every dog on it by name. |
 | `characters/oldtimer` | `oldtimer` | The Old-Timer: been going to the same corner shop since it sold everything loose, and tells them so. |
 | `characters/shopper` | `shopper` | The Shopper: out for the week's groceries, list in hand, ticking it off. |
-| `characters/santa` | `santa` | Father Christmas, cut from the Flatfoot's cloth: a red suit with white fur at the cuffs, collar, front and hem, black gloves and boots, a beard to the belt, a stocking cap with a bobble, and a sack of presents in his left hand. Waves with the right. |
+| `characters/santa` | `santa` | Father Christmas, cut from the Flatfoot's cloth: a red suit with white fur at the cuffs, collar, front and hem, black gloves and boots, a beard to the belt, a stocking cap with a bobble, and a sack of presents in his left hand. Waves with the right and, every few seconds, laughs; walks with a roll and the sack easy at his side; hugs to attack. |
+| `characters/baldguy` | `baldguy` | The Bald Guy: no hair on top and plenty on his chin, a charcoal T-shirt, blue jeans and tan work boots. Carries nothing. |
+| `characters/beauty` | `beauty` | The Beauty: tall and slim-waisted in a fitted burgundy dress to the knee, long auburn hair, green eyes, rose lips. Carries nothing. |
+| `characters/casualwoman` | `casualwoman` | The Casual Woman: a coral T-shirt, light jeans, white trainers, dark hair in a ponytail. Carries nothing. |
+| `characters/fatman` | `fatman` | The Big Guy: a heavy man in a short-sleeved blue shirt over charcoal trousers, white trainers, a thinning brown crop. Carries nothing. |
+| `characters/fatwoman` | `fatwoman` | The Big Woman: a teal top, dark stretch trousers, flat shoes, brown hair to the shoulder with a fringe. Carries nothing. |
+| `characters/hoodieguy` | `hoodieguy` | The Hoodie Guy: a grey hooded top (hood down), dark jeans, white trainers, messy brown hair. Carries nothing. |
+| `characters/officeguy` | `officeguy` | The Office Guy: a pale blue shirt with the collar open, navy trousers, brown belt and shoes, neat side-parted hair. Carries nothing. |
+| `characters/officewoman` | `officewoman` | The Office Woman: a navy jacket over a white blouse, a matching skirt, dark tights, black shoes, a dark bob. Carries nothing. |
+| `characters/oldman` | `oldman` | The Old Man: a green cardigan over a cream shirt, grey slacks, a bald crown ringed with white hair, a stoop. Carries nothing. |
+| `characters/oldwoman` | `oldwoman` | The Old Woman: a lilac cardigan over a white blouse, a navy skirt, tan tights, a white perm, glasses, a stoop. Carries nothing. |
 | `characters/runner` | `runner` (metrlol, rocknroller-iii) | The Bull Runner: in the whites of San Fermín, a red pañuelo knotted at the throat and a red sash round the waist, a rolled-up newspaper in his fist for the bull's nose, and the look over the should… |
 | `characters/salaryman` | `salaryman` (rocknroller-iii) | The Salaryman: missed the last train home from Shinjuku, found a karaoke bar instead, and has the microphone yet. |
 | `characters/sambista` | `sambista` (rocknroller-iii) | The Samba Dancer: off a float in the Sambódromo and not stopping for anybody, in gold sequins and not a lot else, a headdress of feathers twice her height, a back-piece of feathers fanned out behin… |
