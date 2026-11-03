@@ -355,25 +355,16 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
 
 /**
  * Sitting on a seat about as high as the knee: the hips let down until the
- * thighs lie level, the shins straight down to the floor, the back easy, the
- * hands resting on the knees. `t` eases it in (a one-shot sit down, then held);
+ * thighs lie level and the shins go straight down to the floor. Nothing else
+ * is posed: the arms hang as they do at rest. `t` eases it in (a one-shot sit down, then held);
  * `T` is the clock for the small idle fidgets.
  */
 function sit(k, t, T) {
   const s = window_(t, 0, 0.45);
-  const breathe = Math.sin(T * 2.2);
   k.move('hips', 0, -0.138 * s, -0.015 * s);
-  k.turn('hips', 0, Math.sin(T * 0.6) * 0.03 * s, 0);
   k.turn('thighL', -1.52 * s, 0, 0.07 * s); k.turn('shinL', 1.52 * s, 0, 0);
   k.turn('thighR', -1.52 * s, 0, -0.07 * s); k.turn('shinR', 1.52 * s, 0, 0);
-  k.turn('footL', 0, 0, 0); k.turn('footR', 0, 0, 0);
-  // Hips tipped under, the spine a little forward.
-  k.turn('spine', 0.1 * s, 0, 0);
-  k.turn('chest', 0.04 * s + breathe * 0.01, 0, 0);
-  k.turn('head', -0.06 * s + Math.sin(T * 0.5) * 0.04, Math.sin(T * 0.37) * 0.2, 0);
-  // Hands resting on the thighs.
-  k.turn('armL', -0.55 * s, 0, 0.12 * s); k.turn('foreL', -0.75 * s, 0, 0);
-  k.turn('armR', -0.55 * s, 0, -0.12 * s); k.turn('foreR', -0.75 * s, 0, 0);
+  k.turn('head', Math.sin(T * 0.5) * 0.04, Math.sin(T * 0.37) * 0.2, 0);
 }
 
 function attack(k, t, style) {
