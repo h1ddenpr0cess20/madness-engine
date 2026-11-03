@@ -43,7 +43,7 @@ The crossing guard, shopper, mail carrier, old-timer and barista are made. These
 - `bin`: a wheelie bin, its lid open and a bag sticking out.
 - `cashregister`: an old till with its drawer open, keys and a bell. (bodega)
 - `lottoticket`: a scratch card, half scratched. (bodega)
-- `snackrack`: a wire rack of crisps in the colours crisps come in. (bodega)
+- `snackrack`: a wire rack of chips in the colors chips come in. (bodega)
 
 ## Dungeon
 
@@ -51,7 +51,7 @@ The crossing guard, shopper, mail carrier, old-timer and barista are made. These
 - `bookstack`: a pile of grimoires, one open, its pages turning.
 - `skullpile`: skulls that aren't the skeleton's. They grin.
 - `mimic`: a chest that is the chest, until it has teeth. It shares the chest's sculpt, with a hinge that bites.
-- `cauldron`: a cauldron on three legs, the potion's colour bubbling in it.
+- `cauldron`: a cauldron on three legs, the potion's color bubbling in it.
 
 ## Rock'n'roller
 

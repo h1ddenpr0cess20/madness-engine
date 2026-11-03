@@ -7,12 +7,14 @@ import { letters } from '../models/lettering.js';
  *
  * A corner store's stock, one sculpt for everything the shop sells: the
  * fruit and vegetables (a pile of Gala apples, a hand of bananas, a truss
- * of tomatoes, a head of lettuce, russet potatoes), the cold case (a gable
+ * of tomatoes, a head of lettuce, russet potatoes, navel oranges, a bunch of
+ * carrots, yellow onions, bell peppers, green grapes), the cold case (a gable
  * milk carton, a yogurt tub, a wrapped block of cheddar, butter, an open
  * carton of brown eggs, film-wrapped chicken and beef trays, a pack of deli
- * turkey), the bakery (a sliced loaf in its bag, twist-tied), the pantry
+ * turkey, orange juice, bacon, sour cream), the bakery (a sliced loaf in its bag, twist-tied), the pantry
  * (rice, spaghetti in a box with a window, cereal, black beans in a can,
- * ground coffee), the drinks (a 2 L cola, a 1 L water) and the freezer (a
+ * ground coffee, flour, sugar, oats, peanut butter), the snack aisle (a bag
+ * of chips, a box of cookies, a candy bar), the drinks (a 2 L cola, a 1 L water) and the freezer (a
  * frozen pizza, a tub of vanilla ice cream), and the two things that bring
  * them in and carry them out: a shipping carton and a shopping basket.
  *
@@ -674,6 +676,347 @@ export const potatoes = {
   },
 };
 
+// ——————————————————————————————————————————————— more fresh
+
+/** Oranges: three navel oranges in a pile, dimpled peel and a pale navel at the top. */
+export const oranges = {
+  name: 'oranges',
+  cell: 0.0042,
+  budget: 18000,
+  bones: ONE,
+  materials: { skin: MATERIALS.fresh },
+  sculpt(s) {
+    const r = 0.056;
+    const orange = (c, seed) => {
+      const tone = fruit(c, (q) => mix(C('#e8780f'), C('#f4a21e'), smooth(0.3, 0.9, fbm(q[0] * 18 + seed, q[1] * 18, q[2] * 18, 2))));
+      s.ellipsoid(c, [r, r * 0.95, r], { color: tone, mat: 'skin', k: 0, bump: [0.0012, 140] });
+      s.sphere([c[0], c[1] + r * 0.92, c[2]], r * 0.16, { color: '#c9610c', mat: 'skin', k: 0.004 });
+    };
+    orange([-0.05, r * 0.95, -0.025], 1);
+    orange([0.052, r * 0.95, -0.025], 2);
+    orange([0, r * 0.95 + 0.006, 0.055], 3);
+  },
+};
+
+/** Carrots: a bunch of four, orange and ringed, tapering to a point, with the green tops still on. */
+export const carrots = {
+  name: 'carrots',
+  cell: 0.0042,
+  budget: 18000,
+  bones: ONE,
+  materials: { root: MATERIALS.skin, leaf: MATERIALS.leaf },
+  sculpt(s) {
+    const tone = (p) => {
+      const ring = Math.sin(p[0] * 520 + p[2] * 90) > 0.82 ? 0.88 : 1;
+      return hsv(p, C('#e3761a').map((v) => v * ring), 0.06, 80);
+    };
+    for (let i = 0; i < 4; i++) {
+      const z = (i - 1.5) * 0.026, lift = 0.021 + (i % 2) * 0.016;
+      s.chain([[-0.13, lift, z * 0.5], [-0.05, lift, z * 0.9], [0.05, lift - 0.002, z * 1.15], [0.14, lift - 0.004, z * 1.3]], [0.019, 0.0185, 0.0125, 0.003], { color: tone, mat: 'root', k: 0.004, bump: [0.0012, 90] });
+      for (const dz of [-0.01, 0, 0.01]) s.limb([-0.13, lift, z * 0.5], [-0.21, lift + 0.03 + dz * 2, z * 0.5 + dz * 3], 0.006, 0.003, { color: '#4a8a2e', mat: 'leaf', k: 0.004 });
+    }
+  },
+};
+
+/** Onions: three yellow onions, papery and tapered to a dry tip, a tuft of roots underneath. */
+export const onions = {
+  name: 'onions',
+  cell: 0.0042,
+  budget: 18000,
+  bones: ONE,
+  materials: { skin: MATERIALS.skin, root: MATERIALS.stalk },
+  sculpt(s) {
+    const tone = (p) => hsv(p, mix(C('#c98a2e'), C('#8a5420'), smooth(0.2, 0.8, noise(p[0] * 60, p[1] * 18, p[2] * 60))), 0.05, 80);
+    for (const [x, z, r] of [[-0.052, -0.02, 0.05], [0.055, -0.015, 0.047], [0.0, 0.055, 0.05]]) {
+      s.ellipsoid([x, r * 0.88, z], [r, r * 0.88, r], { color: tone, mat: 'skin', k: 0, bump: [0.0012, 60] });
+      s.cone([x, r * 1.95, z], r * 0.28, r * 0.55, { color: tone, mat: 'skin', k: 0.012 });
+      s.limb([x, 0.004, z], [x + 0.006, 0.0, z + 0.006], 0.008, 0.003, { color: '#d8c8a0', mat: 'root', k: 0.004 });
+    }
+  },
+};
+
+/** Peppers: a red, a yellow and a green bell pepper, glossy and lobed, each with its green stem. */
+export const peppers = {
+  name: 'peppers',
+  cell: 0.0042,
+  budget: 20000,
+  bones: ONE,
+  materials: { skin: { roughness: 0.28, clearcoat: 0.6, clearcoatRoughness: 0.25 }, stalk: MATERIALS.stalk },
+  sculpt(s) {
+    const pepper = (x, z, base, tilt) => {
+      const c = [x, 0.047, z];
+      const tone = fruit(c, (q) => mix(C(base[0]), C(base[1]), smooth(-0.04, 0.05, q[1])));
+      for (const a of [0, 2.1, 4.2]) {
+        s.ellipsoid([x + Math.sin(a) * 0.014, 0.046, z + Math.cos(a) * 0.014], [0.03, 0.046, 0.03], { color: tone, mat: 'skin', k: 0.012, rot: [0, 0, tilt] });
+      }
+      s.limb([x, 0.088, z], [x + 0.004, 0.108, z], 0.007, 0.0055, { color: '#4f7a2a', mat: 'stalk', k: 0.004 });
+    };
+    pepper(-0.06, -0.015, ['#b3151c', '#d9281e'], 0.05);
+    pepper(0.06, -0.02, ['#e0b012', '#f2cf2e'], -0.05);
+    pepper(0.0, 0.06, ['#2f7a2a', '#4f9a3a'], 0.03);
+  },
+};
+
+/** Grapes: a bunch of green grapes hanging from a woody stem, each with a bloom of white. */
+export const grapes = {
+  name: 'grapes',
+  cell: 0.0036,
+  budget: 22000,
+  bones: ONE,
+  materials: { fruit: { roughness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.3 }, stalk: MATERIALS.stalk },
+  sculpt(s) {
+    const tone = (p) => mix(C('#9cc24a'), C('#c9dd78'), smooth(0.2, 0.8, noise(p[0] * 70, p[1] * 70, p[2] * 70)));
+    const rows = [[0.1, 5, 0.04], [0.078, 4, 0.034], [0.056, 3, 0.026], [0.036, 2, 0.016], [0.02, 1, 0]];
+    for (const [y, n, ring] of rows) {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + y * 9;
+        s.sphere([Math.sin(a) * ring, y, Math.cos(a) * ring], 0.0215, { color: tone, mat: 'fruit', k: 0.002 });
+      }
+    }
+    s.limb([0, 0.1, 0], [0.012, 0.15, 0.004], 0.006, 0.005, { color: '#6a5230', mat: 'stalk', k: 0.004 });
+    s.limb([0.012, 0.15, 0.004], [0.04, 0.162, 0.004], 0.005, 0.004, { color: '#6a5230', mat: 'stalk', k: 0.004 });
+  },
+};
+
+// ——————————————————————————————————————————————— more pantry
+
+/** Flour: a five-pound paper sack, plain white with a red band and a golden ear of wheat, the top folded over and glued. */
+export const flour = {
+  name: 'flour',
+  cell: 0.0052,
+  budget: 14000,
+  bones: ONE,
+  materials: { paper: MATERIALS.paper },
+  sculpt(s) {
+    const print = printed((p, n) => {
+      const x = p[0], y = p[1];
+      if (n[2] > 0.3) {
+        if (y > 0.27) return C('#e6e0d0');
+        if (inEllipse(x, y, 0, 0.17, 0.018, 0.05)) return C('#d9a83a');
+        if (between(y, 0.1, 0.24)) return C('#b3261e');
+        return C('#f4f1e8');
+      }
+      return C('#efebe0');
+    });
+    s.box([0, 0.14, 0], [0.085, 0.14, 0.04], 0.006, { color: print, mat: 'paper', k: 0 });
+    s.box([0, 0.288, 0], [0.085, 0.01, 0.036], 0.002, { color: '#dcd5c2', mat: 'paper', k: 0 });
+  },
+};
+
+/** Sugar: a four-pound paper bag, white with a sky blue band and a cube of sugar on the front, folded and glued across the top. */
+export const sugar = {
+  name: 'sugar',
+  cell: 0.0048,
+  budget: 14000,
+  bones: ONE,
+  materials: { paper: MATERIALS.paper },
+  sculpt(s) {
+    const print = printed((p, n) => {
+      const x = p[0], y = p[1];
+      if (n[2] > 0.3) {
+        if (Math.abs(x) < 0.026 && between(y, 0.1, 0.152)) return C('#ffffff');
+        if (between(y, 0.07, 0.19)) return C('#4a9ad4');
+        if (y > 0.235) return C('#e6e2d6');
+        return C('#f6f3ea');
+      }
+      return C('#f0ede2');
+    });
+    s.box([0, 0.12, 0], [0.075, 0.12, 0.035], 0.006, { color: print, mat: 'paper', k: 0 });
+    s.box([0, 0.244, 0], [0.075, 0.008, 0.032], 0.002, { color: '#dedacb', mat: 'paper', k: 0 });
+  },
+};
+
+/** Oats: a round cardboard canister, a blue label with a bowl of rolled oats on it and a plastic lid. */
+export const oats = {
+  name: 'oats',
+  cell: 0.0048,
+  budget: 14000,
+  bones: ONE,
+  materials: { card: MATERIALS.card, lid: MATERIALS.plastic },
+  sculpt(s) {
+    const print = (p, n) => {
+      const x = p[0], y = p[1];
+      if (n[2] > 0.25) {
+        if (inEllipse(x, y, 0, 0.115, 0.045, 0.03)) return hsv(p, C('#ddb878'), 0.12, 200);
+        if (inEllipse(x, y, 0, 0.1, 0.055, 0.02)) return C('#f1e8d0');
+        if (y > 0.2) return C('#f2ead4');
+      }
+      return y < 0.032 ? C('#a8b8c8') : C('#2d5da6');
+    };
+    lathe(s, [0, 0], [[0, 0.05], [0.004, 0.0545], [0.2, 0.0545], [0.203, 0.052]], { color: print, mat: 'card' });
+    lathe(s, [0, 0], [[0.2, 0.056], [0.206, 0.0575], [0.222, 0.0575], [0.226, 0.0545]], { color: '#c8302a', mat: 'lid' });
+  },
+};
+
+/** Peanut butter: a squat plastic jar, a brown label with a peanut on it and a red screw lid. */
+export const peanutbutter = {
+  name: 'peanutbutter',
+  cell: 0.0042,
+  budget: 14000,
+  bones: ONE,
+  materials: { jar: MATERIALS.pet, cap: MATERIALS.cap },
+  sculpt(s) {
+    const print = (p, n) => {
+      const x = p[0], y = p[1];
+      if (between(y, 0.035, 0.1)) {
+        if (n[2] > 0.25 && inEllipse(x, y, 0, 0.068, 0.024, 0.017)) return C('#d9a85a');
+        return C('#7a4a22');
+      }
+      return hsv(p, C('#c8883a'), 0.04, 100);
+    };
+    lathe(s, [0, 0], [[0, 0.04], [0.006, 0.048], [0.02, 0.0505], [0.105, 0.0505], [0.115, 0.046], [0.123, 0.04]], { color: print, mat: 'jar' });
+    s.part('cap', () => {
+      lathe(s, [0, 0], [[0.122, 0.0455], [0.125, 0.0495], [0.152, 0.0495], [0.155, 0.047]], { color: '#c8302a', mat: 'cap' });
+      for (let i = 0; i < 28; i++) {
+        const a = (i / 28) * Math.PI * 2;
+        s.limb([Math.sin(a) * 0.05, 0.127, Math.cos(a) * 0.05], [Math.sin(a) * 0.05, 0.15, Math.cos(a) * 0.05], 0.0013, 0.0013, { color: '#a82020', mat: 'cap', k: 0 });
+      }
+    });
+  },
+};
+
+// ——————————————————————————————————————————————— more of the cold case
+
+/** Orange juice: a half-gallon gable carton, orange with a big slice of orange on the front and a screw cap. */
+export const orangejuice = {
+  name: 'orangejuice',
+  cell: 0.0046,
+  budget: 16000,
+  bones: ONE,
+  materials: { card: { roughness: 0.5, clearcoat: 0.4, clearcoatRoughness: 0.35 }, cap: MATERIALS.cap },
+  sculpt(s) {
+    const print = printed((p, n) => {
+      const x = p[0], y = p[1];
+      if (y > 0.235 || y < 0.04) return C('#e8780f');
+      if (n[2] > 0.5) {
+        const r = Math.hypot(x, y - 0.14);
+        if (r < 0.026) return Math.sin(Math.atan2(y - 0.14, x) * 4) > 0.5 ? C('#fff1c4') : C('#f6a41e');
+        if (r < 0.032) return C('#fff6d8');
+      }
+      return C('#f5a21e');
+    });
+    const bounds = [[-0.07, 0, -0.07], [0.07, 0.34, 0.07]];
+    hull(s, [[1, 0, 0, 0.0575], [-1, 0, 0, 0.0575], [0, 0, 1, 0.0575], [0, 0, -1, 0.0575], [0, -1, 0, 0],
+      [0, 0.64, 0.768, 0.19], [0, 0.64, -0.768, 0.19]], bounds, { color: print, mat: 'card', round: 0.003 });
+    s.part('cap', () => s.cylinder([0, 0.311, 0.0], 0.012, 0.01, { color: '#3a8a2a', mat: 'cap', k: 0 }));
+  },
+};
+
+/** Bacon: a vacuum pack of streaky bacon, the red-and-pink strips showing through a window in the card sleeve. */
+export const bacon = {
+  name: 'bacon',
+  cell: 0.0038,
+  budget: 14000,
+  bones: ONE,
+  materials: { pack: { roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.2 }, meat: MATERIALS.meat },
+  sculpt(s) {
+    const print = printed((p, n) => {
+      const x = p[0], z = p[2];
+      if (n[1] > 0.5) {
+        if (Math.abs(x) < 0.062 && Math.abs(z) < 0.027) {
+          return Math.sin(z * 520 + noise(x * 40, 0, z * 40) * 3) > 0.15 ? C('#f0c8b8') : C('#b0382c');
+        }
+        return C('#a8231c');
+      }
+      return C('#9c1e18');
+    });
+    s.box([0, 0.016, 0], [0.095, 0.016, 0.045], 0.012, { color: print, mat: 'pack', k: 0 });
+    s.box([0, 0.0155, 0], [0.098, 0.0165, 0.012], 0.002, { color: '#f4f0e4', mat: 'pack', k: 0.004 });
+  },
+};
+
+/** Sour cream: a round tub, white with a green band and a green foil lid. */
+export const sourcream = {
+  name: 'sourcream',
+  cell: 0.0044,
+  budget: 14000,
+  bones: ONE,
+  materials: { tub: MATERIALS.plastic },
+  sculpt(s) {
+    const print = (p, n) => {
+      const y = p[1];
+      if (n[2] > 0.25 && inEllipse(p[0], y, 0, 0.058, 0.036, 0.022)) return C('#f8f6ef');
+      if (between(y, 0.03, 0.082)) return C('#3a8a3a');
+      return C('#f3f1e6');
+    };
+    lathe(s, [0, 0], [[0, 0.05], [0.006, 0.056], [0.104, 0.066]], { color: print, mat: 'tub' });
+    lathe(s, [0, 0], [[0.103, 0.0685], [0.11, 0.0695], [0.115, 0.0675]], { color: '#2f7a30', mat: 'tub' });
+  },
+};
+
+// ——————————————————————————————————————————————— the snack aisle
+
+/** Chips: a pillow bag of potato chips, bright yellow with a red banner and a chip on the front, crimped at both ends. */
+export const chips = {
+  name: 'chips',
+  cell: 0.0054,
+  budget: 14000,
+  bones: ONE,
+  materials: { bag: { roughness: 0.22, metalness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.15 } },
+  sculpt(s) {
+    const print = printed((p, n) => {
+      const x = p[0], y = p[1];
+      if (n[2] > 0.3) {
+        if (inEllipse(x, y, 0, 0.17, 0.045, 0.034)) return hsv(p, C('#e9b43c'), 0.1, 160);
+        if (between(y, 0.095, 0.115) || between(y, 0.23, 0.25)) return C('#c8202a');
+        if (between(y, 0.115, 0.23)) return C('#f4cf2a');
+        return C('#c8202a');
+      }
+      return C('#b81e24');
+    });
+    s.box([0, 0.17, 0], [0.095, 0.145, 0.032], 0.03, { color: print, mat: 'bag', k: 0 });
+    s.box([0, 0.322, 0], [0.095, 0.012, 0.01], 0.004, { color: '#b81e24', mat: 'bag', k: 0.01 });
+    s.box([0, 0.012, 0], [0.095, 0.01, 0.01], 0.004, { color: '#b81e24', mat: 'bag', k: 0.01 });
+  },
+};
+
+/** Cookies: a tall box of chocolate chip cookies, a dark blue box with a round cookie on the front, studded with chips. */
+export const cookies = {
+  name: 'cookies',
+  cell: 0.0044,
+  budget: 14000,
+  bones: ONE,
+  materials: { card: MATERIALS.card },
+  sculpt(s) {
+    const print = printed((p, n) => {
+      const x = p[0], y = p[1];
+      if (n[2] > 0.5) {
+        const r = Math.hypot(x, y - 0.1);
+        if (r < 0.04) {
+          const chip = noise(x * 280, y * 280, 7) > 0.78;
+          return chip ? C('#3a2112') : hsv(p, C('#c8903f'), 0.1, 140);
+        }
+        if (y > 0.17) return C('#e8d6a0');
+        return C('#1f3f7c');
+      }
+      return C('#1f3f7c');
+    });
+    s.box([0, 0.1, 0], [0.065, 0.1, 0.03], 0.003, { color: print, mat: 'card', k: 0 });
+  },
+};
+
+/** A candy bar: a chocolate bar in a brown wrapper with a gold stripe, the wrapper crimped at each end. */
+export const candybar = {
+  name: 'candybar',
+  cell: 0.0034,
+  budget: 12000,
+  bones: ONE,
+  materials: { wrap: { roughness: 0.25, metalness: 0.4, clearcoat: 0.8, clearcoatRoughness: 0.15 } },
+  sculpt(s) {
+    const print = printed((p, n) => {
+      const x = p[0];
+      if (n[1] > 0.5) {
+        if (Math.abs(x) > 0.078) return C('#d8c08a');
+        if (Math.abs(p[2]) < 0.008) return C('#e0b040');
+        return C('#5a2e18');
+      }
+      return C('#4a2412');
+    });
+    s.box([0, 0.02, 0], [0.09, 0.019, 0.03], 0.01, { color: print, mat: 'wrap', k: 0 });
+    for (const sx of [-1, 1]) s.box([sx * 0.104, 0.02, 0], [0.014, 0.009, 0.03], 0.002, { color: '#d8c08a', mat: 'wrap', k: 0.004 });
+  },
+};
+
 // ——————————————————————————————————————————————— deliveries
 
 /** A shipping carton: kraft cardboard taped shut with a white label on its front. */
@@ -695,10 +1038,11 @@ export const carton = {
 
 /** The whole stock, by name. */
 export const GROCERIES = {
-  apples, bananas, tomatoes, lettuce, potatoes,
-  milk, yogurt, cheddar, butter, eggs, chicken, beef, turkey,
+  apples, bananas, tomatoes, lettuce, potatoes, oranges, carrots, onions, peppers, grapes,
+  milk, yogurt, cheddar, butter, eggs, chicken, beef, turkey, orangejuice, bacon, sourcream,
   bread,
-  rice, spaghetti, cereal, beans, coffee,
+  rice, spaghetti, cereal, beans, coffee, flour, sugar, oats, peanutbutter,
+  chips, cookies, candybar,
   cola, water,
   pizza, icecream,
   carton,
