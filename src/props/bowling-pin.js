@@ -65,6 +65,7 @@ function paletteOf(GFX, options) {
 function paint(GFX, geometry, palette, design, height) {
   const p = geometry.getAttribute('position');
   const color = new GFX.Color();
+  const enamelEdge = new GFX.Color('#74121d');
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
     const nx = x / BOWLING_PIN_RADIUS, ny = y / height, nz = z / BOWLING_PIN_RADIUS;
@@ -95,7 +96,7 @@ function paint(GFX, geometry, palette, design, height) {
       smooth(0.988, 0.991, h) * (1 - smooth(0.993, 0.996, h)),
     );
     color.lerp(palette.stripe, band);
-    color.lerp(new GFX.Color('#74121d'), edge * 0.55);
+    color.lerp(enamelEdge, edge * 0.55);
     const grain = 0.994 + noise3(nx * 95 + 2, ny * 95, nz * 95 - 3) * 0.012;
     color.multiplyScalar(grain);
     geometry.getAttribute('color').setXYZ(i, color.r, color.g, color.b);
@@ -166,7 +167,8 @@ export function createBowlingPin(GFX, options = {}) {
   shell.receiveShadow = true;
   group.add(shell);
 
-  function repaint() { paint(GFX, geometry, palette, design, height); }
+  let currentDesign = design;
+  function repaint() { paint(GFX, geometry, palette, currentDesign, height); }
   function setColors(next = {}) {
     next ??= {};
     for (const [key, alias] of [['base', 'baseColor'], ['swirl', 'swirlColor'], ['accent', 'accentColor'], ['stripe', 'stripeColor']]) {
@@ -182,8 +184,6 @@ export function createBowlingPin(GFX, options = {}) {
     repaint();
     return currentDesign;
   }
-  let currentDesign = design;
-  function repaintCurrent() { paint(GFX, geometry, palette, currentDesign, height); }
 
   return {
     group, shell, setColors, setDesign,
