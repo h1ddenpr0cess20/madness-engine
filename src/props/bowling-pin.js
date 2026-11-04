@@ -38,16 +38,62 @@ function fbm(x, y, z) {
     + noise3(x * 4.3 + 2.8, y * 4.3 + 7.1, z * 4.3 + 3.9) * 0.15;
 }
 
-/** Catmull-Rom radius profile; coordinates are normalized to the pin dimensions. */
-function radiusAt(t, controls) {
-  const scaled = clamp(t, 0, 1) * (controls.length - 1);
-  const i = Math.min(controls.length - 2, Math.floor(scaled));
-  const f = scaled - i, f2 = f * f, f3 = f2 * f;
-  const p0 = controls[Math.max(0, i - 1)], p1 = controls[i];
-  const p2 = controls[i + 1], p3 = controls[Math.min(controls.length - 1, i + 2)];
-  return Math.max(0, 0.5 * (2 * p1 + (-p0 + p2) * f
-    + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f2
-    + (-p0 + 3 * p1 - 3 * p2 + p3) * f3));
+/**
+ * USBC ten-pin target profile. Each pair is [height above the flat base,
+ * radius] in inches. The measured stations are taken from the USBC equipment
+ * specifications; the extra base and crown stations describe the specified
+ * 5/32-inch foot radius and 1.2735-inch crown arc.
+ */
+export const BOWLING_PIN_PROFILE = Object.freeze([
+  [0.000, 1.0155],
+  [0.156, 1.1715],
+  [0.750, 1.4140],
+  [2.250, 1.9530],
+  [3.375, 2.2550],
+  [4.500, 2.3830],
+  [5.875, 2.2815],
+  [7.250, 1.8515],
+  [8.625, 1.2360],
+  [9.375, 0.9825],
+  [10.000, 0.8985],
+  [10.875, 0.9350],
+  [11.750, 1.0470],
+  [12.625, 1.2030],
+  [13.500, 1.2735],
+  [14.000, 1.2470],
+  [14.500, 1.0900],
+  [14.900, 0.5300],
+  [15.000, 0.0000],
+]);
+
+/** Shape-preserving cubic Hermite interpolation through non-uniform stations. */
+function radiusAt(heightInches, controls) {
+  const y = clamp(heightInches, controls[0][0], controls[controls.length - 1][0]);
+  let i = 0;
+  while (i < controls.length - 2 && y > controls[i + 1][0]) i++;
+  const [x0, p0] = controls[i], [x1, p1] = controls[i + 1];
+  const h = x1 - x0, t = (y - x0) / h;
+  const secants = [];
+  for (let j = 0; j < controls.length - 1; j++) {
+    secants.push((controls[j + 1][1] - controls[j][1]) / (controls[j + 1][0] - controls[j][0]));
+  }
+  const slopeAt = (j) => {
+    if (j === 0) return secants[0];
+    if (j === controls.length - 1) return secants[secants.length - 1];
+    const before = secants[j - 1], after = secants[j];
+    if (before === 0 || after === 0 || Math.sign(before) !== Math.sign(after)) return 0;
+    const hBefore = controls[j][0] - controls[j - 1][0];
+    const hAfter = controls[j + 1][0] - controls[j][0];
+    const w1 = 2 * hAfter + hBefore, w2 = hAfter + 2 * hBefore;
+    return (w1 + w2) / (w1 / before + w2 / after);
+  };
+  const m0 = slopeAt(i), m1 = slopeAt(i + 1);
+  const t2 = t * t, t3 = t2 * t;
+  const value = (2 * t3 - 3 * t2 + 1) * p0
+    + (t3 - 2 * t2 + t) * h * m0
+    + (-2 * t3 + 3 * t2) * p1
+    + (t3 - t2) * h * m1;
+  return Math.max(0, value);
 }
 function paletteOf(GFX, options) {
   const supplied = options.colors ?? {};
@@ -85,14 +131,14 @@ function paint(GFX, geometry, palette, design, height) {
 
     // Two precisely placed red neck bands, with a fine dark-red enamel edge.
     const h = ny;
-    const bandA = smooth(0.887, 0.892, h) * (1 - smooth(0.925, 0.930, h));
-    const bandB = smooth(0.948, 0.953, h) * (1 - smooth(0.986, 0.991, h));
+    const bandA = smooth(0.690, 0.693, h) * (1 - smooth(0.713, 0.716, h));
+    const bandB = smooth(0.758, 0.761, h) * (1 - smooth(0.781, 0.784, h));
     const band = Math.max(bandA, bandB);
     const edge = Math.max(
-      smooth(0.884, 0.887, h) * (1 - smooth(0.889, 0.892, h)),
-      smooth(0.927, 0.930, h) * (1 - smooth(0.932, 0.935, h)),
-      smooth(0.945, 0.948, h) * (1 - smooth(0.950, 0.953, h)),
-      smooth(0.988, 0.991, h) * (1 - smooth(0.993, 0.996, h)),
+      smooth(0.687, 0.690, h) * (1 - smooth(0.693, 0.696, h)),
+      smooth(0.713, 0.716, h) * (1 - smooth(0.719, 0.722, h)),
+      smooth(0.755, 0.758, h) * (1 - smooth(0.761, 0.764, h)),
+      smooth(0.781, 0.784, h) * (1 - smooth(0.787, 0.790, h)),
     );
     color.lerp(palette.stripe, band);
     color.lerp(enamelEdge, edge * 0.55);
@@ -117,18 +163,14 @@ export function createBowlingPin(GFX, options = {}) {
   if (!BOWLING_PIN_DESIGNS.includes(design)) throw new RangeError('bowling-pin: unknown design "' + design + '"');
   const palette = paletteOf(GFX, options);
 
-  // Dense, continuously sampled lathe surface. The broad lower body, soft
-  // shoulder, narrow waist, long neck and rounded crown are one watertight shell.
-  const profile = [
-    0.56, 0.61, 0.69, 0.79, 0.89, 0.96, 1.00, 1.00, 0.98,
-    0.91, 0.79, 0.64, 0.49, 0.39, 0.34, 0.33, 0.35, 0.36, 0.34, 0.29, 0.18, 0.00,
-  ];
+  // Dense lathe sampling of the measured regulation ten-pin silhouette.
+  const radialScale = radius / 2.383;
   const positions = new Float32Array((heightSegments + 1) * (widthSegments + 1) * 3);
   const indices = [];
   for (let iy = 0; iy <= heightSegments; iy++) {
     const t = iy / heightSegments;
     const y = t * height;
-    const r = radiusAt(t * (profile.length - 1) / (profile.length - 1), profile) * radius;
+    const r = radiusAt(t * 15, BOWLING_PIN_PROFILE) * radialScale;
     for (let ix = 0; ix <= widthSegments; ix++) {
       const a = ix / widthSegments * Math.PI * 2;
       const k = (iy * (widthSegments + 1) + ix) * 3;
