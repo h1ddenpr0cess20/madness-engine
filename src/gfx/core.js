@@ -1203,6 +1203,12 @@ SpriteMaterial.prototype.isSpriteMaterial = true;
  *         `Object` in shaders/wgsl.js) and the entries of `uniforms`, in
  *         declaration order, as the fields of `material`.
  *
+ * One uniform may be a texture (`uniforms.uData = { value: texture }`): in
+ * GLSL declare `uniform sampler2D uData;` and `texture(uData, uv)`; in WGSL it
+ * is `dataTex` with its sampler `dataSamp`, read in the fragment stage with
+ * `textureSampleLevel(dataTex, dataSamp, uv, 0.0)`. Rows run as they do for any
+ * texture here (v = 1 is the top of the image).
+ *
  * Whatever comes out is written as it is: no colour-space conversion, as
  * with any hand-written shader. The fragment stage is told what the target
  * stores, as a constant `OUTPUT_SRGB` (a `bool`): true for the canvas, false

@@ -143,8 +143,11 @@ export class WebGLBackend {
     };
 
     if (call.key.kind === 'custom') {
+      const gpu = new Map();
+      for (const [name, { value }] of Object.entries(call.material.uniforms)) if (value?.isTexture) gpu.set(name, this._texture(value));
       for (const [name, { value }] of Object.entries(call.material.uniforms)) {
-        if (typeof value === 'number') u.set(name, value, 'f');
+        if (value?.isTexture) bindTexture(name, gpu.get(name));
+        else if (typeof value === 'number') u.set(name, value, 'f');
         else if (value.isColor) u.set(name, [value.r, value.g, value.b], 'v3');
         else if (value.isVector3) u.set(name, [value.x, value.y, value.z], 'v3');
         else if (value.isVector2) u.set(name, [value.x, value.y], 'v2');

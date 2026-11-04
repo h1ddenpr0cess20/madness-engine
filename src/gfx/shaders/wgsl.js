@@ -104,7 +104,7 @@ export function moduleSource(key, material) {
 
 /** The WGSL types a custom material's uniforms are declared with, in order. */
 export function customFields(material) {
-  return Object.entries(material.uniforms).map(([name, { value }]) => {
+  return Object.entries(material.uniforms).filter(([, { value }]) => !value?.isTexture).map(([name, { value }]) => {
     if (typeof value === 'number') return [name, 'f32'];
     if (value.isColor || value.isVector3) return [name, 'vec3f'];
     if (value.isVector2) return [name, 'vec2f'];
