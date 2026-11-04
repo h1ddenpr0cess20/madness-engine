@@ -183,16 +183,23 @@ const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.
  */
 const MOVING = [
   ['krystal', 'Animated props', 'crystal ball', () => avatar('../../../src/heroes/krystal/index.js', 'createKrystal')],
+  ['glass globe', 'Animated props', 'Earth in glass', () => import('../../../src/props/glassglobe.js').then((m) => {
+    const globe = m.createGlassGlobe(GFX, { radius: 0.6, mist: true, animate: true });
+    globe.orient(40, -95);
+    globe.spinRate = 0.12;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 } });
+  }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
-function movingItem([name, category, group, make]) {
+function movingItem([name, category, group, make, from = null]) {
+  const source = from ?? (category === 'Props' ? 'props/pan' : `heroes/${name}`);
   return {
-    id: `${category === 'Props' ? 'props' : 'animated'}/${name}`, category, group, name, source: category === 'Props' ? 'props/pan' : `heroes/${name}`, kind: 'object',
+    id: `${category === 'Props' ? 'props' : 'animated'}/${name}`, category, group, name, source, kind: 'object',
     async build() {
       const made = await make();
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
-      return { object, ...dressOf(made), info: { Source: category === 'Props' ? 'props/pan' : `heroes/${name}`, ...countOf(object) } };
+      return { object, frame: made?.frame, ...dressOf(made), info: { Source: source, ...countOf(object) } };
     },
   };
 }

@@ -40,9 +40,10 @@ export const MIST = Object.freeze({ speed: 0.22, swirl: 2.0, churn: 0.5, glow: 0
  * @param {boolean} [options.etch]  the continents (default true)
  * @param {number} [options.etchWidth]  how wide the etching is painted, in texels
  * @param {object} [options.etchStyle]  `fill`, `coast` (CSS colors, alpha included) and `line` (width at 4096) of the etching
+ * @param {boolean} [options.animate]  move itself on, once a frame, as Krystal does, for where nothing calls `update`
  * @param {number|null} [options.graticule]  degrees between etched lines of latitude and longitude, or null
  */
-export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false, etch: withEtch = true, etchWidth = 4096, etchStyle = {}, graticule = null, seed = 0 } = {}) {
+export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false, etch: withEtch = true, etchWidth = 4096, etchStyle = {}, graticule = null, seed = 0, animate = false } = {}) {
   const R = radius;
   const scale = R / 0.8;
 
@@ -201,6 +202,13 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
       fieldTexture?.dispose();
     },
   };
+  if (animate) {
+    const timer = new GFX.Timer();
+    glass.onBeforeRender = () => {
+      timer.update();
+      api.update(Math.min(timer.getDelta(), 0.05));
+    };
+  }
   return api;
 }
 
