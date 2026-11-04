@@ -54,21 +54,20 @@ test('riding animations rotate every wheel about its axle', () => {
 });
 
 
-test('all bicycle variants have a visible saddle and exposed seatpost geometry', () => {
+test('all bicycle variants have a saddle on a seatpost and a stem holding up the bars', () => {
   for (const name of ['bikeman', 'bikewoman', 'bmxrider']) {
     const s = sculpt(CHARACTERS[name]);
     const kit = s.shapes.filter((shape) => shape.part === 'kit');
     assert.ok(kit.length > 0, `${name}: saddle and seatpost are in the visible kit part`);
-    const saddle = kit.some((shape) =>
-      shape.box[0][1] > 0.3 && shape.box[1][1] > 0.32
-      && shape.box[0][2] < -0.08 && shape.box[1][2] < -0.04
+    const saddle = kit.some((shape) => shape.box[0][2] < -0.04 && shape.box[1][2] > -0.14 && shape.box[1][1] > 0.28);
+    assert.ok(saddle, `${name}: padded saddle sits over the seat tube`);
+    const frame = s.shapes.filter((shape) => shape.part === 'rigid:frame');
+    // A steerer runs from the head tube up to the bars: a tall, narrow member near the front.
+    const stem = frame.some((shape) =>
+      shape.box[1][1] - shape.box[0][1] > 0.08 && shape.box[1][1] > 0.44
+      && Math.abs(shape.box[1][0] - shape.box[0][0]) < 0.05 && shape.box[0][2] > 0.1
     );
-    assert.ok(saddle, `${name}: padded saddle is behind the seat tube`);
-    const post = kit.some((shape) =>
-      shape.box[0][1] < 0.34 && shape.box[1][1] > 0.36
-      && shape.box[0][2] < -0.04 && shape.box[1][2] > -0.1
-    );
-    assert.ok(post, `${name}: seatpost rises visibly from the frame`);
+    assert.ok(stem, `${name}: steerer and stem rise to the bars`);
   }
 });
 

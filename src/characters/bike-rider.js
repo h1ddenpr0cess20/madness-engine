@@ -13,10 +13,16 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
     L: [0.062, CRANK[1] - CL, CRANK[2]],
     R: [-0.062, CRANK[1] + CL, CRANK[2]],
   };
-  const seat = [0, bmx ? 0.33 : 0.4, bmx ? -0.105 : -0.105];
-  const head = [0, bmx ? 0.36 : 0.38, bmx ? 0.145 : 0.17];
-  const bar = [0, bmx ? 0.505 : 0.47, bmx ? 0.19 : 0.15];
-  const handle = bmx ? 0.135 : 0.085;
+  // The seat tube meets the top tube at `seat`; the saddle sits right on it,
+  // under the pelvis, like the Cyclist's. The BMX seat is low and small so a
+  // standing rider clears it.
+  const seat = [0, bmx ? 0.27 : 0.4, bmx ? -0.1 : -0.07];
+  const head = [0, bmx ? 0.37 : 0.38, bmx ? 0.15 : 0.17];
+  // `bar` is the stem clamp at the top of the steerer; the grips are `handle` out from it.
+  const bar = [0, bmx ? 0.45 : 0.47, bmx ? 0.165 : 0.15];
+  const handle = bmx ? 0.12 : 0.085;
+  // Where each hand closes on its grip.
+  const grip = bmx ? [handle + 0.018, bar[1] + 0.05, bar[2] - 0.005] : [handle + 0.016, bar[1], bar[2] - 0.022];
   const FRAME = { color: frame, mat: 'metal', bone: 'root' };
   const wheelCells = { 'rigid:wheelF': 0.0026, 'rigid:wheelB': 0.0026 };
 
@@ -56,7 +62,8 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
 
         if (bmx) {
           // A BMX rider stands light on the pedals, elbows out and knees bent.
-          k.move('hips', 0, 0.015, -0.015);
+          // Standing on the pedals: pelvis lifted well clear of the saddle and set back over the rear wheel.
+          k.move('hips', 0, 0.085, -0.06);
           hold(k, 'hips', 0.12, 0, 0);
           hold(k, 'chest', 0.42, 0, 0);
           hold(k, 'spine', 0.12, 0, 0);
@@ -75,15 +82,11 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
         k.turn('pedalL', -crankPhase, 0, 0);
         k.turn('pedalR', -crankPhase, 0, 0);
         for (const [S, ph] of [['L', 0], ['R', Math.PI]]) {
-          hold(k, `thigh${S}`, (bmx ? -0.72 : -1.15) + Math.sin(crankPhase + ph) * 0.32, 0, 0);
-          hold(k, `shin${S}`, (bmx ? 0.95 : 1.25) + Math.sin(crankPhase + ph + 1.2) * 0.3, 0, 0);
+          hold(k, `thigh${S}`, (bmx ? -0.5 : -1.15) + Math.sin(crankPhase + ph) * 0.32, 0, 0);
+          hold(k, `shin${S}`, (bmx ? 0.62 : 1.25) + Math.sin(crankPhase + ph + 1.2) * 0.3, 0, 0);
           hold(k, `foot${S}`, -0.2, 0, 0);
           step?.(k, S, `pedal${S}`, [PEDAL[S][0] * 0.95, PEDAL[S][1] + 0.008, PEDAL[S][2] + 0.004]);
-          if (clip !== 'attack') reach?.(k, S, 'root', [S === 'L' ? handle : -handle, bar[1], bar[2] - 0.015]);
-        }
-        if (bmx) {
-          hold(k, 'armL', -0.45, 0, 0.24); hold(k, 'foreL', -0.45, 0, 0);
-          hold(k, 'armR', -0.45, 0, -0.24); hold(k, 'foreR', -0.45, 0, 0);
+          if (clip !== 'attack') reach?.(k, S, 'root', [S === 'L' ? grip[0] : -grip[0], grip[1], grip[2]]);
         }
       },
     },
@@ -150,6 +153,9 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
         const tubes = bmx
           ? [[CRANK, lowerHead], [CRANK, seat], [seat, head], [CRANK, BACK], [seat, BACK], [head, lowerHead]]
           : [[CRANK, head], [CRANK, seat], [seat, head], [CRANK, BACK], [seat, BACK], [head, lowerHead]];
+        // The steerer and stem: from the head tube up to the bar clamp, so the
+        // bars are visibly held up by the fork rather than floating.
+        s.limb(lowerHead, bar, bmx ? 0.0105 : 0.009, bmx ? 0.0105 : 0.009, { ...FRAME, k: 0.003 });
         for (const [a, b] of tubes) {
           const radius = bmx ? 0.012 : 0.01;
           s.limb(a, b, radius, radius, { ...FRAME, k: 0.003 });
@@ -168,38 +174,38 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
           );
         }
 
-        // Wide BMX crossbar with a higher rise; a swept-back city bar for
-        // the two ordinary riders.
-        s.limb([-handle, bar[1], bar[2]], [handle, bar[1], bar[2]], bmx ? 0.011 : 0.008, bmx ? 0.011 : 0.008, { ...FRAME, k: 0.003 });
-        for (const m of [1, -1]) {
-          s.limb([m * handle, bar[1], bar[2]], [m * (handle + 0.018), bar[1], bar[2] - 0.018], 0.008, 0.008, { ...FRAME, k: 0.003 });
-          s.limb(
-            [m * (handle + 0.005), bar[1], bar[2] - 0.012],
-            [m * (handle + 0.028), bar[1], bar[2] - 0.025],
-            0.009, 0.009,
-            { color: '#24262b', mat: 'rubber', bone: 'root', k: 0.002 },
-          );
+        if (bmx) {
+          // BMX bars: two risers sweep up and out from the stem to a crossbar,
+          // with grips on the ends.
+          const top = bar[1] + 0.06;
+          s.box([0, bar[1], bar[2]], [0.016, 0.012, 0.014], 0.004, { ...FRAME, k: 0.003 });
+          for (const m of [1, -1]) {
+            s.limb([m * 0.012, bar[1], bar[2]], [m * 0.085, top, bar[2] + 0.005], 0.011, 0.0085, { ...FRAME, k: 0.003 });
+          }
+          s.limb([-0.085, top, bar[2] + 0.005], [0.085, top, bar[2] + 0.005], 0.0095, 0.0075, { ...FRAME, k: 0.003 });
+          for (const m of [1, -1]) {
+            s.limb([m * 0.085, top, bar[2] + 0.005], [m * (handle + 0.03), top - 0.012, bar[2] - 0.01], 0.0085, 0.0085, { ...FRAME, k: 0.003 });
+            s.limb([m * 0.1, top - 0.006, bar[2] - 0.001], [m * (handle + 0.03), top - 0.012, bar[2] - 0.01], 0.0105, 0.0105, { color: '#24262b', mat: 'rubber', bone: 'root', k: 0.002 });
+          }
+        } else {
+          // A swept-back city bar with rubber grips, held on the stem.
+          s.limb([-handle, bar[1], bar[2]], [handle, bar[1], bar[2]], 0.008, 0.008, { ...FRAME, k: 0.003 });
+          for (const m of [1, -1]) {
+            s.limb([m * handle, bar[1], bar[2]], [m * (handle + 0.018), bar[1], bar[2] - 0.018], 0.008, 0.008, { ...FRAME, k: 0.003 });
+            s.limb([m * (handle + 0.005), bar[1], bar[2] - 0.012], [m * (handle + 0.028), bar[1], bar[2] - 0.025], 0.009, 0.009, { color: '#24262b', mat: 'rubber', bone: 'root', k: 0.002 });
+          }
         }
       });
 
-      // A readable saddle and seatpost, deliberately exposed behind the
-      // rider instead of buried directly under the pelvis. The metal post
-      // rises from the seat tube and the padded saddle has a visible nose.
+      // The seatpost rises out of the seat tube and the saddle sits on it,
+      // directly under the pelvis (the rider's hips are set above it).
       s.part('kit', () => {
-        const postBottom = [0, seat[1] - (bmx ? 0.105 : 0.12), seat[2] + 0.035];
-        const postTop = [0, seat[1] + 0.006, seat[2] - 0.012];
-        s.limb(postBottom, postTop, bmx ? 0.0075 : 0.008, bmx ? 0.008 : 0.0085, {
-          color: '#9aa0aa', mat: 'metal', bone: 'root', k: 0.002,
-        });
+        const postTop = [0, seat[1] + 0.012, seat[2] - 0.004];
+        s.limb([0, seat[1] - 0.03, seat[2] + 0.004], postTop, 0.0075, 0.0075, { color: '#9aa0aa', mat: 'metal', bone: 'root', k: 0.002 });
         s.ellipsoid(
-          [0, seat[1] + 0.021, seat[2] - 0.025],
-          [bmx ? 0.041 : 0.038, 0.014, bmx ? 0.058 : 0.066],
-          { color: '#1c1e22', mat: 'leather', bone: 'root', k: 0.005 },
-        );
-        s.ellipsoid(
-          [0, seat[1] + 0.029, seat[2] - 0.027],
-          [bmx ? 0.031 : 0.029, 0.006, bmx ? 0.046 : 0.052],
-          { color: '#30343a', mat: 'leather', bone: 'root', k: 0.003 },
+          [0, seat[1] + 0.022, seat[2] - 0.006],
+          [bmx ? 0.026 : 0.03, 0.01, bmx ? 0.045 : 0.055],
+          { color: '#1c1e22', mat: 'leather', bone: 'root', k: 0.004 },
         );
       });
 

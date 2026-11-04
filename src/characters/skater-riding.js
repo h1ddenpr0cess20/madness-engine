@@ -66,7 +66,11 @@ const base = person({
 
       // Side-on stance: the board runs along +z. Keep the torso low and
       // the arms out for balance, not pumping like a pedestrian.
-      k.move('hips', 0, 0.075, 0);
+      // Set the hips outright (the walk and run clips bob them): the legs are
+      // only 0.26 long, so the pelvis has to stay low or the feet cannot
+      // reach the deck.
+      const hipMove = k.bone('hips').move;
+      hipMove[0] = 0; hipMove[1] = 0.0; hipMove[2] = 0;
       hold(k, 'hips', 0.1, Math.PI / 2, 0);
       hold(k, 'chest', 0.22, 0, 0);
       hold(k, 'spine', 0.08, 0, 0);
@@ -122,7 +126,8 @@ const base = person({
           pushY = 0.006 + (DECK_Y + 0.01 - 0.006) * recover + 0.012 * Math.sin(Math.PI * recover);
         }
         const strength = clip === 'run' ? 1.3 : 1;
-        k.move('hips', 0, 0.006 + Math.sin(stroke * Math.PI) * 0.009 * strength, 0);
+        // Sink into the stance leg so the pushing foot reaches the pavement.
+        hipMove[1] = -0.035 + Math.sin(stroke * Math.PI) * 0.008 * strength;
         hold(k, 'thigh' + stanceSide, -0.86, 0, 0);
         hold(k, 'shin' + stanceSide, 1.34, 0, 0);
         hold(k, 'foot' + stanceSide, -0.16, 0, 0);
