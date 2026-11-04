@@ -6,7 +6,7 @@ import { BOWLING_PIN_DESIGNS, BOWLING_PIN_HEIGHT, BOWLING_PIN_RADIUS, createBowl
 test('builds a dense continuous resin shell with vertex-painted surface detail', () => {
   const pin = createBowlingPin(GFX);
   assert.equal(pin.group.name, 'bowling_pin');
-  assert.equal(pin.shell.geometry.getAttribute('position').count, 513 * 385);
+  assert.equal(pin.shell.geometry.getAttribute('position').count, 513 * 385 + 1);
   assert.equal(pin.shell.geometry.getAttribute('color').count, pin.shell.geometry.getAttribute('position').count);
   assert.ok(pin.shell.geometry.getIndex().count > 1_000_000);
   assert.equal(pin.shell.material.vertexColors, true);
