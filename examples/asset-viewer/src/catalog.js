@@ -189,6 +189,15 @@ const MOVING = [
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
+  ['glass mars', 'Animated props', 'Mars in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/mars/map.js')]).then(([m, mars]) => {
+    // 0.532 of the Earth globe's radius: Mars at its true size beside it.
+    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS * mars.SIZE_VS_EARTH, mist: true, animate: true, etchCanvas: mars.createMarsEtchCanvas() });
+    globe.setMist({ hue: 0.02, spread: 0.18, glow: 0.9, core: 0.25 });
+    globe.orient(-5, -90);
+    globe.spinRate = 0.12;
+    const r = m.RADIUS * mars.SIZE_VS_EARTH;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
+  }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
 function movingItem([name, category, group, make, from = null]) {
