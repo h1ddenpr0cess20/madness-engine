@@ -52,3 +52,34 @@ test('riding animations rotate every wheel about its axle', () => {
     }
   }
 });
+
+
+test('all bicycle variants have a visible saddle and exposed seatpost geometry', () => {
+  for (const name of ['bikeman', 'bikewoman', 'bmxrider']) {
+    const s = sculpt(CHARACTERS[name]);
+    const kit = s.shapes.filter((shape) => shape.part === 'kit');
+    assert.ok(kit.length > 0, `${name}: saddle and seatpost are in the visible kit part`);
+    const saddle = kit.some((shape) =>
+      shape.box[0][1] > 0.3 && shape.box[1][1] > 0.32
+      && shape.box[0][2] < -0.08 && shape.box[1][2] < -0.04
+    );
+    assert.ok(saddle, `${name}: padded saddle is behind the seat tube`);
+    const post = kit.some((shape) =>
+      shape.box[0][1] < 0.34 && shape.box[1][1] > 0.36
+      && shape.box[0][2] < -0.04 && shape.box[1][2] > -0.1
+    );
+    assert.ok(post, `${name}: seatpost rises visibly from the frame`);
+  }
+});
+
+test('BMX has compact BMX wheelbase, twin fork blades and axle pegs', () => {
+  const s = sculpt(CHARACTERS.bmxrider);
+  const metal = s.shapes.filter((shape) => shape.part === 'rigid:frame' || shape.part === 'kit');
+  assert.ok(metal.length > 0);
+  const pegs = metal.filter((shape) =>
+    shape.box[0][0] < -0.09 || shape.box[1][0] > 0.09
+  );
+  assert.ok(pegs.length >= 4, 'four projecting axle pegs');
+  assert.ok(CHARACTERS.bmxrider.bones.some(([name]) => name === 'wheelF'));
+  assert.ok(CHARACTERS.bmxrider.bones.some(([name]) => name === 'wheelB'));
+});
