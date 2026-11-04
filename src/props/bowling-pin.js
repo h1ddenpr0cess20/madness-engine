@@ -15,7 +15,6 @@ const DEFAULTS = Object.freeze({
 });
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const smooth = (a, b, n) => { const t = clamp((n - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-const mix = (a, b, t) => a + (b - a) * t;
 
 function hash3(ix, iy, iz) {
   let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263) ^ Math.imul(iz, 2147483647);
@@ -159,7 +158,6 @@ export function createBowlingPin(GFX, options = {}) {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.setAttribute('color', new GFX.BufferAttribute(new Float32Array(positions.length), 3));
-  const shellColors = geometry.getAttribute('color');
   paint(GFX, geometry, palette, design, height);
 
   const material = new GFX.MeshPhysicalMaterial({
