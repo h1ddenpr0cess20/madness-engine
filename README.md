@@ -118,6 +118,28 @@ createModel(GFX, cop.variant(diverse(seed)));      // a skin tone, hair and eyes
 the palettes `diverse` draws from. The asset viewer has a Colours panel on every person: pick a colour, or Randomise,
 and Copy code gives the `variant(…)` call.
 
+### Talking
+
+Every `person` (and `robot`) has a `talk` clip: their idle with a conversation laid over it. It is made to be
+driven, so its amounts are numbers you ease rather than a fixed loop, and the body moves into and out of speech
+without a seam (a clip itself switches instantly):
+
+```js
+model.pose({ clip: 'talk', time, talk: 0.8, beat: 0, think: 0, listen: 0 });
+```
+
+- `talk` (0 to 1, default 1): how much they are speaking. Scale it by how loud the voice is for someone who gets
+  animated. At 0 they are exactly at rest, so one clip can stand for idle and talking both.
+- `beat` (0 to 1): a point landing right now: a firmer gesture and a nod. Set it on the word and let it die away
+  over half a second.
+- `think` (0 to 1): a pause to think, a hand up to the chin and the head cocked.
+- `listen` (0 to 1): somebody else is talking, with the odd nod.
+
+Both hands gesture, except for someone who holds something ready (the robot's right hand has its weapon), who talks
+with the free one. `talking(skeleton, amounts, { armed })` in `characters/humanoid` is the same gesture for a
+body of your own. A character whose hands are full by design (the Suit's phone and briefcase) keeps them full.
+The dungeon's monsters have the older body, which has no `talk` clip.
+
 ## The games still work as they did
 
 Nothing here changes the games: each keeps its own files until it chooses to

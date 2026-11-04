@@ -1462,12 +1462,77 @@ export function runCycle(k, T, { speed = 1, heavy = 0, weapon = false } = {}) {
 
 
 /**
+ * Someone talking, laid over their idle: hands that gesture, a head that moves
+ * with the words, a nod where a point lands. It is the body of the `talk` clip,
+ * and everything in it is added to what the idle clip already did, so with every
+ * amount at zero a person is exactly at rest.
+ *
+ * Its amounts, all 0 to 1, are what a conversation is made of, and a caller
+ * that eases them gets a body that moves into and out of speech without a seam
+ * (clips themselves switch instantly):
+ * - `talk`: how much they are speaking — 1 is mid-sentence, 0 is not at all;
+ *   scale it by how loud the voice is for a speaker who gets animated.
+ * - `beat`: a point landing right now — a firmer gesture and a nod. Set it on
+ *   the word and let it die away over about half a second.
+ * - `think`: a pause to think — a hand up to the chin, the head cocked.
+ * - `listen`: someone else is speaking — the odd nod.
+ *
+ * `armed` is for someone whose right hand is full (a hero's weapon, held ready):
+ * the right arm is left where it is, and the left does the talking.
+ */
+export function talking(k, { time = 0, seed = 0, talk = 1, think = 0, listen = 0, beat = 0 } = {}, { armed = false } = {}) {
+  const T = time + seed;
+  const sway = 0.5 + 0.5 * Math.sin(T * 3.1);
+  const other = 0.5 + 0.5 * Math.sin(T * 2.3 + 1.7);
+
+  if (talk > 0.001) {
+    if (armed) {
+      k.turn('armL', -0.5 * talk * other, 0, 0.12 * talk);
+      k.turn('foreL', -0.7 * talk * other, 0, 0);
+    } else {
+      k.turn('armR', -0.55 * talk * sway, 0, -0.1 * talk);
+      k.turn('foreR', -0.7 * talk * sway, 0, 0);
+      k.turn('armL', -0.3 * talk * other, 0, 0.08 * talk);
+      k.turn('foreL', -0.4 * talk * other, 0, 0);
+    }
+    k.turn('chest', 0.03 * talk, Math.sin(T * 1.3) * 0.05 * talk, 0);
+    k.turn('head', Math.sin(T * 4.2) * 0.04 * talk, Math.sin(T * 1.1) * 0.12 * talk, 0);
+  }
+
+  if (beat > 0.001) {
+    if (armed) {
+      k.turn('armL', -0.4 * beat, 0, 0);
+      k.turn('foreL', -0.3 * beat, 0, 0);
+    } else {
+      k.turn('armR', -0.4 * beat, 0, 0);
+      k.turn('foreR', -0.3 * beat, 0, 0);
+    }
+    k.turn('head', 0.14 * beat, 0, 0);
+    k.turn('chest', 0.05 * beat, 0, 0);
+  }
+
+  if (think > 0.001) {
+    if (armed) {
+      k.turn('armL', -0.9 * think, 0, 0.1 * think);
+      k.turn('foreL', -1.5 * think, 0, 0);
+    } else {
+      k.turn('armR', -0.9 * think, 0, -0.1 * think);
+      k.turn('foreR', -1.5 * think, 0, 0);
+    }
+    k.turn('head', 0.06 * think, 0.1 * think, 0.1 * think);
+  }
+
+  if (listen > 0.001) k.turn('head', Math.max(0, Math.sin(T * 0.9)) * 0.1 * listen, 0, 0);
+}
+
+/**
  * How a hero moves. `style.attack` is 'slash' (a sword across), 'chop' (an
  * axe from over the head), 'thrust' (a staff jabbed forward) or 'smite' (a
  * mace or staff brought down); `style.heavy` slows and deepens it all.
- * Clips: idle, walk, run, jump, leap, attack, cast, hit, ko, win, sit.
+ * Clips: idle, walk, run, jump, leap, attack, cast, hit, ko, win, sit, talk (see `talking`: the free hand
+ * gestures and the weapon stays ready).
  */
-export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 }, style = {}) {
+export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1, talk, think, listen, beat }, style = {}) {
   const T = time + seed;
   const heavy = style.heavy ?? 0;
   const breathe = Math.sin(T * (2.4 - heavy * 0.6));
@@ -1478,7 +1543,7 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
   k.turn('foreL', -0.15, 0, 0);
   k.turn('foreR', -0.25, 0, 0);
 
-  if (clip === 'idle') {
+  if (clip === 'idle' || clip === 'talk') {
     k.turn('hips', 0, Math.sin(T * 0.7) * 0.04, Math.sin(T * 0.9) * 0.015);
     k.turn('head', Math.sin(T * 0.5) * 0.04, Math.sin(T * 0.37) * 0.18, 0);
     k.move('hips', 0, breathe * 0.002 - 0.004, 0);
@@ -1489,6 +1554,8 @@ export function moveHumanoid(k, { clip = 'idle', t = 0, time = 0, seed = 0, spee
     k.turn('foreR', -0.75, 0, 0);
     // Twisted so a blade shows its face, not its edge.
     k.turn('handR', 0, 0, style.twist ?? -0.9);
+    // Talking with the free hand: the weapon stays where it is.
+    if (clip === 'talk') talking(k, { time, seed, talk, think, listen, beat }, { armed: true });
   } else if (clip === 'walk') {
     const ph = T * (9 - heavy * 2) * Math.max(0.5, speed), g = Math.sin(ph);
     k.move('hips', 0, Math.abs(Math.cos(ph)) * 0.012 - 0.004, 0);
@@ -1805,9 +1872,9 @@ export function reachFoot(k, S, sole, target, steps = 16) {
 /**
  * How a person moves: as a hero does (`moveHumanoid`), but with nothing to
  * hold ready, so at rest the hands hang easy and a walk swings both arms.
- * Clips: idle, walk, run, jump, leap, attack, cast, hit, ko, win, sit.
+ * Clips: idle, walk, run, jump, leap, attack, cast, hit, ko, win, sit, talk (see `talking`).
  */
-export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1, aim = null, reach = null, step = null }, style = {}) {
+export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1, aim = null, reach = null, step = null, talk, think, listen, beat }, style = {}) {
   const T = time + seed;
   const heavy = style.heavy ?? 0;
   const breathe = Math.sin(T * (2.4 - heavy * 0.6));
@@ -1818,7 +1885,7 @@ export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed 
   k.turn('foreL', -0.2, 0, 0);
   k.turn('foreR', -0.2, 0, 0);
 
-  if (clip === 'idle') {
+  if (clip === 'idle' || clip === 'talk') {
     k.turn('hips', 0, Math.sin(T * 0.7) * 0.04, Math.sin(T * 0.9) * 0.015);
     k.turn('head', Math.sin(T * 0.5) * 0.04, Math.sin(T * 0.37) * 0.18, 0);
     k.move('hips', 0, breathe * 0.002 - 0.004, 0);
@@ -1826,6 +1893,8 @@ export function movePerson(k, { clip = 'idle', t = 0, time = 0, seed = 0, speed 
     k.turn('thighR', 0.04, 0, -0.02); k.turn('shinR', 0.08, 0, 0);
     // The hands hanging easy, a little in front.
     k.turn('armL', -0.06, 0, 0.04); k.turn('armR', -0.06, 0, -0.04);
+    // Talking: both hands free, so both gesture.
+    if (clip === 'talk') talking(k, { time, seed, talk, think, listen, beat });
   } else if (clip === 'walk') {
     const ph = T * (9 - heavy * 2) * Math.max(0.5, speed), g = Math.sin(ph);
     k.move('hips', 0, Math.abs(Math.cos(ph)) * 0.012 - 0.004, 0);
