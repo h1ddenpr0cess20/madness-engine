@@ -15,6 +15,7 @@ import { MOODS } from '../../../src/moods/index.js';
 import { tiled } from '../../../src/textures/painters.js';
 import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { createBowlingBall } from '../../../src/props/bowling-ball.js';
+import { createBowlingPin } from '../../../src/props/bowling-pin.js';
 import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
@@ -371,6 +372,33 @@ function bowlingBallItems() {
   }];
 }
 
+/** A standalone premium resin bowling pin, grouped beside the bowling ball. */
+function bowlingPinItems() {
+  return [{
+    id: 'props/bowling-pin',
+    category: 'Props',
+    group: 'pins',
+    name: 'Bowling pin',
+    source: 'props/bowling-pin',
+    kind: 'object',
+    palette: {
+      kind: 'bowling-pin',
+      design: 'classic',
+      base: '#f3f0e8',
+      swirl: '#d9d5cb',
+      accent: '#fffdf6',
+      stripe: '#c51d2c',
+    },
+    build({ colours = {} } = {}) {
+      const made = createBowlingPin(GFX, { colors: colours, design: colours.design ?? 'classic' });
+      return {
+        object: made.group,
+        info: { Source: 'props/bowling-pin', Design: made.design, ...countOf(made.group) },
+      };
+    },
+  }];
+}
+
 /** Walks the library and returns every item, in category order. */
 export async function loadCatalog(onProgress = () => {}) {
   const items = [];
@@ -407,7 +435,7 @@ export async function loadCatalog(onProgress = () => {}) {
     }
   }
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
-  items.push(...diceItems(), ...bowlingBallItems());
+  items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.

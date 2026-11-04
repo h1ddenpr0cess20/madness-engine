@@ -291,6 +291,14 @@ function colourRows(item) {
       ['Finger holes', pal.holes, c.holes, (v) => { c.holes = v; }, () => { delete c.holes; }],
     ];
   }
+  if (pal.kind === 'bowling-pin') {
+    return [
+      ['Base resin', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
+      ['Marbling', pal.swirl, c.swirl, (v) => { c.swirl = v; }, () => { delete c.swirl; }],
+      ['Pearlescent highlight', pal.accent, c.accent, (v) => { c.accent = v; }, () => { delete c.accent; }],
+      ['Neck enamel', pal.stripe, c.stripe, (v) => { c.stripe = v; }, () => { delete c.stripe; }],
+    ];
+  }
   if (pal.kind === 'dice') {
     const rows = [
       ['Resin', pal.color, c.color, (v) => { c.color = v; }, () => { delete c.color; }],
@@ -318,6 +326,27 @@ function colourRows(item) {
   return rows;
 }
 
+/** A coordinated, high-contrast resin palette for the standalone bowling pin. */
+function randomBowlingPinPalette(random = Math.random) {
+  const hue = random() * 360;
+  const hex = (h, saturation, lightness) => {
+    const s = saturation / 100, l = lightness / 100;
+    const k = (n) => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const channel = (n) => {
+      const value = l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+      return Math.round(255 * value).toString(16).padStart(2, '0');
+    };
+    return `#${channel(0)}${channel(8)}${channel(4)}`;
+  };
+  return {
+    base: hex(hue, 48, 36),
+    swirl: hex((hue + 24 + random() * 34) % 360, 54, 58),
+    accent: hex((hue + 8 + random() * 58) % 360, 28, 86),
+    stripe: hex((hue + 150 + random() * 60) % 360, 78, 43),
+  };
+}
+
 /** Whether what is chosen in the pickers is not what is on show. */
 const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colours);
 
@@ -328,18 +357,30 @@ function colourGroup(item) {
   if (!item.palette) return;
   const isDice = item.palette.kind === 'dice';
   const isBowlingBall = item.palette.kind === 'bowling-ball';
+  const isBowlingPin = item.palette.kind === 'bowling-pin';
   $('colourdiverse').style.display = isDice ? 'none' : '';
-  $('colourdiverse').textContent = isBowlingBall ? 'Randomise colours' : 'Randomise';
-  $('colourdiverse').title = isBowlingBall
-    ? 'Pick a coordinated random bowling-ball palette'
-    : 'Randomise this character palette';
-  $('bowlingdesignrow').style.display = isBowlingBall ? '' : 'none';
-  if (isBowlingBall) $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? 'marble';
+  $('colourdiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall ? 'Randomise colours' : 'Randomise';
+  $('colourdiverse').title = isBowlingPin
+    ? 'Generate a coordinated random resin and enamel palette for this pin'
+    : isBowlingBall
+      ? 'Pick a coordinated random bowling-ball palette'
+      : 'Randomise this character palette';
+  $('bowlingdesignrow').style.display = isBowlingBall || isBowlingPin ? '' : 'none';
+  if (isBowlingBall || isBowlingPin) {
+    const choices = isBowlingPin
+      ? [['classic', 'Classic resin'], ['pearl', 'Pearlescent resin'], ['swirl', 'Ribbon swirl']]
+      : [['marble', 'Classic marble'], ['spiral', 'Spiral ribbons'], ['flame', 'Flame ribbons'], ['split', 'Two-tone split'], ['blotch', 'Blotchy marble']];
+    $('bowlingdesign').replaceChildren(...choices.map(([value, label]) => el('option', { value }, label)));
+    $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : 'marble');
+    $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
+  }
   $('colourhint').textContent = isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
     : isBowlingBall
       ? 'Choose a surface design and change the base resin, swirl, accent veins, and recessed finger-hole colour. Apply updates the ball.'
-      : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
+      : isBowlingPin
+        ? 'Choose a resin finish and tune the base, marbling, pearlescent highlight, and red neck enamel. Apply updates the pin.'
+        : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
   $('colourrows').replaceChildren(...colourRows(item).map(([label, was, now, set, clear]) => {
     const input = el('input', { type: 'color', value: now ?? was });
     const undo = el('button', { title: 'Back to how they come', textContent: '×' });
@@ -356,7 +397,10 @@ function colourGroup(item) {
 
 $('colourapply').onclick = () => { view.colours = structuredClone(view.draft); show(view.item); };
 $('colourdiverse').onclick = () => {
-  if (view.item.palette?.kind === 'bowling-ball') {
+  if (view.item.palette?.kind === 'bowling-pin') {
+    const design = view.draft.design ?? view.colours.design ?? view.item.palette.design ?? 'classic';
+    view.draft = { ...view.draft, ...randomBowlingPinPalette(), design };
+  } else if (view.item.palette?.kind === 'bowling-ball') {
     const current = { ...view.item.palette, ...view.colours, ...view.draft };
     const design = current.design ?? 'marble';
     view.draft = { ...randomBowlingBallPalette(Math.random, current), design };
@@ -369,7 +413,7 @@ $('colourdiverse').onclick = () => {
 };
 $('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
 $('bowlingdesign').onchange = () => {
-  if (view.item?.palette?.kind !== 'bowling-ball') return;
+  if (!['bowling-ball', 'bowling-pin'].includes(view.item?.palette?.kind)) return;
   view.draft.design = $('bowlingdesign').value;
   colourGroup(view.item);
 };
@@ -385,6 +429,11 @@ $('colourcopy').onclick = async () => {
       + "import { createBowlingBall } from 'madness-engine/props/bowling-ball';\n\n"
       + "const bowlingBall = createBowlingBall(GFX, { colors: "
       + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'marble') + "' });";
+  } else if (view.item.palette?.kind === 'bowling-pin') {
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\n\n"
+      + "const bowlingPin = createBowlingPin(GFX, { colors: "
+      + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'classic') + "' });";
   } else {
     const name = view.item.name.replace(/[^a-z0-9]/gi, '');
     code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;
