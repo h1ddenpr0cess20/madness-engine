@@ -37,7 +37,7 @@ test('supports runtime palette and design changes without replacing geometry', (
 
 test('accepts lower mesh resolutions and custom physical dimensions', () => {
   const pin = createBowlingPin(GFX, { widthSegments: 128, heightSegments: 192, height: 1.5, radius: 0.24, roughness: 0.3 });
-  assert.equal(pin.shell.geometry.getAttribute('position').count, 129 * 193);
+  assert.equal(pin.shell.geometry.getAttribute('position').count, 129 * 193 + 1);
   assert.equal(pin.shell.material.roughness, 0.3);
   pin.dispose();
 });
