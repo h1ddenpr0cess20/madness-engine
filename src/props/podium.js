@@ -12,20 +12,17 @@ import { grainy } from '../models/skins.js';
  * chest, `PODIUM_TOP` up.
  *
  * `podium` is the plain one, with a grey panel. `podiumOf({ accent })` is one
- * with a panel of any colour: asking twice for the same colour gives the same
+ * with a panel of any color: asking twice for the same colour gives the same
  * definition, so it is baked once, however many podiums are stood up.
  */
 
 /** Where the middle of the reading surface is, up from the floor. */
-export const PODIUM_TOP = 0.49;
+export const PODIUM_TOP = 0.6;
 
 /** How far the reading surface is turned from level, in radians: its far edge is the high one. */
 export const PODIUM_TILT = 0.15;
 
-/** The footprint, so a scene can place it: across (x) and deep (z), at the plinth. */
-export const PODIUM_SIZE = Object.freeze({ width: 0.47, depth: 0.30 });
-
-/** The panel's colour when none is asked for. */
+/** The panel's color when none is asked for. */
 export const PODIUM_ACCENT = '#8a8f98';
 
 /** Everything below is drawn at the size the debate hall drew it at (a reading surface 1.22 up) and brought down by `K`. */
@@ -42,6 +39,9 @@ const MATERIALS = {
 const one = [['root', null, [0, 0, 0]]];
 
 const BASE = { w: 1.18, h: 0.14, d: 0.76 };
+
+/** The footprint, so a scene can place it: across (x) and deep (z), at the plinth. */
+export const PODIUM_SIZE = Object.freeze({ width: BASE.w * K, depth: BASE.d * K });
 const COLUMN = { w: 0.86, h: 1.08, d: 0.52 };
 const DESK = { w: 1.44, h: 0.1, d: 0.76 };
 const FRONT = { w: 0.96, h: 0.64, d: 0.04 };
@@ -69,7 +69,7 @@ function define(accent, name) {
 const made = new Map();
 
 /**
- * A podium with a panel of `accent` (any CSS hex colour). The same colour
+ * A podium with a panel of `accent` (any CSS hex color). The same color
  * always gives the same definition.
  */
 export function podiumOf({ accent = PODIUM_ACCENT } = {}) {

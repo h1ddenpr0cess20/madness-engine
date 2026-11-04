@@ -49,7 +49,7 @@ test('the reading surface rises towards the far (+z) edge, so it faces the speak
   assert.ok(heightFar - heightNear < Math.tan(PODIUM_TILT) * 0.34, 'and not by more than the tilt allows');
 });
 
-test('podiumOf gives one definition per colour, and a different panel for each', () => {
+test('podiumOf gives one definition per color, and a different panel for each', () => {
   assert.equal(podiumOf(), podium);
   assert.equal(podiumOf({ accent: PODIUM_ACCENT }), podium);
   const red = podiumOf({ accent: '#8e3232' });
