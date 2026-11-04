@@ -1,0 +1,49 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import * as GFX from '../src/gfx/index.js';
+import { BOWLING_PIN_DESIGNS, BOWLING_PIN_HEIGHT, BOWLING_PIN_RADIUS, createBowlingPin } from '../src/props/bowling-pin.js';
+
+test('builds a dense continuous resin shell with vertex-painted surface detail', () => {
+  const pin = createBowlingPin(GFX);
+  assert.equal(pin.group.name, 'bowling_pin');
+  assert.equal(pin.shell.geometry.getAttribute('position').count, 513 * 385);
+  assert.equal(pin.shell.geometry.getAttribute('color').count, pin.shell.geometry.getAttribute('position').count);
+  assert.ok(pin.shell.geometry.getIndex().count > 1_000_000);
+  assert.equal(pin.shell.material.vertexColors, true);
+  assert.equal(pin.shell.material.clearcoat, 0.98);
+  assert.equal(pin.shell.material.roughness, 0.17);
+  assert.equal(BOWLING_PIN_HEIGHT, 1.2);
+  assert.equal(BOWLING_PIN_RADIUS, 0.19);
+  pin.dispose();
+});
+
+test('supports runtime palette and design changes without replacing geometry', () => {
+  const pin = createBowlingPin(GFX);
+  const geometry = pin.shell.geometry;
+  const colors = geometry.getAttribute('color');
+  const initial = colors.array.slice();
+  pin.setColors({ base: '#182b50', swirl: '#d93b7b', accent: '#f3bc66', stripe: '#22aa88' });
+  assert.equal(pin.shell.geometry, geometry);
+  assert.notDeepEqual(colors.array, initial);
+  assert.equal(pin.colors.base.getHexString(), '182b50');
+  assert.equal(pin.colors.stripe.getHexString(), '22aa88');
+  const before = colors.array.slice();
+  for (const design of BOWLING_PIN_DESIGNS) pin.setDesign(design);
+  assert.equal(pin.design, 'swirl');
+  assert.notDeepEqual(colors.array, before);
+  assert.throws(() => pin.setDesign('polka-dot'), /unknown design/);
+  pin.dispose();
+});
+
+test('accepts lower mesh resolutions and custom physical dimensions', () => {
+  const pin = createBowlingPin(GFX, { widthSegments: 128, heightSegments: 192, height: 1.5, radius: 0.24, roughness: 0.3 });
+  assert.equal(pin.shell.geometry.getAttribute('position').count, 129 * 193);
+  assert.equal(pin.shell.material.roughness, 0.3);
+  pin.dispose();
+});
+
+test('rejects invalid dimensions and unknown designs', () => {
+  assert.throws(() => createBowlingPin(GFX, { height: 0 }), /height must be a finite positive number/);
+  assert.throws(() => createBowlingPin(GFX, { radius: Infinity }), /radius must be a finite positive number/);
+  assert.throws(() => createBowlingPin(GFX, { design: 'invalid' }), /unknown design/);
+});
