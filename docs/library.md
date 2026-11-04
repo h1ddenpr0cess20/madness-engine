@@ -250,6 +250,7 @@ What lies about to be picked up: sculpted, still, for `createStatic`, and the co
 | `props/winter` | `winter` (blubber) | December's: the snow lantern — a cone of snowballs heaped in rings with a candle inside, glowing out between them (`snowlantern`; unlit, `snowheap`) — the big snowball that rolls down the halls, snowy pines, rocks under snow, and clusters of ice crystals. |
 | `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20's highlighted 20 can be coloured independently. |
 | `props/bowling-ball` | `createBowlingBall` (engine) | A high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs (marble, spiral, flame, split and blotch). Colors and designs are changeable at runtime. |
+| `props/glassglobe` | `glassglobe` | A clear glass Earth: the continents etched on it as frosted glass from real coastline coordinates (`textures/earth/map`, Natural Earth 1:50m land and big lakes), near side and far side as on a real etched globe, with room inside for Krystal's mist and a colorized map of anything over the Earth (`createGlassGlobe(GFX, { radius })`; `orient(lat, lon)`, `setField(canvas)`, `setMist(settings)`, `update(dt)`). |
 
 ## heroes
 
@@ -312,6 +313,7 @@ Painted on canvases at startup. `painters` is the toolkit and the floors and wal
 | `textures/rooms/vault` | `vault` (dungeon-roller) | The vault, as an equirectangular canvas: dark stone all round, a little warm light low down from torches somewhere, a cold grey shaft from above. |
 | `textures/rooms/venue` | `venue` (rocknroller, rocknroller-ii, rocknroller-iii, metroll) | The room the reflections come from, as an equirectangular canvas: a dark ceiling, the venue's colours in a ring of lights round the walls, and a bright rig overhead. The moods' rooms add strip lights overhead (`strips`). |
 | `textures/skies/cloudsea` | `cloudsea` (alan) | Alan's night: stars over a sea of cloud seen from so high up the horizon has dropped below level, a few towns lit through the gaps, and the sun straight overhead. |
+| `textures/earth/map` | `map` | The land as coordinates (`land.js`: Natural Earth 1:50m, thinned to 0.04°): `landRings()`, `landMask(w, h)`, `isLand(lat, lon)` and `createEtchCanvas()`, the frosted etching of the continents. |
 | `textures/skies/cosmos` | `cosmos` (krystal) | Krystal's night: deep indigo going to black overhead, drifts of nebula in violet, rose and teal, and stars, a handful with a glint of colour. |
 | `textures/skies/embers` | `embers` (dungeon-roller) | The dark round the dungeon: black above, a faint ember-red haze far below. |
 | `textures/skies/haze` | `haze` (madness) | The sky round the scene: a deep blue haze at the horizon, dark above and below. |
