@@ -157,7 +157,7 @@ export function createBowlingPin(GFX, options = {}) {
   geometry.setAttribute('position', new GFX.BufferAttribute(closedPositions, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
-  geometry.setAttribute('color', new GFX.BufferAttribute(new Float32Array(positions.length), 3));
+  geometry.setAttribute('color', new GFX.BufferAttribute(new Float32Array(closedPositions.length), 3));
   paint(GFX, geometry, palette, design, height);
 
   const material = new GFX.MeshPhysicalMaterial({
