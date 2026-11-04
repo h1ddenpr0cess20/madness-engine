@@ -3,19 +3,20 @@ import { baseballCap } from './metalwear.js';
 
 /** Build a complete bicycle and rider; the BMX is a shorter, tougher frame. */
 export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, trousers, shoes, hair, helmet = false, frame = '#20252b', shorts = false }) {
-  const R = bmx ? 0.082 : 0.12;
-  const FRONT = [0, R, bmx ? 0.155 : 0.24];
-  const BACK = [0, R, bmx ? -0.155 : -0.22];
-  const CRANK = [0, bmx ? 0.115 : 0.13, 0];
-  const CL = bmx ? 0.042 : 0.05;
+  // Twenty-inch BMX wheels and a compact but not toy-like wheelbase.
+  const R = bmx ? 0.095 : 0.12;
+  const FRONT = [0, R, bmx ? 0.2 : 0.24];
+  const BACK = [0, R, bmx ? -0.2 : -0.22];
+  const CRANK = [0, bmx ? 0.14 : 0.13, 0];
+  const CL = bmx ? 0.045 : 0.05;
   const PEDAL = {
     L: [0.062, CRANK[1] - CL, CRANK[2]],
     R: [-0.062, CRANK[1] + CL, CRANK[2]],
   };
-  const seat = [0, bmx ? 0.3 : 0.4, bmx ? -0.035 : -0.07];
-  const head = [0, bmx ? 0.32 : 0.38, bmx ? 0.115 : 0.17];
-  const bar = [0, bmx ? 0.405 : 0.47, bmx ? 0.145 : 0.15];
-  const handle = bmx ? 0.11 : 0.085;
+  const seat = [0, bmx ? 0.33 : 0.4, bmx ? -0.105 : -0.105];
+  const head = [0, bmx ? 0.36 : 0.38, bmx ? 0.145 : 0.17];
+  const bar = [0, bmx ? 0.505 : 0.47, bmx ? 0.19 : 0.15];
+  const handle = bmx ? 0.135 : 0.085;
   const FRAME = { color: frame, mat: 'metal', bone: 'root' };
   const wheelCells = { 'rigid:wheelF': 0.0026, 'rigid:wheelB': 0.0026 };
 
@@ -141,23 +142,88 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
         });
       }
 
-      // The frame. The BMX has a compact top tube, short seat and wider bars;
-      // the road-style bicycle keeps the longer geometry of the Cyclist.
+      // The frame. The BMX uses a short, low top tube, a steep head tube,
+      // wider bars and two separate fork blades; the city bikes retain the
+      // longer diamond frame from the Cyclist.
       s.part('rigid:frame', () => {
-        const lowerHead = [head[0], head[1] - 0.025, head[2]];
+        const lowerHead = [head[0], head[1] - 0.035, head[2]];
         const tubes = bmx
-          ? [[CRANK, lowerHead], [CRANK, seat], [seat, head], [head, FRONT], [CRANK, BACK], [seat, BACK]]
-          : [[CRANK, head], [CRANK, seat], [seat, head], [head, FRONT], [CRANK, BACK], [seat, BACK], [head, bar]];
-        for (const [a, b] of tubes) s.limb(a, b, bmx ? 0.013 : 0.01, bmx ? 0.013 : 0.01, { ...FRAME, k: 0.003 });
-        // Handlebars and rubber grips.
-        s.limb([-handle, bar[1], bar[2]], [handle, bar[1], bar[2]], bmx ? 0.009 : 0.008, bmx ? 0.009 : 0.008, { ...FRAME, k: 0.003 });
+          ? [[CRANK, lowerHead], [CRANK, seat], [seat, head], [CRANK, BACK], [seat, BACK], [head, lowerHead]]
+          : [[CRANK, head], [CRANK, seat], [seat, head], [CRANK, BACK], [seat, BACK], [head, lowerHead]];
+        for (const [a, b] of tubes) {
+          const radius = bmx ? 0.012 : 0.01;
+          s.limb(a, b, radius, radius, { ...FRAME, k: 0.003 });
+        }
+
+        // Twin fork blades run down either side of the front tyre. This is
+        // especially important on the BMX, where the fork is a visible part
+        // of the compact front end rather than one floating centre tube.
+        for (const m of [1, -1]) {
+          s.limb(
+            [m * (bmx ? 0.024 : 0.018), lowerHead[1], lowerHead[2]],
+            [m * (bmx ? 0.028 : 0.022), R, FRONT[2]],
+            bmx ? 0.011 : 0.009,
+            bmx ? 0.011 : 0.009,
+            { ...FRAME, k: 0.0025 },
+          );
+        }
+
+        // Wide BMX crossbar with a higher rise; a swept-back city bar for
+        // the two ordinary riders.
+        s.limb([-handle, bar[1], bar[2]], [handle, bar[1], bar[2]], bmx ? 0.011 : 0.008, bmx ? 0.011 : 0.008, { ...FRAME, k: 0.003 });
         for (const m of [1, -1]) {
           s.limb([m * handle, bar[1], bar[2]], [m * (handle + 0.018), bar[1], bar[2] - 0.018], 0.008, 0.008, { ...FRAME, k: 0.003 });
-          s.limb([m * (handle + 0.005), bar[1], bar[2] - 0.012], [m * (handle + 0.028), bar[1], bar[2] - 0.025], 0.009, 0.009, { color: '#24262b', mat: 'rubber', bone: 'root', k: 0.002 });
+          s.limb(
+            [m * (handle + 0.005), bar[1], bar[2] - 0.012],
+            [m * (handle + 0.028), bar[1], bar[2] - 0.025],
+            0.009, 0.009,
+            { color: '#24262b', mat: 'rubber', bone: 'root', k: 0.002 },
+          );
         }
-        // The saddle and its post.
-        s.limb([0, seat[1] - 0.09, seat[2]], seat, 0.006, 0.006, { ...FRAME, k: 0.002 });
-        s.ellipsoid([0, seat[1] + 0.012, seat[2] - 0.006], [bmx ? 0.035 : 0.03, 0.012, bmx ? 0.04 : 0.055], { color: '#24262b', mat: 'leather', bone: 'root', k: 0.004 });
+      });
+
+      // A readable saddle and seatpost, deliberately exposed behind the
+      // rider instead of buried directly under the pelvis. The metal post
+      // rises from the seat tube and the padded saddle has a visible nose.
+      s.part('kit', () => {
+        const postBottom = [0, seat[1] - (bmx ? 0.105 : 0.12), seat[2] + 0.035];
+        const postTop = [0, seat[1] + 0.006, seat[2] - 0.012];
+        s.limb(postBottom, postTop, bmx ? 0.0075 : 0.008, bmx ? 0.008 : 0.0085, {
+          color: '#9aa0aa', mat: 'metal', bone: 'root', k: 0.002,
+        });
+        s.ellipsoid(
+          [0, seat[1] + 0.021, seat[2] - 0.025],
+          [bmx ? 0.041 : 0.038, 0.014, bmx ? 0.058 : 0.066],
+          { color: '#1c1e22', mat: 'leather', bone: 'root', k: 0.005 },
+        );
+        s.ellipsoid(
+          [0, seat[1] + 0.029, seat[2] - 0.027],
+          [bmx ? 0.031 : 0.029, 0.006, bmx ? 0.046 : 0.052],
+          { color: '#30343a', mat: 'leather', bone: 'root', k: 0.003 },
+        );
+      });
+
+      if (bmx) {
+        // Four axle pegs are a defining BMX detail: short steel cylinders
+        // projecting from both sides of each hub for grinds and stalls.
+        s.part('kit', () => {
+          for (const z of [FRONT[2], BACK[2]]) {
+            for (const m of [1, -1]) {
+              s.limb(
+                [m * 0.025, R, z],
+                [m * 0.105, R, z],
+                0.009, 0.009,
+                { color: '#a8acb4', mat: 'metal', bone: 'root', k: 0.002 },
+              );
+              s.cylinder(
+                [m * 0.105, R, z],
+                0.009, 0.009,
+                { color: '#777e88', mat: 'metal', bone: 'root', round: 0.002, rot: [0, 0, Math.PI / 2] },
+              );
+            }
+          }
+        });
+      }
       });
     },
   });
