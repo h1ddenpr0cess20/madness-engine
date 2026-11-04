@@ -224,7 +224,6 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
           }
         });
       }
-      });
     },
   });
 
