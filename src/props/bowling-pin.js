@@ -121,7 +121,7 @@ export function createBowlingPin(GFX, options = {}) {
   // Dense, continuously sampled lathe surface. The broad lower body, soft
   // shoulder, narrow waist, long neck and rounded crown are one watertight shell.
   const profile = [
-    0.00, 0.31, 0.47, 0.59, 0.70, 0.82, 0.93, 1.00, 0.98,
+    0.56, 0.61, 0.69, 0.79, 0.89, 0.96, 1.00, 1.00, 0.98,
     0.91, 0.79, 0.64, 0.49, 0.39, 0.34, 0.33, 0.35, 0.36, 0.34, 0.29, 0.18, 0.00,
   ];
   const positions = new Float32Array((heightSegments + 1) * (widthSegments + 1) * 3);
@@ -145,8 +145,17 @@ export function createBowlingPin(GFX, options = {}) {
       indices.push(a, b, a + 1, b, b + 1, a + 1);
     }
   }
+  // Close the underside with a real planar foot instead of leaving an open lathe.
+  const closedPositions = new Float32Array(positions.length + 3);
+  closedPositions.set(positions);
+  const centerIndex = positions.length / 3;
+  closedPositions[positions.length] = 0;
+  closedPositions[positions.length + 1] = 0;
+  closedPositions[positions.length + 2] = 0;
+  for (let ix = 0; ix < widthSegments; ix++) indices.push(centerIndex, ix + 1, ix);
+
   const geometry = new GFX.BufferGeometry();
-  geometry.setAttribute('position', new GFX.BufferAttribute(positions, 3));
+  geometry.setAttribute('position', new GFX.BufferAttribute(closedPositions, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.setAttribute('color', new GFX.BufferAttribute(new Float32Array(positions.length), 3));
