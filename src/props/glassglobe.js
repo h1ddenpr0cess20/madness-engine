@@ -32,7 +32,7 @@ export const MIST_RADIUS = 0.95;
 export const HAZE_RADIUS = 0.997;
 
 /** The mist's settings: Krystal's, but all one blue (`spread: 0`); raise `spread` for her many colors. See `heroes/krystal/moods.js`. */
-export const MIST = Object.freeze({ speed: 0.22, swirl: 2.0, churn: 0.5, glow: 0.8, core: 0.2, hue: 0.52, spread: 0 });
+export const MIST = Object.freeze({ speed: 0.22, swirl: 2.0, churn: 0.5, glow: 0.8, core: 0.2, hue: 0.52, spread: 0, tint: [1, 1, 1] });
 
 /**
  * @param {object} GFX
@@ -41,11 +41,12 @@ export const MIST = Object.freeze({ speed: 0.22, swirl: 2.0, churn: 0.5, glow: 0
  * @param {string|boolean} [options.mist]  Krystal's mist inside: true, or false for clear glass
  * @param {boolean} [options.etch]  the continents (default true)
  * @param {number} [options.etchWidth]  how wide the etching is painted, in texels
+ * @param {HTMLCanvasElement} [options.etchCanvas]  an etching of your own, equirectangular (a planet's), in place of the Earth's
  * @param {object} [options.etchStyle]  `fill`, `coast` (CSS colors, alpha included) and `line` (width at 4096) of the etching
  * @param {boolean} [options.animate]  move itself on, once a frame, as Krystal does, for where nothing calls `update`
  * @param {number|null} [options.graticule]  degrees between etched lines of latitude and longitude, or null
  */
-export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false, etch: withEtch = true, etchWidth = 4096, etchStyle = {}, graticule = null, seed = 0, animate = false } = {}) {
+export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false, etch: withEtch = true, etchWidth = 4096, etchStyle = {}, etchCanvas = null, graticule = null, seed = 0, animate = false } = {}) {
   const R = radius;
   const scale = R / 0.8;
 
@@ -78,7 +79,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
   let etchTexture = null;
   const etched = [];
   if (withEtch) {
-    const canvas = createEtchCanvas({ width: etchWidth, graticule, ...etchStyle });
+    const canvas = etchCanvas ?? createEtchCanvas({ width: etchWidth, graticule, ...etchStyle });
     if (canvas) {
       etchTexture = new GFX.CanvasTexture(canvas);
       etchTexture.colorSpace = GFX.SRGBColorSpace;
@@ -208,6 +209,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
       u.uCore.value = mood.core;
       u.uHue.value = mood.hue;
       u.uSpread.value = mood.spread;
+      u.uTint.value.set(...mood.tint);
       mist.updateWorldMatrix?.(true, false);
       u.uCenter.value.setFromMatrixPosition(mist.matrixWorld);
     },

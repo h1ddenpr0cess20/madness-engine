@@ -7,7 +7,8 @@
  * what makes the wisps curl and split rather than just rotate. Colour comes
  * from where in that folded space a wisp lies, run through a palette that
  * goes violet, magenta, rose, gold, teal; `hue` slides the whole palette
- * round, so a mood can lean the visions toward one end of it. `spread` is how
+ * round, so a mood can lean the visions toward one end of it. `tint` multiplies the light, to take the palette toward one color it
+ * cannot reach by itself (a rust red); `spread` is how
  * much of the palette the mist runs through: 1 is all of it, 0 is the one color
  * at `hue`, in lighter and darker wisps.
  *
@@ -36,6 +37,7 @@ export function visionUniforms(GFX) {
     uGlow: { value: 0.8 },
     uHue: { value: 0.75 },
     uSpread: { value: 1 },
+    uTint: { value: new GFX.Vector3(1, 1, 1) },
     uCore: { value: 0.3 },
     uRadius: { value: 1 },
     uCenter: { value: new GFX.Vector3() },
@@ -58,6 +60,7 @@ uniform float uChurn;
 uniform float uGlow;
 uniform float uHue;
 uniform float uSpread;
+uniform vec3 uTint;
 uniform float uCore;
 uniform float uRadius;
 uniform vec3 uCenter;
@@ -111,7 +114,7 @@ void main() {
     col += palette((shade + d2 * 0.3) * uSpread + uHue) * dens;
     col += light * uCore * exp(-d2 * 7.0) * 0.35;
   }
-  col *= uGlow * 2.6 * dt / uRadius;
+  col *= uGlow * 2.6 * dt / uRadius * uTint;
   col = vec3(1.0) - exp(-col);
   gl_FragColor = vec4(col, 1.0);
 }
@@ -184,7 +187,7 @@ fn fs(v: VOut) -> @location(0) vec4f {
     col += palette((m.shade + d2 * 0.3) * material.uSpread + material.uHue) * m.density * edge * edge;
     col += light * material.uCore * exp(-d2 * 7.0) * 0.35;
   }
-  col *= material.uGlow * 2.6 * dt / material.uRadius;
+  col *= material.uGlow * 2.6 * dt / material.uRadius * material.uTint;
   col = vec3f(1.0) - exp(-col);
   return vec4f(col, 1.0);
 }
