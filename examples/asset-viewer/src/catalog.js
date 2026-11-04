@@ -194,7 +194,7 @@ const MOVING = [
     const r = m.RADIUS * mars.SIZE_VS_EARTH;
     const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: mars.createMarsEtchCanvas() });
     // Rust: the palette's warm end, with the blue taken out of it.
-    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 1.7, core: 0.15 });
+    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 2.1, core: 0.15 });
     globe.orient(-5, 70);
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
@@ -204,7 +204,7 @@ const MOVING = [
     const r = m.RADIUS * mars.SIZE_VS_EARTH;
     const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await mars.loadMarsEtch() });
     // Rust: the palette's warm end, with the blue taken out of it.
-    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 1.7, core: 0.15 });
+    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 2.1, core: 0.15 });
     globe.orient(-5, -90);
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
