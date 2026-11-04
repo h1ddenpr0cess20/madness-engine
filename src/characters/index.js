@@ -3,7 +3,10 @@ import archaeologist from './archaeologist.js';
 import artist from './artist.js';
 import bat from './bat.js';
 import beerguy from './beerguy.js';
+import bikeman from './bikeman.js';
+import bikewoman from './bikewoman.js';
 import blader from './blader.js';
+import bmxrider from './bmxrider.js';
 import bobby from './bobby.js';
 import bouncer from './bouncer.js';
 import brassman from './brassman.js';
@@ -136,6 +139,7 @@ import screamer from './screamer.js';
 import security from './security.js';
 import shredder from './shredder.js';
 import skater from './skater.js';
+import skaterRiding from './skater-riding.js';
 import skeleton from './skeleton.js';
 import skier from './skier.js';
 import snowboarder from './snowboarder.js';
@@ -195,7 +199,7 @@ import { CAT_DEFS } from './cat.js';
  * each. Hand one to `createModel` (models/model.js) or a bake library.
  */
 export const CHARACTERS = {
-  alien, archaeologist, artist, bat, beerguy, blader, bobby, bouncer, brassman,
+  alien, archaeologist, artist, bat, beerguy, bikeman, bikewoman, blader, bmxrider, bobby, bouncer, brassman,
   brother, bull, cabbie, camel, candlekid, capoeira, clubber, cop, corgi, coroner, corpsepaint,
   cosplayer, count, cowboy, critic, croc, crow, crowdsurfer, cultist, cyclist, dame, dancer, director,
   diver, dj, doomlord, dracfan, dragon, drone, drum, drunk, emo, engineer, eurocrat, extra, fan,
@@ -206,7 +210,7 @@ export const CHARACTERS = {
   mrbig, mummy, neighbour, newsie, ninja, nonna, nuguy, orc, pa, pallbearer, paparazzo, parrot,
   pauser, phone, pigeon, pirate, pizzaiolo, poet, poodle, poolball, poser, promoter, punk, purist,
   rat, raver, reveler, roadie, robot, tinbot, barista, crossingguard, mailcarrier, oldtimer, shopper, hand, snowman, turkey, runner, salaryman, sambista, santa, scalper, scarab, scenekid,
-  screamer, security, shredder, skater, skeleton, skier, snowboarder, soundguy, stbernard, stoner,
+  screamer, security, shredder, skater, skaterRiding, skeleton, skier, snowboarder, soundguy, stbernard, stoner,
   streetteam, stuntman, suit, sumo, superfan, surfer, tapetrader, toughguy, tourist, troll, usher,
   vendor, viking, waiter, welder, wizard, wolf, wraith, yeti, yodeler, yokozuna, zinekid, zombie,
   // Ten ordinary people, carrying nothing, for any game: five men, five women.
