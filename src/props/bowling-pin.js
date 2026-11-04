@@ -155,7 +155,7 @@ export function createBowlingPin(GFX, options = {}) {
   if (!Number.isFinite(height) || height <= 0) throw new RangeError('bowling-pin: height must be a finite positive number');
   if (!Number.isFinite(radius) || radius <= 0) throw new RangeError('bowling-pin: radius must be a finite positive number');
   const widthSegments = Number.isFinite(options.widthSegments) ? Math.max(128, Math.floor(options.widthSegments)) : 512;
-  const heightSegments = Number.isFinite(options.heightSegments) ? Math.max(192, Math.floor(options.heightSegments)) : 384;
+  const heightSegments = Number.isFinite(options.heightSegments) ? Math.max(384, Math.floor(options.heightSegments)) : 768;
   const roughness = Number.isFinite(options.roughness) ? clamp(options.roughness, 0.04, 1) : 0.17;
   const clearcoat = Number.isFinite(options.clearcoat) ? clamp(options.clearcoat, 0, 1) : 0.98;
   const metalness = Number.isFinite(options.metalness) ? clamp(options.metalness, 0, 1) : 0.025;
@@ -166,17 +166,29 @@ export function createBowlingPin(GFX, options = {}) {
   // Dense lathe sampling of the measured regulation ten-pin silhouette.
   const radialScale = radius / 2.383;
   const positions = new Float32Array((heightSegments + 1) * (widthSegments + 1) * 3);
+  const normals = new Float32Array(positions.length);
   const indices = [];
   for (let iy = 0; iy <= heightSegments; iy++) {
     const t = iy / heightSegments;
     const y = t * height;
     const r = radiusAt(t * 15, BOWLING_PIN_PROFILE) * radialScale;
+    // Analytic lathe normals avoid lighting facets and seam discontinuities.
+    // A central difference of the smooth profile gives the local meridian slope.
+    const dt = 0.0001;
+    const before = radiusAt(Math.max(0, t - dt) * 15, BOWLING_PIN_PROFILE) * radialScale;
+    const after = radiusAt(Math.min(1, t + dt) * 15, BOWLING_PIN_PROFILE) * radialScale;
+    const drdy = (after - before) / (Math.min(1, t + dt) - Math.max(0, t - dt)) / height;
     for (let ix = 0; ix <= widthSegments; ix++) {
       const a = ix / widthSegments * Math.PI * 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
       const k = (iy * (widthSegments + 1) + ix) * 3;
-      positions[k] = Math.cos(a) * r;
+      positions[k] = ca * r;
       positions[k + 1] = y;
-      positions[k + 2] = Math.sin(a) * r;
+      positions[k + 2] = sa * r;
+      const invLength = 1 / Math.hypot(1, drdy);
+      normals[k] = ca * invLength;
+      normals[k + 1] = -drdy * invLength;
+      normals[k + 2] = sa * invLength;
     }
   }
   const row = widthSegments + 1;
@@ -188,17 +200,22 @@ export function createBowlingPin(GFX, options = {}) {
   }
   // Close the underside with a real planar foot instead of leaving an open lathe.
   const closedPositions = new Float32Array(positions.length + 3);
+  const closedNormals = new Float32Array(normals.length + 3);
   closedPositions.set(positions);
+  closedNormals.set(normals);
   const centerIndex = positions.length / 3;
   closedPositions[positions.length] = 0;
   closedPositions[positions.length + 1] = 0;
   closedPositions[positions.length + 2] = 0;
+  closedNormals[positions.length] = 0;
+  closedNormals[positions.length + 1] = -1;
+  closedNormals[positions.length + 2] = 0;
   for (let ix = 0; ix < widthSegments; ix++) indices.push(centerIndex, ix, ix + 1);
 
   const geometry = new GFX.BufferGeometry();
   geometry.setAttribute('position', new GFX.BufferAttribute(closedPositions, 3));
+  geometry.setAttribute('normal', new GFX.BufferAttribute(closedNormals, 3));
   geometry.setIndex(indices);
-  geometry.computeVertexNormals();
   geometry.setAttribute('color', new GFX.BufferAttribute(new Float32Array(closedPositions.length), 3));
   paint(GFX, geometry, palette, design, height);
 
