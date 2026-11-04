@@ -34,7 +34,6 @@ im = Image.fromarray((frost * 255).astype(np.uint8), "L").resize((4096, 2048), I
 buf = io.BytesIO()
 im.save(buf, "JPEG", quality=72, optimize=True)
 packed = base64.b64encode(buf.getvalue()).decode()
-lines = "\n".join(f"  '{packed[i:i+120]}' +" for i in range(0, len(packed), 120)).rstrip(" +")
 out = os.path.join(os.path.dirname(__file__), "..", "src", "textures", "mars", "relief.js")
 open(out, "w").write(f"""/**
  * The surface of Mars as frost: MOLA laser altimetry (Mars Global Surveyor,
@@ -45,8 +44,7 @@ open(out, "w").write(f"""/**
  */
 export const RELIEF_WIDTH = 4096;
 export const RELIEF_HEIGHT = 2048;
-export const RELIEF_JPEG =
-{lines};
+export const RELIEF_JPEG = '{packed}';
 """)
 im.resize((1400, 700), Image.LANCZOS).save(sys.argv[2] if len(sys.argv) > 2 else os.devnull, "PNG") if len(sys.argv) > 2 else None
 print(f"{len(packed)//1024} KB base64")
