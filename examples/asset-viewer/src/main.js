@@ -404,8 +404,8 @@ $('colourcopy').onclick = async () => {
       + "const bowlingBall = createBowlingBall(GFX, { colors: "
       + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'marble') + "' });";
   } else if (view.item.palette?.kind === 'bowling-pin') {
-    code = "import * as GFX from 'madness-engine/gfx';\\n"
-      + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\\n\\n"
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\n\n"
       + "const bowlingPin = createBowlingPin(GFX, { colors: "
       + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'classic') + "' });";
   } else {
