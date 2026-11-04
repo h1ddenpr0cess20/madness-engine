@@ -152,7 +152,7 @@ export function createBowlingPin(GFX, options = {}) {
   closedPositions[positions.length] = 0;
   closedPositions[positions.length + 1] = 0;
   closedPositions[positions.length + 2] = 0;
-  for (let ix = 0; ix < widthSegments; ix++) indices.push(centerIndex, ix + 1, ix);
+  for (let ix = 0; ix < widthSegments; ix++) indices.push(centerIndex, ix, ix + 1);
 
   const geometry = new GFX.BufferGeometry();
   geometry.setAttribute('position', new GFX.BufferAttribute(closedPositions, 3));
