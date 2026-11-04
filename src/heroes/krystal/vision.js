@@ -7,7 +7,9 @@
  * what makes the wisps curl and split rather than just rotate. Colour comes
  * from where in that folded space a wisp lies, run through a palette that
  * goes violet, magenta, rose, gold, teal; `hue` slides the whole palette
- * round, so a mood can lean the visions toward one end of it.
+ * round, so a mood can lean the visions toward one end of it. `spread` is how
+ * much of the palette the mist runs through: 1 is all of it, 0 is the one color
+ * at `hue`, in lighter and darker wisps.
  *
  * It is drawn additively after the glass, on a sphere just inside it: the
  * glass still refracts the night behind, and the mist glows in front of
@@ -33,6 +35,7 @@ export function visionUniforms(GFX) {
     uChurn: { value: 0.55 },
     uGlow: { value: 0.8 },
     uHue: { value: 0.75 },
+    uSpread: { value: 1 },
     uCore: { value: 0.3 },
     uRadius: { value: 1 },
     uCenter: { value: new GFX.Vector3() },
@@ -54,6 +57,7 @@ uniform float uSwirl;
 uniform float uChurn;
 uniform float uGlow;
 uniform float uHue;
+uniform float uSpread;
 uniform float uCore;
 uniform float uRadius;
 uniform vec3 uCenter;
@@ -104,7 +108,7 @@ void main() {
     float edge = clamp(1.0 - d2, 0.0, 1.0);
     float shade;
     float dens = mist(p, shade) * edge * edge;
-    col += palette(shade + uHue + d2 * 0.3) * dens;
+    col += palette((shade + d2 * 0.3) * uSpread + uHue) * dens;
     col += light * uCore * exp(-d2 * 7.0) * 0.35;
   }
   col *= uGlow * 2.6 * dt / uRadius;
@@ -177,7 +181,7 @@ fn fs(v: VOut) -> @location(0) vec4f {
     let d2 = dot(p, p);
     let edge = clamp(1.0 - d2, 0.0, 1.0);
     let m = mist(p);
-    col += palette(m.shade + material.uHue + d2 * 0.3) * m.density * edge * edge;
+    col += palette((m.shade + d2 * 0.3) * material.uSpread + material.uHue) * m.density * edge * edge;
     col += light * material.uCore * exp(-d2 * 7.0) * 0.35;
   }
   col *= material.uGlow * 2.6 * dt / material.uRadius;

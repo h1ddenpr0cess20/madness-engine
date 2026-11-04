@@ -172,7 +172,7 @@ test('on WebGPU a hand-written material\'s uniforms are bound whole, however man
   assert.equal(customWindow(48), 256);
   // The bind group is made with that window, and kept for the next material of the size.
   const made = [];
-  const backend = { device: { createBindGroup: (d) => (made.push(d), { d }) }, arena: {}, customLayout: {} };
+  const backend = { device: { createBindGroup: (d) => (made.push(d), { d }) }, arena: {}, customLayout: {}, dummy2D: { createView: () => ({}) }, linear: {} };
   const group = WebGPUBackend.prototype._customGroup.call(backend, customWindow(size));
   assert.equal(group.d.entries[1].resource.size, customWindow(size));
   assert.equal(WebGPUBackend.prototype._customGroup.call(backend, customWindow(size)), group);

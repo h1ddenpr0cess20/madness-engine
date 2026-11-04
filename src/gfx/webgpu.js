@@ -164,6 +164,8 @@ export class WebGPUBackend {
       entries: [
         { binding: 0, visibility: V | F, buffer: { type: 'uniform', hasDynamicOffset: true } },
         { binding: 1, visibility: V | F, buffer: { type: 'uniform', hasDynamicOffset: true } },
+        { binding: 2, visibility: F, texture: {} },
+        { binding: 3, visibility: F, sampler: {} },
       ],
     });
     this.depthLayout = d.createBindGroupLayout({
@@ -277,7 +279,8 @@ export class WebGPUBackend {
       const size = Math.max(16, structSize(fields));
       const materialOffset = this._alloc(size);
       this._packCustom(materialOffset, fields, call.material);
-      p.pass.setBindGroup(0, this._customGroup(customWindow(size)), [objectOffset, materialOffset]);
+      const data = Object.values(call.material.uniforms).find((u) => u.value?.isTexture)?.value;
+      p.pass.setBindGroup(0, this._customGroup(customWindow(size), data ? this._texture(data) : null), [objectOffset, materialOffset]);
     } else {
       const offset = this._alloc(DRAW_SIZE);
       this._packDraw(offset, call);
@@ -548,18 +551,21 @@ export class WebGPUBackend {
   }
 
   /** The bind group for a hand-written material whose uniforms take up to `window` bytes: one for each size there is. */
-  _customGroup(window) {
+  _customGroup(window, data = null) {
     this.customGroups ??= new Map();
-    let group = this.customGroups.get(window);
+    const id = `${window}|${data?.id ?? '-'}`;
+    let group = this.customGroups.get(id);
     if (!group) {
       group = this.device.createBindGroup({
         layout: this.customLayout,
         entries: [
           { binding: 0, resource: { buffer: this.arena, size: OBJECT_SIZE } },
           { binding: 1, resource: { buffer: this.arena, size: window } },
+          { binding: 2, resource: (data?.texture ?? this.dummy2D).createView() },
+          { binding: 3, resource: data?.sampler ?? this.linear },
         ],
       });
-      this.customGroups.set(window, group);
+      this.customGroups.set(id, group);
     }
     return group;
   }
@@ -631,6 +637,7 @@ export class WebGPUBackend {
       entry.version = texture.version;
       entry.id = `${texture.id}.${texture.version}`;
       this.drawGroups.clear();
+      this.customGroups?.clear();
     }
     return entry;
   }
