@@ -5,7 +5,7 @@ import { createVisionMaterial } from '../heroes/krystal/vision.js';
  * A clear glass Earth: a sphere of glass (a transmissive physical material,
  * as Alan's eye, the marble and Krystal's ball are) with the continents
  * etched on it from real coordinates (`textures/earth/map.js`), and room
- * inside for something to move: Krystal's coloured mist, a colourised map of
+ * inside for something to move: Krystal's coloured mist, a colorized map of
  * anything over the Earth (`setField`), or both.
  *
  * The etching is frosted glass: milky land with a fine bright coast, on a
@@ -111,9 +111,9 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
   const mood = { ...MIST };
   let flow = seed * 100;
 
-  // --- a field of colour: a map, wrapped on a sphere just inside the glass
+  // --- a field of colour: a haze of thin shells inside the glass, each carrying the same map
   let field = null;
-  let fieldTexture = null;
+  let fieldTextures = [];
 
   const group = new GFX.Group();
   group.name = 'glassglobe';
@@ -123,7 +123,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
     group, spin, glass, mist, mistMaterial, mood,
     get etch() { return etched; },
     get field() { return field; },
-    get fieldTexture() { return fieldTexture; },
+    get fieldTextures() { return fieldTextures; },
     get etchTexture() { return etchTexture; },
     radius: R,
     /** How fast it turns on its own, in radians a second about its axis; 0 for still. */
@@ -142,37 +142,50 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
     },
 
     /**
-     * Puts a map of colour inside the glass: `source` is a canvas covering the
-     * Earth, equirectangular, -180 on the left and 90 at the top. Drawn on it
-     * again, `refreshField()` sends it. Opaque, so the glass bends it as it
-     * bends anything inside it; null takes it out.
+     * Puts a map of colour inside the glass as a haze: `source` is a canvas (or
+     * several, used in turn from the outside in) covering the Earth,
+     * equirectangular, -180 on the left and 90 at the top, whose alpha is how
+     * thick the haze is there. It is `layers` thin shells one inside another,
+     * added together, so it has depth as you turn: the colors stay where the
+     * map puts them. Drawn on again, `refreshField()` sends it. null takes it out.
      */
-    setField(source, { opacity = 1 } = {}) {
+    setField(source, { layers = 7, opacity = 0.2, inner = 0.45, outer = 0.94 } = {}) {
       if (!source) {
         if (field) field.visible = false;
         return api;
       }
+      const sources = Array.isArray(source) ? source : [source];
       if (!field) {
-        fieldTexture = new GFX.CanvasTexture(source);
-        fieldTexture.colorSpace = GFX.SRGBColorSpace;
-        fieldTexture.anisotropy = 8;
-        field = new GFX.Mesh(
-          new GFX.SphereGeometry(R * FIELD_RADIUS, 128, 96),
-          new GFX.MeshBasicMaterial({ name: 'field', map: fieldTexture, toneMapped: false, transparent: opacity < 1, opacity }),
-        );
+        field = new GFX.Group();
         field.name = 'field';
-        field.castShadow = false;
-        field.receiveShadow = false;
+        fieldTextures = sources.map((canvas) => {
+          const t = new GFX.CanvasTexture(canvas);
+          t.colorSpace = GFX.SRGBColorSpace;
+          t.anisotropy = 4;
+          return t;
+        });
+        for (let i = 0; i < layers; i++) {
+          const f = layers === 1 ? 1 : i / (layers - 1);
+          const shell = new GFX.Mesh(
+            new GFX.SphereGeometry(R * (inner + (outer - inner) * f), 96, 64),
+            new GFX.MeshBasicMaterial({
+              name: 'haze', map: fieldTextures[i % fieldTextures.length], transparent: true, opacity,
+              blending: GFX.AdditiveBlending, depthWrite: false, toneMapped: false,
+            }),
+          );
+          shell.name = 'haze';
+          shell.renderOrder = 1;
+          shell.castShadow = false;
+          shell.receiveShadow = false;
+          field.add(shell);
+        }
         spin.add(field);
-      } else if (fieldTexture.image !== source) {
-        fieldTexture.image = source;
-        fieldTexture.needsUpdate = true;
       }
       field.visible = true;
       return api;
     },
 
-    refreshField() { if (fieldTexture) fieldTexture.needsUpdate = true; return api; },
+    refreshField() { for (const t of fieldTextures) t.needsUpdate = true; return api; },
 
     /** The mist's mood: any of `MIST`'s settings. `show` false clears the glass. */
     setMist(settings = {}, show = true) {
@@ -199,7 +212,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
 
     dispose() {
       etchTexture?.dispose();
-      fieldTexture?.dispose();
+      for (const t of fieldTextures) t.dispose();
     },
   };
   if (animate) {

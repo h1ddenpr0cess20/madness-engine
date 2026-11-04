@@ -75,3 +75,21 @@ test('the globe is clear glass with an etching on each side of it, and the mist 
   assert.equal(globe.mistMaterial.uniforms.uHue.value, 0.6);
   assert.ok(globe.mistMaterial.uniforms.uFlow.value > 0);
 });
+
+test('a field is a haze of added shells inside the glass, none of them opaque, all turning with the Earth', () => {
+  const globe = createGlassGlobe(GFX, { radius: 1 });
+  const canvas = { width: 4, height: 2 };
+  globe.setField([canvas, { width: 4, height: 2 }], { layers: 5 });
+  assert.equal(globe.field.children.length, 5);
+  const radii = globe.field.children.map((m) => m.geometry.parameters.radius);
+  assert.deepEqual([...radii].sort((a, b) => a - b), radii, 'from the inside out');
+  assert.ok(radii[4] < 1, 'inside the glass');
+  for (const shell of globe.field.children) {
+    assert.equal(shell.material.blending, GFX.AdditiveBlending);
+    assert.equal(shell.material.transparent, true);
+  }
+  assert.equal(globe.fieldTextures.length, 2);
+  assert.ok(globe.spin.children.includes(globe.field), 'it turns with the globe, so colors stay on their places');
+  globe.setField(null);
+  assert.equal(globe.field.visible, false);
+});
