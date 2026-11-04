@@ -18,6 +18,9 @@ The people, creatures and monsters. Most are sculpted definitions (the default e
 | `characters/artist` | `artist` (rocknroller-iii) | The Pavement Artist: up from Montmartre with an easel's worth of opinions, in a beret, a loose blue smock smeared with every colour, a red neckerchief, a waxed moustache and a little beard; the pal… |
 | `characters/bat` | `bat` (rocknroller-ii, metroll, dungeon-roller; `bat.dungeon-roller` is the same model) | The cave bat: a furry little body, a pug face with a squashed nose, huge pointed ears, tiny fangs and red eyes that glow, on leathery wings that stretch between long finger bones. |
 | `characters/beerguy` | `beerguy` (metroll, metrlol) | The Beer Guy: a festival T-shirt from three years ago, stretched over a stomach that is half the reason the festival is profitable, shorts, green rubber wellies caked in mud to the knee, a plastic … |
+| `characters/bikeman` | `bikeman` | A generic adult man on a black-framed bicycle, in a blue T-shirt and dark jeans. |
+| `characters/bikewoman` | `bikewoman` | A generic adult woman on a city bicycle, in a rose T-shirt and dark trousers, with long hair. |
+| `characters/bmxrider` | `bmxrider` | A BMX rider in a baggy T-shirt, shorts, skate shoes and a bright helmet, on a compact BMX with wide bars. |
 | `characters/blader` | `blader` (metroll, metrlol) | The Rollerblader: neon spandex, a headband and matching wristbands, knee pads, big headphones on a Walkman at the hip, and in-line skates, the wheels in a row. |
 | `characters/bobby` | `bobby` (metroll)<br>`bobby.rocknroller-iii` (rocknroller-iii) | The Bobby: a London constable on the beat, in the tall custodian helmet with its star badge and its knob on top, the dark tunic buttoned up in silver, the chequered band, a whistle on its chain, an… |
 | `characters/boulder` | `boulder` (dungeon-roller) | The rock monster: Rock's boulder (github.com/h1ddenpr0cess20/rock, its `boulder`), several tons of granite, brought down into the dungeon to roll after people. |
@@ -181,6 +184,7 @@ The people, creatures and monsters. Most are sculpted definitions (the default e
 | `characters/security` | `security` (rocknroller-iii, petroll, metroll, metrlol, rocknroller, rocknroller-ii) | Security: a hi-vis vest with reflective stripes, a black cap, a radio on the shoulder and a hand on it. |
 | `characters/shredder` | `shredder` (metroll) | The Shredder: a bandana, a mane, a bare chest with one gold chain, tiger- stripe spandex, high-tops, and a flying V in banana yellow. |
 | `characters/skater` | `skater` (metroll, metrlol) | The Skater: a cap on backwards, a shirt two sizes too big, shorts, tube socks and skate shoes worn through at the toes, a board under one arm with a sticker on the bottom of it that says something … |
+| `characters/skater-riding` | `skater-riding` | A beanie-wearing, bearded skateboarder in a plain dark T-shirt and blue jeans, crouched sideways on a maple deck with four rolling wheels. |
 | `characters/skeleton` | `skeleton` (dungeon-roller) | The skeleton: an old soldier still on its feet. |
 | `characters/skier` | `skier` (rocknroller-iii, petroll, metroll) | The Skier: down off the black run in a lot of very expensive anorak, hot pink and electric blue, salopettes, a helmet, mirrored goggles, a pass on a lanyard, ski boots that walk like boots that wer… |
 | `characters/slime` | `slime` (dungeon-roller) | The slime: Slimey's jelly orb (github.com/h1ddenpr0cess20/slimey, its `orb`), brought down into the dungeon. |
