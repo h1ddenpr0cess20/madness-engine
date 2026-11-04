@@ -326,6 +326,27 @@ function colourRows(item) {
   return rows;
 }
 
+/** A coordinated, high-contrast resin palette for the standalone bowling pin. */
+function randomBowlingPinPalette(random = Math.random) {
+  const hue = random() * 360;
+  const hex = (h, saturation, lightness) => {
+    const s = saturation / 100, l = lightness / 100;
+    const k = (n) => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const channel = (n) => {
+      const value = l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+      return Math.round(255 * value).toString(16).padStart(2, '0');
+    };
+    return `#${channel(0)}${channel(8)}${channel(4)}`;
+  };
+  return {
+    base: hex(hue, 48, 36),
+    swirl: hex((hue + 24 + random() * 34) % 360, 54, 58),
+    accent: hex((hue + 8 + random() * 58) % 360, 28, 86),
+    stripe: hex((hue + 150 + random() * 60) % 360, 78, 43),
+  };
+}
+
 /** Whether what is chosen in the pickers is not what is on show. */
 const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colours);
 
@@ -337,11 +358,13 @@ function colourGroup(item) {
   const isDice = item.palette.kind === 'dice';
   const isBowlingBall = item.palette.kind === 'bowling-ball';
   const isBowlingPin = item.palette.kind === 'bowling-pin';
-  $('colourdiverse').style.display = isDice || isBowlingPin ? 'none' : '';
-  $('colourdiverse').textContent = isBowlingBall ? 'Randomise colours' : 'Randomise';
-  $('colourdiverse').title = isBowlingBall
-    ? 'Pick a coordinated random bowling-ball palette'
-    : 'Randomise this character palette';
+  $('colourdiverse').style.display = isDice ? 'none' : '';
+  $('colourdiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall ? 'Randomise colours' : 'Randomise';
+  $('colourdiverse').title = isBowlingPin
+    ? 'Generate a coordinated random resin and enamel palette for this pin'
+    : isBowlingBall
+      ? 'Pick a coordinated random bowling-ball palette'
+      : 'Randomise this character palette';
   $('bowlingdesignrow').style.display = isBowlingBall || isBowlingPin ? '' : 'none';
   if (isBowlingBall || isBowlingPin) {
     const choices = isBowlingPin
@@ -374,7 +397,10 @@ function colourGroup(item) {
 
 $('colourapply').onclick = () => { view.colours = structuredClone(view.draft); show(view.item); };
 $('colourdiverse').onclick = () => {
-  if (view.item.palette?.kind === 'bowling-ball') {
+  if (view.item.palette?.kind === 'bowling-pin') {
+    const design = view.draft.design ?? view.colours.design ?? view.item.palette.design ?? 'classic';
+    view.draft = { ...view.draft, ...randomBowlingPinPalette(), design };
+  } else if (view.item.palette?.kind === 'bowling-ball') {
     const current = { ...view.item.palette, ...view.colours, ...view.draft };
     const design = current.design ?? 'marble';
     view.draft = { ...randomBowlingBallPalette(Math.random, current), design };
