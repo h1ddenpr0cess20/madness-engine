@@ -10,6 +10,7 @@ import key from './key.js';
 import lighter from './lighter.js';
 import pass from './pass.js';
 import pick from './pick.js';
+import podium from './podium.js';
 import popcorn from './popcorn.js';
 import potion from './potion.js';
 import record from './record.js';
@@ -31,7 +32,7 @@ import { crystals, pine, snowball, snowheap, snowlantern, snowrock } from './win
  * Every sculpted prop in the library, by name: the default version of each.
  */
 export const PROPS = {
-  bucket, case: caseModel, chair, chest, clapper, demo, globe, gold, key, lighter, pass, pick, popcorn,
+  bucket, case: caseModel, chair, chest, clapper, demo, globe, gold, key, lighter, pass, pick, podium, popcorn,
   potion, record, reel, revive, suitcase, tape, vinyl, whetstone,
   // Blubber's: the pumpkins, the harvest, the sweets, the graveyard and the winter.
   pumpkin, jack, bigpumpkin, pumpkinpile, whitepumpkin, gourd, cornshock, barrel, haystack, table,
@@ -45,4 +46,5 @@ export const PROPS = {
 };
 export { DICE, DICE_TYPES, createDieProp, createD4, createD6, createD6Pips, createD8, createD10, createDPercentile, createD12, createD20 } from '../dice.js';
 export { BOWLING_BALL_DESIGNS, BOWLING_BALL_RADIUS, createBowlingBall } from './bowling-ball.js';
+export { PODIUM_ACCENT, PODIUM_SIZE, PODIUM_TILT, PODIUM_TOP, podiumOf } from './podium.js';
 export { BOWLING_PIN_DESIGNS, BOWLING_PIN_HEIGHT, BOWLING_PIN_RADIUS, createBowlingPin } from './bowling-pin.js';
