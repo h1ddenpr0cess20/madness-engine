@@ -157,7 +157,7 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
         }
         // The saddle and its post.
         s.limb([0, seat[1] - 0.09, seat[2]], seat, 0.006, 0.006, { ...FRAME, k: 0.002 });
-        s.ollipsoid([0, seat[1] + 0.012, seat[2] - 0.006], [bmx ? 0.035 : 0.03, 0.012, bmx ? 0.04 : 0.055], { color: '#24262b', mat: 'leather', bone: 'root', k: 0.004 });
+        s.ellipsoid([0, seat[1] + 0.012, seat[2] - 0.006], [bmx ? 0.035 : 0.03, 0.012, bmx ? 0.04 : 0.055], { color: '#24262b', mat: 'leather', bone: 'root', k: 0.004 });
       });
     },
   });
