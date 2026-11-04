@@ -158,6 +158,9 @@ async function show(item) {
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
+    // What an item can switch on and off (the glass globe's mist).
+    $('togglegroup').style.display = built.mist ? '' : 'none';
+    if (built.mist) $('mistbox').checked = built.mist.get();
     // A flyer's origin is its middle: lift it clear of the floor rather than half under it. Only characters fly: a
     // building's footings, a tree's roots and a river's bed go below the ground on purpose, and stay there.
     if (!built.noFloor && !built.frame && item.kind === 'object' && item.category === 'Characters') {
@@ -718,6 +721,7 @@ $('flagbtn').onclick = toggleFlag;
 $('markbtn').onclick = () => setMarking(!marking);
 $('pin').onclick = () => { const f = flags[view.item?.id]; if (f) { f.angle = angleOf(); f.context = contextOf(); saveFlags(); renderFlag(); } };
 $('note').oninput = () => { const f = flags[view.item?.id]; if (f) { f.note = $('note').value; saveFlags(); } };
+$('mistbox').onchange = () => view.built?.mist?.set($('mistbox').checked);
 $('turn').onclick = () => { controls.autoRotate = !controls.autoRotate; $('turn').classList.toggle('on', controls.autoRotate); };
 $('sheetbtn').onclick = contactSheet;
 $('gridbtn').onclick = () => { floor.visible = !floor.visible; $('gridbtn').classList.toggle('on', !floor.visible); };

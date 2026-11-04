@@ -187,7 +187,7 @@ const MOVING = [
     const globe = m.createGlassGlobe(GFX, { radius: 0.6, mist: true, animate: true });
     globe.orient(40, -95);
     globe.spinRate = 0.12;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 } });
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
@@ -199,7 +199,7 @@ function movingItem([name, category, group, make, from = null]) {
       const made = await make();
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
-      return { object, frame: made?.frame, ...dressOf(made), info: { Source: source, ...countOf(object) } };
+      return { object, frame: made?.frame, mist: made?.mist, ...dressOf(made), info: { Source: source, ...countOf(object) } };
     },
   };
 }

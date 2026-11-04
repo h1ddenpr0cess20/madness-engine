@@ -20,7 +20,7 @@ export function hazeUniforms(GFX, map) {
   return {
     uFlow: { value: 0 },
     uGlow: { value: 1 },
-    uShell: { value: 0.55 },
+    uShell: { value: 0.72 },
     uRadius: { value: 1 },
     uCenter: { value: new GFX.Vector3() },
     uInverse: { value: new GFX.Matrix4() },
@@ -59,7 +59,7 @@ float mist(vec3 p) {
   ribbon *= ribbon;
   ribbon *= ribbon;
   float veil = 0.5 + 0.5 * sin(0.8 * q.y - 0.7 * q.x + 0.6 * q.z);
-  return 0.5 + ribbon * 1.0 + veil * veil * 0.4;
+  return 0.75 + ribbon * 0.7 + veil * veil * 0.25;
 }
 
 vec3 data(vec3 p) {
@@ -87,7 +87,7 @@ void main() {
     vec3 world = ro + rd * (t0 + (float(i) + jitter) * dt);
     vec3 p = (uInverse * vec4(world, 1.0)).xyz / uRadius;
     float r = length(p);
-    float shell = smoothstep(uShell, 0.9, r) * (1.0 - smoothstep(0.96, 1.0, r)) + 0.1 * (1.0 - r);
+    float shell = smoothstep(uShell, 0.9, r) * (1.0 - smoothstep(0.985, 1.0, r)) + 0.03 * (1.0 - r);
     float w = mist(p) * shell;
     sum += data(p) * w;
     weight += w;
@@ -125,7 +125,7 @@ fn mist(p: vec3f) -> f32 {
   ribbon *= ribbon;
   ribbon *= ribbon;
   let veil = 0.5 + 0.5 * sin(0.8 * q.y - 0.7 * q.x + 0.6 * q.z);
-  return 0.5 + ribbon * 1.0 + veil * veil * 0.4;
+  return 0.75 + ribbon * 0.7 + veil * veil * 0.25;
 }
 
 fn dataAt(p: vec3f) -> vec3f {
@@ -154,7 +154,7 @@ fn fs(v: VOut) -> @location(0) vec4f {
     let world = ro + rd * (t0 + (f32(i) + jitter) * dt);
     let p = (material.uInverse * vec4f(world, 1.0)).xyz / material.uRadius;
     let r = length(p);
-    let shell = smoothstep(material.uShell, 0.9, r) * (1.0 - smoothstep(0.96, 1.0, r)) + 0.1 * (1.0 - r);
+    let shell = smoothstep(material.uShell, 0.9, r) * (1.0 - smoothstep(0.985, 1.0, r)) + 0.03 * (1.0 - r);
     let w = mist(p) * shell;
     sum += dataAt(p) * w;
     weight += w;

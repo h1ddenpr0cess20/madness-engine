@@ -29,9 +29,10 @@ export const RADIUS = 0.6;
 /** Where the inner things sit, as fractions of the radius. */
 export const FIELD_RADIUS = 0.93;
 export const MIST_RADIUS = 0.95;
+export const HAZE_RADIUS = 0.997;
 
-/** The mist's settings: the same as Krystal's moods, leaning to the sea. See `heroes/krystal/moods.js`. */
-export const MIST = Object.freeze({ speed: 0.22, swirl: 2.0, churn: 0.5, glow: 0.8, core: 0.2, hue: 0.52 });
+/** The mist's settings: Krystal's, but all one blue (`spread: 0`); raise `spread` for her many colors. See `heroes/krystal/moods.js`. */
+export const MIST = Object.freeze({ speed: 0.22, swirl: 2.0, churn: 0.5, glow: 0.8, core: 0.2, hue: 0.52, spread: 0 });
 
 /**
  * @param {object} GFX
@@ -150,7 +151,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
      * under the glass, so from outside it reads as the map, and it drifts. Drawn
      * on again, `refreshField()` sends it. null takes it out.
      */
-    setField(source, { glow = 1, shell = 0.55 } = {}) {
+    setField(source, { glow = 1, shell = 0.72 } = {}) {
       if (!source) {
         if (field) field.visible = false;
         return api;
@@ -160,8 +161,8 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
         fieldTexture.wrapS = GFX.RepeatWrapping;
         fieldTexture.anisotropy = 4;
         const material = createHazeMaterial(GFX, fieldTexture);
-        material.uniforms.uRadius.value = R * MIST_RADIUS;
-        field = new GFX.Mesh(new GFX.SphereGeometry(R * MIST_RADIUS, 64, 48), material);
+        material.uniforms.uRadius.value = R * HAZE_RADIUS;
+        field = new GFX.Mesh(new GFX.SphereGeometry(R * HAZE_RADIUS, 96, 64), material);
         field.name = 'field';
         field.renderOrder = 1;
         field.castShadow = false;
@@ -206,6 +207,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
       u.uGlow.value = mood.glow;
       u.uCore.value = mood.core;
       u.uHue.value = mood.hue;
+      u.uSpread.value = mood.spread;
       mist.updateWorldMatrix?.(true, false);
       u.uCenter.value.setFromMatrixPosition(mist.matrixWorld);
     },
