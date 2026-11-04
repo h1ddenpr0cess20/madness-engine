@@ -189,6 +189,26 @@ const MOVING = [
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
+  ['glass mars', 'Animated props', 'Mars in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/mars/map.js')]).then(([m, mars]) => {
+    // Mars at its true size beside the Earth globe: 0.532 of its radius.
+    const r = m.RADIUS * mars.SIZE_VS_EARTH;
+    const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: mars.createMarsEtchCanvas() });
+    // Rust: the palette's warm end, with the blue taken out of it.
+    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 1.7, core: 0.15 });
+    globe.orient(-5, 70);
+    globe.spinRate = 0.12;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
+  }), 'props/glassglobe'],
+  ['glass mars', 'Animated props', 'Mars in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/mars/map.js')]).then(async ([m, mars]) => {
+    // Mars at its true size beside the Earth globe: 0.532 of its radius, its MOLA surface etched in the glass.
+    const r = m.RADIUS * mars.SIZE_VS_EARTH;
+    const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await mars.loadMarsEtch() });
+    // Rust: the palette's warm end, with the blue taken out of it.
+    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 1.7, core: 0.15 });
+    globe.orient(-5, -90);
+    globe.spinRate = 0.12;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
+  }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
 function movingItem([name, category, group, make, from = null]) {
