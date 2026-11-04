@@ -1,7 +1,7 @@
 /**
  * The data as mist: a ray marched through the glass, adding up the color of a
  * map (an equirectangular texture of the Earth, -180 on the left, 90 at the top)
- * as it is found along the way, the way Krystal's visions add up theirs
+ * front to back as it is found along the way (the near side hides the far), the way Krystal's visions add up theirs
  * (`heroes/krystal/vision.js`). The map's color is read where each sample lies
  * over the Earth, strongest in a thick shell just under the glass, so from
  * outside the globe reads as the map itself, and thinning inward into wisps. The
@@ -13,7 +13,7 @@
  * with the globe. The same program twice, once per backend: keep the two in step.
  */
 
-export const STEPS = 40;
+export const STEPS = 56;
 
 /** Uniforms in the order the WGSL struct declares them (the texture is separate). */
 export function hazeUniforms(GFX, map) {
@@ -81,20 +81,18 @@ void main() {
   float t1 = -b + h;
   float dt = (t1 - t0) / float(STEPS);
   float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-  vec3 sum = vec3(0.0);
-  float weight = 0.0;
+  vec3 col = vec3(0.0);
+  float through = 1.0;
   for (int i = 0; i < STEPS; i++) {
     vec3 world = ro + rd * (t0 + (float(i) + jitter) * dt);
     vec3 p = (uInverse * vec4(world, 1.0)).xyz / uRadius;
     float r = length(p);
     float shell = smoothstep(uShell, 0.9, r) * (1.0 - smoothstep(0.985, 1.0, r)) + 0.03 * (1.0 - r);
-    float w = mist(p) * shell;
-    sum += data(p) * w;
-    weight += w;
+    float a = 1.0 - exp(-mist(p) * shell * dt / uRadius * uGlow * 12.0);
+    col += data(p) * a * through;
+    through *= 1.0 - a;
   }
-  vec3 col = sum / max(weight, 1e-4);
-  float a = 1.0 - exp(-weight * dt / uRadius * uGlow * 2.2);
-  gl_FragColor = vec4(col * a, 1.0);
+  gl_FragColor = vec4(col, 1.0);
 }
 `;
 
@@ -148,20 +146,18 @@ fn fs(v: VOut) -> @location(0) vec4f {
   let t1 = -b + h;
   let dt = (t1 - t0) / f32(STEPS);
   let jitter = fract(52.9829189 * fract(dot(v.position.xy, vec2f(0.06711056, 0.00583715))));
-  var sum = vec3f(0.0);
-  var weight = 0.0;
+  var col = vec3f(0.0);
+  var through = 1.0;
   for (var i = 0; i < STEPS; i++) {
     let world = ro + rd * (t0 + (f32(i) + jitter) * dt);
     let p = (material.uInverse * vec4f(world, 1.0)).xyz / material.uRadius;
     let r = length(p);
     let shell = smoothstep(material.uShell, 0.9, r) * (1.0 - smoothstep(0.985, 1.0, r)) + 0.03 * (1.0 - r);
-    let w = mist(p) * shell;
-    sum += dataAt(p) * w;
-    weight += w;
+    let a = 1.0 - exp(-mist(p) * shell * dt / material.uRadius * material.uGlow * 12.0);
+    col += dataAt(p) * a * through;
+    through *= 1.0 - a;
   }
-  let col = sum / max(weight, 1e-4);
-  let a = 1.0 - exp(-weight * dt / material.uRadius * material.uGlow * 2.2);
-  return vec4f(col * a, 1.0);
+  return vec4f(col, 1.0);
 }
 `;
 
