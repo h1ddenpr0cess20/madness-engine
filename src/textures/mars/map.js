@@ -17,8 +17,8 @@ export const RELIEF = Object.freeze({ width: RELIEF_WIDTH, height: RELIEF_HEIGHT
 
 /**
  * The etching, on a canvas `width` wide (4096 is the data's own size): frost
- * where the relief catches the light, clear glass where it falls away, and a
- * graticule every 30°. Resolves to null where there is no document to paint on.
+ * where the relief catches the light and clear glass where it falls away.
+ * Resolves to null where there is no document to paint on.
  */
 export async function loadMarsEtch({ width = RELIEF_WIDTH } = {}) {
   if (typeof document === 'undefined' || typeof Image === 'undefined') return null;
@@ -38,11 +38,5 @@ export async function loadMarsEtch({ width = RELIEF_WIDTH } = {}) {
     d[i] = 255; d[i + 1] = 236; d[i + 2] = 224; d[i + 3] = frost * 0.95;
   }
   ctx.putImageData(pixels, 0, 0);
-  ctx.strokeStyle = 'rgba(255,230,215,0.35)';
-  ctx.lineWidth = Math.max(1, width / 4096);
-  ctx.beginPath();
-  for (let lon = -180; lon <= 180; lon += 30) { const x = (lon + 180) / 360 * width; ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
-  for (let lat = -60; lat <= 60; lat += 30) { const y = (90 - lat) / 180 * canvas.height; ctx.moveTo(0, y); ctx.lineTo(width, y); }
-  ctx.stroke();
   return canvas;
 }
