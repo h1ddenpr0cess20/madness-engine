@@ -227,6 +227,16 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
+  ['glass jupiter etched', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
+    // The alternate: the zones and belts etched in the glass, and the mist in belts that shear sideways, in the planet's rust-red and blue-green.
+    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, mist: true, animate: true, etchCanvas: await jupiter.loadJupiterEtch() });
+    globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [0.12, 0.72, 0.68]], glow: 2.4, core: 0.1, swirl: 0.6 });
+    globe.orient(-22, 0);
+    globe.spinRate = 0.12;
+    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+    const mesh = globe.mist;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
+  }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
 function movingItem([name, category, group, make, from = null]) {

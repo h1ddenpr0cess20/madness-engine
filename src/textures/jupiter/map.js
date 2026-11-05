@@ -32,3 +32,23 @@ export async function loadJupiterMap() {
   ctx.drawImage(image, 0, 0);
   return canvas;
 }
+
+/**
+ * The clouds as an etching, for `createGlassGlobe(...).setField`-less glass: `etchCanvas`. The zones
+ * (the bright bands) are the frost, the belts and the Great Red Spot clear glass, so the pattern of
+ * the planet is cut into the glass and the mist inside shows through it.
+ * Resolves to null where there is no document to paint on.
+ */
+export async function loadJupiterEtch() {
+  const canvas = await loadJupiterMap();
+  if (!canvas) return null;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = pixels.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const light = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
+    d[i] = 255; d[i + 1] = 240; d[i + 2] = 228; d[i + 3] = Math.min(1, Math.max(0, (light - 0.5) * 1.6)) * 150;
+  }
+  ctx.putImageData(pixels, 0, 0);
+  return canvas;
+}
