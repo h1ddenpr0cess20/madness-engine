@@ -61,20 +61,36 @@ export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold' } = 
     // displacement maps are not relied on), so it is real height that catches the light. A vertex with no logo
     // sinks into the coin, so only the strokes show.
     const geometry = new GFX.PlaneGeometry(width, height, bw - 1, bh - 1);
-    const pos = geometry.attributes.position, uv = geometry.attributes.uv;
+    const pos = geometry.attributes.position;
     const at = (x, y) => pixels[(Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))) * 4];
-    for (let i = 0; i < pos.count; i++) {
-      const px = x0 + Math.round(uv.getX(i) * (bw - 1));
-      const py = y0 + Math.round((1 - uv.getY(i)) * (bh - 1));
-      // The brightest pixel within three of it, softened by the mean with its neighbors: the thin strokes made
-      // bolder, and sloped at their edges instead of stepping.
+    // The height as a field, one value to a vertex (row by row from the top): the brightest pixel within three,
+    // so the thin strokes are bolder, then blurred twice so they are rounded ridges, not steps.
+    let field = new Float32Array(bw * bh);
+    for (let iy = 0; iy < bh; iy++) for (let ix = 0; ix < bw; ix++) {
       let best = 0;
       for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
         const d = Math.hypot(dx, dy);
-        if (d <= 3) best = Math.max(best, at(px + dx, py + dy) * (1 - d / 5));
+        if (d <= 3) best = Math.max(best, at(x0 + ix + dx, y0 + iy + dy) * (1 - d / 6));
       }
-      const h = Math.min(1, best / 255 * 1.2);
-      pos.setZ(i, h > 0.06 ? h * lip * 2 : -0.004);
+      field[iy * bw + ix] = Math.min(1, best / 255 * 1.3);
+    }
+    const blur = (src) => {
+      const k = [1, 4, 6, 4, 1], tmp = new Float32Array(src.length), out = new Float32Array(src.length);
+      for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+        let v = 0; for (let j = -2; j <= 2; j++) v += src[y * bw + Math.min(bw - 1, Math.max(0, x + j))] * k[j + 2];
+        tmp[y * bw + x] = v / 16;
+      }
+      for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+        let v = 0; for (let j = -2; j <= 2; j++) v += tmp[Math.min(bh - 1, Math.max(0, y + j)) * bw + x] * k[j + 2];
+        out[y * bw + x] = v / 16;
+      }
+      return out;
+    };
+    field = blur(blur(blur(field)));
+    for (let i = 0; i < pos.count; i++) {
+      const t = Math.min(1, field[i] * 2.2);
+      const h = t * t * (3 - 2 * t);               // smoothstep: a rounded ridge
+      pos.setZ(i, h > 0.004 ? h * lip * 2 : -0.004);
     }
     geometry.computeVertexNormals();
     const logoMaterial = new GFX.MeshPhysicalMaterial({ name: 'coin logo', color: new GFX.Color('#ffffff'), metalness: 1, roughness: 0.25, envMapIntensity: 3 });
