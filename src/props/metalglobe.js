@@ -31,14 +31,29 @@ export const METALS = Object.freeze({
 });
 
 /** A gray canvas of a relief canvas's alpha: the height, for a bump map. */
-function heightOf(source) {
+export function heightOf(source, blur = 0) {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width; canvas.height = source.height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (blur) ctx.filter = `blur(${blur}px)`;
+  ctx.drawImage(source, 0, 0);
+  ctx.filter = 'none';
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = pixels.data;
+  for (let i = 0; i < d.length; i += 4) { d[i] = d[i + 1] = d[i + 2] = d[i + 3]; d[i + 3] = 255; }
+  ctx.putImageData(pixels, 0, 0);
+  return canvas;
+}
+
+/** A roughness map (the green channel) of a relief canvas: 0.25 of the metal's roughness on the field, all of it on the engraving. */
+function roughnessOf(source) {
   const canvas = document.createElement('canvas');
   canvas.width = source.width; canvas.height = source.height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(source, 0, 0);
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const d = pixels.data;
-  for (let i = 0; i < d.length; i += 4) { d[i] = d[i + 1] = d[i + 2] = d[i + 3]; d[i + 3] = 255; }
+  for (let i = 0; i < d.length; i += 4) { const v = 64 + (255 - 64) * Math.min(1, d[i + 3] / 160); d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
   ctx.putImageData(pixels, 0, 0);
   return canvas;
 }
@@ -49,21 +64,31 @@ function heightOf(source) {
  * @param {number} [options.radius]
  * @param {HTMLCanvasElement} options.relief  a canvas with the height in its alpha, equirectangular
  * @param {string} [options.metal]  a key of `METALS`
+ * @param {number} [options.bump]  the bump map's strength (negative cuts in)
+ * @param {number} [options.soften]  pixels of blur on the relief that cuts the mesh itself (0 for none): the mesh has only so many vertices
+ * @param {boolean} [options.frost]  frost the engraving and leave the field polished
+ * @param {number[]} [options.segments]  the sphere's width and height in segments
  * @param {number} [options.height]  how deep the relief is cut, as a fraction of the radius
  */
-export function createMetalGlobe(GFX, { radius = RADIUS, relief, metal = 'steel', height = 0.02 } = {}) {
+export function createMetalGlobe(GFX, { radius = RADIUS, relief, metal = 'steel', height = 0.02, bump = -9, soften = 0, frost = false, segments = [384, 256] } = {}) {
+  // Two readings of the relief: sharp for the bump, which carries the fine detail, and softened for the
+  // displacement, which cuts the mesh itself (it has only so many vertices) so the engraving has real depth.
   const gray = relief ? heightOf(relief) : null;
   const map = gray ? new GFX.CanvasTexture(gray) : null;
-  if (map) { map.wrapS = GFX.RepeatWrapping; map.anisotropy = 4; }
+  const deep = relief ? new GFX.CanvasTexture(heightOf(relief, soften)) : null;
+  // Currency finish: the field polished to a mirror and the engraving frosted, as a proof coin is struck.
+  const rough = relief && frost ? new GFX.CanvasTexture(roughnessOf(relief)) : null;
+  for (const t of [map, deep, rough]) if (t) { t.wrapS = GFX.RepeatWrapping; t.anisotropy = 4; }
   const material = new GFX.MeshPhysicalMaterial({
     name: 'metal',
     color: new GFX.Color('#ffffff'),
     metalness: 1,
     roughness: 0.3,
     envMapIntensity: 3,
-    ...(map ? { bumpMap: map, bumpScale: -3, displacementMap: map, displacementScale: -radius * height, displacementBias: 0 } : {}),
+    ...(rough ? { roughnessMap: rough } : {}),
+    ...(map ? { bumpMap: map, bumpScale: bump, displacementMap: deep, displacementScale: -radius * height, displacementBias: 0 } : {}),
   });
-  const mesh = new GFX.Mesh(new GFX.SphereGeometry(radius, 192, 128), material);
+  const mesh = new GFX.Mesh(new GFX.SphereGeometry(radius, ...segments), material);
   mesh.name = 'metal globe';
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -82,7 +107,7 @@ export function createMetalGlobe(GFX, { radius = RADIUS, relief, metal = 'steel'
       const m = METALS[name];
       if (!m) throw new Error(`no metal called ${name}`);
       material.color.set(m.color);
-      material.roughness = m.roughness;
+      material.roughness = m.roughness + (material.roughnessMap ? 0.3 : 0);
       api.metal = name;
       return api;
     },

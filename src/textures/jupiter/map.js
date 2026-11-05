@@ -39,7 +39,7 @@ export async function loadJupiterMap() {
  * the planet is cut into the glass and the mist inside shows through it.
  * Resolves to null where there is no document to paint on.
  */
-export async function loadJupiterEtch() {
+export async function loadJupiterEtch({ relief = false } = {}) {
   const canvas = await loadJupiterMap();
   if (!canvas) return null;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -47,7 +47,10 @@ export async function loadJupiterEtch() {
   const d = pixels.data;
   for (let i = 0; i < d.length; i += 4) {
     const light = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
-    d[i] = 255; d[i + 1] = 240; d[i + 2] = 228; d[i + 3] = Math.min(1, Math.max(0, (light - 0.5) * 1.6)) * 150;
+    d[i] = 255; d[i + 1] = 240; d[i + 2] = 228;
+    // For glass, the zones frost it. For metal, the whole range of the clouds' tone is the depth, stretched,
+    // so every belt, festoon and storm is cut at its own depth and the finest of them is not lost.
+    d[i + 3] = relief ? Math.min(1, Math.max(0, (light - 0.18) / 0.72)) ** 1.25 * 255 : Math.min(1, Math.max(0, (light - 0.5) * 1.6)) * 150;
   }
   ctx.putImageData(pixels, 0, 0);
   return canvas;

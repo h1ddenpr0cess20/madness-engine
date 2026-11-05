@@ -132,7 +132,7 @@ export function createEtchCanvas({ width = 4096, fill = 'rgba(236,244,255,0.5)',
  * The Earth's land as relief, for a metal globe: a canvas with the height in its alpha, the land raised
  * and the sea down, the coast softened a little so it slopes. Resolves to null with no document to paint on.
  */
-export async function loadEarthRelief({ width = 2048 } = {}) {
+export async function loadEarthRelief({ width = 4096 } = {}) {
   if (typeof document === 'undefined') return null;
   const height = width / 2;
   const mask = landMask(width, height);
@@ -150,7 +150,7 @@ export async function loadEarthRelief({ width = 2048 } = {}) {
   const soft = document.createElement('canvas');
   soft.width = width; soft.height = height;
   const sctx = soft.getContext('2d');
-  sctx.filter = 'blur(2px)';
+  sctx.filter = 'blur(0.6px)';
   sctx.drawImage(canvas, 0, 0);
   return soft;
 }
