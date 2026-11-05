@@ -1,10 +1,9 @@
 import { RADIUS } from './glassglobe.js';
 
 /**
- * A planet in solid metal, its relief engraved into the surface: a smooth sphere with the relief engraved into it by a bump and a displacement
- * map cut from a relief canvas (`textures/earth/map` `loadEarthRelief`, `textures/mars/map` `loadMarsEtch`,
- * `textures/moon/map` `loadMoonEtch`, `textures/jupiter/map` `loadJupiterEtch`: whatever has its height in
- * the alpha), with no color on it but the metal's own.
+ * A planet in solid metal. Equirectangular etch maps can add a bump-map finish;
+ * when `topography: true`, real elevations are baked into the sphere vertices
+ * so the terrain changes the silhouette and the mesh normals, not just lighting.
  *
  *     const globe = createMetalGlobe(GFX, { radius: 0.6, relief: await loadMoonEtch(), metal: 'silver' });
  *     scene.add(globe.group);
@@ -45,6 +44,66 @@ export function heightOf(source, blur = 0) {
   return canvas;
 }
 
+/**
+ * Applies a normalized equirectangular height canvas to a sphere's actual
+ * vertices. The custom GFX renderers support bump maps but do not implement
+ * material displacementMap, so terrain must be part of the BufferGeometry.
+ *
+ * `depth` is the full low-to-high elevation range in world units; the map's
+ * midpoint stays on the reference sphere.
+ */
+export function displaceSphereGeometry(geometry, heightCanvas, depth) {
+  if (!geometry || !heightCanvas || !Number.isFinite(depth) || depth < 0) {
+    throw new TypeError('displaceSphereGeometry needs a geometry, height canvas, and non-negative depth');
+  }
+  if (depth === 0) return geometry;
+  const position = geometry.getAttribute('position');
+  const uv = geometry.getAttribute('uv');
+  if (!position || !uv) throw new Error('topographic sphere geometry needs position and uv attributes');
+  const ctx = heightCanvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('could not read the height canvas');
+  const { width, height } = heightCanvas;
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+  const rowMean = (row) => {
+    let total = 0;
+    for (let x = 0; x < width; x++) total += pixels[(row * width + x) * 4];
+    return total / width;
+  };
+  const northPole = rowMean(0);
+  const southPole = rowMean(height - 1);
+  const sample = (u, v) => {
+    if (v >= 1 - 1e-6) return northPole;
+    if (v <= 1e-6) return southPole;
+    const px = (((u % 1) + 1) % 1) * width - 0.5;
+    const xFloor = Math.floor(px);
+    const x0 = ((xFloor % width) + width) % width;
+    const x1 = (x0 + 1) % width;
+    const tx = px - xFloor;
+    const py = Math.min(height - 1, Math.max(0, (1 - v) * height - 0.5));
+    const y0 = Math.floor(py);
+    const y1 = Math.min(height - 1, y0 + 1);
+    const ty = py - y0;
+    const a = pixels[(y0 * width + x0) * 4] * (1 - tx) + pixels[(y0 * width + x1) * 4] * tx;
+    const b = pixels[(y1 * width + x0) * 4] * (1 - tx) + pixels[(y1 * width + x1) * 4] * tx;
+    return a * (1 - ty) + b * ty;
+  };
+
+  for (let i = 0; i < position.count; i++) {
+    const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
+    const radius = Math.hypot(x, y, z);
+    if (!radius) continue;
+    const normalizedHeight = sample(uv.getX(i), uv.getY(i)) / 255;
+    const offset = (normalizedHeight - 0.5) * depth;
+    const scale = (radius + offset) / radius;
+    position.setXYZ(i, x * scale, y * scale, z * scale);
+  }
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
 /** A roughness map (the green channel) of a relief canvas: 0.25 of the metal's roughness on the field, all of it on the engraving. */
 function roughnessOf(source) {
   const canvas = document.createElement('canvas');
@@ -68,17 +127,18 @@ function roughnessOf(source) {
  * @param {number} [options.soften]  pixels of blur on the relief that cuts the mesh itself (0 for none): the mesh has only so many vertices
  * @param {boolean} [options.frost]  frost the engraving and leave the field polished
  * @param {number[]} [options.segments]  the sphere's width and height in segments
- * @param {number} [options.height]  how deep the relief is cut, as a fraction of the radius
+ * @param {number} [options.height]  full low-to-high terrain range as a fraction of the radius (topography only)
+ * @param {boolean} [options.topography]  bake the relief canvas into the sphere vertices as real terrain
  */
-export function createMetalGlobe(GFX, { radius = RADIUS, relief, metal = 'steel', height = 0.02, bump = -9, soften = 0, frost = false, segments = [384, 256] } = {}) {
-  // Two readings of the relief: sharp for the bump, which carries the fine detail, and softened for the
-  // displacement, which cuts the mesh itself (it has only so many vertices) so the engraving has real depth.
+export function createMetalGlobe(GFX, { radius = RADIUS, relief, metal = 'steel', height = 0.02, bump = -9, soften = 0, frost = false, topography = false, segments = [384, 256] } = {}) {
   const gray = relief ? heightOf(relief) : null;
+  const deepCanvas = relief ? heightOf(relief, soften) : null;
   const map = gray ? new GFX.CanvasTexture(gray) : null;
-  const deep = relief ? new GFX.CanvasTexture(heightOf(relief, soften)) : null;
   // Currency finish: the field polished to a mirror and the engraving frosted, as a proof coin is struck.
   const rough = relief && frost ? new GFX.CanvasTexture(roughnessOf(relief)) : null;
-  for (const t of [map, deep, rough]) if (t) { t.wrapS = GFX.RepeatWrapping; t.anisotropy = 4; }
+  for (const t of [map, rough]) if (t) { t.wrapS = GFX.RepeatWrapping; t.anisotropy = 4; }
+  const geometry = new GFX.SphereGeometry(radius, ...segments);
+  if (topography && deepCanvas) displaceSphereGeometry(geometry, deepCanvas, radius * height);
   const material = new GFX.MeshPhysicalMaterial({
     name: 'metal',
     color: new GFX.Color('#ffffff'),
@@ -86,9 +146,9 @@ export function createMetalGlobe(GFX, { radius = RADIUS, relief, metal = 'steel'
     roughness: 0.3,
     envMapIntensity: 3,
     ...(rough ? { roughnessMap: rough } : {}),
-    ...(map ? { bumpMap: map, bumpScale: bump, displacementMap: deep, displacementScale: -radius * height, displacementBias: 0 } : {}),
+    ...(map && bump !== 0 ? { bumpMap: map, bumpScale: bump } : {}),
   });
-  const mesh = new GFX.Mesh(new GFX.SphereGeometry(radius, ...segments), material);
+  const mesh = new GFX.Mesh(geometry, material);
   mesh.name = 'metal globe';
   mesh.castShadow = true;
   mesh.receiveShadow = true;
