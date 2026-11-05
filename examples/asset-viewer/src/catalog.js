@@ -183,7 +183,7 @@ const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.
  */
 const MOVING = [
   ['krystal', 'Animated props', 'crystal ball', () => avatar('../../../src/heroes/krystal/index.js', 'createKrystal')],
-  ['glass globe', 'Animated props', 'Earth in glass', () => import('../../../src/props/glassglobe.js').then((m) => {
+  ['glass globe', 'Animated props', 'Earth', () => import('../../../src/props/glassglobe.js').then((m) => {
     const globe = m.createGlassGlobe(GFX, { radius: 0.6, mist: true, animate: true });
     globe.orient(40, -95);
     globe.spinRate = 0.12;
@@ -191,7 +191,7 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
-  ['glass mars', 'Animated props', 'Mars in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/mars/map.js')]).then(async ([m, mars]) => {
+  ['glass mars', 'Animated props', 'Mars', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/mars/map.js')]).then(async ([m, mars]) => {
     // Mars at its true size beside the Earth globe: 0.532 of its radius, its MOLA surface etched in the glass.
     const r = m.RADIUS * mars.SIZE_VS_EARTH;
     const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await mars.loadMarsEtch() });
@@ -203,7 +203,7 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
-  ['glass moon', 'Animated props', 'Moon in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/moon/map.js')]).then(async ([m, moon]) => {
+  ['glass moon', 'Animated props', 'Moon', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/moon/map.js')]).then(async ([m, moon]) => {
     // The Moon at its true size beside the Earth globe: 0.273 of its radius, its LOLA surface etched in the glass.
     const r = m.RADIUS * moon.SIZE_VS_EARTH;
     const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await moon.loadMoonEtch() });
@@ -215,7 +215,7 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
-  ['glass jupiter', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
+  ['glass jupiter', 'Animated props', 'Jupiter', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
     // Shown at the Earth globe's size: Jupiter is 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
     const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false, mist: true, animate: true });
     // White mist swirls inside, as the planet's pale zones are; the photograph's clouds drift over it as the field.
@@ -227,7 +227,7 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
-  ['glass jupiter etched', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
+  ['glass jupiter etched', 'Animated props', 'Jupiter', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
     // The alternate: the zones and belts etched in the glass, and the mist in belts that shear sideways, in the planet's rust-red and blue-green.
     const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, mist: true, animate: true, etchCanvas: await jupiter.loadJupiterEtch() });
     globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.02, 0.62, 0.78]], glow: 2.4, core: 0.1, swirl: 0.6 });
@@ -237,14 +237,47 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
+  // The same planets in solid metal, their relief raised; the metal is the viewer's `metal` option.
+  ...[
+    ['metal earth', 'Earth', () => import('../../../src/textures/earth/map.js'), 'loadEarthRelief', [40, -95], {}, { bump: -8, soften: 0.6, height: 0.022, segments: [768, 512] }],
+    ['metal mars', 'Mars', () => import('../../../src/textures/mars/map.js'), 'loadMarsEtch', [-5, -90], {}, {}],
+    ['metal moon', 'Moon', () => import('../../../src/textures/moon/map.js'), 'loadMoonEtch', [0, 0], {}, {}],
+    ['metal jupiter', 'Jupiter', () => import('../../../src/textures/jupiter/map.js'), 'loadJupiterEtch', [-22, 0], { relief: true }, { bump: -8, soften: 0.5, height: 0.03, segments: [640, 384] }],
+  ].map(([name, group, load, loader, [lat, lon], args, look]) => [name, 'Animated props', group, ({ metal = 'steel' } = {}) => Promise.all([import('../../../src/props/metalglobe.js'), load()]).then(async ([m, t]) => {
+    const size = t.SIZE_VS_EARTH ?? 1;
+    // True size beside the Earth globe (the Moon, Mars), but Jupiter, 11 Earths across, at the Earth's.
+    const radius = 0.6 * (name === 'metal jupiter' ? 1 : size);
+    const globe = m.createMetalGlobe(GFX, { radius, relief: await t[loader](args), metal, ...look });
+    globe.orient(lat, lon);
+    globe.spinRate = 0.12;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
+  }), 'props/metalglobe', { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }]),
+  // And in cast resin, as the dice are: the Earth blue and green, Mars red, the Moon a warm white.
+  ...[
+    ['resin earth', 'Earth', () => import('../../../src/textures/earth/map.js'), 'loadEarthRelief', [40, -95], { colors: { low: '#1c5fb5', high: '#2f9a58' } }],
+    ['resin mars', 'Mars', () => import('../../../src/textures/mars/map.js'), 'loadMarsEtch', [-5, -90], { color: '#b8331f' }],
+    ['resin moon', 'Moon', () => import('../../../src/textures/moon/map.js'), 'loadMoonEtch', [0, 0], { color: '#f2e7d0' }],
+  ].map(([name, group, load, loader, [lat, lon], paint]) => [name, 'Animated props', group, () => Promise.all([import('../../../src/props/resinglobe.js'), import('../../../src/props/metalglobe.js'), load()]).then(async ([r, m, t]) => {
+    const radius = 0.6 * (t.SIZE_VS_EARTH ?? 1);
+    const globe = r.createResinGlobe(GFX, { radius, relief: await t[loader](), ...paint });
+    globe.orient(lat, lon);
+    globe.spinRate = 0.12;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
+  }), 'props/resinglobe']),
+  // A coin of the logo, raised, in the same metals.
+  ['coin', 'Animated props', 'coin', ({ metal = 'gold' } = {}) => Promise.all([import('../../../src/props/coin.js'), import('../../../src/props/metalglobe.js'), import('../../../src/textures/coin/logo.js')]).then(async ([c, m, t]) => {
+    const coin = c.createCoin(GFX, { radius: 0.3, logo: await t.loadCoinLogo(), metal });
+    coin.spinRate = 0.9;
+    return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
+  }), 'props/coin', { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
-function movingItem([name, category, group, make, from = null]) {
+function movingItem([name, category, group, make, from = null, options = null]) {
   const source = from ?? (category === 'Props' ? 'props/pan' : `heroes/${name}`);
   return {
-    id: `${category === 'Props' ? 'props' : 'animated'}/${name}`, category, group, name, source, kind: 'object',
-    async build() {
-      const made = await make();
+    id: `${category === 'Props' ? 'props' : 'animated'}/${name}`, category, group, name, source, kind: 'object', options,
+    async build(opts = {}) {
+      const made = await make(opts);
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
       return { object, frame: made?.frame, mist: made?.mist, ...dressOf(made), info: { Source: source, ...countOf(object) } };
