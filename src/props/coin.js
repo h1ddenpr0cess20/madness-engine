@@ -141,7 +141,7 @@ export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold', yea
     work.width = W; work.height = H;
     const wctx = work.getContext('2d', { willReadFrequently: true });
     wctx.drawImage(logo, 0, 0);
-    const [x0, y0, x1, y1] = boxOf(wctx.getImageData(0, 0, W, H).data, W, H);
+    const [, y0, x1, y1] = boxOf(wctx.getImageData(0, 0, W, H).data, W, H);
     wctx.fillStyle = '#ffffff';
     wctx.font = `700 ${Math.round((y1 - y0) * 0.13)}px Georgia, 'Times New Roman', serif`;
     wctx.textAlign = 'right'; wctx.textBaseline = 'top';
