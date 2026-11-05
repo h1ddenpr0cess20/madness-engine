@@ -23,7 +23,7 @@ as a field of mist (`setField`), as globes does with its temperature.
 """
 import base64, io, os, sys
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 OUT_W, OUT_H = 4096, 2048
 UPSCALE = 4
@@ -32,13 +32,13 @@ UPSCALE = 4
 # is the photograph's brightness, 0 darkest to 1 brightest. The belts go to brown and rust, the zones to
 # cream and a cool white, so the planet reads as itself rather than as the photograph, which is dim and faded.
 JUPITER_STOPS = [
-    [0.00, [92, 62, 44]],
-    [0.25, [158, 104, 66]],
-    [0.45, [206, 152, 102]],
-    [0.62, [226, 200, 160]],
-    [0.80, [240, 232, 214]],
-    [0.92, [236, 240, 246]],
-    [1.00, [250, 250, 252]],
+    [0.00, [58, 34, 24]],
+    [0.20, [120, 70, 42]],
+    [0.40, [182, 118, 74]],
+    [0.58, [214, 176, 132]],
+    [0.76, [238, 222, 196]],
+    [0.90, [246, 242, 232]],
+    [1.00, [255, 255, 255]],
 ]
 
 
@@ -55,7 +55,21 @@ def value_of(disc, cx, cy, r):
     inside = (xx - cx) ** 2 + (yy - cy) ** 2 < (r * 0.97) ** 2
     lum = 0.2126 * disc[..., 0] + 0.7152 * disc[..., 1] + 0.0722 * disc[..., 2]
     lo, hi = np.percentile(lum[inside], [0.5, 99.5])
-    return np.clip((lum - lo) / max(hi - lo, 1e-6), 0, 1) ** 0.8
+    v = np.clip((lum - lo) / max(hi - lo, 1e-6), 0, 1)
+    # a gentle S-curve so belts and zones separate, then a sharpen for the small storms
+    v = v * v * (3 - 2 * v) * 0.6 + v * 0.4
+    blur = np.asarray(Image.fromarray((v * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(6))).astype(np.float64) / 255
+    return np.clip(v + (v - blur) * 1.2, 0, 1)
+
+
+def redness_of(disc, cx, cy, r):
+    """How red the disc is, 0..1, so the Great Red Spot and the brown belts keep their hue."""
+    yy, xx = np.mgrid[0:disc.shape[0], 0:disc.shape[1]]
+    inside = (xx - cx) ** 2 + (yy - cy) ** 2 < (r * 0.97) ** 2
+    lum = disc.mean(axis=2) + 1e-6
+    red = (disc[..., 0] - disc[..., 2]) / lum
+    lo, hi = np.percentile(red[inside], [2, 99.8])
+    return np.clip((red - lo) / max(hi - lo, 1e-6), 0, 1)
 
 
 def scale_from_photo(disc, value, cx, cy, r, saturation=3.0, bins=24):
@@ -88,7 +102,7 @@ def layout(value, cx, cy, r, lon0):
     xs = np.cos(lat) * np.sin(dlon)
     ys = np.sin(lat) * np.ones_like(dlon)
     zs = np.cos(lat) * np.cos(dlon)
-    front = zs > 0.0
+    zs = np.abs(zs)  # the far side is the near side mirrored, so the belts and their storms carry on round
     # Bilinear across the four pixels round each point.
     fx = np.clip(cx + r * xs - 0.5, 0, value.shape[1] - 1.001)
     fy = np.clip(cy - r * ys - 0.5, 0, value.shape[0] - 1.001)
@@ -97,6 +111,7 @@ def layout(value, cx, cy, r, lon0):
     v = ((value[y0, x0] * (1 - tx) + value[y0, x0 + 1] * tx) * (1 - ty)
          + (value[y0 + 1, x0] * (1 - tx) + value[y0 + 1, x0 + 1] * tx) * ty)
 
+    v = v * (0.7 + 0.3 / np.maximum(zs, 0.35))  # lift the limb's darkening a little
     # Each latitude's mean over the well-lit middle of the visible hemisphere, for the far side and the limb.
     core = zs > 0.5
     count = core.sum(axis=1)
@@ -104,7 +119,7 @@ def layout(value, cx, cy, r, lon0):
     rows = np.nonzero(count > 0)[0]  # near the poles no column is well lit: take the nearest latitude that is
     mean = np.interp(np.arange(OUT_H), rows, mean[rows])
     mean = np.broadcast_to(mean[:, None], v.shape)
-    keep = np.clip(zs / 0.5, 0.0, 1.0)
+    keep = np.clip(zs / 0.4, 0.0, 1.0)
     return np.clip(v * keep + mean * (1.0 - keep), 0, 1)
 
 
@@ -121,8 +136,13 @@ def main():
     cx, cy, r = cx * UPSCALE, cy * UPSCALE, r * UPSCALE
     value_disc = value_of(disc, cx, cy, r)
     value = layout(value_disc, cx, cy, r, lon0)
+    red = layout(redness_of(disc, cx, cy, r), cx, cy, r, lon0)
     lut = stops_lut(JUPITER_STOPS)
-    colours = lut[np.round(value * (len(lut) - 1)).astype(int)].astype(np.uint8)
+    colours = lut[np.round(value * (len(lut) - 1)).astype(int)]
+    # the red the photograph has: pull the colour toward rust where it is red, most where it is dark
+    rust = np.array([190.0, 82.0, 44.0])
+    k = (np.clip(red, 0, 1) ** 1.5 * 0.85)[..., None] * (1.0 - 0.35 * value[..., None])
+    colours = np.clip(colours * (1 - k) + rust * k * (0.55 + 0.6 * value[..., None]), 0, 255).astype(np.uint8)
     im = Image.fromarray(colours, "RGB")
     buf = io.BytesIO()
     im.save(buf, "JPEG", quality=85, optimize=True)
