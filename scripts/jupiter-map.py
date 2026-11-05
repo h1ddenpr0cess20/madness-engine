@@ -26,6 +26,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 OUT_W, OUT_H = 4096, 2048
+SPOT = (230, 246, 34)  # the Great Red Spot in the 352 px disc: x, y, radius
 UPSCALE = 4
 
 # Jupiter's colour scale, in globes' form (stops of value and color, as its temperature scale is): the value
@@ -97,30 +98,32 @@ def layout(value, cx, cy, r, lon0):
     """The values of the cylindrical layout, rows from 90N, columns from -180 east, as 0..1."""
     lat = np.radians(90 - (np.arange(OUT_H) + 0.5) / OUT_H * 180)[:, None]
     lon = np.radians((np.arange(OUT_W) + 0.5) / OUT_W * 360 - 180)[None, :]
-    dlon = lon - np.radians(lon0)
+    # Only the well-lit middle of the disc is clean; fold the longitude into it as a triangle wave, so the
+    # patch is mirrored round the planet and meets itself, with no limb, no seam and no invented band.
+    span = np.radians(62)
+    dlon = span * (2 / np.pi) * np.arcsin(np.sin(np.pi * (lon - np.radians(lon0)) / (2 * span)))
     # The point on the sphere, seen from the camera: x east (right), y north (up), z toward the camera.
     xs = np.cos(lat) * np.sin(dlon)
     ys = np.sin(lat) * np.ones_like(dlon)
     zs = np.cos(lat) * np.cos(dlon)
-    zs = np.abs(zs)  # the far side is the near side mirrored, so the belts and their storms carry on round
-    # Bilinear across the four pixels round each point.
-    fx = np.clip(cx + r * xs - 0.5, 0, value.shape[1] - 1.001)
-    fy = np.clip(cy - r * ys - 0.5, 0, value.shape[0] - 1.001)
-    x0, y0 = np.floor(fx).astype(int), np.floor(fy).astype(int)
-    tx, ty = fx - x0, fy - y0
-    v = ((value[y0, x0] * (1 - tx) + value[y0, x0 + 1] * tx) * (1 - ty)
-         + (value[y0 + 1, x0] * (1 - tx) + value[y0 + 1, x0 + 1] * tx) * ty)
+    def sample(fx, fy):
+        # Bilinear across the four pixels round each point.
+        fx = np.clip(fx - 0.5, 0, value.shape[1] - 1.001)
+        fy = np.clip(fy - 0.5, 0, value.shape[0] - 1.001)
+        x0, y0 = np.floor(fx).astype(int), np.floor(fy).astype(int)
+        tx, ty = fx - x0, fy - y0
+        return ((value[y0, x0] * (1 - tx) + value[y0, x0 + 1] * tx) * (1 - ty)
+                + (value[y0 + 1, x0] * (1 - tx) + value[y0 + 1, x0 + 1] * tx) * ty)
 
-    v = v * (0.7 + 0.3 / np.maximum(zs, 0.35))  # lift the limb's darkening a little
-    # Each latitude's mean over the well-lit middle of the visible hemisphere, for the far side and the limb.
-    core = zs > 0.5
-    count = core.sum(axis=1)
-    mean = (v * core).sum(axis=1) / np.maximum(count, 1)
-    rows = np.nonzero(count > 0)[0]  # near the poles no column is well lit: take the nearest latitude that is
-    mean = np.interp(np.arange(OUT_H), rows, mean[rows])
-    mean = np.broadcast_to(mean[:, None], v.shape)
-    keep = np.clip(zs / 0.4, 0.0, 1.0)
-    return np.clip(v * keep + mean * (1.0 - keep), 0, 1)
+    fx, fy = cx + r * xs, cy - r * ys
+    v = sample(fx, fy)
+    # The mirrored copies would repeat the Great Red Spot: keep it in the one real copy, and in the others
+    # read the same latitude from beside the spot, where the belt carries on without it.
+    spot = np.clip(((SPOT[2] + 14) * UPSCALE - np.hypot(fx - SPOT[0] * UPSCALE, fy - SPOT[1] * UPSCALE)) / (14 * UPSCALE), 0, 1)
+    primary = np.abs(np.degrees(((lon - np.radians(lon0) + np.pi) % (2 * np.pi)) - np.pi)) < 62
+    drop = spot * ~primary
+    aside = sample(fx - 80 * UPSCALE, fy)
+    return np.clip(v * (1 - drop) + aside * drop, 0, 1)
 
 
 def main():
@@ -140,9 +143,9 @@ def main():
     lut = stops_lut(JUPITER_STOPS)
     colours = lut[np.round(value * (len(lut) - 1)).astype(int)]
     # the red the photograph has: pull the colour toward rust where it is red, most where it is dark
-    rust = np.array([190.0, 82.0, 44.0])
-    k = (np.clip(red, 0, 1) ** 1.5 * 0.85)[..., None] * (1.0 - 0.35 * value[..., None])
-    colours = np.clip(colours * (1 - k) + rust * k * (0.55 + 0.6 * value[..., None]), 0, 255).astype(np.uint8)
+    rust = np.array([196.0, 58.0, 30.0])
+    k = (np.clip(red * 1.3 - 0.25, 0, 1) ** 1.3)[..., None]
+    colours = np.clip(colours * (1 - k) + rust * k * (0.8 + 0.4 * value[..., None]), 0, 255).astype(np.uint8)
     im = Image.fromarray(colours, "RGB")
     buf = io.BytesIO()
     im.save(buf, "JPEG", quality=85, optimize=True)
