@@ -36,11 +36,26 @@ import { split } from './split.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Engine-authored library assets are kept when the game-built library is regenerated.
 const ENGINE_OWNED = [
+  // Engine-authored props have no game origin; keep them when the game-built library is regenerated.
   'props/bowling-ball.js',
+  'props/bowling-pin.js',
+  'props/cafe.js',
+  'props/chair.js',
+  'props/coin.js',
   'props/cookware.js',
+  'props/glassglobe.js',
+  'props/groceries.js',
+  'props/halloween.js',
+  'props/harvest.js',
   'props/metal-finish.js',
+  'props/metalglobe.js',
   'props/pan/cast.js',
   'props/pan/index.js',
+  'props/podium.js',
+  'props/pumpkin.js',
+  'props/resinglobe.js',
+  'props/sweets.js',
+  'props/winter.js',
 ];
 const SRC = join(HERE, '..', '..', 'src');
 export const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music'];

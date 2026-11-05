@@ -13,11 +13,21 @@ test('both cookware finish variants are registered on the Props shelf', () => {
   assert.ok(catalog.includes("'props/cookware'"));
 });
 
-test('the cookware modules and skillet base survive library extraction', () => {
+test('cookware and its shared metal/skillet dependencies survive library extraction', () => {
   for (const path of [
     'props/cookware.js',
     'props/metal-finish.js',
+    'props/metalglobe.js',
     'props/pan/cast.js',
     'props/pan/index.js',
+  ]) assert.ok(extraction.includes(path), path);
+});
+
+test('other engine-authored prop assets are retained by the same extraction allowlist', () => {
+  for (const path of [
+    'props/bowling-pin.js',
+    'props/coin.js',
+    'props/glassglobe.js',
+    'props/resinglobe.js',
   ]) assert.ok(extraction.includes(path), path);
 });
