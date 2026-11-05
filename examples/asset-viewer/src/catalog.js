@@ -215,6 +215,16 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
+  ['glass jupiter', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
+    // Shown at the Earth globe's size: Jupiter is 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
+    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false });
+    // The clouds are the mist: they drift inside the glass, so they read as gas.
+    globe.setField(await jupiter.loadJupiterMap(), { shell: 0.8, glow: 1 }).refreshField();
+    globe.orient(-22, 0);
+    globe.spinRate = 0.12;
+    // No mist toggle: the clouds are the field, and the viewer hides the toggle when `mist` is absent.
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: null });
+  }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
 function movingItem([name, category, group, make, from = null]) {
