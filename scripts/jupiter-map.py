@@ -100,7 +100,7 @@ def layout(value, cx, cy, r, lon0):
     lon = np.radians((np.arange(OUT_W) + 0.5) / OUT_W * 360 - 180)[None, :]
     # Only the well-lit middle of the disc is clean; fold the longitude into it as a triangle wave, so the
     # patch is mirrored round the planet and meets itself, with no limb, no seam and no invented band.
-    span = np.radians(62)
+    span = np.radians(50)
     dlon = span * (2 / np.pi) * np.arcsin(np.sin(np.pi * (lon - np.radians(lon0)) / (2 * span)))
     # The point on the sphere, seen from the camera: x east (right), y north (up), z toward the camera.
     xs = np.cos(lat) * np.sin(dlon)
@@ -120,10 +120,17 @@ def layout(value, cx, cy, r, lon0):
     # The mirrored copies would repeat the Great Red Spot: keep it in the one real copy, and in the others
     # read the same latitude from beside the spot, where the belt carries on without it.
     spot = np.clip(((SPOT[2] + 14) * UPSCALE - np.hypot(fx - SPOT[0] * UPSCALE, fy - SPOT[1] * UPSCALE)) / (14 * UPSCALE), 0, 1)
-    primary = np.abs(np.degrees(((lon - np.radians(lon0) + np.pi) % (2 * np.pi)) - np.pi)) < 62
+    primary = np.abs(np.degrees(((lon - np.radians(lon0) + np.pi) % (2 * np.pi)) - np.pi)) < 50
     drop = spot * ~primary
     aside = sample(fx - 80 * UPSCALE, fy)
-    return np.clip(v * (1 - drop) + aside * drop, 0, 1)
+    v = v * (1 - drop) + aside * drop
+    # Level the columns: the photograph darkens toward its limb, which would show as dark vertical bands where
+    # the patch folds. Each column is scaled to the mean of the middle one, over the latitudes the photo holds.
+    band = np.abs(lat[:, 0]) < np.radians(55)
+    colmean = v[band].mean(axis=0)
+    colmean = np.convolve(np.pad(colmean, 40, mode='wrap'), np.ones(81) / 81, 'valid')
+    v = v * (colmean.max() / np.maximum(colmean, 1e-3))[None, :] ** 0.9
+    return np.clip(v, 0, 1)
 
 
 def main():
