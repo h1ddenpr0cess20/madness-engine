@@ -96,6 +96,7 @@ const gridTexture = (() => {
 })();
 gridTexture.repeat.set(24, 24);
 const floor = new GFX.Mesh(new GFX.PlaneGeometry(24, 24), new GFX.MeshStandardMaterial({ map: gridTexture, roughness: 0.9 }));
+floor.visible = false; // the grid is off until Grid (G) turns it on (the button is lit while it shows)
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
@@ -183,7 +184,7 @@ async function show(item) {
     $('moodrow').style.display = item.kind === 'object' ? '' : 'none';
     // Models stand on y = 0; centre the thing over the origin and look at its middle.
     const b = built.frame ? { min: built.frame.center.map((c) => c - built.frame.radius), max: built.frame.center.map((c) => c + built.frame.radius), size: [2, 2, 2].map((v) => v * built.frame.radius) } : boundsOf(built.object);
-    floor.visible = !built.noFloor && !$('gridbtn').classList.contains('on');
+    floor.visible = !built.noFloor && $('gridbtn').classList.contains('on');
     view.center.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
     view.radius = Math.max(0.2, Math.hypot(...b.size) / 2);
     view.bounds = b;
@@ -724,7 +725,7 @@ $('note').oninput = () => { const f = flags[view.item?.id]; if (f) { f.note = $(
 $('mistbox').onchange = () => view.built?.mist?.set($('mistbox').checked);
 $('turn').onclick = () => { controls.autoRotate = !controls.autoRotate; $('turn').classList.toggle('on', controls.autoRotate); };
 $('sheetbtn').onclick = contactSheet;
-$('gridbtn').onclick = () => { floor.visible = !floor.visible; $('gridbtn').classList.toggle('on', !floor.visible); };
+$('gridbtn').onclick = () => { floor.visible = !floor.visible; $('gridbtn').classList.toggle('on', floor.visible); };
 $('pause').onclick = () => { view.paused = !view.paused; $('pause').classList.toggle('on', view.paused); };
 $('speed').oninput = () => { view.speed = Number($('speed').value); };
 $('clip').onchange = () => { view.clip = $('clip').value; view.clipStart = view.clock; };
