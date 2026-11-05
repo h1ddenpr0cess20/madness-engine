@@ -219,8 +219,8 @@ const MOVING = [
     // Shown at the Earth globe's size: Jupiter is 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
     const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false, mist: true, animate: true });
     // White mist swirls inside, as the planet's pale zones are; the photograph's clouds drift over it as the field.
-    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 0.7, core: 0.04 });
-    globe.setField(await jupiter.loadJupiterMap(), { shell: 0.9, glow: 1.7 }).refreshField();
+    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 0.4, core: 0.02 });
+    globe.setField(await jupiter.loadJupiterMap(), { shell: 0.9, glow: 1.3 }).refreshField();
     globe.orient(-22, 0);
     globe.spinRate = 0.12;
     // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
