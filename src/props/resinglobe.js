@@ -1,5 +1,5 @@
 import { RADIUS } from './glassglobe.js';
-import { heightOf } from './metalglobe.js';
+import { displaceSphereGeometry, heightOf } from './metalglobe.js';
 
 /**
  * A planet in resin, the material the dice are cast in (`dice.js`): glossy, a clearcoat over a colored body,
@@ -39,13 +39,14 @@ function colorsOf(source, low, high) {
  * @param {number} [options.bump]  the bump map's strength (negative cuts in)
  * @param {number} [options.soften]  pixels of blur on the relief that cuts the mesh itself
  * @param {number[]} [options.segments]  the sphere's width and height in segments
- * @param {number} [options.height]  how deep the relief is cut, as a fraction of the radius
+ * @param {number} [options.height]  full low-to-high terrain range as a fraction of the radius (topography only)
+ * @param {boolean} [options.topography]  bake the relief canvas into the sphere vertices as real terrain
  */
-export function createResinGlobe(GFX, { radius = RADIUS, relief, color = '#3a3350', colors = null, height = 0.016, bump = -6, soften = 0, segments = [384, 256] } = {}) {
+export function createResinGlobe(GFX, { radius = RADIUS, relief, color = '#3a3350', colors = null, height = 0.016, bump = -6, soften = 0, topography = false, segments = [384, 256] } = {}) {
   const gray = relief ? heightOf(relief) : null;
+  const deepCanvas = relief ? heightOf(relief, soften) : null;
   const map = gray ? new GFX.CanvasTexture(gray) : null;
-  const deep = relief ? new GFX.CanvasTexture(heightOf(relief, soften)) : null;
-  for (const t of [map, deep]) if (t) { t.wrapS = GFX.RepeatWrapping; t.anisotropy = 4; }
+  if (map) { map.wrapS = GFX.RepeatWrapping; map.anisotropy = 4; }
   let colorMap = null;
   if (relief && colors) {
     colorMap = new GFX.CanvasTexture(colorsOf(relief, colors.low, colors.high));
@@ -62,9 +63,11 @@ export function createResinGlobe(GFX, { radius = RADIUS, relief, color = '#3a335
     clearcoat: 0.9,
     clearcoatRoughness: 0.14,
     ...(colorMap ? { map: colorMap } : {}),
-    ...(map ? { bumpMap: map, bumpScale: bump, displacementMap: deep, displacementScale: -radius * height, displacementBias: 0 } : {}),
+    ...(map && bump !== 0 ? { bumpMap: map, bumpScale: bump } : {}),
   });
-  const mesh = new GFX.Mesh(new GFX.SphereGeometry(radius, ...segments), material);
+  const geometry = new GFX.SphereGeometry(radius, ...segments);
+  if (topography && deepCanvas) displaceSphereGeometry(geometry, deepCanvas, radius * height);
+  const mesh = new GFX.Mesh(geometry, material);
   mesh.name = 'resin globe';
   mesh.castShadow = true;
   mesh.receiveShadow = true;
