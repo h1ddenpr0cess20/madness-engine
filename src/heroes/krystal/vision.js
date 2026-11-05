@@ -42,7 +42,7 @@ export function visionUniforms(GFX) {
     uRadius: { value: 1 },
     uCenter: { value: new GFX.Vector3() },
     // Added last (the WGSL struct follows this order): `bands` stretches the mist into horizontal belts that
-    // shear past each other; `duo` (0 or 1) colors it, in place of the palette, with A (red) along Jupiter's belts, B (cream) between them, mostly B, and a little C (blue-green) where the mist is thin.
+    // shear past each other; `duo` (0 or 1) colors it, in place of the palette, with A (red) along Jupiter's belts, B (cream) between them, mostly B, and a little C (blue-green) around the equator.
     uBands: { value: 0 },
     uDuoA: { value: new GFX.Vector3(1, 0.3, 0.2) },
     uDuoB: { value: new GFX.Vector3(0.15, 0.75, 0.7) },
@@ -126,7 +126,7 @@ void main() {
     vec3 tone = palette((shade + d2 * 0.3) * uSpread + uHue);
     if (uDuo > 0.5) {
       tone = mix(uDuoA, uDuoB, smoothstep(-0.75, 0.3, 0.45 * shade + 0.8 * cos((p.y - 0.16) * 12.5)));
-      tone = mix(tone, uDuoC, 0.85 * smoothstep(0.45, 0.9, shade));
+      tone = mix(tone, uDuoC, 1.0 * smoothstep(0.0, 0.5, shade - 0.17 * (2.8 + uBands * 4.0) * p.y) * exp(-p.y * p.y * 10.0));
     }
     col += tone * dens;
     col += light * uCore * exp(-d2 * 7.0) * 0.35;
@@ -204,7 +204,7 @@ fn fs(v: VOut) -> @location(0) vec4f {
     var tone = palette((m.shade + d2 * 0.3) * material.uSpread + material.uHue);
     if (material.uDuo > 0.5) {
       tone = mix(material.uDuoA, material.uDuoB, smoothstep(-0.75, 0.3, 0.45 * m.shade + 0.8 * cos((p.y - 0.16) * 12.5)));
-      tone = mix(tone, material.uDuoC, 0.85 * smoothstep(0.45, 0.9, m.shade));
+      tone = mix(tone, material.uDuoC, 1.0 * smoothstep(0.0, 0.5, m.shade - 0.17 * (2.8 + material.uBands * 4.0) * p.y) * exp(-p.y * p.y * 10.0));
     }
     col += tone * m.density * edge * edge;
     col += light * material.uCore * exp(-d2 * 7.0) * 0.35;

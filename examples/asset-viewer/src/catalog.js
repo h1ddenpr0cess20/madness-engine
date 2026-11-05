@@ -230,7 +230,7 @@ const MOVING = [
   ['glass jupiter etched', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
     // The alternate: the zones and belts etched in the glass, and the mist in belts that shear sideways, in the planet's rust-red and blue-green.
     const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, mist: true, animate: true, etchCanvas: await jupiter.loadJupiterEtch() });
-    globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.12, 0.72, 0.68]], glow: 2.4, core: 0.1, swirl: 0.6 });
+    globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.02, 0.62, 0.78]], glow: 2.4, core: 0.1, swirl: 0.6 });
     globe.orient(-22, 0);
     globe.spinRate = 0.12;
     // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
