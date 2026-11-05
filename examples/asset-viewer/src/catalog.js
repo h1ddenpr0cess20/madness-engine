@@ -240,14 +240,16 @@ const MOVING = [
   // The same planets in solid metal, their relief raised; the metal is the viewer's `metal` option.
   ...[
     ['metal earth', 'Earth', () => import('../../../src/textures/earth/map.js'), 'loadEarthRelief', [40, -95], {}, { bump: -8, soften: 0.6, height: 0.022, segments: [768, 512] }],
-    ['metal mars', 'Mars', () => import('../../../src/textures/mars/map.js'), 'loadMarsEtch', [-5, -90], {}, {}],
-    ['metal moon', 'Moon', () => import('../../../src/textures/moon/map.js'), 'loadMoonEtch', [0, 0], {}, {}],
+    ['metal mars', 'Mars', () => import('../../../src/textures/mars/map.js'), 'loadMarsEtch', [-5, -90], {}, {}, true],
+    ['metal moon', 'Moon', () => import('../../../src/textures/moon/map.js'), 'loadMoonEtch', [0, 0], {}, {}, true],
     ['metal jupiter', 'Jupiter', () => import('../../../src/textures/jupiter/map.js'), 'loadJupiterEtch', [-22, 0], { relief: true }, { bump: -8, soften: 0.5, height: 0.03, segments: [640, 384] }],
-  ].map(([name, group, load, loader, [lat, lon], args, look]) => [name, 'Animated props', group, ({ metal = 'steel' } = {}) => Promise.all([import('../../../src/props/metalglobe.js'), load()]).then(async ([m, t]) => {
+  ].map(([name, group, load, loader, [lat, lon], args, look, reverse = false]) => [name, 'Animated props', group, ({ metal = 'steel' } = {}) => Promise.all([import('../../../src/props/metalglobe.js'), load()]).then(async ([m, t]) => {
     const size = t.SIZE_VS_EARTH ?? 1;
     // True size beside the Earth globe (the Moon, Mars), but Jupiter, 11 Earths across, at the Earth's.
     const radius = 0.6 * (name === 'metal jupiter' ? 1 : size);
-    const globe = m.createMetalGlobe(GFX, { radius, relief: await t[loader](args), metal, ...look });
+    const sourceRelief = await t[loader](args);
+    const relief = reverse ? m.reverseRelief(sourceRelief) : sourceRelief;
+    const globe = m.createMetalGlobe(GFX, { radius, relief, metal, ...look });
     globe.orient(lat, lon);
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
@@ -255,11 +257,13 @@ const MOVING = [
   // And in cast resin, as the dice are: the Earth blue and green, Mars red, the Moon a warm white.
   ...[
     ['resin earth', 'Earth', () => import('../../../src/textures/earth/map.js'), 'loadEarthRelief', [40, -95], { colors: { low: '#1c5fb5', high: '#2f9a58' } }],
-    ['resin mars', 'Mars', () => import('../../../src/textures/mars/map.js'), 'loadMarsEtch', [-5, -90], { color: '#b8331f' }],
-    ['resin moon', 'Moon', () => import('../../../src/textures/moon/map.js'), 'loadMoonEtch', [0, 0], { color: '#f2e7d0' }],
-  ].map(([name, group, load, loader, [lat, lon], paint]) => [name, 'Animated props', group, () => Promise.all([import('../../../src/props/resinglobe.js'), import('../../../src/props/metalglobe.js'), load()]).then(async ([r, m, t]) => {
+    ['resin mars', 'Mars', () => import('../../../src/textures/mars/map.js'), 'loadMarsEtch', [-5, -90], { color: '#b8331f' }, true],
+    ['resin moon', 'Moon', () => import('../../../src/textures/moon/map.js'), 'loadMoonEtch', [0, 0], { color: '#f2e7d0' }, true],
+  ].map(([name, group, load, loader, [lat, lon], paint, reverse = false]) => [name, 'Animated props', group, () => Promise.all([import('../../../src/props/resinglobe.js'), import('../../../src/props/metalglobe.js'), load()]).then(async ([r, m, t]) => {
     const radius = 0.6 * (t.SIZE_VS_EARTH ?? 1);
-    const globe = r.createResinGlobe(GFX, { radius, relief: await t[loader](), ...paint });
+    const sourceRelief = await t[loader]();
+    const relief = reverse ? m.reverseRelief(sourceRelief) : sourceRelief;
+    const globe = r.createResinGlobe(GFX, { radius, relief, ...paint });
     globe.orient(lat, lon);
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
