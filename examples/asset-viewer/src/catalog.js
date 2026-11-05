@@ -217,13 +217,15 @@ const MOVING = [
   }), 'props/glassglobe'],
   ['glass jupiter', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
     // Shown at the Earth globe's size: Jupiter is 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
-    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false });
-    // The clouds are the mist: they drift inside the glass, so they read as gas.
-    globe.setField(await jupiter.loadJupiterMap(), { shell: 0.8, glow: 1 }).refreshField();
+    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false, mist: true, animate: true });
+    // White mist swirls inside, as the planet's pale zones are; the photograph's clouds drift over it as the field.
+    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 0.7, core: 0.04 });
+    globe.setField(await jupiter.loadJupiterMap(), { shell: 0.9, glow: 1.7 }).refreshField();
     globe.orient(-22, 0);
     globe.spinRate = 0.12;
-    // No mist toggle: the clouds are the field, and the viewer hides the toggle when `mist` is absent.
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: null });
+    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+    const mesh = globe.mist;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];

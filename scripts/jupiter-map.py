@@ -32,12 +32,12 @@ UPSCALE = 4
 # is the photograph's brightness, 0 darkest to 1 brightest. The belts go to brown and rust, the zones to
 # cream and a cool white, so the planet reads as itself rather than as the photograph, which is dim and faded.
 JUPITER_STOPS = [
-    [0.00, [58, 34, 24]],
-    [0.20, [120, 70, 42]],
-    [0.40, [182, 118, 74]],
-    [0.58, [214, 176, 132]],
-    [0.76, [238, 222, 196]],
-    [0.90, [246, 242, 232]],
+    [0.00, [70, 28, 14]],
+    [0.20, [140, 62, 26]],
+    [0.40, [206, 112, 54]],
+    [0.58, [232, 172, 106]],
+    [0.76, [246, 218, 170]],
+    [0.90, [252, 240, 218]],
     [1.00, [255, 255, 255]],
 ]
 
