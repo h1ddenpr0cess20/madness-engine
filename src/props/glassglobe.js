@@ -31,7 +31,7 @@ export const FIELD_RADIUS = 0.93;
 export const MIST_RADIUS = 0.95;
 export const HAZE_RADIUS = 0.997;
 
-/** The mist's settings: Krystal's, but all one blue (`spread: 0`); raise `spread` for her many colors. `bands` (0 to 1) shears it into horizontal belts; `duo` is [[r,g,b],[r,g,b]] to color it between two colors instead. See `heroes/krystal/moods.js`. */
+/** The mist's settings: Krystal's, but all one blue (`spread: 0`); raise `spread` for her many colors. `bands` (0 to 1) shears it into horizontal belts; `duo` is [[r,g,b] red, [r,g,b] white, [r,g,b] blue-green], to color it as Jupiter is (mostly white, then red, a little blue-green). See `heroes/krystal/moods.js`. */
 export const MIST = Object.freeze({ speed: 0.22, swirl: 2.0, churn: 0.5, glow: 0.8, core: 0.2, hue: 0.52, spread: 0, tint: [1, 1, 1], bands: 0, duo: null });
 
 /**
@@ -212,7 +212,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
       u.uTint.value.set(...mood.tint);
       u.uBands.value = mood.bands;
       u.uDuo.value = mood.duo ? 1 : 0;
-      if (mood.duo) { u.uDuoA.value.set(...mood.duo[0]); u.uDuoB.value.set(...mood.duo[1]); }
+      if (mood.duo) { u.uDuoA.value.set(...mood.duo[0]); u.uDuoB.value.set(...mood.duo[1]); u.uDuoC.value.set(...mood.duo[2]); }
       mist.updateWorldMatrix?.(true, false);
       u.uCenter.value.setFromMatrixPosition(mist.matrixWorld);
     },

@@ -42,11 +42,12 @@ export function visionUniforms(GFX) {
     uRadius: { value: 1 },
     uCenter: { value: new GFX.Vector3() },
     // Added last (the WGSL struct follows this order): `bands` stretches the mist into horizontal belts that
-    // shear past each other; `duo` (0 or 1) colors it between two colors, A and B, in place of the palette, A along Jupiter's belts and B between them.
+    // shear past each other; `duo` (0 or 1) colors it, in place of the palette, with A (red) along Jupiter's belts, B (cream) between them, mostly B, and a little C (blue-green) where the mist is thin.
     uBands: { value: 0 },
     uDuoA: { value: new GFX.Vector3(1, 0.3, 0.2) },
     uDuoB: { value: new GFX.Vector3(0.15, 0.75, 0.7) },
     uDuo: { value: 0 },
+    uDuoC: { value: new GFX.Vector3(0.12, 0.72, 0.68) },
   };
 }
 
@@ -74,6 +75,7 @@ uniform float uBands;
 uniform vec3 uDuoA;
 uniform vec3 uDuoB;
 uniform float uDuo;
+uniform vec3 uDuoC;
 varying vec3 vWorld;
 
 const int STEPS = ${STEPS};
@@ -122,7 +124,10 @@ void main() {
     float shade;
     float dens = mist(p, shade) * edge * edge;
     vec3 tone = palette((shade + d2 * 0.3) * uSpread + uHue);
-    if (uDuo > 0.5) tone = mix(uDuoA, uDuoB, smoothstep(-0.6, 0.6, 0.45 * shade + 0.8 * cos((p.y - 0.16) * 12.5)));
+    if (uDuo > 0.5) {
+      tone = mix(uDuoA, uDuoB, smoothstep(-0.75, 0.3, 0.45 * shade + 0.8 * cos((p.y - 0.16) * 12.5)));
+      tone = mix(tone, uDuoC, 0.85 * smoothstep(0.45, 0.9, shade));
+    }
     col += tone * dens;
     col += light * uCore * exp(-d2 * 7.0) * 0.35;
   }
@@ -197,7 +202,10 @@ fn fs(v: VOut) -> @location(0) vec4f {
     let edge = clamp(1.0 - d2, 0.0, 1.0);
     let m = mist(p);
     var tone = palette((m.shade + d2 * 0.3) * material.uSpread + material.uHue);
-    if (material.uDuo > 0.5) { tone = mix(material.uDuoA, material.uDuoB, smoothstep(-0.6, 0.6, 0.45 * m.shade + 0.8 * cos((p.y - 0.16) * 12.5))); }
+    if (material.uDuo > 0.5) {
+      tone = mix(material.uDuoA, material.uDuoB, smoothstep(-0.75, 0.3, 0.45 * m.shade + 0.8 * cos((p.y - 0.16) * 12.5)));
+      tone = mix(tone, material.uDuoC, 0.85 * smoothstep(0.45, 0.9, m.shade));
+    }
     col += tone * m.density * edge * edge;
     col += light * material.uCore * exp(-d2 * 7.0) * 0.35;
   }
