@@ -35,7 +35,13 @@ import { split } from './split.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Engine-authored library assets are kept when the game-built library is regenerated.
-const ENGINE_OWNED = ['props/bowling-ball.js'];
+const ENGINE_OWNED = [
+  'props/bowling-ball.js',
+  'props/cookware.js',
+  'props/metal-finish.js',
+  'props/pan/cast.js',
+  'props/pan/index.js',
+];
 const SRC = join(HERE, '..', '..', 'src');
 export const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music'];
 export const ORIGINS = join(HERE, 'origins.json');
@@ -290,6 +296,7 @@ function contents(places, moods) {
     }
     if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be coloured independently. |');
     if (kind === 'props') lines.push('| `props/bowling-ball` | `createBowlingBall` (engine) | A high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs (marble, spiral, flame, split and blotch). Colors and designs are changeable at runtime. |');
+    if (kind === 'props') lines.push('| `props/cookware` | `createCookwareSet` (engine) | Two five-piece cookware lines: an 8-inch and 12-inch skillet, a 2-quart saucepan, a 4-quart pot and an 8-quart stockpot. The `steel` finish reuses `METALS.steel` and `studioEnvironment`; `nonstick` has a dark, clearcoated cooking surface. Build with `createCookwareSet(GFX, { finish: 'steel' | 'nonstick', renderer })`. |');
     lines.push('');
   }
   lines.push('## moods', '', ABOUT.moods, '', '| Path | Versions (games) | What it is |', '|---|---|---|');

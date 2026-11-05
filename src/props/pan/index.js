@@ -14,6 +14,7 @@
  */
 
 import { cast } from './cast.js';
+import { METALS } from '../metal-finish.js';
 
 /** Where the debaters stand. The flare starts outside this. */
 export const COOK_RADIUS = 5.5;
@@ -32,6 +33,7 @@ export const RIM_HEIGHT = 1.75;
 
 /** How thick the iron is. Rim, wall and base are all cast in one piece. */
 const IRON = 0.34;
+export const PAN_BASE_OFFSET = IRON;
 
 /** The outside of the rim: the silhouette anything looking in has to clear. */
 export const RIM_RADIUS = COOK_RADIUS + 0.85;
@@ -189,28 +191,64 @@ const HOLLOW = Object.freeze([
  * The seasoned surface: near black, worn paler in the middle where a pan gets
  * used, with the faint concentric rings a lathe-turned base is left with.
  */
-function cookTexture(GFX) {
+function cookTexture(GFX, finish) {
   const c = document.createElement('canvas');
   c.width = c.height = 512;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#131211';
-  ctx.fillRect(0, 0, 512, 512);
-
-  const worn = ctx.createRadialGradient(256, 256, 10, 256, 256, 250);
-  worn.addColorStop(0, 'rgba(96,84,70,0.34)');
-  worn.addColorStop(0.45, 'rgba(62,55,47,0.2)');
-  worn.addColorStop(1, 'rgba(20,19,18,0)');
-  ctx.fillStyle = worn;
-  ctx.fillRect(0, 0, 512, 512);
-
-  ctx.lineWidth = 1;
-  for (let r = 12; r < 250; r += 6) {
-    ctx.strokeStyle = `rgba(198,182,160,${0.014 + (r % 18 === 0 ? 0.016 : 0)})`;
-    ctx.beginPath();
-    ctx.arc(256, 256, r, 0, Math.PI * 2);
-    ctx.stroke();
+  if (finish === 'steel') {
+    const brushed = ctx.createRadialGradient(256, 256, 12, 256, 256, 270);
+    brushed.addColorStop(0, '#e3e7eb');
+    brushed.addColorStop(0.58, '#b8c0c8');
+    brushed.addColorStop(1, '#7d8791');
+    ctx.fillStyle = brushed;
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.lineWidth = 1;
+    for (let r = 10; r < 250; r += 5) {
+      ctx.strokeStyle = `rgba(255,255,255,${r % 20 === 0 ? 0.12 : 0.035})`;
+      ctx.beginPath();
+      ctx.arc(256, 256, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    for (let y = 0; y < 512; y += 3) {
+      ctx.strokeStyle = `rgba(30,38,46,${y % 12 === 0 ? 0.035 : 0.012})`;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(512, y);
+      ctx.stroke();
+    }
+  } else if (finish === 'nonstick') {
+    ctx.fillStyle = '#191d22';
+    ctx.fillRect(0, 0, 512, 512);
+    const worn = ctx.createRadialGradient(256, 256, 12, 256, 256, 250);
+    worn.addColorStop(0, 'rgba(83,91,99,0.18)');
+    worn.addColorStop(0.6, 'rgba(53,60,68,0.1)');
+    worn.addColorStop(1, 'rgba(15,18,22,0)');
+    ctx.fillStyle = worn;
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.lineWidth = 1;
+    for (let r = 12; r < 250; r += 8) {
+      ctx.strokeStyle = `rgba(174,184,194,${r % 24 === 0 ? 0.025 : 0.009})`;
+      ctx.beginPath();
+      ctx.arc(256, 256, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = '#131211';
+    ctx.fillRect(0, 0, 512, 512);
+    const worn = ctx.createRadialGradient(256, 256, 10, 256, 256, 250);
+    worn.addColorStop(0, 'rgba(96,84,70,0.34)');
+    worn.addColorStop(0.45, 'rgba(62,55,47,0.2)');
+    worn.addColorStop(1, 'rgba(20,19,18,0)');
+    ctx.fillStyle = worn;
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.lineWidth = 1;
+    for (let r = 12; r < 250; r += 6) {
+      ctx.strokeStyle = `rgba(198,182,160,${0.014 + (r % 18 === 0 ? 0.016 : 0)})`;
+      ctx.beginPath();
+      ctx.arc(256, 256, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
-
   const map = new GFX.CanvasTexture(c);
   map.colorSpace = GFX.SRGBColorSpace;
   return map;
@@ -322,37 +360,34 @@ function handleOutline(x, s) {
  * of the stage, and a handle across one debater and not the other reads as a
  * lopsided set rather than as a pan.
  */
-export function buildHandle(GFX, iron) {
+const handleGeometries = new WeakMap();
+function geometryOfHandle(GFX) {
+  let geometry = handleGeometries.get(GFX);
+  if (geometry) return geometry;
   const { tilt, root, half, edge } = HANDLE;
   const cos = Math.cos(tilt), sin = Math.sin(tilt);
   const profile = Float64Array.from(PROFILE.flat());
   const hollow = Float64Array.from(HOLLOW.flat());
-
   const distance = (x, h, s) => {
     const outline = handleOutline(x, s);
     const wx = outline + edge, wy = Math.abs(h) - half(s) + edge;
     const tab = Math.min(Math.max(wx, wy), 0) + Math.hypot(Math.max(wx, 0), Math.max(wy, 0)) - edge;
-
-    /**
-     * Only as much of the wall as the fillet reaches. Past that the handle is
-     * on its own, and the copy of the wall stops at a face buried in the iron.
-     */
     if (tab > FILLET) return tab;
-
-    /** The same point in the pan's frame: `s` runs out and up the handle, `h` off its face. */
     const py = root + s * sin + h * cos;
     const out = Math.hypot(x, RIM_RADIUS + s * cos - h * sin);
-    /** Nothing of the pan is out here to be filleted to, or cut back from. */
     if (out > RIM_RADIUS + 2 * FILLET) return tab;
     const wall = polygonDistance(profile, out, py) + INSET;
-    const solid = blend(tab, wall, FILLET);
-    return Math.max(solid, CLEAR - polygonDistance(hollow, out, py));
+    return Math.max(blend(tab, wall, FILLET), CLEAR - polygonDistance(hollow, out, py));
   };
+  geometry = cast(GFX, { distance, from: [-1.65, -0.75, -1.5], to: [1.65, 0.62, 6.9], step: 0.045 });
+  handleGeometries.set(GFX, geometry);
+  return geometry;
+}
 
-  const geometry = cast(GFX, { distance, from: [-1.65, -0.75, -1.5], to: [1.65, 0.62, 6.9], step: 0.045 });
-
-  /** Cast in the handle's own frame, then turned out the back and tipped up. */
-  const handle = new GFX.Mesh(geometry, iron);
+/** The cast handle geometry is shared by both skillet sizes and both finishes. */
+export function buildHandle(GFX, iron) {
+  const { tilt, root } = HANDLE;
+  const handle = new GFX.Mesh(geometryOfHandle(GFX), iron);
   handle.name = 'pan-handle';
   handle.position.set(0, root, -RIM_RADIUS);
   handle.rotation.set(tilt, Math.PI, 0);
@@ -363,42 +398,47 @@ export function buildHandle(GFX, iron) {
  * Builds the pan and hands it back as one group, base at y = 0 so a debater
  * standing at the origin is standing in it.
  */
-export function buildPan(GFX) {
+/** Builds the skillet in cast iron, stainless steel or a nonstick finish. */
+export function buildPan(GFX, { finish = 'cast-iron' } = {}) {
+  if (!['cast-iron', 'steel', 'nonstick'].includes(finish)) throw new RangeError(`Unknown pan finish: ${finish}`);
   const pan = new GFX.Group();
-  pan.name = 'pan';
+  pan.name = finish === 'cast-iron' ? 'pan' : `${finish}-skillet`;
 
-  const iron = new GFX.MeshStandardMaterial({
-    name: 'pan-iron',
-    color: 0x17130f,
-    roughness: 0.42,
-    metalness: 0.72,
+  const steel = finish === 'steel';
+  const nonstick = finish === 'nonstick';
+  const bodyOptions = {
+    name: `${finish}-pan-body`,
+    color: steel ? new GFX.Color(METALS.steel.color) : nonstick ? '#292e34' : 0x17130f,
+    roughness: steel ? METALS.steel.roughness : nonstick ? 0.38 : 0.42,
+    metalness: steel ? 1 : nonstick ? 0.12 : 0.72,
+    ...(steel ? { envMapIntensity: 3 } : {}),
+    ...(nonstick ? { envMapIntensity: 1.35, clearcoat: 0.28, clearcoatRoughness: 0.24 } : {}),
     side: GFX.DoubleSide,
-  });
+  };
+  const iron = finish === 'cast-iron'
+    ? new GFX.MeshStandardMaterial(bodyOptions)
+    : new GFX.MeshPhysicalMaterial(bodyOptions);
 
   const body = new GFX.Mesh(new GFX.LatheGeometry(PROFILE.map(([x, y]) => new GFX.Vector2(x, y)), 72), iron);
   body.name = 'pan-body';
   pan.add(body);
 
-  /**
-   * The cooking surface, laid a hair over the base of the body. Its own mesh
-   * because it is the one part that is worn rather than cast, and because it is
-   * the floor: it is what the blots under the two of them fall on.
-   */
-  const surface = new GFX.Mesh(
-    new GFX.CircleGeometry(FLAT + 0.25, 96),
-    new GFX.MeshStandardMaterial({
-      name: 'pan-surface',
-      map: cookTexture(GFX),
-      roughness: 0.44,
-      metalness: 0.62,
-    }),
-  );
+  const surfaceOptions = {
+    name: `${finish}-pan-surface`,
+    map: cookTexture(GFX, finish),
+    roughness: steel ? 0.29 : nonstick ? 0.43 : 0.44,
+    metalness: steel ? 1 : nonstick ? 0.06 : 0.62,
+    ...(steel ? { envMapIntensity: 3 } : {}),
+    ...(nonstick ? { envMapIntensity: 1.15, clearcoat: 0.18, clearcoatRoughness: 0.3 } : {}),
+  };
+  const surfaceMaterial = finish === 'cast-iron'
+    ? new GFX.MeshStandardMaterial(surfaceOptions)
+    : new GFX.MeshPhysicalMaterial(surfaceOptions);
+  const surface = new GFX.Mesh(new GFX.CircleGeometry(FLAT + 0.25, 96), surfaceMaterial);
   surface.name = 'floor';
   surface.rotation.x = -Math.PI / 2;
   surface.position.y = 0.002;
   pan.add(surface);
-
   pan.add(buildHandle(GFX, iron));
-
   return pan;
 }

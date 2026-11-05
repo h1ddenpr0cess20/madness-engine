@@ -271,6 +271,8 @@ const MOVING = [
     return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
   }), 'props/coin', { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
+  ['steel cookware set', 'Props', 'cookware', () => import('../../../src/props/cookware.js').then((m) => m.createCookwareSet(GFX, { finish: 'steel', renderer: globalThis.assetViewer?.renderer ?? null })), 'props/cookware'],
+  ['nonstick cookware set', 'Props', 'cookware', () => import('../../../src/props/cookware.js').then((m) => m.createCookwareSet(GFX, { finish: 'nonstick', renderer: globalThis.assetViewer?.renderer ?? null })), 'props/cookware'],
 ];
 function movingItem([name, category, group, make, from = null, options = null]) {
   const source = from ?? (category === 'Props' ? 'props/pan' : `heroes/${name}`);
