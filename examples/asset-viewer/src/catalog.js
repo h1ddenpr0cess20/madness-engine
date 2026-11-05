@@ -199,6 +199,16 @@ const MOVING = [
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
+  ['glass moon', 'Animated props', 'Moon in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/moon/map.js')]).then(async ([m, moon]) => {
+    // The Moon at its true size beside the Earth globe: 0.273 of its radius, its LOLA surface etched in the glass.
+    const r = m.RADIUS * moon.SIZE_VS_EARTH;
+    const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await moon.loadMoonEtch() });
+    // White: the palette's most neutral hue, with the tint balancing its three channels to grey-white.
+    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 2.1, core: 0.15 });
+    globe.orient(0, 0);
+    globe.spinRate = 0.12;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
+  }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
 function movingItem([name, category, group, make, from = null]) {
