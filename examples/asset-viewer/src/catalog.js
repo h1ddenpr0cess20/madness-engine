@@ -264,6 +264,14 @@ const MOVING = [
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
   }), 'props/resinglobe']),
+  // A pine in glass after the street's (`scenery/street.js`), green mist drifting in each tier.
+  ['glass pine', 'Animated props', 'Pine', () => import('../../../src/props/glasspine.js').then((m) => {
+    const scale = 0.32;
+    const pine = m.createGlassPine(GFX, { scale, animate: true });
+    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the first cloud, not the toggle.
+    const first = pine.clouds[0];
+    return Object.assign(pine, { frame: { center: [0, 3.8 * scale / 2, 0], radius: 3.8 * scale * 0.55 }, mist: { get: () => first.visible, set: (on) => pine.setMist({}, on) } });
+  }), 'props/glasspine'],
   // A coin of the logo, raised, in the same metals.
   ['coin', 'Animated props', 'coin', ({ metal = 'gold' } = {}) => Promise.all([import('../../../src/props/coin.js'), import('../../../src/props/metalglobe.js'), import('../../../src/textures/coin/logo.js')]).then(async ([c, m, t]) => {
     const coin = c.createCoin(GFX, { radius: 0.3, logo: await t.loadCoinLogo(), metal });
