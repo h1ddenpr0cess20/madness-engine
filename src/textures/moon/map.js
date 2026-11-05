@@ -1,4 +1,5 @@
 import { RELIEF_HEIGHT, RELIEF_JPEG, RELIEF_WIDTH } from './relief.js';
+import { loadElevationMap } from '../elevation.js';
 
 /**
  * The Moon from measurements. `RADIUS_KM` is its mean radius, 1737.4 km (IAU),
@@ -39,4 +40,17 @@ export async function loadMoonEtch({ width = RELIEF_WIDTH } = {}) {
   }
   ctx.putImageData(pixels, 0, 0);
   return canvas;
+}
+
+
+/**
+ * NASA's LOLA global elevation map, supplied by the CGI Moon Kit. This is a
+ * height raster (not the north-west shaded frost image used by loadMoonEtch),
+ * centered on 0° longitude, so it uses the same -180°..+180° UV convention.
+ * Source: https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg
+ */
+export function loadMoonTopography() {
+  return loadElevationMap(
+    'https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg',
+  );
 }
