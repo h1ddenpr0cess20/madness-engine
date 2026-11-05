@@ -1,4 +1,5 @@
 import { RELIEF_HEIGHT, RELIEF_JPEG, RELIEF_WIDTH } from './relief.js';
+import { loadElevationMap } from '../elevation.js';
 
 /**
  * Mars from measurements. `RADIUS_KM` is its mean radius, 3389.5 km (IAU), and
@@ -39,4 +40,19 @@ export async function loadMarsEtch({ width = RELIEF_WIDTH } = {}) {
   }
   ctx.putImageData(pixels, 0, 0);
   return canvas;
+}
+
+
+/**
+ * MOLA MEGDR global topography at 4 pixels/degree (0°E..360°E). Unlike
+ * loadMarsEtch(), this is elevation, not a shaded-relief image. Rotate it
+ * half a turn so its 0° meridian sits at the center of the globe's UV map.
+ * Source raster: https://github.com/jaanga/mars/blob/gh-pages/heightmaps/megt90n000cb.png
+ * Data source: NASA/PDS MGS MOLA MEGDR, product MEGT90N000CB.
+ */
+export function loadMarsTopography() {
+  return loadElevationMap(
+    'https://raw.githubusercontent.com/jaanga/mars/gh-pages/heightmaps/megt90n000cb.png',
+    { halfTurn: true },
+  );
 }
