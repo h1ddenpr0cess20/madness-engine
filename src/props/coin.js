@@ -73,7 +73,7 @@ export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold', yea
     }
     return [x0, y0, x1, y1];
   };
-  const reliefOf = (canvas, perPixel, { grow = 3, ridge = 2, pad = 8, soften = 3 } = {}) => {
+  const reliefOf = (canvas, perPixel, { grow = 3, ridge = 2, pad = 8, soften = 3, gain = 2.2 } = {}) => {
     const W = canvas.width, H = canvas.height;
     const pixels = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
     let [x0, y0, x1, y1] = boxOf(pixels, W, H);
@@ -107,7 +107,7 @@ export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold', yea
     };
     for (let i = 0; i < soften; i++) field = blur(field);
     for (let i = 0; i < pos.count; i++) {
-      const t = Math.min(1, field[i] * 2.2);
+      const t = Math.min(1, field[i] * gain);
       const h = t * t * (3 - 2 * t);               // smoothstep: a rounded ridge
       pos.setZ(i, h > 0.004 ? h * lip * ridge : -0.004);
     }
@@ -136,20 +136,30 @@ export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold', yea
 
   if (logo) {
     const W = logo.width, H = logo.height;
-    // The year, small, under the logo's right-hand end, struck into a copy of the logo's canvas in white.
-    const work = document.createElement('canvas');
-    work.width = W; work.height = H;
-    const wctx = work.getContext('2d', { willReadFrequently: true });
-    wctx.drawImage(logo, 0, 0);
-    const [, y0, x1, y1] = boxOf(wctx.getImageData(0, 0, W, H).data, W, H);
-    wctx.fillStyle = '#ffffff';
-    wctx.font = `700 ${Math.round((y1 - y0) * 0.13)}px Georgia, 'Times New Roman', serif`;
-    wctx.textAlign = 'right'; wctx.textBaseline = 'top';
-    wctx.fillText(year, x1, y1 + (y1 - y0) * 0.04);
-    const [bx0, by0, bx1, by1] = boxOf(wctx.getImageData(0, 0, W, H).data, W, H);
-    // As wide as the field allows, inside the ring of lettering: the box's corners reach 0.72 of the radius.
+    const [, y0, x1, y1] = boxOf(logo.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data, W, H);
+    // The year, small, under the logo's right-hand end, on a canvas of its own the logo's size, so it can be struck lower and finer than the logo is.
+    const S = 1;
+    const dated = document.createElement('canvas');
+    dated.width = W * S; dated.height = H * S;
+    const dctx = dated.getContext('2d', { willReadFrequently: true });
+    dctx.fillStyle = '#000'; dctx.fillRect(0, 0, W * S, H * S);
+    dctx.fillStyle = '#ffffff';
+    dctx.font = `600 ${Math.round((y1 - y0) * 0.1 * S)}px Georgia, 'Times New Roman', serif`;
+    dctx.textAlign = 'right'; dctx.textBaseline = 'top';
+    dctx.fillText(year, x1 * S, (y1 + (y1 - y0) * 0.05) * S);
+    // The logo and its year together set the scale: as wide as the field allows, inside the ring of lettering
+    // (their corners reach 0.72 of the radius).
+    const both = document.createElement('canvas');
+    both.width = W; both.height = H;
+    const bctx = both.getContext('2d', { willReadFrequently: true });
+    bctx.drawImage(logo, 0, 0);
+    bctx.globalCompositeOperation = 'lighten';         // the year's black ground must not cover the logo
+    bctx.drawImage(dated, 0, 0, W, H);
+    const [bx0, by0, bx1, by1] = boxOf(bctx.getImageData(0, 0, W, H).data, W, H);
     const fit = (R * 0.72 * 2) / Math.hypot(bx1 - bx0 + 17, by1 - by0 + 17);
-    strike(reliefOf(work, fit));
+    strike(reliefOf(logo, fit));
+    // The year is struck low and fine: it is small, and a ridge as high and strokes as bold as the logo's would be out of all proportion.
+    strike(reliefOf(dated, fit / S, { grow: 1, ridge: 0.8, pad: 4, soften: 1, gain: 2.2 }));
   }
 
   // The motto, round the top of the rim as an arc, each letter turned to stand on the circle.
