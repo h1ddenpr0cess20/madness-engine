@@ -215,16 +215,6 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
-  ['glass jupiter', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(([m, jupiter]) => {
-    // Shown at the Earth globe's size: Jupiter is 11.2 Earths across, too big to sit beside it. Its bands and spot are a model.
-    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false });
-    const field = Object.assign(document.createElement('canvas'), { width: 1024, height: 512 });
-    jupiter.paintJupiter(field);
-    globe.setField(field, { shell: 0.8, glow: 1 }).refreshField();
-    globe.orient(jupiter.GRS.lat, jupiter.GRS.lon);
-    globe.spinRate = 0.12;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 } });
-  }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
 function movingItem([name, category, group, make, from = null]) {
