@@ -237,14 +237,29 @@ const MOVING = [
     const mesh = globe.mist;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
+  // The same planets in solid metal, their relief raised; the metal is the viewer's `metal` option.
+  ...[
+    ['metal earth', 'Earth in metal', () => import('../../../src/textures/earth/map.js'), 'loadEarthRelief', [40, -95]],
+    ['metal mars', 'Mars in metal', () => import('../../../src/textures/mars/map.js'), 'loadMarsEtch', [-5, -90]],
+    ['metal moon', 'Moon in metal', () => import('../../../src/textures/moon/map.js'), 'loadMoonEtch', [0, 0]],
+    ['metal jupiter', 'Jupiter in metal', () => import('../../../src/textures/jupiter/map.js'), 'loadJupiterEtch', [-22, 0]],
+  ].map(([name, group, load, loader, [lat, lon]]) => [name, 'Animated props', group, ({ metal = 'steel' } = {}) => Promise.all([import('../../../src/props/metalglobe.js'), load()]).then(async ([m, t]) => {
+    const size = t.SIZE_VS_EARTH ?? 1;
+    // True size beside the Earth globe (the Moon, Mars), but Jupiter, 11 Earths across, at the Earth's.
+    const radius = 0.6 * (name === 'metal jupiter' ? 1 : size);
+    const globe = m.createMetalGlobe(GFX, { radius, relief: await t[loader](), metal });
+    globe.orient(lat, lon);
+    globe.spinRate = 0.12;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
+  }), 'props/metalglobe', { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }]),
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
-function movingItem([name, category, group, make, from = null]) {
+function movingItem([name, category, group, make, from = null, options = null]) {
   const source = from ?? (category === 'Props' ? 'props/pan' : `heroes/${name}`);
   return {
-    id: `${category === 'Props' ? 'props' : 'animated'}/${name}`, category, group, name, source, kind: 'object',
-    async build() {
-      const made = await make();
+    id: `${category === 'Props' ? 'props' : 'animated'}/${name}`, category, group, name, source, kind: 'object', options,
+    async build(opts = {}) {
+      const made = await make(opts);
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
       return { object, frame: made?.frame, mist: made?.mist, ...dressOf(made), info: { Source: source, ...countOf(object) } };

@@ -127,3 +127,30 @@ export function createEtchCanvas({ width = 4096, fill = 'rgba(236,244,255,0.5)',
   ctx.stroke();
   return canvas;
 }
+
+/**
+ * The Earth's land as relief, for a metal globe: a canvas with the height in its alpha, the land raised
+ * and the sea down, the coast softened a little so it slopes. Resolves to null with no document to paint on.
+ */
+export async function loadEarthRelief({ width = 2048 } = {}) {
+  if (typeof document === 'undefined') return null;
+  const height = width / 2;
+  const mask = landMask(width, height);
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  const pixels = ctx.createImageData(width, height);
+  for (let i = 0; i < mask.length; i++) {
+    pixels.data[i * 4] = pixels.data[i * 4 + 1] = pixels.data[i * 4 + 2] = 255;
+    pixels.data[i * 4 + 3] = mask[i];
+  }
+  ctx.putImageData(pixels, 0, 0);
+  // Soften the coast: draw it blurred onto a second canvas.
+  const soft = document.createElement('canvas');
+  soft.width = width; soft.height = height;
+  const sctx = soft.getContext('2d');
+  sctx.filter = 'blur(2px)';
+  sctx.drawImage(canvas, 0, 0);
+  return soft;
+}
