@@ -276,8 +276,11 @@ function animGroup(built) {
   document.querySelectorAll('.opt').forEach((n) => n.remove());
   for (const [name, values] of Object.entries(view.item.options ?? {})) {
     const select = el('select', { className: 'opt' }, ...values.map((v) => el('option', { value: v }, String(v))));
+    // Named choices (a metal) are kept as names; numbers (a building's level) as numbers.
+    const numeric = values.every((v) => typeof v === 'number');
+    if (!values.includes(options[name])) options[name] = values[0];
     select.value = options[name];
-    select.onchange = () => { options[name] = Number(select.value); show(view.item); };
+    select.onchange = () => { options[name] = numeric ? Number(select.value) : select.value; show(view.item); };
     $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, name), select));
   }
 }
