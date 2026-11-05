@@ -41,6 +41,13 @@ export function visionUniforms(GFX) {
     uCore: { value: 0.3 },
     uRadius: { value: 1 },
     uCenter: { value: new GFX.Vector3() },
+    // Added last (the WGSL struct follows this order): `bands` stretches the mist into horizontal belts that
+    // shear past each other; `duo` (0 or 1) colors it, in place of the palette, with A (red) along Jupiter's belts, B (cream) between them, mostly B, and a little C (blue-green) around the equator.
+    uBands: { value: 0 },
+    uDuoA: { value: new GFX.Vector3(1, 0.3, 0.2) },
+    uDuoB: { value: new GFX.Vector3(0.15, 0.75, 0.7) },
+    uDuo: { value: 0 },
+    uDuoC: { value: new GFX.Vector3(0.12, 0.72, 0.68) },
   };
 }
 
@@ -64,6 +71,11 @@ uniform vec3 uTint;
 uniform float uCore;
 uniform float uRadius;
 uniform vec3 uCenter;
+uniform float uBands;
+uniform vec3 uDuoA;
+uniform vec3 uDuoB;
+uniform float uDuo;
+uniform vec3 uDuoC;
 varying vec3 vWorld;
 
 const int STEPS = ${STEPS};
@@ -74,11 +86,11 @@ vec3 palette(float t) {
 
 float mist(vec3 p, out float shade) {
   float r = length(p.xz);
-  float a = uSwirl * (1.15 - r) * 2.2 + uFlow * 0.9;
+  float a = uSwirl * (1.15 - r) * 2.2 + uFlow * 0.9 + uBands * (p.y * 3.5 + 0.6 * sin(p.y * 7.0 + uFlow * 0.5));
   float c = cos(a);
   float s = sin(a);
   p.xz = mat2(c, -s, s, c) * p.xz;
-  vec3 q = p * 2.8;
+  vec3 q = p * vec3(2.8, 2.8 + uBands * 4.0, 2.8);
   for (int i = 1; i < 5; i++) {
     float fi = float(i);
     q += uChurn / fi * sin(fi * 1.6 * q.yzx + uFlow * (0.7 + 0.3 * fi));
@@ -111,7 +123,12 @@ void main() {
     float edge = clamp(1.0 - d2, 0.0, 1.0);
     float shade;
     float dens = mist(p, shade) * edge * edge;
-    col += palette((shade + d2 * 0.3) * uSpread + uHue) * dens;
+    vec3 tone = palette((shade + d2 * 0.3) * uSpread + uHue);
+    if (uDuo > 0.5) {
+      tone = mix(uDuoA, uDuoB, smoothstep(-0.75, 0.3, 0.45 * shade + 0.8 * cos((p.y - 0.16) * 12.5)));
+      tone = mix(tone, uDuoC, 1.0 * smoothstep(0.0, 0.5, shade - 0.17 * (2.8 + uBands * 4.0) * p.y) * exp(-p.y * p.y * 10.0));
+    }
+    col += tone * dens;
     col += light * uCore * exp(-d2 * 7.0) * 0.35;
   }
   col *= uGlow * 2.6 * dt / uRadius * uTint;
@@ -147,12 +164,12 @@ fn mist(at: vec3f) -> Mist {
   var p = at;
   let flow = material.uFlow;
   let r = length(p.xz);
-  let a = material.uSwirl * (1.15 - r) * 2.2 + flow * 0.9;
+  let a = material.uSwirl * (1.15 - r) * 2.2 + flow * 0.9 + material.uBands * (p.y * 3.5 + 0.6 * sin(p.y * 7.0 + flow * 0.5));
   let c = cos(a);
   let s = sin(a);
   let turned = mat2x2f(c, -s, s, c) * p.xz;
   p = vec3f(turned.x, p.y, turned.y);
-  var q = p * 2.8;
+  var q = p * vec3f(2.8, 2.8 + material.uBands * 4.0, 2.8);
   for (var i = 1; i < 5; i++) {
     let fi = f32(i);
     q += material.uChurn / fi * sin(fi * 1.6 * q.yzx + flow * (0.7 + 0.3 * fi));
@@ -184,7 +201,12 @@ fn fs(v: VOut) -> @location(0) vec4f {
     let d2 = dot(p, p);
     let edge = clamp(1.0 - d2, 0.0, 1.0);
     let m = mist(p);
-    col += palette((m.shade + d2 * 0.3) * material.uSpread + material.uHue) * m.density * edge * edge;
+    var tone = palette((m.shade + d2 * 0.3) * material.uSpread + material.uHue);
+    if (material.uDuo > 0.5) {
+      tone = mix(material.uDuoA, material.uDuoB, smoothstep(-0.75, 0.3, 0.45 * m.shade + 0.8 * cos((p.y - 0.16) * 12.5)));
+      tone = mix(tone, material.uDuoC, 1.0 * smoothstep(0.0, 0.5, m.shade - 0.17 * (2.8 + material.uBands * 4.0) * p.y) * exp(-p.y * p.y * 10.0));
+    }
+    col += tone * m.density * edge * edge;
     col += light * material.uCore * exp(-d2 * 7.0) * 0.35;
   }
   col *= material.uGlow * 2.6 * dt / material.uRadius * material.uTint;

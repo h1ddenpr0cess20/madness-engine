@@ -187,7 +187,9 @@ const MOVING = [
     const globe = m.createGlassGlobe(GFX, { radius: 0.6, mist: true, animate: true });
     globe.orient(40, -95);
     globe.spinRate = 0.12;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
+    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+    const mesh = globe.mist;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
   ['glass mars', 'Animated props', 'Mars in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/mars/map.js')]).then(async ([m, mars]) => {
     // Mars at its true size beside the Earth globe: 0.532 of its radius, its MOLA surface etched in the glass.
@@ -197,7 +199,43 @@ const MOVING = [
     globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 2.1, core: 0.15 });
     globe.orient(-5, -90);
     globe.spinRate = 0.12;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => globe.mist.visible, set: (on) => globe.setMist({}, on) } });
+    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+    const mesh = globe.mist;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
+  }), 'props/glassglobe'],
+  ['glass moon', 'Animated props', 'Moon in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/moon/map.js')]).then(async ([m, moon]) => {
+    // The Moon at its true size beside the Earth globe: 0.273 of its radius, its LOLA surface etched in the glass.
+    const r = m.RADIUS * moon.SIZE_VS_EARTH;
+    const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await moon.loadMoonEtch() });
+    // White: the palette's most neutral hue, with the tint balancing its three channels to grey-white.
+    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 2.1, core: 0.15 });
+    globe.orient(0, 0);
+    globe.spinRate = 0.12;
+    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+    const mesh = globe.mist;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
+  }), 'props/glassglobe'],
+  ['glass jupiter', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
+    // Shown at the Earth globe's size: Jupiter is 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
+    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false, mist: true, animate: true });
+    // White mist swirls inside, as the planet's pale zones are; the photograph's clouds drift over it as the field.
+    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 0.4, core: 0.02 });
+    globe.setField(await jupiter.loadJupiterMap(), { shell: 0.9, glow: 1.3 }).refreshField();
+    globe.orient(-22, 0);
+    globe.spinRate = 0.12;
+    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+    const mesh = globe.mist;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
+  }), 'props/glassglobe'],
+  ['glass jupiter etched', 'Animated props', 'Jupiter in glass', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
+    // The alternate: the zones and belts etched in the glass, and the mist in belts that shear sideways, in the planet's rust-red and blue-green.
+    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, mist: true, animate: true, etchCanvas: await jupiter.loadJupiterEtch() });
+    globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.02, 0.62, 0.78]], glow: 2.4, core: 0.1, swirl: 0.6 });
+    globe.orient(-22, 0);
+    globe.spinRate = 0.12;
+    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+    const mesh = globe.mist;
+    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
   }), 'props/glassglobe'],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
