@@ -30,6 +30,25 @@ export const METALS = Object.freeze({
   pewter: { color: '#a9a9a2', roughness: 0.4 },
 });
 
+/**
+ * Mirrors an equirectangular relief horizontally. The Mars and Moon etches are
+ * also shown on the glass globes' far shell; seen through the glass, that shell
+ * is east-west reversed. The opaque metal/resin versions need the matching
+ * exterior orientation instead.
+ */
+export function reverseRelief(source) {
+  if (!source) return source;
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('could not create a canvas context for reversed relief');
+  ctx.translate(source.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(source, 0, 0);
+  return canvas;
+}
+
 /** A gray canvas of a relief canvas's alpha: the height, for a bump map. */
 export function heightOf(source, blur = 0) {
   const canvas = document.createElement('canvas');
