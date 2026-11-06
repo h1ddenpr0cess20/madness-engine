@@ -341,7 +341,7 @@ export function buildWeapon(GFX, spec, {
   // A small central boss physically intersects both the leather handle and
   // the blade root, making the grip/guard/blade one visually continuous hilt.
   hilt.add(sphere(GFX, 'guard central boss', hiltMaterial,
-    [0, guardY, 0], [0.026, 0.012, 0.016], [32, 20]));
+    [0, guardY, 0], [0.026, 0.015, 0.016], [32, 20]));
 
   const span = spec.guardSpan / 2;
   const guardPoints = [
