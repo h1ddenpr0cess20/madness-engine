@@ -9,8 +9,8 @@ const HEROES = {
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
-  mace: ['createMace', 'createPlayer', 'RADIUS'],
-  morningstar: [],
+  mace: ['createMace', 'createMetalMace', 'createPlayer', 'createMetalPlayer', 'RADIUS'],
+  morningstar: ['createMorningStar', 'createMetalMorningStar', 'METALS'],
   rock: ['createRock', 'createBoulder'],
 };
 
@@ -45,4 +45,39 @@ test('the town games share one prop kit, and it puts shapes into one geometry pe
   const { linearRGB } = await import('../src/color.js');
   assert.deepEqual(linearRGB('#000000'), [0, 0, 0]);
   assert.ok(Math.abs(linearRGB('#ffffff')[0] - 1) < 1e-9);
+});
+
+
+test('metal Morningstar keeps the original shape and snapping with the coin metal finishes', async () => {
+  const { createMorningStar, createMetalMorningStar, METALS } = await import('../src/heroes/morningstar.js');
+  const original = createMorningStar(GFX);
+  const metal = createMetalMorningStar(GFX, { metal: 'copper' });
+
+  assert.equal(metal.core.geometry.attributes.position.count, original.core.geometry.attributes.position.count);
+  assert.equal(metal.mesh.geometry.attributes.position.count, original.mesh.geometry.attributes.position.count);
+  assert.equal(metal.group.children.length, original.group.children.length);
+  assert.equal(metal.material.metalness, 1);
+  assert.equal(metal.spikeMaterial.metalness, 1);
+  assert.equal(metal.material.roughness, METALS.copper.roughness);
+  assert.equal(metal.spikeMaterial.roughness, METALS.copper.roughness);
+  assert.equal(metal.snap(7), true);
+  assert.equal(metal.snapped, 7);
+  metal.setMetal('gold');
+  assert.equal(metal.metal, 'gold');
+  assert.equal(metal.material.roughness, METALS.gold.roughness);
+  assert.equal(metal.spikeMaterial.roughness, METALS.gold.roughness);
+  assert.throws(() => metal.setMetal('unobtainium'), /no metal/);
+});
+
+test('the metal player shares the original mace scale, roll transform, and damage behaviour', async () => {
+  const { createMace, createMetalMace, RADIUS } = await import('../src/heroes/mace.js');
+  const original = createMace(GFX, { radius: RADIUS });
+  const metal = createMetalMace(GFX, { radius: RADIUS, metal: 'silver' });
+  assert.deepEqual(metal.mesh.scale.toArray(), original.mesh.scale.toArray());
+  assert.equal(metal.metal, 'silver');
+  assert.equal(metal.hurtTo(0.5), true);
+  metal.update(1 / 60, { q: [0, 0, 0, 1], position: [2, 3, 4] });
+  assert.deepEqual(metal.group.position.toArray(), [2, 3, 4]);
+  metal.setMetal('chrome');
+  assert.equal(metal.metal, 'chrome');
 });

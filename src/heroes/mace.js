@@ -1,4 +1,4 @@
-import { createMorningStar, SPIKES, TIP } from './morningstar.js';
+import { createMetalMorningStar, createMorningStar, SPIKES, TIP } from './morningstar.js';
 
 /**
  * Metroll. The head of a morning star (morningstar.js), turned as the
@@ -17,8 +17,7 @@ const spring = (s, k, c, dt, to = 0) => {
 /** How much of the ball's spikes can be gone and it is still, just, in one piece. */
 const MOST_SNAPPED = 0.85;
 
-export function createMace(GFX, { radius = 0.45 } = {}) {
-  const asset = createMorningStar(GFX);
+function wrapMace(GFX, asset, radius) {
   const group = new GFX.Group();
   group.name = 'metroll';
   const body = new GFX.Group();
@@ -33,7 +32,7 @@ export function createMace(GFX, { radius = 0.45 } = {}) {
   // The landing squash: a spring, kicked when it comes down or is hit.
   const squash = { p: 0, v: 0 };
 
-  return {
+  const api = {
     group, body, mesh, material: asset.material,
 
     /** Something happened to it: a smash or a hit gives the steel a squash. (There is no face to change.) */
@@ -58,6 +57,21 @@ export function createMace(GFX, { radius = 0.45 } = {}) {
       group.position.set(position[0], position[1], position[2]);
     },
   };
+  if (asset.setMetal) {
+    Object.defineProperty(api, 'metal', { enumerable: true, get: () => asset.metal });
+    api.setMetal = (name) => { asset.setMetal(name); return api; };
+  }
+  return api;
+}
+
+export function createMace(GFX, { radius = 0.45 } = {}) {
+  return wrapMace(GFX, createMorningStar(GFX), radius);
+}
+
+/** The same morning-star head and movement, using a selectable reflective metal finish. */
+export function createMetalMace(GFX, { radius = 0.45, metal = 'steel', spikes = SPIKES, detail = 1 } = {}) {
+  const asset = createMetalMorningStar(GFX, { metal, spikes, detail });
+  return wrapMace(GFX, asset, radius);
 }
 
 /** The player's ball in the town games (Metrlol): in tiles, a little under three-quarters of a tile across. */
@@ -71,5 +85,11 @@ export const RADIUS = 0.36;
  */
 export function createPlayer(GFX, { radius = RADIUS } = {}) {
   const mace = createMace(GFX, { radius });
+  return { player: mace.group, mace };
+}
+
+/** The town-game player with the metal Morningstar finish; physics and radius are unchanged. */
+export function createMetalPlayer(GFX, { radius = RADIUS, metal = 'steel', spikes = SPIKES, detail = 1 } = {}) {
+  const mace = createMetalMace(GFX, { radius, metal, spikes, detail });
   return { player: mace.group, mace };
 }

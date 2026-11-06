@@ -146,6 +146,10 @@ const HEROES = [
   ['hamster in ball', () => import('../../../src/heroes/hamster.js').then((m) => m.createPlayer(GFX))],
   ['hamster', () => import('../../../src/heroes/hamster.js').then((m) => m.createHamster(GFX))],
   ['morningstar', () => import('../../../src/heroes/morningstar.js').then((m) => m.createMorningStar(GFX))],
+  ['metal morningstar', ({ metal = 'steel' } = {}) => Promise.all([import('../../../src/heroes/morningstar.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
+    h.createMetalMorningStar(GFX, { metal }),
+    { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
+  )), null, { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
@@ -285,11 +289,11 @@ function movingItem([name, category, group, make, from = null, options = null]) 
   };
 }
 
-function heroItem([name, make, palette = null]) {
+function heroItem([name, make, palette = null, options = null]) {
   return {
-    id: `heroes/${name}`, category: 'Heroes', group: 'heroes', name, source: 'heroes', kind: 'object', palette,
-    async build({ colours = {} } = {}) {
-      const made = await make(colours);
+    id: `heroes/${name}`, category: 'Heroes', group: 'heroes', name, source: 'heroes', kind: 'object', palette, options,
+    async build({ colours = {}, ...buildOptions } = {}) {
+      const made = await make({ ...colours, ...buildOptions });
       // Those that are posed by how far they have come (the yarn ball, its strand laid out behind it) are shown a little way along.
       made?.pose?.(1.2);
       const object = objectOf(made);
