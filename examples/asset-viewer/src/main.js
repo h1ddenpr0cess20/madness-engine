@@ -145,10 +145,13 @@ async function show(item) {
   const token = ++view.token;
   const changingItem = view.item?.id !== item.id;
   view.item = item;
-  if (changingItem && item.palette?.kind === 'weapon') {
+  if (changingItem && (item.palette?.kind === 'weapon' || item.palette?.kind === 'banana-weapon')) {
     const saved = view.weaponMetals[item.id] ?? {};
     options.bladeMetal = saved.bladeMetal ?? item.palette.bladeMetal ?? 'steel';
     options.hiltMetal = saved.hiltMetal ?? item.palette.hiltMetal ?? 'steel';
+    if (item.palette.kind === 'banana-weapon') {
+      options.innerMetal = saved.innerMetal ?? item.palette.innerMetal ?? 'chrome';
+    }
   } else if (changingItem && item.palette?.kind === 'morningstar') {
     const saved = view.weaponMetals[item.id] ?? {};
     options.metal = saved.metal ?? item.palette.metal ?? 'steel';
@@ -300,6 +303,7 @@ function animGroup(built) {
 /** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
+  if (pal.kind === 'banana-weapon') return [];
   if (pal.kind === 'weapon') {
     const rows = [
       ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
