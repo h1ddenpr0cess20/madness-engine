@@ -20,7 +20,7 @@ function bananaBladeGeometry(GFX, { rootY, length, width, bend = 0.042, sections
   const ring = 20;
   const positions = [];
   const indices = [];
-  const centerZ = (t) => bend * Math.sin(t * Math.PI * 0.92) * (0.18 + 0.82 * t);
+  const centerZ = (t) => bend * t * t * (3 - 2 * t);
   for (let i = 0; i <= sections; i++) {
     const t = i / sections;
     const y = rootY + t * length;
@@ -32,6 +32,9 @@ function bananaBladeGeometry(GFX, { rootY, length, width, bend = 0.042, sections
       const a = j / ring * Math.PI * 2;
       const side = Math.cos(a);
       const face = Math.sin(a);
+      const fuller = t < 0.75
+        ? 0.00042 * (1 - t / 0.75) * Math.exp(-((side / 0.26) ** 2))
+        : 0;
       positions.push(halfWidth * side, y, z + face * (thickness * (0.72 + 0.28 * Math.abs(side)) - fuller));
     }
   }
@@ -41,7 +44,7 @@ function bananaBladeGeometry(GFX, { rootY, length, width, bend = 0.042, sections
       const b = i * ring + (j + 1) % ring;
       const c = (i + 1) * ring + j;
       const d = (i + 1) * ring + (j + 1) % ring;
-      indices.push(a, b, c, b, d, c);
+      indices.push(a, c, b, b, c, d);
     }
   }
   const shoulder = positions.length / 3;
@@ -49,12 +52,12 @@ function bananaBladeGeometry(GFX, { rootY, length, width, bend = 0.042, sections
   const tip = shoulder + 1;
   positions.push(0, rootY + length, centerZ(1));
   for (let j = 0; j < ring; j++) {
-    indices.push(shoulder, (j + 1) % ring, j);
+    indices.push(shoulder, j, (j + 1) % ring);
     const base = sections * ring;
-    indices.push(base + j, base + (j + 1) % ring, tip);
+    indices.push(base + j, tip, base + (j + 1) % ring);
   }
   const geometry = new GFX.BufferGeometry();
-  geometry.setAttribute('position', new GFX.BufferAttribute(positions, 3));
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
@@ -88,8 +91,8 @@ function bananaPeelLobeGeometry(GFX, { length, width, curl, side = 1, inner = fa
     }
   }
   const geometry = new GFX.BufferGeometry();
-  geometry.setAttribute('position', new GFX.BufferAttribute(positions, 3));
-  geometry.setAttribute('uv', new GFX.BufferAttribute(uv, 2));
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setAttribute('uv', new GFX.BufferAttribute(new Float32Array(uv), 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
