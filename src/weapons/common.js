@@ -338,10 +338,25 @@ export function buildWeapon(GFX, spec, {
     hilt.add(ring);
   }
 
-  // A small central boss physically intersects both the leather handle and
-  // the blade root, making the grip/guard/blade one visually continuous hilt.
-  hilt.add(sphere(GFX, 'guard central boss', hiltMaterial,
-    [0, guardY, 0], [0.026, 0.015, 0.016], [32, 20]));
+  // A short metal boss-seat caps the handle end. It overlaps the leather by
+  // only 2 mm, but its wider footprint covers the entire cut end. The raised
+  // central boss sits on this seat and overlaps it, not the length of the grip.
+  const bossSeatBottom = gripTop - 0.002;
+  const bossSeatTop = gripTop + 0.004;
+  const bossSeat = new GFX.Mesh(
+    new GFX.CylinderGeometry(handleRadius * 1.18, handleRadius * 1.18, bossSeatTop - bossSeatBottom, 48),
+    hiltMaterial,
+  );
+  bossSeat.name = 'guard boss lower cap';
+  bossSeat.position.set(0, (bossSeatBottom + bossSeatTop) / 2, 0);
+  bossSeat.castShadow = true;
+  bossSeat.receiveShadow = true;
+  hilt.add(bossSeat);
+
+  // The domed central boss is above the grip overlap and sits over the cap.
+  const guardBoss = sphere(GFX, 'guard central boss', hiltMaterial,
+    [0, guardY, 0], [0.026, 0.015, 0.016], [32, 20]);
+  hilt.add(guardBoss);
 
   const span = spec.guardSpan / 2;
   const guardPoints = [
@@ -390,7 +405,9 @@ export function buildWeapon(GFX, spec, {
     }),
     bezelBounds: Object.freeze({ bottom: bezelBottom, top: bezelTop, outerRadius: bezelOuterRadius }),
     guardY,
-    guardBoss: hilt.children.find((part) => part.name === 'guard central boss'),
+    bossSeat,
+    bossSeatBounds: Object.freeze({ bottom: bossSeatBottom, top: bossSeatTop }),
+    guardBoss,
     dimensions: Object.freeze({
       overallLength: bladeRootY + spec.bladeLength,
       bladeLength: spec.bladeLength,
