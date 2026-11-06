@@ -125,18 +125,23 @@ function createWeaponPommel(GFX, spec, { style = 'marble', metal, material } = {
 /** A continuous helical leather cord laid over the cylindrical grip. */
 function diagonalWrapGeometry(GFX, {
   radius, startY, height, pitch = 0.0117, tubeRadius = 0.00105, radialSegments = 8,
+  direction = 1, phase = 0,
 } = {}) {
   const turns = height / pitch;
   const tubularSegments = Math.max(24, Math.ceil(turns * 28));
   const positions = [], indices = [];
-  const angularTravel = turns * Math.PI * 2;
-  const risePerRadian = height / angularTravel;
+  const angularTravel = turns * Math.PI * 2 * Math.sign(direction || 1);
+  const risePerRadian = height / (turns * Math.PI * 2);
   for (let i = 0; i <= tubularSegments; i++) {
     const t = i / tubularSegments;
-    const angle = t * angularTravel;
+    const angle = phase + t * angularTravel;
     const cos = Math.cos(angle), sin = Math.sin(angle);
     const center = new GFX.Vector3(radius * cos, startY + height * t, radius * sin);
-    const tangent = new GFX.Vector3(-radius * sin, risePerRadian, radius * cos).normalize();
+    const tangent = new GFX.Vector3(
+      -radius * sin * Math.sign(direction || 1),
+      risePerRadian,
+      radius * cos * Math.sign(direction || 1),
+    ).normalize();
     const normal = new GFX.Vector3(cos, 0, sin);
     const binormal = tangent.clone().cross(normal).normalize();
     for (let j = 0; j < radialSegments; j++) {
@@ -282,6 +287,149 @@ export function createDevilHornGuard(GFX, parent, material, {
   guard.name = 'Marc inverted Madness swept guard';
   const mesh = new GFX.Mesh(geometry, material);
   mesh.name = 'Madness swept guard with integrated pointed terminals';
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  guard.add(mesh);
+  parent.add(guard);
+  return guard;
+}
+
+/**
+ * A single, mirrored lightning-bolt crossguard. Each arm has three deliberate
+ * bends and sweeps upward at a shallow angle. The root is reinforced and the
+ * outer terminals taper continuously into sharp points.
+ */
+export function createLightningGuard(GFX, parent, material, {
+  centerY, span = 0.22, thickness = 0.016,
+} = {}) {
+  if (!GFX?.Vector3 || !GFX?.BufferGeometry || !GFX?.BufferAttribute) {
+    throw new TypeError('createLightningGuard requires the Madness Engine GFX module');
+  }
+  if (!Number.isFinite(centerY) || !Number.isFinite(span) || span <= 0
+    || !Number.isFinite(thickness) || thickness <= 0) {
+    throw new TypeError('lightning guard requires a finite centre, positive span and thickness');
+  }
+
+  const halfSpan = span / 2;
+  const tipExtension = Math.min(0.014, Math.max(0.008, span * 0.06));
+  // Three changes of direction on each arm: outward/up, shallow return, then
+  // outward/up again. The final point continues on a restrained ~20 degree rise.
+  const stations = [
+    [-halfSpan - tipExtension, centerY + 0.030, 0],
+    [-halfSpan * 0.88, centerY + 0.023, 0],
+    [-halfSpan * 0.68, centerY + 0.009, 0],
+    [-halfSpan * 0.47, centerY + 0.021, 0],
+    [-halfSpan * 0.25, centerY + 0.006, 0],
+    [0, centerY + 0.004, 0],
+    [halfSpan * 0.25, centerY + 0.006, 0],
+    [halfSpan * 0.47, centerY + 0.021, 0],
+    [halfSpan * 0.68, centerY + 0.009, 0],
+    [halfSpan * 0.88, centerY + 0.023, 0],
+    [halfSpan + tipExtension, centerY + 0.030, 0],
+  ];
+  // The 20.5 mm centre-root diameter gives the quillons extra visual weight;
+  // the 15 mm shaft eases into fine, fully integrated terminals.
+  const radii = [
+    0.00010,
+    thickness * 0.22,
+    thickness * 0.39,
+    thickness * 0.48,
+    thickness * 0.57,
+    thickness * 0.64,
+    thickness * 0.57,
+    thickness * 0.48,
+    thickness * 0.39,
+    thickness * 0.22,
+    0.00010,
+  ];
+
+  const centres = stations.map((point) => new GFX.Vector3(...point));
+  const radialSegments = 24;
+  const samplesPerSegment = 8;
+  const sampledCentres = [];
+  const sampledRadii = [];
+  const catmullRom = (p0, p1, p2, p3, t) => {
+    const t2 = t * t, t3 = t2 * t;
+    return p1.clone().multiplyScalar(2)
+      .add(p2.clone().sub(p0).multiplyScalar(t))
+      .add(p0.clone().multiplyScalar(2).sub(p1.clone().multiplyScalar(5))
+        .add(p2.clone().multiplyScalar(4)).sub(p3).multiplyScalar(t2))
+      .add(p1.clone().multiplyScalar(3).sub(p0).sub(p2.clone().multiplyScalar(3)).add(p3)
+        .multiplyScalar(t3))
+      .multiplyScalar(0.5);
+  };
+
+  for (let segment = 0; segment < centres.length - 1; segment++) {
+    const p0 = centres[Math.max(0, segment - 1)];
+    const p1 = centres[segment];
+    const p2 = centres[segment + 1];
+    const p3 = centres[Math.min(centres.length - 1, segment + 2)];
+    for (let step = 0; step < samplesPerSegment; step++) {
+      const t = step / samplesPerSegment;
+      sampledCentres.push(catmullRom(p0, p1, p2, p3, t));
+      const smooth = t * t * (3 - 2 * t);
+      sampledRadii.push(radii[segment] * (1 - smooth) + radii[segment + 1] * smooth);
+    }
+  }
+  sampledCentres.push(centres.at(-1).clone());
+  sampledRadii.push(radii.at(-1));
+
+  const positions = [];
+  const indices = [];
+  const ringStarts = [];
+  positions.push(sampledCentres[0].x, sampledCentres[0].y, sampledCentres[0].z);
+  for (let i = 1; i < sampledCentres.length - 1; i++) {
+    const tangent = sampledCentres[i + 1].clone()
+      .sub(sampledCentres[i - 1]).normalize();
+    const normal = new GFX.Vector3(-tangent.y, tangent.x, 0).normalize();
+    const binormal = new GFX.Vector3(0, 0, 1);
+    ringStarts.push(positions.length / 3);
+    for (let j = 0; j < radialSegments; j++) {
+      const angle = (j / radialSegments) * Math.PI * 2;
+      const vertex = sampledCentres[i].clone()
+        .addScaledVector(normal, Math.cos(angle) * sampledRadii[i])
+        .addScaledVector(binormal, Math.sin(angle) * sampledRadii[i]);
+      positions.push(vertex.x, vertex.y, vertex.z);
+    }
+  }
+  const endTip = positions.length / 3;
+  const finalPoint = sampledCentres.at(-1);
+  positions.push(finalPoint.x, finalPoint.y, finalPoint.z);
+
+  for (let j = 0; j < radialSegments; j++) {
+    indices.push(0, ringStarts[0] + (j + 1) % radialSegments, ringStarts[0] + j);
+  }
+  for (let ring = 0; ring < ringStarts.length - 1; ring++) {
+    const a0 = ringStarts[ring], b0 = ringStarts[ring + 1];
+    for (let j = 0; j < radialSegments; j++) {
+      const a = a0 + j;
+      const b = a0 + (j + 1) % radialSegments;
+      const c = b0 + j;
+      const d = b0 + (j + 1) % radialSegments;
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+  const finalRing = ringStarts.at(-1);
+  for (let j = 0; j < radialSegments; j++) {
+    indices.push(finalRing + j, finalRing + (j + 1) % radialSegments, endTip);
+  }
+
+  const geometry = new GFX.BufferGeometry();
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+
+  const guard = new GFX.Group();
+  guard.name = 'lightning swept crossguard';
+  guard.userData.lightningProfile = Object.freeze({
+    bendsPerArm: 3,
+    baseDiameter: radii[5] * 2,
+    shaftDiameter: thickness * 0.96,
+    tipRadius: radii[0],
+    tipExtension,
+  });
+  const mesh = new GFX.Mesh(geometry, material);
+  mesh.name = 'three-bend lightning quillons with tapered points';
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   guard.add(mesh);
@@ -611,6 +759,23 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
     helix.castShadow = true;
     helix.receiveShadow = true;
     hilt.add(helix);
+  } else if (wrapStyle === 'diamond') {
+    const pitch = spec.diamondWrapPitch ?? 0.019;
+    for (const [label, direction] of [['rising', 1], ['falling', -1]]) {
+      const lace = new GFX.Mesh(diagonalWrapGeometry(GFX, {
+        radius: handleRadius + 0.00072,
+        startY: gripBottom,
+        height: spec.gripLength,
+        pitch,
+        tubeRadius: 0.00058,
+        radialSegments: 8,
+        direction,
+      }), wrapMaterial);
+      lace.name = `diamond leather stitch ${label}`;
+      lace.castShadow = true;
+      lace.receiveShadow = true;
+      hilt.add(lace);
+    }
   } else if (wrapStyle === 'banded') {
     const wraps = spec.gripWrapDivisions ?? 13;
     for (let i = 1; i < wraps; i++) {
@@ -707,7 +872,14 @@ export function buildWeapon(GFX, spec, {
   let guardBoss;
   const guardThickness = spec.guardThickness ?? 0.0136;
   const span = spec.guardSpan / 2;
-  if ((spec.guardStyle ?? 'swept') === 'horns') {
+  if (spec.guardStyle === 'lightning') {
+    guardBoss = sphere(GFX, 'lightning guard reinforced central boss', hiltMaterial,
+      [0, guardY + 0.003, 0], [0.028, 0.017, 0.018], [40, 24]);
+    hilt.add(guardBoss);
+    guard = createLightningGuard(GFX, hilt, hiltMaterial, {
+      centerY: guardY, span: spec.guardSpan, thickness: guardThickness,
+    });
+  } else if ((spec.guardStyle ?? 'swept') === 'horns') {
     guard = createDevilHornGuard(GFX, hilt, hiltMaterial, {
       centerY: guardY, span: spec.guardSpan, thickness: guardThickness,
     });

@@ -138,6 +138,37 @@ The three variants are exposed from `madness-engine/weapons` as
 corresponding `Dagger`, `Greatsword` and `Morningstar` factory names.
 
 
+## Lightning Sword
+
+`createLightningSword(GFX, options)` introduces a separate broadsword
+variant without changing the existing Madness, Regular, Marc or Krystal
+families. Its crossguard is a continuous, mirrored lightning-bolt sweep with
+three shallow directional bends per arm, a reinforced central root and
+integrated tapered points. The guard thickens to about 20.5 mm at the base,
+narrows to a roughly 15.4 mm shaft, and rises outward at a restrained angle.
+The leather grip uses two opposing helical laces that cross to form a
+diamond-stitched pattern.
+
+The blade proportions and marble pommel retain the established broadsword
+dimensions. Blade and hilt finishes and grip colour remain independently
+selectable through the usual setters.
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createLightningSword } from 'madness-engine/weapons';
+
+const sword = createLightningSword(GFX, {
+  bladeMetal: 'steel',
+  hiltMetal: 'silver',
+  gripColor: '#633b2c',
+});
+scene.add(sword.group);
+sword.setBladeMetal('chrome');
+sword.setHiltMetal('brass');
+sword.setGripColor('#75452e');
+```
+
+
 ## Krystal sword and dagger
 
 The Krystal set is derived from the Madness sword and dagger: the blade

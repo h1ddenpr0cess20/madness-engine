@@ -84,6 +84,18 @@ export function createKrystalDagger(GFX, options = {}) {
   }, { ...options, bladeMist: true }), 'Krystal Dagger');
 }
 
+/** A broad fantasy sword with a swept three-bend lightning guard and diamond-stitched grip. */
+export function createLightningSword(GFX, options = {}) {
+  return named(buildWeapon(GFX, {
+    ...BROADSWORD_SPEC,
+    name: 'lightning-sword',
+    pommelStyle: 'marble',
+    guardStyle: 'lightning',
+    guardThickness: 0.016,
+    wrapStyle: 'diamond',
+  }, options), 'Lightning Sword');
+}
+
 /** Marc's family uses the engine metal egg, upward horn guard and diagonal grip wrap. */
 export function createMarcsSword(GFX, options = {}) {
   return swordVariant(GFX, BROADSWORD_SPEC, "Marc's Sword", 'metal-egg', 'horns', 'diagonal', options);

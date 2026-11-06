@@ -17,6 +17,7 @@ import {
   createMarcsMorningstar,
   createKrystalSword,
   createKrystalDagger,
+  createLightningSword,
 } from '../src/weapons/index.js';
 import { METALS } from '../src/props/metalglobe.js';
 
@@ -171,4 +172,42 @@ test('Krystal sword and dagger use her crystal orb and independently toggleable 
     assert.equal(krystal.pommelAsset.vision.visible, true,
       'enabling the blade sheath does not control the orb visions');
   }
+});
+
+test('Lightning Sword has a three-bend tapered bolt guard and crossed diamond-stitched grip', () => {
+  const weapon = createLightningSword(GFX);
+  assert.equal(weapon.name, 'Lightning Sword');
+  assert.equal(weapon.pommelAsset.kind, 'marble');
+  assert.equal(weapon.guard.name, 'lightning swept crossguard');
+  assert.equal(weapon.guard.children.length, 1);
+  assert.equal(weapon.guard.children[0].name, 'three-bend lightning quillons with tapered points');
+  assert.deepEqual(weapon.guard.userData.lightningProfile, {
+    bendsPerArm: 3,
+    baseDiameter: 0.02048,
+    shaftDiameter: 0.01536,
+    tipRadius: 0.0001,
+    tipExtension: 0.0132,
+  });
+  const positions = weapon.guard.children[0].geometry.attributes.position;
+  let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (let i = 0; i < positions.count; i++) {
+    minX = Math.min(minX, positions.getX(i));
+    maxX = Math.max(maxX, positions.getX(i));
+    maxY = Math.max(maxY, positions.getY(i));
+  }
+  assert.ok(maxX > weapon.dimensions.guardSpan / 2,
+    'the outer point extends beyond the nominal guard span');
+  assert.ok(minX < -weapon.dimensions.guardSpan / 2,
+    'the left outer point mirrors the right');
+  assert.ok(maxY > weapon.guardY + 0.025,
+    'the lightning quillons sweep upward from the central boss');
+
+  const diamondLaces = weapon.hilt.children.filter((part) => part.name.startsWith('diamond leather stitch '));
+  assert.equal(diamondLaces.length, 2, 'opposing laces cross over the full leather grip');
+  assert.ok(diamondLaces.every((lace) => lace.geometry.attributes.position.count > 1000),
+    'both stitch passes have a dense continuous helical mesh');
+  assert.ok(diamondLaces.every((lace) => lace.material === weapon.wrapMaterial),
+    'stitch colour remains coordinated with the leather wrap material');
+  weapon.setGripColor('#75452e');
+  assert.equal(weapon.wrapMaterial.color.getHexString(), '502f1f');
 });
