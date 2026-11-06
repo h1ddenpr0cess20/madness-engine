@@ -148,7 +148,7 @@ function floorField(u, v, scale) {
 
 
 
-const HOT_VERTEX = \`
+const HOT_VERTEX = `
 uniform float uLocal;
 varying vec3 vMoltenPoint;
 void main() {
@@ -159,9 +159,9 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
 }
-\`;
+`;
 
-const HOT_FRAGMENT = \`
+const HOT_FRAGMENT = `
 uniform float uTime;
 uniform float uScale;
 uniform float uLocal;
@@ -259,9 +259,9 @@ void main() {
   colour = mix(colour * 0.58, colour, coolingRim * 0.65);
   gl_FragColor = vec4(colour * 1.12, mask);
 }
-\`;
+`;
 
-const HOT_WGSL = \`
+const HOT_WGSL = `
 struct Varyings {
   @builtin(position) position: vec4f,
   @location(0) point: vec3f,
@@ -358,7 +358,7 @@ fn fs(in: Varyings) -> @location(0) vec4f {
   colour = mix(colour * 0.58, colour, coolingRim * 0.65);
   return vec4f(colour * 1.12, mask);
 }
-\`;
+`;
 
 function writePixel(data, offset, rgb, alpha = 255) {
   data[offset] = rgb[0];
@@ -470,7 +470,7 @@ export function createLavaBubbler(GFX, sourceGeometry, { segments = 6, spacing =
   const output = Object.fromEntries(Object.entries(sourceGeometry.attributes).map(([name]) => [name, []]));
 
   const vertexIndex = (i) => sourceIndex ? sourceIndex.getX(i) : i;
-  const point = (ia, ib, ic, i, j, n, flip = false) => {
+  const point = (ia, ib, ic, i, j, n) => {
     const wb = i / n, wc = j / n, wa = 1 - wb - wc;
     for (const [name, attribute] of Object.entries(sourceGeometry.attributes)) {
       const list = output[name];
@@ -516,67 +516,84 @@ export function createLavaBubbler(GFX, sourceGeometry, { segments = 6, spacing =
     minZ=Math.min(minZ,position.getZ(i)); maxZ=Math.max(maxZ,position.getZ(i));
   }
 
-  const hash = (x,z,seed) => {
-    let h = Math.imul(x|0,0x8da6b343)^Math.imul(z|0,0xd8163841)^Math.imul(seed|0,0xcb1ab31f);
-    h=Math.imul(h^(h>>>16),0x7feb352d);
-    h=Math.imul(h^(h>>>15),0x846ca68b);
-    h^=h>>>16;
-    return (h>>>0)/4294967295;
+  const hash = (x, z, seed) => {
+    let h = Math.imul(x | 0, 0x8da6b343)
+      ^ Math.imul(z | 0, 0xd8163841)
+      ^ Math.imul(seed | 0, 0xcb1ab31f);
+    h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
+    h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967295;
   };
+
   const cells = new Map();
-  for(let iz=Math.floor(minZ/spacing)-1;iz<=Math.ceil(maxZ/spacing)+1;iz++){
-    for(let ix=Math.floor(minX/spacing)-1;ix<=Math.ceil(maxX/spacing)+1;ix++){
-      const rx=hash(ix,iz,17), rz=hash(ix,iz,41);
-      cells.set(ix+','+iz,{
-        x:(ix+0.2+rx*0.6)*spacing,
-        z:(iz+0.2+rz*0.6)*spacing,
-        radius:(0.34+hash(ix,iz,73)*0.24)*spacing,
-        height:0.10+hash(ix,iz,97)*0.085,
-        phase:hash(ix,iz,131)*Math.PI*2,
-        speed:0.68+hash(ix,iz,157)*0.46,
+  for (let iz = Math.floor(minZ / spacing) - 1; iz <= Math.ceil(maxZ / spacing) + 1; iz++) {
+    for (let ix = Math.floor(minX / spacing) - 1; ix <= Math.ceil(maxX / spacing) + 1; ix++) {
+      const rx = hash(ix, iz, 17);
+      const rz = hash(ix, iz, 41);
+      cells.set(ix + ',' + iz, {
+        x: (ix + 0.2 + rx * 0.6) * spacing,
+        z: (iz + 0.2 + rz * 0.6) * spacing,
+        radius: (0.34 + hash(ix, iz, 73) * 0.24) * spacing,
+        height: 0.10 + hash(ix, iz, 97) * 0.085,
+        phase: hash(ix, iz, 131) * Math.PI * 2,
+        speed: 0.68 + hash(ix, iz, 157) * 0.46,
       });
     }
   }
 
-  const sample=(x,z,time)=>{
-    let h=0,dx=0,dz=0;
-    const ix=Math.floor(x/spacing),iz=Math.floor(z/spacing);
-    for(let oz=-1;oz<=1;oz++) for(let ox=-1;ox<=1;ox++){
-      const bubble=cells.get((ix+ox)+','+(iz+oz));
-      if(!bubble) continue;
-      const px=x-bubble.x,pz=z-bubble.z;
-      const pulse=0.5+0.5*Math.sin(time*bubble.speed+bubble.phase);
-      const rise=Math.pow(pulse,2.0);
-      const radius=bubble.radius*(0.82+0.24*pulse);
-      const inv=1/(radius*radius);
-      const dome=bubble.height*rise*Math.exp(-3.4*(px*px+pz*pz)*inv);
-      h+=dome;
-      dx+=dome*(-6.8*px*inv);
-      dz+=dome*(-6.8*pz*inv);
+  const sample = (x, z, time) => {
+    let height = 0, dx = 0, dz = 0;
+    const ix = Math.floor(x / spacing);
+    const iz = Math.floor(z / spacing);
+    for (let oz = -1; oz <= 1; oz++) {
+      for (let ox = -1; ox <= 1; ox++) {
+        const bubble = cells.get((ix + ox) + ',' + (iz + oz));
+        if (!bubble) continue;
+        const px = x - bubble.x;
+        const pz = z - bubble.z;
+        const pulse = 0.5 + 0.5 * Math.sin(time * bubble.speed + bubble.phase);
+        const rise = pulse * pulse;
+        const radius = bubble.radius * (0.82 + 0.24 * pulse);
+        const inverseRadiusSq = 1 / (radius * radius);
+        const dome = bubble.height * rise * Math.exp(-3.4 * (px * px + pz * pz) * inverseRadiusSq);
+        height += dome;
+        dx += dome * (-6.8 * px * inverseRadiusSq);
+        dz += dome * (-6.8 * pz * inverseRadiusSq);
+      }
     }
-    return [h,dx,dz];
+    return [height, dx, dz];
   };
 
-  const update=(time)=>{
-    for(let i=0;i<position.count;i++){
-      const k=i*3,x=basePositions[k],y=basePositions[k+1],z=basePositions[k+2];
-      const ny=Math.max(0,baseNormals[k+1]);
-      if(ny<0.35){
-        position.array[k]=x;position.array[k+1]=y;position.array[k+2]=z;
-        normal.array[k]=baseNormals[k];normal.array[k+1]=baseNormals[k+1];normal.array[k+2]=baseNormals[k+2];
+  const update = (time) => {
+    for (let i = 0; i < position.count; i++) {
+      const k = i * 3;
+      const x = basePositions[k], y = basePositions[k + 1], z = basePositions[k + 2];
+      const ny = Math.max(0, baseNormals[k + 1]);
+      if (ny < 0.35) {
+        position.array[k] = x;
+        position.array[k + 1] = y;
+        position.array[k + 2] = z;
+        normal.array[k] = baseNormals[k];
+        normal.array[k + 1] = baseNormals[k + 1];
+        normal.array[k + 2] = baseNormals[k + 2];
         continue;
       }
-      const [height,dhx,dhz]=sample(x,z,time);
-      position.array[k]=x;
-      position.array[k+1]=y+height*ny;
-      position.array[k+2]=z;
-      let nx=baseNormals[k]-dhx*ny;
-      let nz=baseNormals[k+2]-dhz*ny;
-      let nn=Math.hypot(nx,baseNormals[k+1],nz)||1;
-      normal.array[k]=nx/nn;normal.array[k+1]=baseNormals[k+1]/nn;normal.array[k+2]=nz/nn;
+
+      const [height, dhx, dhz] = sample(x, z, time);
+      position.array[k] = x;
+      position.array[k + 1] = y + height * ny;
+      position.array[k + 2] = z;
+
+      let nx = baseNormals[k] - dhx * ny;
+      let nz = baseNormals[k + 2] - dhz * ny;
+      const normalLength = Math.hypot(nx, baseNormals[k + 1], nz) || 1;
+      normal.array[k] = nx / normalLength;
+      normal.array[k + 1] = baseNormals[k + 1] / normalLength;
+      normal.array[k + 2] = nz / normalLength;
     }
-    position.needsUpdate=true;
-    normal.needsUpdate=true;
+    position.needsUpdate = true;
+    normal.needsUpdate = true;
   };
 
   geometry.computeBoundingSphere();

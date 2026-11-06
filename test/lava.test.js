@@ -138,34 +138,88 @@ test('floor lava geometry is subdivided and physically bubbles in localized patc
   const { createLavaBubbler } = await import('../src/textures/lava.js');
   const source = new GFX.BufferGeometry();
   source.setAttribute('position', new GFX.BufferAttribute(new Float32Array([
-    0,0,0,  4,0,0,  0,0,4,
-    4,0,0,  4,0,4,  0,0,4,
-  ]),3));
+    0, 0, 0,  4, 0, 0,  0, 0, 4,
+    4, 0, 0,  4, 0, 4,  0, 0, 4,
+  ]), 3));
   source.setAttribute('normal', new GFX.BufferAttribute(new Float32Array([
-    0,1,0, 0,1,0, 0,1,0,
-    0,1,0, 0,1,0, 0,1,0,
-  ]),3));
+    0, 1, 0,  0, 1, 0,  0, 1, 0,
+    0, 1, 0,  0, 1, 0,  0, 1, 0,
+  ]), 3));
   source.setAttribute('uv', new GFX.BufferAttribute(new Float32Array([
-    0,0, 1,0, 0,1,
-    1,0, 1,1, 0,1,
-  ]),2));
+    0, 0,  1, 0,  0, 1,
+    1, 0,  1, 1,  0, 1,
+  ]), 2));
 
-  const bubbler = createLavaBubbler(GFX,source,{segments:6,spacing:1.05});
-  assert.ok(bubbler.geometry.attributes.position.count > source.attributes.position.count * 10,
-    'floor mesh is subdivided enough to make round swells');
-  const positions=bubbler.geometry.attributes.position;
-  const normals=bubbler.geometry.attributes.normal;
+  const bubbler = createLavaBubbler(GFX, source, { segments: 6, spacing: 1.05 });
+  assert.ok(
+    bubbler.geometry.attributes.position.count > source.attributes.position.count * 10,
+    'floor mesh is subdivided enough to make rounded swells',
+  );
+
+  const positions = bubbler.geometry.attributes.position;
+  const normals = bubbler.geometry.attributes.normal;
   bubbler.update(0);
-  const first=positions.array.slice();
-  let peak=0;
-  for(let i=1;i<positions.array.length;i+=3) peak=Math.max(peak,positions.array[i]);
-  assert.ok(peak>0.04,'bubbles rise visibly above the floor');
-  assert.ok(normals.array.some((v)=>Math.abs(v)>0.01),'bubble slopes update the surface normals');
+  const firstPositions = positions.array.slice();
+
+  let peak = 0;
+  let minimum = Infinity;
+  let maxSlope = 0;
+  let displaced = 0;
+  for (let i = 0; i < positions.count; i++) {
+    const k = i * 3;
+    const height = positions.array[k + 1];
+    peak = Math.max(peak, height);
+    minimum = Math.min(minimum, height);
+    maxSlope = Math.max(maxSlope, Math.abs(normals.array[k]), Math.abs(normals.array[k + 2]));
+    if (height > 0.015) displaced++;
+  }
+  assert.ok(peak > 0.04, 'bubbles rise visibly above the floor');
+  assert.ok(peak - minimum > 0.03, 'bubble displacement is localized rather than uniform');
+  assert.ok(maxSlope > 0.005, 'bubble slopes update the surface normals');
+  assert.ok(displaced > 0 && displaced < positions.count, 'only local patches of the floor are lifted');
+
   bubbler.update(2.4);
-  let changed=0;
-  for(let i=0;i<positions.array.length;i++) changed=Math.max(changed,Math.abs(positions.array[i]-first[i]));
-  assert.ok(changed>0.01,'each bubble swells and subsides independently over time');
+  let changed = 0;
+  for (let i = 0; i < positions.array.length; i++) {
+    changed = Math.max(changed, Math.abs(positions.array[i] - firstPositions[i]));
+  }
+  assert.ok(changed > 0.01, 'each bubble swells and subsides independently over time');
+
   bubbler.update(2.4);
-  assert.deepEqual(Array.from(positions.array),Array.from(positions.array),
-    'the same time value yields a stable surface');
+  const secondPositions = positions.array.slice();
+  bubbler.update(2.4);
+  assert.deepEqual(Array.from(positions.array), Array.from(secondPositions),
+    'the same time value yields the same surface');
+});
+
+test('dungeon floor integrates the bubbling lava geometry and time-driven molten layer', async () => {
+  const { createDungeonMeshes } = await import('../src/scenery/dungeon.js');
+  const parts = (position, normal) => ({
+    position: new Float32Array(position),
+    normal: new Float32Array(normal),
+    color: new Float32Array(Array.from({ length: position.length }, (_, i) => i % 3 === 0 ? 0.4 : 0.4)),
+    uv: new Float32Array(Array.from({ length: position.length / 3 * 2 }, () => 0)),
+  });
+  const empty = parts([], []);
+  const floor = parts([
+    0, 0, 0,  4, 0, 0,  0, 0, 4,
+    4, 0, 0,  4, 0, 4,  0, 0, 4,
+  ], [
+    0, 1, 0,  0, 1, 0,  0, 1, 0,
+    0, 1, 0,  0, 1, 0,  0, 1, 0,
+  ]);
+  const dungeon = createDungeonMeshes(GFX, { tops: empty, walls: empty, lava: floor });
+  const basalt = dungeon.group.children.find((mesh) => mesh.name === 'lava-basalt-floor');
+  const molten = dungeon.group.children.find((mesh) => mesh.name === 'lava-molten-flow-floor');
+  assert.ok(basalt && molten, 'both crust and animated molten layer are present');
+  assert.equal(basalt.geometry, molten.geometry, 'both layers share the same deformed vertices');
+  assert.ok(basalt.geometry.attributes.position.count > floor.position.length / 3 * 10);
+  dungeon.update(0);
+  const t0 = basalt.geometry.attributes.position.array.slice();
+  dungeon.update(2.4);
+  const t1 = basalt.geometry.attributes.position.array;
+  let displacement = 0;
+  for (let i = 0; i < t1.length; i++) displacement = Math.max(displacement, Math.abs(t1[i] - t0[i]));
+  assert.ok(displacement > 0.01, 'the dungeon update physically moves the lava surface');
+  assert.equal(basalt.material.hotMaterial.uniforms.uTime.value, 2.4);
 });
