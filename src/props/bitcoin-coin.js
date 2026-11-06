@@ -24,6 +24,11 @@ export function createBitcoinCoin(GFX, { radius = 0.3, metal = 'gold' } = {}) {
       // platform font having the Bitcoin currency glyph.
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, size, size);
+      ctx.save();
+      // Scale the mark inward to leave room for the builder's year engraving.
+      ctx.translate(256, 256);
+      ctx.scale(0.82, 0.78);
+      ctx.translate(-299, -256);
       ctx.fillStyle = '#fff';
       ctx.beginPath();
       ctx.moveTo(172, 82);
@@ -61,6 +66,7 @@ export function createBitcoinCoin(GFX, { radius = 0.3, metal = 'gold' } = {}) {
       ctx.fillRect(230, 52, 17, 136);
       ctx.fillRect(195, 391, 17, 100);
       ctx.fillRect(230, 391, 17, 100);
+      ctx.restore();
       logo = canvas;
     }
   }
