@@ -114,10 +114,10 @@ export function createKrystalDagger(GFX, options = {}) {
 }
 
 /** The inverted lightning-guard Magic Egg Sword with glass egg and white/yellow mist. */
-export function createMagicEggSword(GFX, options = {}) {
+function createMagicEggVariant(GFX, spec, slug, label, options = {}) {
   return named(buildWeapon(GFX, {
-    ...BROADSWORD_SPEC,
-    name: 'magic-egg-sword',
+    ...spec,
+    name: slug,
     pommelStyle: 'magic-egg',
     guardStyle: 'lightning',
     guardInverted: true,
@@ -131,7 +131,20 @@ export function createMagicEggSword(GFX, options = {}) {
     threadColor: '#ffd264',
     ...options,
     bladeMist: true,
-  }), 'Magic Egg Sword');
+  }), label);
+}
+
+/** Magic Egg sword, dagger and greatsword share the same glass egg construction and finish palette. */
+export function createMagicEggSword(GFX, options = {}) {
+  return createMagicEggVariant(GFX, BROADSWORD_SPEC, 'magic-egg-sword', 'Magic Egg Sword', options);
+}
+
+export function createMagicEggDagger(GFX, options = {}) {
+  return createMagicEggVariant(GFX, DAGGER_SPEC, 'magic-egg-dagger', 'Magic Egg Dagger', options);
+}
+
+export function createMagicEggGreatsword(GFX, options = {}) {
+  return createMagicEggVariant(GFX, GREATSWORD_SPEC, 'magic-egg-greatsword', 'Magic Egg Greatsword', options);
 }
 
 /** Marc's family uses the engine metal egg, upward horn guard and diagonal grip wrap. */

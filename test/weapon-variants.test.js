@@ -18,6 +18,8 @@ import {
   createKrystalSword,
   createKrystalDagger,
   createMagicEggSword,
+  createMagicEggDagger,
+  createMagicEggGreatsword,
   bladeGeometry,
 } from '../src/weapons/index.js';
 import { METALS } from '../src/props/metalglobe.js';
@@ -409,4 +411,66 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
   assert.equal(weapon.bladeMist.visible, false);
   assert.equal(weapon.pommelAsset.mist.visible, true,
     'the glass egg mist remains visible independently of the blade sheath');
+});
+
+
+test('Magic Egg Dagger and Greatsword reuse the fitted inverted glass-egg weapon construction', () => {
+  const pairs = [
+    [createMagicEggDagger(GFX), createMadnessDagger(GFX), 'Magic Egg Dagger'],
+    [createMagicEggGreatsword(GFX), createMadnessGreatsword(GFX), 'Magic Egg Greatsword'],
+  ];
+
+  for (const [weapon, base, label] of pairs) {
+    assert.equal(weapon.name, label);
+    assert.equal(weapon.pommelAsset.kind, 'magic-egg');
+    assertEggBezelOutsideShell(weapon);
+    assert.equal(weapon.bladeMetal, 'silver');
+    assert.equal(weapon.hiltMetal, 'gold');
+    assert.equal(weapon.gripColor, '#c0c0c0');
+    assert.equal(weapon.threadColor, '#ffd264');
+    assert.equal(weapon.handle.material.color.getHexString(), 'c0c0c0');
+    assert.equal(weapon.hilt.children.find((part) =>
+      part.name === 'diamond leather stitch rising').material.color.getHexString(), 'ffd264');
+
+    assert.equal(weapon.dimensions.bladeLength, base.dimensions.bladeLength);
+    assert.equal(weapon.dimensions.bladeWidth, base.dimensions.bladeWidth);
+    assert.equal(weapon.dimensions.gripLength, base.dimensions.gripLength);
+    assert.equal(weapon.dimensions.guardSpan, base.dimensions.guardSpan);
+
+    assert.equal(weapon.guard.name, 'inverted lightning swept crossguard');
+    assert.equal(weapon.guard.userData.lightningProfile.orientation, 'inverted');
+    assert.equal(weapon.guard.userData.lightningProfile.bendsPerArm, 3);
+
+    assert.equal(weapon.pommelAsset.glass.material.transmission, 1);
+    assert.equal(weapon.pommelAsset.glass.onBeforeRender(), undefined,
+      'the detached glass shell has no hero wobble');
+    assert.equal(weapon.pommelAsset.mist.visible, true);
+    assert.equal(weapon.pommelAsset.mist.material.uniforms.uDuo.value, 1);
+    assert.equal(weapon.pommelAsset.mist.material.uniforms.uGlow.value, 1.15);
+
+    assert.ok(weapon.bladeMist);
+    assert.equal(weapon.bladeMist.visible, true);
+    assert.equal(weapon.bladeMist.name, 'Magic Egg blade mist');
+    assert.equal(weapon.bladeMist.material.uniforms.uDuo.value, 1);
+    assert.equal(weapon.bladeMist.material.uniforms.uGlow.value, 1.05);
+
+    weapon.setBladeMist(false);
+    assert.equal(weapon.bladeMist.visible, false);
+    assert.equal(weapon.pommelAsset.mist.visible, true,
+      'toggling the blade mist leaves the egg pommel mist visible');
+
+    const custom = weapon === pairs[0][0]
+      ? createMagicEggDagger(GFX, {
+        bladeMetal: 'platinum', hiltMetal: 'rose gold',
+        gripColor: '#eeeeee', threadColor: '#ccaa33',
+      })
+      : createMagicEggGreatsword(GFX, {
+        bladeMetal: 'platinum', hiltMetal: 'rose gold',
+        gripColor: '#eeeeee', threadColor: '#ccaa33',
+      });
+    assert.equal(custom.bladeMetal, 'platinum');
+    assert.equal(custom.hiltMetal, 'rose gold');
+    assert.equal(custom.gripColor, '#eeeeee');
+    assert.equal(custom.threadColor, '#ccaa33');
+  }
 });

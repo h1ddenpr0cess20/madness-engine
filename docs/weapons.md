@@ -194,20 +194,21 @@ sword.setBladeMist(false);
 ```
 
 
-## Magic Egg Sword
+## Magic Egg Sword, Dagger and Greatsword
 
 `createMagicEggSword(GFX, options)` follows the Krystal sword construction
 but replaces the crystal orb pommel with the repository's actual transmissive
-Glass Egg shell and its white/yellow ray-marched mist. The egg is detached
-from its hero rig, fitted into the existing pommel envelope, and turned with
-its broad end toward the grip. Its gold bezel follows the outside contour of
-the glass shell rather than passing through the egg; the same fitted outer
-ferrule is used for Marc's Metal Egg pommel. The internal egg mist remains
+Glass Egg shell and its white/yellow ray-marched mist. Sword, dagger and
+greatsword share the same detached, stationary egg pommel, correctly fitted
+with its narrow point facing outward and its broad shoulder meeting the grip.
+The gold bezel forms a short collar around that upper shoulder and follows
+the outside contour of the glass shell rather than passing through the egg;
+the same fitted outer ferrule is used for Marc's Metal Egg pommel. The internal egg mist remains
 visible independently of the separate blade sheath.
 
-The guard uses the same three-bend lightning quillons as Krystal, mirrored
-vertically so both arms sweep down. Its default blade is silver and
-its hilt is gold. The grip uses silver leather (`#c0c0c0`) with gold diamond
+All three variants use the same three-bend lightning quillons as Krystal,
+mirrored vertically so both arms sweep down. Their default blades are silver
+and their hilts are gold. The grip uses silver leather (`#c0c0c0`) with gold diamond
 stitching (`#ffd264`). Metal finishes, leather and thread remain
 independently customizable through the factory options; grip and thread can
 also be changed later with `setGripColor()` and `setThreadColor()`. Its
@@ -216,15 +217,23 @@ blade sheath uses the egg's white/yellow palette and can be toggled with
 
 ```js
 import * as GFX from 'madness-engine/gfx';
-import { createMagicEggSword } from 'madness-engine/weapons';
+import {
+  createMagicEggSword,
+  createMagicEggDagger,
+  createMagicEggGreatsword,
+} from 'madness-engine/weapons';
 
-const sword = createMagicEggSword(GFX, {
+const options = {
   bladeMetal: 'silver',
   hiltMetal: 'gold',
   gripColor: '#c0c0c0',
   threadColor: '#ffd264',
-});
-scene.add(sword.group);
+};
+const sword = createMagicEggSword(GFX, options);
+const dagger = createMagicEggDagger(GFX, options);
+const greatsword = createMagicEggGreatsword(GFX, options);
+scene.add(sword.group, dagger.group, greatsword.group);
+
 sword.setGripColor('#d0d0d0');
 sword.setThreadColor('#e8b62f');
 sword.setBladeMist(false);
