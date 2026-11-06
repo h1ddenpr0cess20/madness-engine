@@ -15,6 +15,7 @@ function smoothLongitudeSeam(geometry) {
   }
 
   const pairs = [];
+  const poles = [[], []];
   for (const [row, a] of starts) {
     const b = ends.get(row);
     if (b === undefined) continue;
@@ -26,20 +27,39 @@ function smoothLongitudeSeam(geometry) {
     pairs.push([a, b]);
   }
 
+  // SphereGeometry fans each pole into many coincident UV vertices too. They
+  // must share a normal or the moving specular highlight pinches at the poles.
+  for (let i = 0; i < uv.count; i++) {
+    const v = uv.getY(i);
+    if (v >= 1 - 1e-6) poles[0].push(i);
+    else if (v <= 1e-6) poles[1].push(i);
+  }
+  for (const group of poles) {
+    if (group.length < 2) continue;
+    let x = 0, y = 0, z = 0;
+    for (const i of group) {
+      x += position.getX(i); y += position.getY(i); z += position.getZ(i);
+    }
+    x /= group.length; y /= group.length; z /= group.length;
+    for (const i of group) position.setXYZ(i, x, y, z);
+  }
+
   position.needsUpdate = true;
   geometry.computeVertexNormals();
 
   const normal = geometry.attributes.normal;
   if (!normal) return;
-  for (const [a, b] of pairs) {
-    let x = normal.getX(a) + normal.getX(b);
-    let y = normal.getY(a) + normal.getY(b);
-    let z = normal.getZ(a) + normal.getZ(b);
+  const shareNormal = (indices) => {
+    let x = 0, y = 0, z = 0;
+    for (const i of indices) {
+      x += normal.getX(i); y += normal.getY(i); z += normal.getZ(i);
+    }
     const length = Math.hypot(x, y, z) || 1;
     x /= length; y /= length; z /= length;
-    normal.setXYZ(a, x, y, z);
-    normal.setXYZ(b, x, y, z);
-  }
+    for (const i of indices) normal.setXYZ(i, x, y, z);
+  };
+  for (const [a, b] of pairs) shareNormal([a, b]);
+  for (const group of poles) if (group.length > 1) shareNormal(group);
   normal.needsUpdate = true;
 }
 

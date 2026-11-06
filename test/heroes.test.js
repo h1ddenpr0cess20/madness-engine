@@ -99,6 +99,17 @@ test('metal Slimey keeps the orb geometry and controls while switching shared me
   assert.equal(metalShell.material.metalness, 1);
   assert.equal(metalShell.material.roughness, METALS.silver.roughness);
   assert.equal(metalShell.material.transmission, 0);
+  const metalGlow = metalStage.object.children.find((child) => child.name === 'glow');
+  const metalCore = metalStage.object.children.find((child) => child.name === 'core');
+  const metalBubbles = metalStage.object.children.filter((child) => child.name.startsWith('bubble_'));
+  assert.equal(metalGlow.visible, false, 'the additive slime rim is hidden');
+  assert.equal(metalCore.material.emissiveIntensity, 0, 'the core does not emit non-metal light');
+  assert.ok(metalBubbles.length > 0);
+  for (const bubble of metalBubbles) {
+    assert.equal(bubble.material.metalness, 1);
+    assert.equal(bubble.material.transmission, 0);
+    assert.equal(bubble.material.opacity, 1);
+  }
   metal.setMetal('copper');
   assert.equal(metal.metal, 'copper');
   assert.equal(metalShell.material.roughness, METALS.copper.roughness);
@@ -137,6 +148,19 @@ test('Slimey deformation keeps the duplicated longitude seam position and normal
   }
 
   assert.ok(starts.size > 0, 'sphere has duplicated wrap vertices');
+  for (const pole of [1, 0]) {
+    const indices = Array.from({ length: uv.count }, (_, i) => i)
+      .filter((i) => Math.abs(uv.getY(i) - pole) < 1e-6);
+    assert.ok(indices.length > 1, 'sphere pole has duplicated UV vertices');
+    for (const attr of [position, normal]) {
+      const first = [attr.getX(indices[0]), attr.getY(indices[0]), attr.getZ(indices[0])];
+      for (const index of indices.slice(1)) {
+        assert.ok(Math.abs(attr.getX(index) - first[0]) < 1e-7);
+        assert.ok(Math.abs(attr.getY(index) - first[1]) < 1e-7);
+        assert.ok(Math.abs(attr.getZ(index) - first[2]) < 1e-7);
+      }
+    }
+  }
   for (const [row, a] of starts) {
     const b = ends.get(row);
     if (b === undefined) continue;
