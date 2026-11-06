@@ -268,11 +268,25 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
   assert.equal(weapon.name, 'Magic Egg Sword');
   assert.equal(weapon.pommelAsset.kind, 'magic-egg');
   assert.equal(weapon.pommelAsset.glass.material.transmission, 1);
-  assert.equal(weapon.pommelAsset.glass.onBeforeRender(), undefined,
-    'the detached glass shell no longer runs the hero wobble callback');
+  assert.equal(weapon.pommelAsset.glass.parent, weapon.pommelAsset.group,
+    'the glass shell is attached to the stationary pommel group, not the animated hero');
+  assert.equal(weapon.pommelAsset.mist.parent, weapon.pommelAsset.group,
+    'the animated mist is fitted into the same stationary pommel group');
+  const detachedRig = weapon.pommelAsset.asset.group;
+  detachedRig.position.set(0.12, 0.21, -0.17);
+  detachedRig.rotation.set(0.13, -0.24, 0.37);
+  const rigPosition = detachedRig.position.toArray();
+  const rigRotation = detachedRig.rotation.toArray();
+  weapon.pommelAsset.glass.onBeforeRender();
+  assert.deepEqual(detachedRig.position.toArray(), rigPosition,
+    'rendering the glass pommel cannot move the detached hero rig');
+  assert.deepEqual(detachedRig.rotation.toArray(), rigRotation,
+    'rendering the glass pommel cannot rotate or wobble the detached hero rig');
   assert.equal(weapon.pommelAsset.mist.visible, true);
+  assert.equal(typeof weapon.pommelAsset.mist.onBeforeRender, 'function',
+    'the egg mist retains its separate animation callback');
   assert.notEqual(weapon.pommelAsset.mist.onBeforeRender, weapon.pommelAsset.glass.onBeforeRender,
-    'the egg mist retains its independent animation callback');
+    'the egg mist animation is not replaced by the stationary shell hook');
   assert.equal(weapon.pommelAsset.asset.mist, weapon.pommelAsset.mist);
   assert.equal(weapon.pommelAsset.mist.material.uniforms.uDuo.value, 1);
 
