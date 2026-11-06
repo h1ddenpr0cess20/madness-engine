@@ -116,7 +116,8 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
   for (let i = 0; i < sections; i++) {
     const t = i / sections;
     // The blade holds its width through the forte before a long, steady taper.
-    const taper = 1 - 0.20 * t - 0.80 * smoothstep(0.68, 1, t);
+    const shoulder = 0.94 + 0.06 * smoothstep(0, 0.11, t);
+    const taper = shoulder * (1 - 0.12 * t - 0.88 * smoothstep(0.68, 1, t));
     const w = halfWidth * Math.max(0.002, taper);
     const halfThickness = Math.max(0.00055, 0.0032 * (1 - 0.48 * t));
     const fullerStart = smoothstep(0.025, 0.09, t);
