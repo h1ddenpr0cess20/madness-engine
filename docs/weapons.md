@@ -46,5 +46,5 @@ sword.setHiltMetal('brass');
 sword.setGripColor('#75452e');
 ```
 
-Published dimensions: approximately 0.99 m overall, 0.81 m blade,
-52 mm maximum blade width, 140 mm grip, 220 mm crossguard span, and a 54 mm glass marble pommel. Its solid blade has a fuller that fades out at 75% of blade length.
+Published dimensions: approximately 0.99 m overall, 0.786 m blade,
+52 mm maximum blade width, 140 mm grip, 220 mm crossguard span, and a 54 mm glass marble pommel with a hollow metal bezel between it and the 140 mm leather grip. Its solid blade has a fuller that fades out at 75% of blade length.
