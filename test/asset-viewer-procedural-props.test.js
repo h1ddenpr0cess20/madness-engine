@@ -15,7 +15,7 @@ test('the original logo coin is registered through the dedicated procedural-prop
   assert.equal(coinAsset.category, 'Animated props');
   assert.ok(coinSource.includes("import('../textures/coin/logo.js')"));
   assert.ok(coinSource.includes('texture.loadCoinLogo()'));
-  assert.ok(catalog.includes("const proceduralProps = import.meta.glob('../../../src/props/*.js');"));
+  assert.ok(catalog.includes("const proceduralProps = import.meta.glob('../../../src/props/**/*.js');"));
   assert.ok(catalog.includes('for (const [path, load] of Object.entries(proceduralProps))'));
   assert.ok(catalog.includes('if (mod.assetViewer) items.push(proceduralPropItem(mod.assetViewer, path));'));
 });

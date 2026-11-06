@@ -23,7 +23,7 @@ const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.
 // Procedural props register themselves through an assetViewer descriptor.
 // Keep a dedicated root-props glob so stand-alone factory modules (coins, globes, etc.)
 // are reliably discovered independently of the sculpted-definition scan.
-const proceduralProps = import.meta.glob('../../../src/props/*.js');
+const proceduralProps = import.meta.glob('../../../src/props/**/*.js');
 const textures = import.meta.glob('../../../src/textures/**/*.js');
 
 // Street furniture (trees, lamps, benches) has no skeleton: it stands on one root bone.
