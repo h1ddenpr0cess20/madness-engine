@@ -239,3 +239,26 @@ sword.setThreadColor('#e8b62f');
 sword.setBladeMist(false);
 ```
 
+
+
+## Banana Dagger
+
+\`createBananaDagger(GFX, options)\` is a distinct curved dagger inspired by a
+half-peeled banana. Its blade sweeps forward with a convex, lenticular profile
+and a tapered point. The grip is exposed pale pulp with three narrow brass skin
+strips. At the guard, three flared, cupped peel lobes open around the tang:
+their outer faces are brass and their undersides are chrome. It has no separate
+pommel; a compact chrome end cap suggests the dark banana tip.
+
+Defaults are a chrome blade, brass peel exterior and chrome peel interior.
+These finishes are independently selectable with \`setBladeMetal()\`,
+\`setHiltMetal()\` and \`setInnerMetal()\`. The design is approximately 405 mm
+overall, with a 244 mm blade and a 96 mm grip.
+
+\`\`\`js
+import * as GFX from 'madness-engine/gfx';
+import { createBananaDagger } from 'madness-engine/weapons';
+
+const dagger = createBananaDagger(GFX);
+scene.add(dagger.group);
+\`\`\`
