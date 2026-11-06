@@ -48,3 +48,5 @@ export { DICE, DICE_TYPES, createDieProp, createD4, createD6, createD6Pips, crea
 export { BOWLING_BALL_DESIGNS, BOWLING_BALL_RADIUS, createBowlingBall } from './bowling-ball.js';
 export { PODIUM_ACCENT, PODIUM_SIZE, PODIUM_TILT, PODIUM_TOP, podiumOf } from './podium.js';
 export { BOWLING_PIN_DESIGNS, BOWLING_PIN_HEIGHT, BOWLING_PIN_RADIUS, createBowlingPin } from './bowling-pin.js';
+
+export { BUCKLER_DIMENSIONS, createBuckler } from './buckler.js';

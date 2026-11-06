@@ -474,3 +474,38 @@ test('Magic Egg Dagger and Greatsword reuse the fitted inverted glass-egg weapon
     assert.equal(custom.threadColor, '#ccaa33');
   }
 });
+
+
+test("Marc sword, dagger, greatsword and morningstar share gold metal and black wrap defaults", () => {
+  const edged = [
+    createMarcsSword(GFX),
+    createMarcsDagger(GFX),
+    createMarcsGreatsword(GFX),
+  ];
+  for (const weapon of edged) {
+    assert.equal(weapon.bladeMetal, 'gold');
+    assert.equal(weapon.hiltMetal, 'gold');
+    assert.equal(weapon.gripColor, '#101010');
+    assert.equal(weapon.handle.material.color.getHexString(), '101010');
+    const wrap = weapon.hilt.children.find((part) => part.name === 'diagonal leather wrap');
+    assert.ok(wrap);
+    assert.equal(wrap.material.color.getHexString(), '0b0b0b');
+  }
+
+  const morningstar = createMarcsMorningstar(GFX);
+  assert.equal(morningstar.metal, 'gold');
+  assert.equal(morningstar.gripColor, '#101010');
+  assert.equal(morningstar.handle.material.color.getHexString(), '101010');
+  const wrap = morningstar.hilt.children.find((part) => part.name === 'diagonal leather wrap');
+  assert.ok(wrap);
+  assert.equal(wrap.material.color.getHexString(), '0b0b0b');
+
+  const overridden = createMarcsDagger(GFX, {
+    bladeMetal: 'silver',
+    hiltMetal: 'platinum',
+    gripColor: '#303030',
+  });
+  assert.equal(overridden.bladeMetal, 'silver');
+  assert.equal(overridden.hiltMetal, 'platinum');
+  assert.equal(overridden.gripColor, '#303030');
+});

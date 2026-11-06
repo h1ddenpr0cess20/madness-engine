@@ -281,3 +281,8 @@ morningstar. The dagger and greatsword retain the broadsword's blade profile;
 the greatsword has a two-hand grip. The morningstar reuses the existing
 spiked head with a selectable metal haft, leather grip and marble pommel.
 See [docs/weapons.md](docs/weapons.md) for dimensions and construction.
+
+
+## Decorative Buckler
+
+A measured, convex metal buckler with independently selectable shell and trim finishes and a recessed OpenAI Blossom engraving is documented in [docs/buckler.md](docs/buckler.md).
