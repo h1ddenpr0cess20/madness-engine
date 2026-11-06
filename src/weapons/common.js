@@ -720,6 +720,57 @@ function sweptGuardGeometry(GFX, points, radius, radialSegments = 12) {
  * metal ferrule, wrapped leather grip and fitted upper metal seat. Sword and
  * hafted weapon families use this same construction.
  */
+/**
+ * An open, egg-following ferrule sleeve. The Magic Egg and Metal Egg share
+ * the same sculpted shell profile and scale; following that profile keeps the
+ * metal bezel outside the shell instead of letting a straight frustum pass
+ * through the egg's broad shoulder.
+ */
+function createEggFittedBezelGeometry(GFX, {
+  bottom, top, centerY, pommelRadius, topRadius,
+  radialScale = 0.032, clearance = 0.0008,
+  radialSegments = 64, axialSegments = 32,
+} = {}) {
+  const positions = [];
+  const indices = [];
+  const radiusAt = (worldY) => {
+    const y = (centerY - worldY) / pommelRadius;
+    if (Math.abs(y) >= 1) return 0;
+    const taper = 1 - 0.075 * y - 0.055 * y * y;
+    return radialScale * 0.84 * taper * Math.sqrt(1 - y * y);
+  };
+
+  for (let row = 0; row <= axialSegments; row++) {
+    const t = row / axialSegments;
+    const y = bottom + (top - bottom) * t;
+    const r = Math.max(radiusAt(y) + clearance, topRadius);
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const angle = (segment / radialSegments) * Math.PI * 2;
+      positions.push(Math.cos(angle) * r, y, Math.sin(angle) * r);
+    }
+  }
+
+  for (let row = 0; row < axialSegments; row++) {
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const a = row * radialSegments + segment;
+      const b = row * radialSegments + (segment + 1) % radialSegments;
+      const d = (row + 1) * radialSegments + segment;
+      const e = (row + 1) * radialSegments + (segment + 1) % radialSegments;
+      indices.push(a, d, b, b, d, e);
+    }
+  }
+
+  const geometry = new GFX.BufferGeometry();
+  geometry.type = 'EggFittedBezelGeometry';
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.clearance = clearance;
+  geometry.radialSegments = radialSegments;
+  geometry.axialSegments = axialSegments;
+  return geometry;
+}
+
 export function createWeaponHandleAssembly(GFX, group, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
@@ -785,21 +836,43 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   // The opening stays clear of the spark; the upper lip slips 1.2 mm over the
   // leather so the metal-to-leather joint reads as a fitted ferrule.
   const bezelTopRadius = handleRadius * 1.08;
-  const bezelBottomRadius = Math.min(radius * 0.86, handleRadius * 1.34);
-  const bezelBottom = radius + Math.sqrt(radius * radius - bezelBottomRadius * bezelBottomRadius);
+  const isEggPommel = pommelAsset.kind === 'metal-egg' || pommelAsset.kind === 'magic-egg';
+  const eggCenterY = radius + 0.0125 - radius * 0.01 / 1.03;
   const bezelTop = gripBottom + 0.0012;
+  const bezelBottomRadius = Math.min(radius * 0.86, handleRadius * 1.34);
+  // The spherical marble keeps its bell-shaped frustum. Egg pommels use a
+  // contoured sleeve beginning at the shell's equator and maintaining a
+  // small, consistent clearance over the actual sculpted shell surface.
+  const bezelBottom = isEggPommel
+    ? eggCenterY
+    : radius + Math.sqrt(radius * radius - bezelBottomRadius * bezelBottomRadius);
+  const eggRadiusAt = (worldY) => {
+    const y = (eggCenterY - worldY) / radius;
+    if (Math.abs(y) >= 1) return 0;
+    return 0.032 * 0.84 * (1 - 0.075 * y - 0.055 * y * y) * Math.sqrt(1 - y * y);
+  };
+  const eggLowerRimY = bezelBottom + 0.0006;
+  const fittedBottomRadius = isEggPommel
+    ? eggRadiusAt(eggLowerRimY) + 0.0008
+    : bezelBottomRadius;
   const bezelHeight = bezelTop - bezelBottom;
-  const bezelSleeve = new GFX.Mesh(
-    new GFX.CylinderGeometry(bezelTopRadius, bezelBottomRadius, bezelHeight, 48, 1, true),
-    hiltMaterial,
-  );
+  const bezelGeometry = isEggPommel
+    ? createEggFittedBezelGeometry(GFX, {
+      bottom: bezelBottom,
+      top: bezelTop,
+      centerY: eggCenterY,
+      pommelRadius: radius,
+      topRadius: bezelTopRadius,
+    })
+    : new GFX.CylinderGeometry(bezelTopRadius, bezelBottomRadius, bezelHeight, 48, 1, true);
+  const bezelSleeve = new GFX.Mesh(bezelGeometry, hiltMaterial);
   bezelSleeve.name = 'pommel bezel tapered hollow sleeve';
   bezelSleeve.position.set(0, (bezelBottom + bezelTop) / 2, 0);
   bezelSleeve.castShadow = true;
   bezelSleeve.receiveShadow = true;
   bezel.add(bezelSleeve);
   for (const [name, y, rimRadius, rimThickness] of [
-    ['pommel bezel lower flared rim', bezelBottom + 0.0006, bezelBottomRadius, 0.0008],
+    ['pommel bezel lower flared rim', eggLowerRimY, fittedBottomRadius, 0.0008],
     ['pommel bezel upper handle-fit rim', bezelTop - 0.0006, bezelTopRadius, 0.00065],
   ]) {
     const rim = new GFX.Mesh(
@@ -898,9 +971,9 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
     bezelBounds: Object.freeze({
       bottom: bezelBottom,
       top: bezelTop,
-      bottomRadius: bezelBottomRadius,
+      bottomRadius: fittedBottomRadius,
       topRadius: bezelTopRadius,
-      outerRadius: bezelBottomRadius,
+      outerRadius: fittedBottomRadius,
     }),
     bossSeat,
     bossSeatBounds: Object.freeze({ bottom: bossSeatBottom, top: bossSeatTop }),

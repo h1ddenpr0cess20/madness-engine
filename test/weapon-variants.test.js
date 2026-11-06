@@ -22,6 +22,29 @@ import {
 } from '../src/weapons/index.js';
 import { METALS } from '../src/props/metalglobe.js';
 
+function assertEggBezelOutsideShell(weapon) {
+  const sleeve = weapon.bezel.children.find((part) =>
+    part.name === 'pommel bezel tapered hollow sleeve');
+  assert.ok(sleeve, 'egg pommel has a fitted metal bezel sleeve');
+  const geometry = sleeve.geometry;
+  assert.equal(geometry.type, 'EggFittedBezelGeometry');
+  assert.ok(geometry.clearance >= 0.0008);
+  const positions = geometry.attributes.position;
+  const segments = geometry.radialSegments;
+  const rows = geometry.axialSegments;
+  const radius = weapon.pommelAsset.radius;
+  const centerY = radius + 0.0125 - radius * 0.01 / 1.03;
+  for (let row = 0; row <= rows; row++) {
+    const index = row * segments;
+    const sleeveRadius = Math.hypot(positions.getX(index), positions.getZ(index));
+    const y = (centerY - positions.getY(index)) / radius;
+    const eggRadius = Math.abs(y) >= 1 ? 0
+      : 0.032 * 0.84 * (1 - 0.075 * y - 0.055 * y * y) * Math.sqrt(1 - y * y);
+    assert.ok(sleeveRadius >= eggRadius + 0.00079,
+      `bezel remains outside egg shell at sleeve row ${row}`);
+  }
+}
+
 test('Madness and Regular retain their original guard shape and differ only at the pommel', () => {
   const pairs = [
     [createMadnessSword(GFX), createRegularSword(GFX)],
@@ -99,6 +122,7 @@ test('Marc metal egg is a stationary engine shell with its broad end joined to t
   assert.equal(egg.parent, weapon.pommel);
   assert.equal(weapon.pommel.parent, weapon.group);
   assert.equal(weapon.pommelAsset.kind, 'metal-egg');
+  assertEggBezelOutsideShell(weapon);
 
   const source = egg.geometry.attributes.position;
   let broadEndRadius = 0, narrowEndRadius = 0;
@@ -272,6 +296,7 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
   assert.equal(weapon.threadColor, '#ffd264');
   assert.equal(weapon.handle.material.color.getHexString(), 'c0c0c0');
   assert.equal(weapon.pommelAsset.kind, 'magic-egg');
+  assertEggBezelOutsideShell(weapon);
   assert.equal(weapon.pommelAsset.glass.material.transmission, 1);
   assert.equal(weapon.pommelAsset.glass.parent, weapon.pommelAsset.group,
     'the glass shell is attached to the stationary pommel group, not the animated hero');

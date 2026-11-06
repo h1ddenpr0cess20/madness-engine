@@ -200,8 +200,10 @@ sword.setBladeMist(false);
 but replaces the crystal orb pommel with the repository's actual transmissive
 Glass Egg shell and its white/yellow ray-marched mist. The egg is detached
 from its hero rig, fitted into the existing pommel envelope, and turned with
-its broad end toward the grip. The internal egg mist remains visible
-independently of the separate blade sheath.
+its broad end toward the grip. Its gold bezel follows the outside contour of
+the glass shell rather than passing through the egg; the same fitted outer
+ferrule is used for Marc's Metal Egg pommel. The internal egg mist remains
+visible independently of the separate blade sheath.
 
 The guard uses the same three-bend lightning quillons as Krystal, mirrored
 vertically so both arms sweep down. Its default blade is silver and
