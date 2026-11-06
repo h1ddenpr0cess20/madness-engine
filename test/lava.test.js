@@ -222,3 +222,37 @@ test('dungeon floor integrates the bubbling lava geometry and time-driven molten
   assert.ok(displacement > 0.01, 'the dungeon update physically moves the lava surface');
   assert.equal(basalt.material.hotMaterial.uniforms.uTime.value, 2.4);
 });
+
+test('pit lava renders and bubbles when its surface triangles face downward', async () => {
+  const { createLavaBubbler, createLavaMaterial } = await import('../src/textures/lava.js');
+  const pit = new GFX.BufferGeometry();
+  pit.setAttribute('position', new GFX.BufferAttribute(new Float32Array([
+    0, -2, 0,  0, -2, 4,  4, -2, 0,
+    4, -2, 0,  0, -2, 4,  4, -2, 4,
+  ]), 3));
+  pit.setAttribute('normal', new GFX.BufferAttribute(new Float32Array([
+    0, -1, 0,  0, -1, 0,  0, -1, 0,
+    0, -1, 0,  0, -1, 0,  0, -1, 0,
+  ]), 3));
+  pit.setAttribute('uv', new GFX.BufferAttribute(new Float32Array([
+    0, 0,  0, 1,  1, 0,
+    1, 0,  0, 1,  1, 1,
+  ]), 2));
+
+  const crust = createLavaMaterial(GFX, { mapping: 'world' });
+  assert.equal(crust.side, GFX.DoubleSide, 'pit-facing basalt is not culled');
+  assert.equal(crust.hotMaterial.side, GFX.DoubleSide, 'pit-facing molten layer is not culled');
+
+  const bubbler = createLavaBubbler(GFX, pit, { segments: 8, spacing: 1.05 });
+  bubbler.update(0);
+  const initial = bubbler.geometry.attributes.position.array.slice();
+  let peak = -Infinity;
+  for (let i = 1; i < initial.length; i += 3) peak = Math.max(peak, initial[i]);
+  assert.ok(peak > -1.95, 'downward-facing pit floor still swells upward into the pit');
+
+  bubbler.update(2.1);
+  const next = bubbler.geometry.attributes.position.array;
+  let changed = 0;
+  for (let i = 0; i < next.length; i++) changed = Math.max(changed, Math.abs(next[i] - initial[i]));
+  assert.ok(changed > 0.01, 'pit bubbles pulse on downward-facing geometry');
+});

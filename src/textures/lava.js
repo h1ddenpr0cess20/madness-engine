@@ -544,8 +544,9 @@ export function createLavaBubbler(GFX, sourceGeometry, { segments = 6, spacing =
     for (let i = 0; i < position.count; i++) {
       const k = i * 3;
       const x = basePositions[k], y = basePositions[k + 1], z = basePositions[k + 2];
-      const ny = Math.max(0, baseNormals[k + 1]);
-      if (ny < 0.35) {
+      const normalY = baseNormals[k + 1];
+      const surfaceWeight = Math.abs(normalY);
+      if (surfaceWeight < 0.35) {
         position.array[k] = x;
         position.array[k + 1] = y;
         position.array[k + 2] = z;
@@ -557,14 +558,15 @@ export function createLavaBubbler(GFX, sourceGeometry, { segments = 6, spacing =
 
       const [height, dhx, dhz] = sample(x, z, time);
       position.array[k] = x;
-      position.array[k + 1] = y + height * ny;
+      position.array[k + 1] = y + height * surfaceWeight;
       position.array[k + 2] = z;
 
-      let nx = baseNormals[k] - dhx * ny;
-      let nz = baseNormals[k + 2] - dhz * ny;
-      const normalLength = Math.hypot(nx, baseNormals[k + 1], nz) || 1;
+      const orientation = Math.sign(normalY) || 1;
+      let nx = baseNormals[k] - dhx * surfaceWeight * orientation;
+      let nz = baseNormals[k + 2] - dhz * surfaceWeight * orientation;
+      const normalLength = Math.hypot(nx, normalY, nz) || 1;
       normal.array[k] = nx / normalLength;
-      normal.array[k + 1] = baseNormals[k + 1] / normalLength;
+      normal.array[k + 1] = normalY / normalLength;
       normal.array[k + 2] = nz / normalLength;
     }
     position.needsUpdate = true;
@@ -601,6 +603,7 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
     envMapIntensity: 0.62,
     emissive: new GFX.Color('#100300'),
     emissiveIntensity: 0.075,
+    side: GFX.DoubleSide,
     toneMapped: false,
   });
 
@@ -617,7 +620,7 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
     blending: GFX.AdditiveBlending,
     depthWrite: false,
     toneMapped: false,
-    side: GFX.FrontSide,
+    side: GFX.DoubleSide,
   });
   material.hotMaterial = hotMaterial;
   material.textures = maps;
