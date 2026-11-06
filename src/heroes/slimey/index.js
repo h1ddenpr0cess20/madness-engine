@@ -98,6 +98,7 @@ export function createSlimeOrb({ stage, GFX, metal = null, lava = false }) {
       ampScale: 1,
       freqScale: 2.35,
       phaseScale: 2.2,
+      bubbling: lava ? 0.075 + 0.018 * Math.sin(phase * 0.72) : 0,
     });
 
     deform(core.geometry, core.base, coreLobes, {

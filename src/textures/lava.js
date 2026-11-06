@@ -26,8 +26,14 @@ const smooth = (a, b, x) => {
 const mix = (a, b, t) => a + (b - a) * t;
 
 function hash3(x, y, z, seed = 0) {
-  const n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7 + seed * 19.19) * 43758.5453123;
-  return n - Math.floor(n);
+  let h = Math.imul(x | 0, 0x8da6b343)
+    ^ Math.imul(y | 0, 0xd8163841)
+    ^ Math.imul(z | 0, 0xcb1ab31f)
+    ^ Math.imul(seed | 0, 0x165667b1);
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
+  h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967295;
 }
 
 function noise3(x, y, z, seed = 0) {
@@ -55,8 +61,7 @@ function fbm3(x, y, z, seed = 0, octaves = 3) {
 }
 
 function hash2(x, y, seed = 0) {
-  const n = Math.sin(x * 127.1 + y * 311.7 + seed * 19.19) * 43758.5453123;
-  return n - Math.floor(n);
+  return hash3(x, y, 0, seed);
 }
 
 function noise2(u, v, seed, period) {
@@ -112,7 +117,7 @@ function sphereField(u, v, scale) {
 
   // One broad, warped low-frequency field creates a few continuous molten
   // rivers. A second field bends them gently; it is not another line layer.
-  const density = 1.25 + Math.min(0.35, Math.max(0, scale - 1) * 0.07);
+  const density = 0.78 + Math.min(0.2, Math.max(0, scale - 1) * 0.035);
   const wx = fbm3(dx * 1.05 + 2.4, dy * 1.05 + 7.1, dz * 1.05 + 3.2, 3, 2) - 0.5;
   const wy = fbm3(dx * 1.05 + 8.2, dy * 1.05 + 2.6, dz * 1.05 + 5.4, 7, 2) - 0.5;
   const wz = fbm3(dx * 1.05 + 4.1, dy * 1.05 + 9.3, dz * 1.05 + 1.7, 11, 2) - 0.5;
@@ -120,11 +125,13 @@ function sphereField(u, v, scale) {
   const qy = dy * density + wy * 0.58;
   const qz = dz * density + wz * 0.58;
 
-  const flow = fbm3(qx * 1.55, qy * 1.55, qz * 1.55, 13, 3);
-  const bend = fbm3(dx * 1.45 + 5.2, dy * 1.45 + 1.8, dz * 1.45 + 6.3, 19, 2);
-  const contour = Math.abs(flow - (0.505 + (bend - 0.5) * 0.105));
-  const channel = 1 - smooth(0.026, 0.076, contour);
-  const channelCore = 1 - smooth(0.006, 0.024, contour);
+  const flow = fbm3(qx * 0.88, qy * 0.88, qz * 0.88, 13, 3);
+  const bend = fbm3(dx * 0.86 + 5.2, dy * 0.86 + 1.8, dz * 0.86 + 6.3, 19, 2);
+  const contour = Math.abs(flow - (0.505 + (bend - 0.5) * 0.085));
+  // Soft shoulders and a narrower hot centre keep a few broad rivers readable
+  // without a busy mesh of hairline channels.
+  const channel = 1 - smooth(0.022, 0.092, contour);
+  const channelCore = 1 - smooth(0.006, 0.025, contour);
   const pocket = fbm3(dx * 1.45 + 9.1, dy * 1.45 + 4.3, dz * 1.45 + 2.7, 23, 2);
   const pool = smooth(0.775, 0.88, pocket) * 0.62;
   const molten = Math.max(channel, pool);
@@ -195,8 +202,8 @@ function textureSet(GFX, mapping, scale) {
   const key = mapping + ':' + scale.toFixed(3);
   if (cache.has(key)) return cache.get(key);
 
-  const width = mapping === 'local' ? 768 : 512;
-  const height = mapping === 'local' ? 384 : 512;
+  const width = mapping === 'local' ? 1024 : 1024;
+  const height = mapping === 'local' ? 512 : 512;
   const albedo = new Uint8Array(width * height * 4);
   const glow = new Uint8Array(width * height * 4);
   const relief = new Uint8Array(width * height * 4);
@@ -257,6 +264,8 @@ function textureSet(GFX, mapping, scale) {
     tex.wrapS = GFX.RepeatWrapping;
     tex.wrapT = wrapT;
     tex.anisotropy = 8;
+    tex.generateMipmaps = true;
+    tex.minFilter = GFX.LinearMipmapLinearFilter;
     tex.needsUpdate = true;
     return tex;
   };
@@ -287,14 +296,14 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
     color: new GFX.Color('#ffffff'),
     map: maps.map,
     bumpMap: maps.bump,
-    bumpScale: mapping === 'local' ? 0.045 : 0.055,
-    metalness: 0.28,
-    roughness: 0.27,
-    clearcoat: 0.92,
-    clearcoatRoughness: 0.12,
-    envMapIntensity: 1.8,
-    emissive: new GFX.Color('#170400'),
-    emissiveIntensity: 0.12,
+    bumpScale: mapping === 'local' ? 0.014 : 0.02,
+    metalness: 0.025,
+    roughness: 0.62,
+    clearcoat: 0.14,
+    clearcoatRoughness: 0.46,
+    envMapIntensity: 0.62,
+    emissive: new GFX.Color('#100300'),
+    emissiveIntensity: 0.075,
     toneMapped: false,
   });
 
@@ -316,8 +325,10 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
   let currentTime = 0;
   let brightness = 1;
   const applyTime = () => {
-    const u = currentTime * (mapping === 'local' ? 0.0032 : 0.006);
-    const v = currentTime * (mapping === 'local' ? 0 : 0.0018);
+    // Local mapping drifts around the orb's longitude only: this remains
+    // seamless at both poles. Floor mapping moves slowly in both directions.
+    const u = currentTime * (mapping === 'local' ? 0.018 : 0.014);
+    const v = currentTime * (mapping === 'local' ? 0 : 0.005);
     for (const tex of [maps.map, maps.hot, maps.bump]) tex.offset.set(u % 1, v % 1);
   };
 

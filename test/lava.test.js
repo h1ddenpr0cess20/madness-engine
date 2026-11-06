@@ -16,8 +16,10 @@ test('lava is a physically based basalt material with an optional emissive hot l
   assert.equal(world.mapping, 'world');
   assert.equal(world.uniforms.uTime.value, 0);
   assert.equal(world.uniforms.uBright.value, 1);
-  assert.equal(world.metalness, 0.28);
-  assert.equal(world.clearcoat, 0.92);
+  assert.equal(world.metalness, 0.025);
+  assert.equal(world.roughness, 0.62);
+  assert.equal(world.clearcoat, 0.14);
+  assert.equal(world.bumpScale, 0.02);
   assert.equal(world.hotMaterial, null);
 
   const local = createLavaMaterial(GFX, { mapping: 'local', scale: 4.35 });
@@ -25,7 +27,14 @@ test('lava is a physically based basalt material with an optional emissive hot l
   assert.equal(local.mapping, 'local');
   assert.equal(local.hotMaterial.type, 'MeshBasicMaterial');
   assert.equal(local.hotMaterial.blending, GFX.AdditiveBlending);
-  assert.equal(local.bumpScale, 0.045);
+  assert.equal(local.bumpScale, 0.014);
+  assert.equal(local.roughness, 0.62);
+  assert.equal(local.textures.width, 1024);
+  assert.equal(local.textures.height, 512);
+  for (const texture of [local.textures.map, local.textures.hot, local.textures.bump]) {
+    assert.equal(texture.generateMipmaps, true);
+    assert.equal(texture.minFilter, GFX.LinearMipmapLinearFilter);
+  }
   assert.throws(() => createLavaMaterial(GFX, { mapping: 'uv' }), /unknown lava mapping/);
   assert.throws(() => createLavaMaterial(GFX, { scale: 0 }), /positive finite/);
 });
@@ -69,10 +78,35 @@ test('lava time and brightness controls keep their original public shape', () =>
   material.uniforms.uTime.value = 24;
   assert.equal(material.uniforms.uTime.value, 24);
   assert.ok(material.textures.map.offset.x > 0);
+  assert.ok(material.textures.map.offset.x >= 0.4, 'lava drift is visible rather than imperceptibly slow');
   assert.equal(material.textures.hot.offset.x, material.textures.map.offset.x);
+  assert.equal(material.textures.bump.offset.x, material.textures.map.offset.x);
   material.uniforms.uBright.value = 0.8;
   assert.equal(material.uniforms.uBright.value, 0.8);
   assert.equal(material.color.r, 0.8);
   material.update(36);
   assert.equal(material.uniforms.uTime.value, 36);
+});
+
+
+test('lava bubbling adds smooth, localized surface inflation without changing other Slimey variants', async () => {
+  const { createDeformer } = await import('../src/heroes/slimey/deform.js');
+  const { createLobes } = await import('../src/heroes/slimey/lobes.js');
+  const geometryA = new GFX.SphereGeometry(1, 24, 16);
+  const geometryB = new GFX.SphereGeometry(1, 24, 16);
+  const baseA = geometryA.attributes.position.array.slice();
+  const baseB = geometryB.attributes.position.array.slice();
+  const lobes = createLobes(GFX);
+  const deform = createDeformer(GFX);
+  const settings = {
+    wobble: 1.15, phase: 1.7, scale: 1, ampScale: 1, freqScale: 2.35, phaseScale: 2.2,
+  };
+  deform(geometryA, baseA, lobes, settings);
+  deform(geometryB, baseB, lobes, { ...settings, bubbling: 0.08 });
+
+  const plain = geometryA.attributes.position.array;
+  const bubbled = geometryB.attributes.position.array;
+  let largestDelta = 0;
+  for (let i = 0; i < plain.length; i++) largestDelta = Math.max(largestDelta, Math.abs(plain[i] - bubbled[i]));
+  assert.ok(largestDelta > 0.005, 'bubbling should visibly inflate local patches');
 });
