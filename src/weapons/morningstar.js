@@ -29,6 +29,7 @@ export const MORNINGSTAR_SPEC = Object.freeze({
 export function createMorningstar(GFX, {
   metal = 'steel',
   gripColor = '#633b2c',
+  threadColor,
   detail = 1,
   pommelStyle = 'marble',
   wrapStyle = 'banded',
@@ -43,6 +44,7 @@ export function createMorningstar(GFX, {
   const handle = createWeaponHandleAssembly(GFX, group, MORNINGSTAR_SPEC, {
     hiltMetal: metal,
     gripColor,
+    threadColor,
     pommelStyle,
     wrapStyle,
   });

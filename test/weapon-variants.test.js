@@ -17,6 +17,7 @@ import {
   createMarcsMorningstar,
   createKrystalSword,
   createKrystalDagger,
+  createMagicEggSword,
   bladeGeometry,
 } from '../src/weapons/index.js';
 import { METALS } from '../src/props/metalglobe.js';
@@ -215,3 +216,93 @@ test('shared sword and dagger blade geometry keeps its width and ends in a short
 });
 
 
+
+
+test('named weapon families use their requested default metals and grip colours', () => {
+  for (const weapon of [
+    createMadnessSword(GFX),
+    createMadnessDagger(GFX),
+    createMadnessGreatsword(GFX),
+  ]) {
+    assert.equal(weapon.bladeMetal, 'rose gold');
+    assert.equal(weapon.hiltMetal, 'rose gold');
+    assert.equal(weapon.gripColor, '#ffffff');
+    assert.equal(weapon.handle.material.color.getHexString(), 'ffffff');
+  }
+
+  const krystal = createKrystalSword(GFX);
+  assert.equal(krystal.bladeMetal, 'platinum');
+  assert.equal(krystal.hiltMetal, 'platinum');
+  assert.equal(krystal.gripColor, '#25364a');
+  assert.equal(krystal.threadColor, '#a7e6ff');
+
+  const marc = createMarcsSword(GFX);
+  assert.equal(marc.bladeMetal, 'gold');
+  assert.equal(marc.hiltMetal, 'gold');
+  assert.equal(marc.gripColor, '#101010');
+  assert.equal(marc.handle.material.color.getHexString(), '101010');
+  const wrap = marc.hilt.children.find((part) => part.name === 'diagonal leather wrap');
+  assert.ok(wrap);
+  assert.equal(wrap.material.color.getHexString(), '0b0b0b');
+
+  const madnessMorningstar = createMadnessMorningstar(GFX);
+  assert.equal(madnessMorningstar.metal, 'rose gold');
+  assert.equal(madnessMorningstar.gripColor, '#ffffff');
+
+  const krystalDagger = createKrystalDagger(GFX);
+  assert.equal(krystalDagger.bladeMetal, 'platinum');
+  assert.equal(krystalDagger.hiltMetal, 'platinum');
+
+  const override = createMadnessSword(GFX, {
+    bladeMetal: 'steel',
+    hiltMetal: 'platinum',
+    gripColor: '#224466',
+  });
+  assert.equal(override.bladeMetal, 'steel');
+  assert.equal(override.hiltMetal, 'platinum');
+  assert.equal(override.gripColor, '#224466');
+});
+
+test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightning quillons', () => {
+  const weapon = createMagicEggSword(GFX);
+  assert.equal(weapon.name, 'Magic Egg Sword');
+  assert.equal(weapon.pommelAsset.kind, 'magic-egg');
+  assert.equal(weapon.pommelAsset.glass.material.transmission, 1);
+  assert.equal(weapon.pommelAsset.mist.visible, true);
+  assert.equal(weapon.pommelAsset.asset.mist, weapon.pommelAsset.mist);
+  assert.equal(weapon.pommelAsset.mist.material.uniforms.uDuo.value, 1);
+
+  assert.equal(weapon.guard.name, 'inverted lightning swept crossguard');
+  assert.equal(weapon.guard.userData.lightningProfile.orientation, 'inverted');
+  const guardPositions = weapon.guard.children[0].geometry.attributes.position;
+  let meanGuardY = 0;
+  for (let i = 0; i < guardPositions.count; i++) meanGuardY += guardPositions.getY(i);
+  meanGuardY /= guardPositions.count;
+  assert.ok(meanGuardY < weapon.guardY - 0.01,
+    'the inverted lightning guard bends below the guard root');
+
+  const stitches = weapon.hilt.children.filter((part) => part.name.startsWith('diamond leather stitch '));
+  assert.equal(stitches.length, 2);
+  assert.equal(weapon.gripColor, '#ffffff');
+  assert.equal(weapon.threadColor, '#f2c94c');
+  assert.equal(weapon.handle.material.color.getHexString(), 'ffffff');
+  assert.equal(stitches[0].material.color.getHexString(), 'f2c94c');
+
+  assert.ok(weapon.bladeMist);
+  assert.equal(weapon.bladeMist.visible, true);
+  assert.equal(weapon.bladeMist.name, 'Magic Egg blade mist');
+  assert.equal(weapon.bladeMist.material.uniforms.uDuo.value, 1);
+  assert.ok(weapon.bladeMist.material.uniforms.uCore.value > 0.8,
+    'the blade mist carries the warm white/yellow egg core');
+  assert.equal(weapon.bladeMist.material.uniforms.uGlow.value, 1.05);
+
+  weapon.setGripColor('#333333');
+  assert.equal(weapon.threadColor, '#f2c94c');
+  weapon.setThreadColor('#ffdd66');
+  assert.equal(weapon.gripColor, '#333333');
+  assert.equal(weapon.threadColor, '#ffdd66');
+  weapon.setBladeMist(false);
+  assert.equal(weapon.bladeMist.visible, false);
+  assert.equal(weapon.pommelAsset.mist.visible, true,
+    'the glass egg mist remains visible independently of the blade sheath');
+});

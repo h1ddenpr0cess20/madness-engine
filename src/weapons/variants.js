@@ -20,21 +20,31 @@ function swordVariant(GFX, spec, name, pommelStyle, guardStyle = 'swept', wrapSt
   }, options), name);
 }
 
-/** The original marble-pommel family, now explicitly named Madness. */
+/** The marble-pommel Madness family defaults to rose-gold metal and white leather. */
+const MADNESS_DEFAULTS = Object.freeze({
+  bladeMetal: 'rose gold',
+  hiltMetal: 'rose gold',
+  gripColor: '#ffffff',
+});
+
 export function createMadnessSword(GFX, options = {}) {
-  return named(createBroadsword(GFX, options), 'Madness Sword');
+  return named(createBroadsword(GFX, { ...MADNESS_DEFAULTS, ...options }), 'Madness Sword');
 }
 
 export function createMadnessDagger(GFX, options = {}) {
-  return named(createDagger(GFX, options), 'Madness Dagger');
+  return named(createDagger(GFX, { ...MADNESS_DEFAULTS, ...options }), 'Madness Dagger');
 }
 
 export function createMadnessGreatsword(GFX, options = {}) {
-  return named(createGreatsword(GFX, options), 'Madness Greatsword');
+  return named(createGreatsword(GFX, { ...MADNESS_DEFAULTS, ...options }), 'Madness Greatsword');
 }
 
 export function createMadnessMorningstar(GFX, options = {}) {
-  return named(createMorningstar(GFX, options), 'Madness Morningstar');
+  return named(createMorningstar(GFX, {
+    metal: 'rose gold',
+    gripColor: '#ffffff',
+    ...options,
+  }), 'Madness Morningstar');
 }
 
 /** Same sword geometry and banded grip; the glass marble is a metal ball. */
@@ -76,6 +86,8 @@ export function createKrystalSword(GFX, options = {}) {
     guardThickness: 0.016,
     wrapStyle: 'diamond',
   }, {
+    bladeMetal: 'platinum',
+    hiltMetal: 'platinum',
     gripColor: KRYSTAL_GRIP_COLOR,
     threadColor: KRYSTAL_THREAD_COLOR,
     ...options,
@@ -92,6 +104,8 @@ export function createKrystalDagger(GFX, options = {}) {
     guardThickness: 0.016,
     wrapStyle: 'diamond',
   }, {
+    bladeMetal: 'platinum',
+    hiltMetal: 'platinum',
     gripColor: KRYSTAL_GRIP_COLOR,
     threadColor: KRYSTAL_THREAD_COLOR,
     ...options,
@@ -99,9 +113,33 @@ export function createKrystalDagger(GFX, options = {}) {
   }), 'Krystal Dagger');
 }
 
+/** The inverted lightning-guard Magic Egg Sword with glass egg and white/yellow mist. */
+export function createMagicEggSword(GFX, options = {}) {
+  return named(buildWeapon(GFX, {
+    ...BROADSWORD_SPEC,
+    name: 'magic-egg-sword',
+    pommelStyle: 'magic-egg',
+    guardStyle: 'lightning',
+    guardInverted: true,
+    guardThickness: 0.016,
+    wrapStyle: 'diamond',
+    bladeMistPalette: 'egg',
+  }, {
+    gripColor: '#ffffff',
+    threadColor: '#f2c94c',
+    ...options,
+    bladeMist: true,
+  }), 'Magic Egg Sword');
+}
+
 /** Marc's family uses the engine metal egg, upward horn guard and diagonal grip wrap. */
 export function createMarcsSword(GFX, options = {}) {
-  return swordVariant(GFX, BROADSWORD_SPEC, "Marc's Sword", 'metal-egg', 'horns', 'diagonal', options);
+  return swordVariant(GFX, BROADSWORD_SPEC, "Marc's Sword", 'metal-egg', 'horns', 'diagonal', {
+    bladeMetal: 'gold',
+    hiltMetal: 'gold',
+    gripColor: '#101010',
+    ...options,
+  });
 }
 
 export function createMarcsDagger(GFX, options = {}) {

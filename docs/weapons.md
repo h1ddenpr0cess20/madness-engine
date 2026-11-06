@@ -38,8 +38,8 @@ import * as GFX from 'madness-engine/gfx';
 import { createBroadsword } from 'madness-engine/weapons/broadsword';
 
 const sword = createBroadsword(GFX, {
-  bladeMetal: 'steel',
-  hiltMetal: 'silver',
+  bladeMetal: 'platinum',
+  hiltMetal: 'platinum',
   gripColor: '#633b2c',
 });
 scene.add(sword.group);
@@ -138,6 +138,16 @@ The three variants are exposed from `madness-engine/weapons` as
 corresponding `Dagger`, `Greatsword` and `Morningstar` factory names.
 
 
+## Default finishes
+
+The Madness sword, dagger and greatsword factories default to rose-gold blade
+and hilt metal with a white leather grip. The Madness Morningstar uses the
+same rose-gold metal and white grip. Marc's Sword defaults to gold blade and
+hilt metal with a black wrap. Krystal Sword and Dagger default to platinum
+metal with their independently customizable blue-charcoal leather and
+ice-blue thread. These remain factory defaults; callers can override the
+metals, leather and thread independently.
+
 ## Krystal sword and dagger
 
 The Krystal set retains the Madness sword and dagger blade dimensions, but
@@ -182,3 +192,35 @@ sword.setGripColor('#75452e');
 sword.setThreadColor('#ffb04a');
 sword.setBladeMist(false);
 ```
+
+
+## Magic Egg Sword
+
+`createMagicEggSword(GFX, options)` follows the Krystal sword construction
+but replaces the crystal orb pommel with the repository's actual transmissive
+Glass Egg shell and its white/yellow ray-marched mist. The egg is detached
+from its hero rig, fitted into the existing pommel envelope, and turned with
+its broad end toward the grip. The internal egg mist remains visible
+independently of the separate blade sheath.
+
+The guard uses the same three-bend lightning quillons as Krystal, mirrored
+vertically so both arms sweep down. Its grip is white leather with contrasting
+yellow diamond stitching (`#f2c94c`). The leather and thread colors remain
+independently customizable through `gripColor`, `threadColor`,
+`setGripColor()` and `setThreadColor()`. Its blade sheath uses the egg's
+white/yellow palette and can be toggled with `setBladeMist()`.
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createMagicEggSword } from 'madness-engine/weapons';
+
+const sword = createMagicEggSword(GFX, {
+  gripColor: '#ffffff',
+  threadColor: '#f2c94c',
+});
+scene.add(sword.group);
+sword.setGripColor('#f2eee2');
+sword.setThreadColor('#e8b62f');
+sword.setBladeMist(false);
+```
+

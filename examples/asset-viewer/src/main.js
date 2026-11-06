@@ -106,7 +106,7 @@ scene.add(plate);
 
 // ———————————————————————————————————————————————— the viewer's state
 
-const view = { item: null, colours: {}, draft: {}, coloursFor: null, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
+const view = { item: null, colours: {}, draft: {}, coloursFor: null, weaponMetals: {}, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
 const options = { level: 1, variant: 0, construction: 0, detail: 1 };
 
 const VIEWS = [
@@ -143,7 +143,16 @@ function clearStage() {
 
 async function show(item) {
   const token = ++view.token;
+  const changingItem = view.item?.id !== item.id;
   view.item = item;
+  if (changingItem && item.palette?.kind === 'weapon') {
+    const saved = view.weaponMetals[item.id] ?? {};
+    options.bladeMetal = saved.bladeMetal ?? item.palette.bladeMetal ?? 'steel';
+    options.hiltMetal = saved.hiltMetal ?? item.palette.hiltMetal ?? 'steel';
+  } else if (changingItem && item.palette?.kind === 'morningstar') {
+    const saved = view.weaponMetals[item.id] ?? {};
+    options.metal = saved.metal ?? item.palette.metal ?? 'steel';
+  }
   // Another person starts in their own colours.
   if (view.coloursFor !== item.id) { view.colours = {}; view.draft = {}; view.coloursFor = item.id; view.seed = 0; }
   $('busy').style.display = 'grid';
@@ -390,11 +399,15 @@ function colourGroup(item) {
   if (isWeapon || isMorningstar) {
     const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
     for (const [key, label] of metalOptions) {
-      options[key] ??= 'steel';
+      options[key] ??= item.palette[key] ?? 'steel';
       const select = el('select', { className: 'weapon-metal-select' },
         ...METAL_CHOICES.map((metal) => el('option', { value: metal }, metal)));
       select.value = options[key];
-      select.onchange = () => { options[key] = select.value; show(view.item); };
+      select.onchange = () => {
+        options[key] = select.value;
+        view.weaponMetals[item.id] = { ...view.weaponMetals[item.id], [key]: select.value };
+        show(view.item);
+      };
       const row = el('div', { className: 'line' }, el('label', {}, label), select);
       row.style.justifyContent = 'space-between';
       row.style.width = '100%';

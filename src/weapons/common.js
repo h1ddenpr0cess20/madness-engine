@@ -1,6 +1,6 @@
 import { METALS } from '../props/metalglobe.js';
 import { createMarble } from '../heroes/marble.js';
-import { createMetalEgg } from '../heroes/debater-egg/index.js';
+import { createMetalEgg, createGlassEgg } from '../heroes/debater-egg/index.js';
 import { createBall } from '../heroes/krystal/model.js';
 import { createBladeMist } from './blade-mist.js';
 
@@ -114,11 +114,51 @@ function createMetalEggPommel(GFX, radius, metal) {
   };
 }
 
+/**
+ * The real transmissive glass egg and its white/yellow ray-marched mist,
+ * detached from the hero rig and fitted into the same 54 mm pommel envelope.
+ * The broad end faces the grip, matching the stationary Metal Egg orientation.
+ */
+function createMagicEggPommel(GFX, radius) {
+  const asset = createGlassEgg({ GFX, mist: true });
+  const glass = asset.glass;
+  const mist = asset.mist;
+  glass.parent?.remove(glass);
+  mist.parent?.remove(mist);
+
+  const group = new GFX.Group();
+  group.name = 'Magic Egg glass pommel';
+  const radialScale = 0.032;
+  const verticalScale = radius / 1.03;
+  for (const mesh of [glass, mist]) {
+    mesh.scale.set(radialScale, -verticalScale, radialScale);
+    mesh.position.y = radius + 0.0125;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    group.add(mesh);
+  }
+
+  glass.material.thickness *= radialScale;
+  glass.material.attenuationDistance *= radialScale;
+  mist.visible = true;
+  mist.renderOrder = 1;
+
+  return {
+    group, asset, glass, mist, material: mist.material, radius,
+    height: radius * 2, kind: 'magic-egg',
+    setMist(show = true) {
+      asset.setMist(show);
+      return this;
+    },
+  };
+}
+
 function createWeaponPommel(GFX, spec, { style = 'marble', metal, material } = {}) {
   if (style === 'marble') return { ...createWeaponPommelMarble(GFX, spec.marbleRadius), kind: 'marble' };
   if (style === 'metal-ball') return createMetalBallPommel(GFX, spec.marbleRadius, material);
   if (style === 'metal-egg') return createMetalEggPommel(GFX, spec.marbleRadius, metal);
   if (style === 'krystal') return createKrystalOrbPommel(GFX, spec.marbleRadius);
+  if (style === 'magic-egg') return createMagicEggPommel(GFX, spec.marbleRadius);
   throw new Error(`unknown weapon pommel style: ${style}`);
 }
 
@@ -300,7 +340,7 @@ export function createDevilHornGuard(GFX, parent, material, {
  * outer terminals taper continuously into sharp points.
  */
 export function createLightningGuard(GFX, parent, material, {
-  centerY, span = 0.22, thickness = 0.016,
+  centerY, span = 0.22, thickness = 0.016, invert = false,
 } = {}) {
   if (!GFX?.Vector3 || !GFX?.BufferGeometry || !GFX?.BufferAttribute) {
     throw new TypeError('createLightningGuard requires the Madness Engine GFX module');
@@ -311,21 +351,22 @@ export function createLightningGuard(GFX, parent, material, {
   }
 
   const halfSpan = span / 2;
+  const vertical = invert ? -1 : 1;
   const tipExtension = Math.min(0.014, Math.max(0.008, span * 0.06));
   // Three changes of direction on each arm: outward/up, shallow return, then
   // outward/up again. The final point continues on a restrained ~20 degree rise.
   const stations = [
-    [-halfSpan - tipExtension, centerY + 0.030, 0],
-    [-halfSpan * 0.88, centerY + 0.023, 0],
-    [-halfSpan * 0.68, centerY + 0.009, 0],
-    [-halfSpan * 0.47, centerY + 0.021, 0],
-    [-halfSpan * 0.25, centerY + 0.006, 0],
-    [0, centerY + 0.004, 0],
-    [halfSpan * 0.25, centerY + 0.006, 0],
-    [halfSpan * 0.47, centerY + 0.021, 0],
-    [halfSpan * 0.68, centerY + 0.009, 0],
-    [halfSpan * 0.88, centerY + 0.023, 0],
-    [halfSpan + tipExtension, centerY + 0.030, 0],
+    [-halfSpan - tipExtension, centerY + vertical * 0.030, 0],
+    [-halfSpan * 0.88, centerY + vertical * 0.023, 0],
+    [-halfSpan * 0.68, centerY + vertical * 0.009, 0],
+    [-halfSpan * 0.47, centerY + vertical * 0.021, 0],
+    [-halfSpan * 0.25, centerY + vertical * 0.006, 0],
+    [0, centerY + vertical * 0.004, 0],
+    [halfSpan * 0.25, centerY + vertical * 0.006, 0],
+    [halfSpan * 0.47, centerY + vertical * 0.021, 0],
+    [halfSpan * 0.68, centerY + vertical * 0.009, 0],
+    [halfSpan * 0.88, centerY + vertical * 0.023, 0],
+    [halfSpan + tipExtension, centerY + vertical * 0.030, 0],
   ];
   // The 20.5 mm centre-root diameter gives the quillons extra visual weight;
   // the 15 mm shaft eases into fine, fully integrated terminals.
@@ -420,8 +461,9 @@ export function createLightningGuard(GFX, parent, material, {
   geometry.computeVertexNormals();
 
   const guard = new GFX.Group();
-  guard.name = 'lightning swept crossguard';
+  guard.name = invert ? 'inverted lightning swept crossguard' : 'lightning swept crossguard';
   guard.userData.lightningProfile = Object.freeze({
+    orientation: invert ? 'inverted' : 'upright',
     bendsPerArm: 3,
     baseDiameter: radii[5] * 2,
     shaftDiameter: thickness * 0.96,
@@ -890,11 +932,15 @@ export function buildWeapon(GFX, spec, {
   const guardThickness = spec.guardThickness ?? 0.0136;
   const span = spec.guardSpan / 2;
   if (spec.guardStyle === 'lightning') {
+    const guardDirection = spec.guardInverted ? -1 : 1;
     guardBoss = sphere(GFX, 'lightning guard reinforced central boss', hiltMaterial,
-      [0, guardY + 0.003, 0], [0.028, 0.017, 0.018], [40, 24]);
+      [0, guardY + guardDirection * 0.003, 0], [0.028, 0.017, 0.018], [40, 24]);
     hilt.add(guardBoss);
     guard = createLightningGuard(GFX, hilt, hiltMaterial, {
-      centerY: guardY, span: spec.guardSpan, thickness: guardThickness,
+      centerY: guardY,
+      span: spec.guardSpan,
+      thickness: guardThickness,
+      invert: spec.guardInverted === true,
     });
   } else if ((spec.guardStyle ?? 'swept') === 'horns') {
     guard = createDevilHornGuard(GFX, hilt, hiltMaterial, {
@@ -948,6 +994,7 @@ export function buildWeapon(GFX, spec, {
       rootY: bladeRootY,
       length: spec.bladeLength,
       width: spec.bladeWidth,
+      palette: spec.bladeMistPalette ?? 'krystal',
     })
     : null;
 
@@ -992,7 +1039,9 @@ export function buildWeapon(GFX, spec, {
       'Scale': '1 world unit = 1 metre',
       'Pommel': pommelAsset.kind === 'marble' ? 'Glass marble with 3D spark'
         : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball'
-          : pommelAsset.kind === 'metal-egg' ? 'Engine metal egg' : 'Krystal glass orb with animated mist',
+          : pommelAsset.kind === 'metal-egg' ? 'Engine metal egg'
+          : pommelAsset.kind === 'magic-egg' ? 'Glass egg with white/yellow animated mist'
+            : 'Krystal glass orb with animated mist',
     },
     get bladeMetal() { return bladeMetal; },
     get hiltMetal() { return hiltMetal; },

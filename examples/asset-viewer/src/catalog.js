@@ -508,24 +508,28 @@ function bowlingPinItems() {
 
 /** Dedicated shelf for measured, display-ready weapons. */
 const WEAPON_ASSETS = [
-  { id: 'weapons/madness-sword', factory: 'createMadnessSword', name: 'Madness Sword', group: 'Madness Set', paletteKind: 'weapon' },
-  { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon' },
-  { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon' },
-  { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar' },
-  { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon', grip: '#25364a', thread: '#a7e6ff' },
-  { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon', grip: '#25364a', thread: '#a7e6ff' },
+  { id: 'weapons/madness-sword', factory: 'createMadnessSword', name: 'Madness Sword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
+  { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
+  { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
+  { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar', metal: 'rose gold', grip: '#ffffff' },
+  { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
+  { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
+  { id: 'weapons/magic-egg-sword', factory: 'createMagicEggSword', name: 'Magic Egg Sword', group: 'Magic Egg Set', paletteKind: 'weapon', grip: '#ffffff', thread: '#f2c94c' },
   { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-morningstar', factory: 'createRegularMorningstar', name: 'Regular Morningstar', group: 'Regular Set', paletteKind: 'morningstar' },
-  { id: 'weapons/marcs-sword', factory: 'createMarcsSword', name: "Marc's Sword", group: "Marc's Set", paletteKind: 'weapon' },
+  { id: 'weapons/marcs-sword', factory: 'createMarcsSword', name: "Marc's Sword", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
   { id: 'weapons/marcs-dagger', factory: 'createMarcsDagger', name: "Marc's Dagger", group: "Marc's Set", paletteKind: 'weapon' },
   { id: 'weapons/marcs-greatsword', factory: 'createMarcsGreatsword', name: "Marc's Greatsword", group: "Marc's Set", paletteKind: 'weapon' },
   { id: 'weapons/marcs-morningstar', factory: 'createMarcsMorningstar', name: "Marc's Morningstar", group: "Marc's Set", paletteKind: 'morningstar' },
 ];
 
 function weaponItems() {
-  return WEAPON_ASSETS.map(({ id, factory, name, group, paletteKind, grip, thread }) => ({
+  return WEAPON_ASSETS.map(({
+    id, factory, name, group, paletteKind, grip, thread,
+    bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault,
+  }) => ({
     id,
     category: 'Weapons',
     group,
@@ -537,14 +541,22 @@ function weaponItems() {
       kind: paletteKind,
       grip: grip ?? '#633b2c',
       ...(thread ? { thread } : {}),
+      ...(bladeMetalDefault ? { bladeMetal: bladeMetalDefault } : {}),
+      ...(hiltMetalDefault ? { hiltMetal: hiltMetalDefault } : {}),
+      ...(metalDefault ? { metal: metalDefault } : {}),
     },
-    async build({ bladeMetal = 'steel', hiltMetal = 'steel', metal = 'steel', colours = {} } = {}) {
+    async build({
+      bladeMetal = bladeMetalDefault ?? 'steel',
+      hiltMetal = hiltMetalDefault ?? 'steel',
+      metal = metalDefault ?? 'steel',
+      colours = {},
+    } = {}) {
       const [weapons, metals] = await Promise.all([
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
       const made = paletteKind === 'morningstar'
-        ? weapons[factory](GFX, { metal, gripColor: colours.gripColor ?? '#633b2c' })
+        ? weapons[factory](GFX, { metal, gripColor: colours.gripColor ?? grip ?? '#633b2c' })
         : weapons[factory](GFX, {
           bladeMetal,
           hiltMetal,
