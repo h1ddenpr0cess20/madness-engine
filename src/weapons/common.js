@@ -19,8 +19,6 @@ export const MARBLE_DISPLAY_BASE = Object.freeze({
   get height() { return this.lowerHeight + this.upperHeight; },
 });
 
-const UP = () => new (globalThis.__weaponGfx?.Vector3 ?? class {})();
-
 /** A polished two-tier marble display block shared by the weapon catalogue. */
 export function createWeaponDisplayBase(GFX) {
   const painted = FLOORS.marble(GFX);
@@ -263,9 +261,13 @@ export function buildWeapon(GFX, spec, {
   grip.add(handle);
 
   // Narrow raised cords read as a tight spiral wrap under the grain.
+  const wrapShade = (hex, factor = 0.68) => {
+    const value = hex.slice(1);
+    return `#${[0, 2, 4].map((i) => Math.round(parseInt(value.slice(i, i + 2), 16) * factor).toString(16).padStart(2, '0')).join('')}`;
+  };
   const wrapMaterial = new GFX.MeshPhysicalMaterial({
     name: 'leather wrap ridges',
-    color: new GFX.Color(gripColor).multiplyScalar(0.68),
+    color: new GFX.Color(wrapShade(gripColor)),
     roughness: 0.9,
     metalness: 0,
   });
@@ -390,7 +392,7 @@ export function buildWeapon(GFX, spec, {
     setGripColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
       leatherMaterial.color.set(color);
-      wrapMaterial.color.set(color).multiplyScalar(0.68);
+      wrapMaterial.color.set(wrapShade(color));
       gripColor = color;
       return api;
     },
