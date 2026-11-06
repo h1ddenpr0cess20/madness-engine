@@ -514,7 +514,7 @@ const WEAPON_ASSETS = [
   { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar', metal: 'rose gold', grip: '#ffffff' },
   { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
   { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
-  { id: 'weapons/magic-egg-sword', factory: 'createMagicEggSword', name: 'Magic Egg Sword', group: 'Magic Egg Set', paletteKind: 'weapon', grip: '#ffffff', thread: '#f2c94c' },
+  { id: 'weapons/magic-egg-sword', factory: 'createMagicEggSword', name: 'Magic Egg Sword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
   { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },

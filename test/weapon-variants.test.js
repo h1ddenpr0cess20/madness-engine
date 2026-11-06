@@ -266,6 +266,11 @@ test('named weapon families use their requested default metals and grip colours'
 test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightning quillons', () => {
   const weapon = createMagicEggSword(GFX);
   assert.equal(weapon.name, 'Magic Egg Sword');
+  assert.equal(weapon.bladeMetal, 'silver');
+  assert.equal(weapon.hiltMetal, 'gold');
+  assert.equal(weapon.gripColor, '#c0c0c0');
+  assert.equal(weapon.threadColor, '#ffd264');
+  assert.equal(weapon.handle.material.color.getHexString(), 'c0c0c0');
   assert.equal(weapon.pommelAsset.kind, 'magic-egg');
   assert.equal(weapon.pommelAsset.glass.material.transmission, 1);
   assert.equal(weapon.pommelAsset.glass.parent, weapon.pommelAsset.group,
@@ -311,10 +316,10 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
 
   const stitches = weapon.hilt.children.filter((part) => part.name.startsWith('diamond leather stitch '));
   assert.equal(stitches.length, 2);
-  assert.equal(weapon.gripColor, '#ffffff');
-  assert.equal(weapon.threadColor, '#f2c94c');
-  assert.equal(weapon.handle.material.color.getHexString(), 'ffffff');
-  assert.equal(stitches[0].material.color.getHexString(), 'f2c94c');
+  assert.equal(weapon.gripColor, '#c0c0c0');
+  assert.equal(weapon.threadColor, '#ffd264');
+  assert.equal(weapon.handle.material.color.getHexString(), 'c0c0c0');
+  assert.equal(stitches[0].material.color.getHexString(), 'ffd264');
 
   assert.ok(weapon.bladeMist);
   assert.equal(weapon.bladeMist.visible, true);
@@ -325,10 +330,20 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
   assert.equal(weapon.bladeMist.material.uniforms.uGlow.value, 1.05);
 
   weapon.setGripColor('#333333');
-  assert.equal(weapon.threadColor, '#f2c94c');
+  assert.equal(weapon.threadColor, '#ffd264');
   weapon.setThreadColor('#ffdd66');
   assert.equal(weapon.gripColor, '#333333');
   assert.equal(weapon.threadColor, '#ffdd66');
+  const custom = createMagicEggSword(GFX, {
+    bladeMetal: 'platinum',
+    hiltMetal: 'rose gold',
+    gripColor: '#eeeeee',
+    threadColor: '#ccaa33',
+  });
+  assert.equal(custom.bladeMetal, 'platinum');
+  assert.equal(custom.hiltMetal, 'rose gold');
+  assert.equal(custom.gripColor, '#eeeeee');
+  assert.equal(custom.threadColor, '#ccaa33');
   weapon.setBladeMist(false);
   assert.equal(weapon.bladeMist.visible, false);
   assert.equal(weapon.pommelAsset.mist.visible, true,

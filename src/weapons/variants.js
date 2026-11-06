@@ -125,8 +125,10 @@ export function createMagicEggSword(GFX, options = {}) {
     wrapStyle: 'diamond',
     bladeMistPalette: 'egg',
   }, {
-    gripColor: '#ffffff',
-    threadColor: '#f2c94c',
+    bladeMetal: 'silver',
+    hiltMetal: 'gold',
+    gripColor: '#c0c0c0',
+    threadColor: '#ffd264',
     ...options,
     bladeMist: true,
   }), 'Magic Egg Sword');

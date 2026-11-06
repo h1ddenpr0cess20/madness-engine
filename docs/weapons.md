@@ -204,22 +204,26 @@ its broad end toward the grip. The internal egg mist remains visible
 independently of the separate blade sheath.
 
 The guard uses the same three-bend lightning quillons as Krystal, mirrored
-vertically so both arms sweep down. Its grip is white leather with contrasting
-yellow diamond stitching (`#f2c94c`). The leather and thread colors remain
-independently customizable through `gripColor`, `threadColor`,
-`setGripColor()` and `setThreadColor()`. Its blade sheath uses the egg's
-white/yellow palette and can be toggled with `setBladeMist()`.
+vertically so both arms sweep down. Its default blade is silver and
+its hilt is gold. The grip uses silver leather (`#c0c0c0`) with gold diamond
+stitching (`#ffd264`). Metal finishes, leather and thread remain
+independently customizable through the factory options; grip and thread can
+also be changed later with `setGripColor()` and `setThreadColor()`. Its
+blade sheath uses the egg's white/yellow palette and can be toggled with
+`setBladeMist()`.
 
 ```js
 import * as GFX from 'madness-engine/gfx';
 import { createMagicEggSword } from 'madness-engine/weapons';
 
 const sword = createMagicEggSword(GFX, {
-  gripColor: '#ffffff',
-  threadColor: '#f2c94c',
+  bladeMetal: 'silver',
+  hiltMetal: 'gold',
+  gripColor: '#c0c0c0',
+  threadColor: '#ffd264',
 });
 scene.add(sword.group);
-sword.setGripColor('#f2eee2');
+sword.setGripColor('#d0d0d0');
 sword.setThreadColor('#e8b62f');
 sword.setBladeMist(false);
 ```
