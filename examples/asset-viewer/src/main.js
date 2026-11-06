@@ -395,9 +395,12 @@ function colourGroup(item) {
   const isBowlingPin = item.palette.kind === 'bowling-pin';
   const isWeapon = item.palette.kind === 'weapon';
   const isMorningstar = item.palette.kind === 'morningstar';
-  $('colourdiverse').style.display = isDice || isWeapon || isMorningstar ? 'none' : '';
-  if (isWeapon || isMorningstar) {
-    const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
+  const isBananaWeapon = item.palette.kind === 'banana-weapon';
+  $('colourdiverse').style.display = isDice || isWeapon || isMorningstar || isBananaWeapon ? 'none' : '';
+  if (isWeapon || isMorningstar || isBananaWeapon) {
+    const metalOptions = isBananaWeapon
+      ? [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Peel exterior'], ['innerMetal', 'Peel underside']]
+      : isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
     for (const [key, label] of metalOptions) {
       options[key] ??= item.palette[key] ?? 'steel';
       const select = el('select', { className: 'weapon-metal-select' },
@@ -430,7 +433,9 @@ function colourGroup(item) {
     $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : 'marble');
     $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
   }
-  $('colourhint').textContent = isWeapon
+  $('colourhint').textContent = isBananaWeapon
+    ? 'Choose the blade finish, peel exterior and peel underside independently.'
+    : isWeapon
     ? (item.palette.thread
       ? 'Choose blade and hilt metals, then customize the leather and contrasting grip thread independently.'
       : 'Choose blade and hilt metals, then set the leather grip colour here. Metal finishes update immediately; Apply commits the grip colour.')
