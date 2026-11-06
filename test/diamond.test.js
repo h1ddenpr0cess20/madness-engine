@@ -25,7 +25,7 @@ test('the diamond is a real round brilliant with a table, crown, girdle and pavi
   assert.equal(diamond.mistMaterial.uniforms.uDuo.value, 1);
   assert.deepEqual(diamond.mistMaterial.uniforms.uTint.value.toArray(), [0.84, 0.94, 1]);
   diamond.setMist(false);
-  assert.equal(diamond.mist, false);
+  assert.equal(diamond.mistEnabled, false);
   diamond.dispose();
 });
 
@@ -41,7 +41,8 @@ test('the diamond registers itself for the asset viewer without a manual catalog
   assert.equal(assetViewer.group, 'glass & crystal');
   assert.equal(typeof assetViewer.build, 'function');
   const built = assetViewer.build();
-  assert.equal(built.object.name, 'diamond');
+  assert.equal(built.group.name, 'diamond');
+  assert.equal(typeof built.pose, 'function');
   assert.equal(built.mist.get(), true);
   built.mist.set(false);
   assert.equal(built.mist.get(), false);
