@@ -21,7 +21,8 @@ export const MARBLE_DISPLAY_BASE = Object.freeze({
 
 /** A polished two-tier marble display block shared by the weapon catalogue. */
 export function createWeaponDisplayBase(GFX) {
-  const painted = FLOORS.marble(GFX);
+  // The browser gets the full painted marble; server-side geometry tests use the neutral material fallback.
+  const painted = typeof document === 'undefined' ? { map: null, bump: null } : FLOORS.marble(GFX);
   const marble = new GFX.MeshPhysicalMaterial({
     name: 'display marble',
     color: new GFX.Color('#f5f2eb'),
