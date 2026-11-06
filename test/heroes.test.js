@@ -189,9 +189,10 @@ test('lava Slimey reuses the deforming orb while replacing every slime layer wit
   assert.equal(lava.appearance, 'lava');
   assert.equal(lavaShell.geometry.attributes.position.count, originalShell.geometry.attributes.position.count);
   assert.equal(lavaShell.material, lava.lavaMaterial);
-  assert.equal(lavaShell.material.name, 'lava');
-  assert.equal(lavaShell.material.uniforms.uLocal.value, 1);
-  assert.equal(lavaShell.material.uniforms.uScale.value, 4.35);
+  assert.equal(lavaShell.material.name, 'lava-basalt');
+  assert.equal(lavaShell.material.mapping, 'local');
+  assert.equal(lavaShell.material.textures.width, 1024);
+  assert.equal(lavaShell.material.textures.height, 512);
   assert.equal(lavaShell.material.hotMaterial.type, 'ShaderMaterial');
   assert.equal(lavaShell.material.hotMaterial.uniforms.uTime.value, 0);
   assert.equal(core.visible, false, 'no green slime core remains');

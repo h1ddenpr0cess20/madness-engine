@@ -239,16 +239,20 @@ void main() {
   float centre = 0.505 + (bend - 0.5) * 0.12;
   float distance = abs(field - centre);
 
-  // Soft shoulders fade into rock; the narrow core supplies the hot centre.
-  float channel = 1.0 - smoothstep(0.025, 0.105, distance);
-  float core = 1.0 - smoothstep(0.004, 0.027, distance);
+  // Derivative-aware widths keep the soft lava edges antialiased as the orb
+  // fills the screen or the camera moves closer.
+  float edgeAA = clamp(fwidth(distance) * 1.25, 0.001, 0.018);
+  float channel = 1.0 - smoothstep(0.025 - edgeAA, 0.105 + edgeAA, distance);
+  float core = 1.0 - smoothstep(max(0.0, 0.004 - edgeAA * 0.35), 0.027 + edgeAA, distance);
   float poolField = fbm3(q * 0.44 - drift * 0.12 + vec3(9.7, 3.2, 5.8));
-  float pools = smoothstep(0.73, 0.86, poolField) * 0.35;
+  float poolAA = clamp(fwidth(poolField) * 1.25, 0.008, 0.045);
+  float pools = smoothstep(0.73 - poolAA, 0.86 + poolAA, poolField) * 0.35;
 
   // This independent, slow life field fades individual sections locally;
   // new regions kindle as its smooth noise moves through the channel network.
   float life = fbm3(q * 0.58 + drift * 0.19 + vec3(t * 0.012, 6.1, 2.7));
-  float activity = smoothstep(0.32, 0.68, life);
+  float lifeAA = clamp(fwidth(life) * 1.35, 0.008, 0.045);
+  float activity = smoothstep(0.32 - lifeAA, 0.68 + lifeAA, life);
   float thermal = fbm3(q * 1.12 - drift * 0.43 + vec3(2.7, t * 0.018, 8.2));
   float pulse = 0.84 + 0.16 * sin(t * 0.72 + thermal * 4.2);
   float mask = clamp(max(channel * 0.68, pools) * activity * pulse, 0.0, 0.72);
@@ -257,7 +261,7 @@ void main() {
   vec3 colour = heat(temperature);
   float edgeHeat = exp(-distance * 28.0) * (1.0 - core);
   colour = mix(colour * 0.66, colour, 1.0 - edgeHeat * 0.32);
-  gl_FragColor = vec4(colour * mask * 1.35, mask);
+  gl_FragColor = vec4(colour * 1.12, mask);
 }
 \`;
 
@@ -337,13 +341,17 @@ fn fs(in: Varyings) -> @location(0) vec4f {
   let centre = 0.505 + (bend - 0.5) * 0.12;
   let distance = abs(field - centre);
 
-  let channel = 1.0 - smoothstep(0.025, 0.105, distance);
-  let core = 1.0 - smoothstep(0.004, 0.027, distance);
+  // Derivative-aware widths smooth the channels at close camera distances.
+  let edgeAA = clamp(fwidth(distance) * 1.25, 0.001, 0.018);
+  let channel = 1.0 - smoothstep(0.025 - edgeAA, 0.105 + edgeAA, distance);
+  let core = 1.0 - smoothstep(max(0.0, 0.004 - edgeAA * 0.35), 0.027 + edgeAA, distance);
   let poolField = fbm3(q * 0.44 - drift * 0.12 + vec3f(9.7, 3.2, 5.8));
-  let pools = smoothstep(0.73, 0.86, poolField) * 0.35;
+  let poolAA = clamp(fwidth(poolField) * 1.25, 0.008, 0.045);
+  let pools = smoothstep(0.73 - poolAA, 0.86 + poolAA, poolField) * 0.35;
 
   let life = fbm3(q * 0.58 + drift * 0.19 + vec3f(t * 0.012, 6.1, 2.7));
-  let activity = smoothstep(0.32, 0.68, life);
+  let lifeAA = clamp(fwidth(life) * 1.35, 0.008, 0.045);
+  let activity = smoothstep(0.32 - lifeAA, 0.68 + lifeAA, life);
   let thermal = fbm3(q * 1.12 - drift * 0.43 + vec3f(2.7, t * 0.018, 8.2));
   let pulse = 0.84 + 0.16 * sin(t * 0.72 + thermal * 4.2);
   let mask = clamp(max(channel * 0.68, pools) * activity * pulse, 0.0, 0.72);
@@ -352,7 +360,7 @@ fn fs(in: Varyings) -> @location(0) vec4f {
   var colour = heat(temperature);
   let edgeHeat = exp(-distance * 28.0) * (1.0 - core);
   colour = mix(colour * 0.66, colour, 1.0 - edgeHeat * 0.32);
-  return vec4f(colour * mask * 1.35, mask);
+  return vec4f(colour * 1.12, mask);
 }
 \`;
 

@@ -25,8 +25,12 @@ test('lava is a physically based basalt material with an optional emissive hot l
   const local = createLavaMaterial(GFX, { mapping: 'local', scale: 4.35 });
   assert.equal(local.type, 'MeshPhysicalMaterial');
   assert.equal(local.mapping, 'local');
-  assert.equal(local.hotMaterial.type, 'MeshBasicMaterial');
+  assert.equal(local.hotMaterial.type, 'ShaderMaterial');
   assert.equal(local.hotMaterial.blending, GFX.AdditiveBlending);
+  assert.match(local.hotMaterial.glsl.fragment, /fwidth\(distance\)/);
+  assert.match(local.hotMaterial.glsl.fragment, /lifeAA/);
+  assert.match(local.hotMaterial.wgsl, /fwidth\(distance\)/);
+  assert.match(local.hotMaterial.wgsl, /lifeAA/);
   assert.equal(local.bumpScale, 0.014);
   assert.equal(local.roughness, 0.62);
   assert.equal(local.textures.width, 1024);
@@ -88,6 +92,8 @@ test('lava time and brightness controls animate the molten layer while keeping l
   material.update(36);
   assert.equal(material.uniforms.uTime.value, 36);
   assert.equal(material.hotMaterial.uniforms.uTime.value, 36);
+  assert.match(material.hotMaterial.glsl.fragment, /smoothstep\(0\.32 - lifeAA, 0\.68 \+ lifeAA, life\)/);
+  assert.match(material.hotMaterial.wgsl, /smoothstep\(0\.32 - lifeAA, 0\.68 \+ lifeAA, life\)/);
 });
 
 test('world lava textures continue to drift for existing floor callers', () => {
