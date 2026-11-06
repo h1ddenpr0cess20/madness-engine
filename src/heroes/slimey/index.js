@@ -5,11 +5,13 @@ import { ENERGY_GAIN, MODES } from './modes.js';
 import { createPalette } from './palette.js';
 import { createBubbles, createCore, createGlow, createShell } from './parts.js';
 import { METALS } from '../../props/metalglobe.js';
+import { createLavaMaterial } from '../../textures/lava.js';
 
 export { METALS };
 
-export function createSlimeOrb({ stage, GFX, metal = null }) {
-  buildEnvironment({ stage, GFX });
+export function createSlimeOrb({ stage, GFX, metal = null, lava = false }) {
+  if (lava && metal !== null) throw new Error('Slimey cannot be both lava and metal');
+  if (!lava) buildEnvironment({ stage, GFX });
 
   const paletteAt = createPalette(GFX);
   const deform = createDeformer(GFX);
@@ -20,6 +22,13 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
   const core = createCore(GFX);
   const glow = createGlow(GFX, shell.geometry);
   const bubbles = createBubbles(GFX);
+  const lavaMaterial = lava ? createLavaMaterial(GFX, { mapping: 'local', scale: 4.35 }) : null;
+  if (lava) {
+    shell.mesh.material = lavaMaterial;
+    core.mesh.visible = false;
+    glow.mesh.visible = false;
+    for (const bubble of bubbles.meshes) bubble.visible = false;
+  }
 
   const orb = new GFX.Group();
   orb.name = 'slime_orb';
@@ -97,14 +106,19 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
       phaseScale: -3,
     });
 
-    if (selectedMetal) tmpColor.set(METALS[selectedMetal].color);
-    else paletteAt(hue, tmpColor);
-    shell.material.color.copy(tmpColor);
-    shell.material.attenuationColor.copy(tmpColor).lerp(white, 0.35);
-    core.material.emissive.copy(tmpColor);
-    core.material.emissiveIntensity = selectedMetal ? 0 : m.glow + energy * ENERGY_GAIN.glow;
-    glow.material.uniforms.uColor.value.copy(tmpColor);
-    glow.material.uniforms.uStrength.value = halo * 6.0 * (0.85 + Math.sin(phase * 2.1) * 0.15);
+    if (lava) {
+      lavaMaterial.uniforms.uTime.value = phase;
+      lavaMaterial.uniforms.uBright.value = 0.96 + 0.04 * Math.sin(phase * 1.7);
+    } else {
+      if (selectedMetal) tmpColor.set(METALS[selectedMetal].color);
+      else paletteAt(hue, tmpColor);
+      shell.material.color.copy(tmpColor);
+      shell.material.attenuationColor.copy(tmpColor).lerp(white, 0.35);
+      core.material.emissive.copy(tmpColor);
+      core.material.emissiveIntensity = selectedMetal ? 0 : m.glow + energy * ENERGY_GAIN.glow;
+      glow.material.uniforms.uColor.value.copy(tmpColor);
+      glow.material.uniforms.uStrength.value = halo * 6.0 * (0.85 + Math.sin(phase * 2.1) * 0.15);
+    }
 
     core.mesh.position.set(
       Math.sin(phase * 0.7) * 0.06,
@@ -114,10 +128,12 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
     core.mesh.rotation.y = phase * 0.3;
     orb.rotation.y += dt * m.spin;
 
-    for (const b of bubbles.meshes) {
-      const o = b.userData.orbit;
-      const a = o.a + phase * o.sp * bub;
-      b.position.set(Math.cos(a) * o.rr, o.y + Math.sin(phase * 0.8 + o.a) * 0.12, Math.sin(a) * o.rr);
+    if (!lava) {
+      for (const b of bubbles.meshes) {
+        const o = b.userData.orbit;
+        const a = o.a + phase * o.sp * bub;
+        b.position.set(Math.cos(a) * o.rr, o.y + Math.sin(phase * 0.8 + o.a) * 0.12, Math.sin(a) * o.rr);
+      }
     }
   };
 
@@ -127,6 +143,8 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
   for (const b of bubbles.meshes) b.castShadow = b.receiveShadow = false;
 
   const api = {
+    appearance: lava ? 'lava' : metal !== null ? 'metal' : 'slime',
+    lavaMaterial,
     get state() { return state; },
     setState(next) {
       if (!Object.hasOwn(MODES, next) || next === state) return;
@@ -147,4 +165,8 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
 
 export function createMetalSlimeOrb({ stage, GFX, metal = 'steel' }) {
   return createSlimeOrb({ stage, GFX, metal });
+}
+
+export function createLavaSlimeOrb({ stage, GFX }) {
+  return createSlimeOrb({ stage, GFX, lava: true });
 }
