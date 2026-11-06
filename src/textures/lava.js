@@ -163,7 +163,7 @@ function floorField(u, v, scale) {
 
 
 
-const HOT_VERTEX = \`
+const HOT_VERTEX = `
 varying vec3 vMoltenPoint;
 void main() {
   vec3 p = position * 1.002;
@@ -171,9 +171,9 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
 }
-\`;
+`;
 
-const HOT_FRAGMENT = \`
+const HOT_FRAGMENT = `
 uniform float uTime;
 uniform float uScale;
 varying vec3 vMoltenPoint;
@@ -263,9 +263,9 @@ void main() {
   colour = mix(colour * 0.66, colour, 1.0 - edgeHeat * 0.32);
   gl_FragColor = vec4(colour * 1.12, mask);
 }
-\`;
+`;
 
-const HOT_WGSL = \`
+const HOT_WGSL = `
 struct Varyings {
   @builtin(position) position: vec4f,
   @location(0) point: vec3f,
@@ -362,7 +362,7 @@ fn fs(in: Varyings) -> @location(0) vec4f {
   colour = mix(colour * 0.66, colour, 1.0 - edgeHeat * 0.32);
   return vec4f(colour * 1.12, mask);
 }
-\`;
+`;
 
 function writePixel(data, offset, rgb, alpha = 255) {
   data[offset] = rgb[0];
