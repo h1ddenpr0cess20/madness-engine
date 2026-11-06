@@ -25,8 +25,9 @@ one standard dimension.
 
 ## Broadsword
 
-`createBroadsword(GFX, options)` builds a point-up broadsword on a separate
-glass-and-spark marble pommel. The blade and hilt each accept one of the 12
+`createBroadsword(GFX, options)` builds a point-up broadsword with the actual
+engine glass-and-spark marble integrated into the bottom of the leather grip
+as the pommel. The blade and hilt each accept one of the 12
 shared `METALS` finishes and change independently; the grip has a live hex
 colour setter.
 
