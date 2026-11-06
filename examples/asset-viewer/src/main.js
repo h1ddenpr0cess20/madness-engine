@@ -15,7 +15,7 @@ import { texture } from '../../../src/textures/painters.js';
 import { paintRoom } from '../../../src/textures/rooms/studio.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { diverse } from '../../../src/characters/person.js';
-import { boundsOf, loadCatalog } from './catalog.js';
+import { boundsOf, loadCatalog, METAL_CHOICES } from './catalog.js';
 import { randomBowlingBallPalette } from './bowling-ball-palettes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -367,12 +367,29 @@ const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.col
 function colourGroup(item) {
   const group = $('colourgroup');
   group.style.display = item.palette ? '' : 'none';
+  const weaponRows = $('weaponmetalrows');
+  weaponRows.style.display = 'none';
+  weaponRows.replaceChildren();
   if (!item.palette) return;
   const isDice = item.palette.kind === 'dice';
   const isBowlingBall = item.palette.kind === 'bowling-ball';
   const isBowlingPin = item.palette.kind === 'bowling-pin';
   const isWeapon = item.palette.kind === 'weapon';
   $('colourdiverse').style.display = isDice || isWeapon ? 'none' : '';
+  if (isWeapon) {
+    for (const [key, label] of [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']]) {
+      options[key] ??= 'steel';
+      const select = el('select', { className: 'weapon-metal-select' },
+        ...METAL_CHOICES.map((metal) => el('option', { value: metal }, metal)));
+      select.value = options[key];
+      select.onchange = () => { options[key] = select.value; show(view.item); };
+      const row = el('div', { className: 'line' }, el('label', {}, label), select);
+      row.style.justifyContent = 'space-between';
+      row.style.width = '100%';
+      weaponRows.append(row);
+    }
+    weaponRows.style.display = 'grid';
+  }
   $('colourdiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall ? 'Randomise colours' : 'Randomise';
   $('colourdiverse').title = isBowlingPin
     ? 'Generate a coordinated random resin and enamel palette for this pin'
@@ -389,7 +406,7 @@ function colourGroup(item) {
     $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
   }
   $('colourhint').textContent = isWeapon
-    ? 'Choose a leather grip colour independently from the blade and hilt metals. Metal finishes are selected above and the grip updates when you apply the colour.'
+    ? 'Choose blade and hilt metals, then set the leather grip colour here. Metal finishes update immediately; Apply commits the grip colour.'
     : isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
     : isBowlingBall
