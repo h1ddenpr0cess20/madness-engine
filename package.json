@@ -8,6 +8,7 @@
     "node": ">=22.12"
   },
   "exports": {
+    "./weapons": "./src/weapons/index.js",
     "./gfx": "./src/gfx/index.js",
     "./characters": "./src/characters/index.js",
     "./props": "./src/props/index.js",

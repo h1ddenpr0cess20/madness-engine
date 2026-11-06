@@ -41,6 +41,7 @@
       #flagbtn { width: 100%; padding: 9px; font-weight: 600; } #flagbtn.on { background: var(--flag); border-color: var(--flag); color: #1a0a08; }
       textarea { width: 100%; min-height: 70px; resize: vertical; }
       #err { color: var(--flag); white-space: pre-wrap; }
+      #weaponmetalrows .weapon-metal-select { min-width: 140px; }
       #colourrows .swatchrow { display: grid; grid-template-columns: 1fr 34px 22px; gap: 6px; align-items: center; }
       #colourrows .swatchrow label { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       #colourrows input[type=color] { padding: 0; width: 34px; height: 22px; }
@@ -95,6 +96,7 @@
         </div>
         <div class="group" id="colourgroup" style="display:none"><h3>Colours &amp; design</h3>
           <label id="bowlingdesignrow" class="line" style="display:none;justify-content:space-between"><span>Surface pattern</span><select id="bowlingdesign"><option value="marble">Classic marble</option><option value="spiral">Spiral ribbons</option><option value="flame">Flame ribbons</option><option value="split">Two-tone split</option><option value="blotch">Blotchy marble</option></select></label>
+          <div id="weaponmetalrows" style="display:none;gap:6px"></div>
           <div id="colourrows" style="display:grid;gap:5px"></div>
           <button id="colourapply" disabled style="width:100%;font-weight:600">Applied</button>
           <div class="line"><button id="colourdiverse" title="A skin tone, hair and eyes from the palettes (diverse() in characters/person.js)">Randomise</button><button id="colourreset">Reset</button><button id="colourcopy">Copy code</button></div>
