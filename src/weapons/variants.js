@@ -64,14 +64,23 @@ export function createRegularMorningstar(GFX, options = {}) {
  * banded grip, replacing the marble with her crystal orb and adding her
  * animated mist as an optional sheath around the blade.
  */
+const KRYSTAL_GRIP_COLOR = '#25364a';
+const KRYSTAL_THREAD_COLOR = '#a7e6ff';
+
 export function createKrystalSword(GFX, options = {}) {
   return named(buildWeapon(GFX, {
     ...BROADSWORD_SPEC,
     name: 'krystal-sword',
     pommelStyle: 'krystal',
-    guardStyle: 'swept',
-    wrapStyle: 'banded',
-  }, { ...options, bladeMist: true }), 'Krystal Sword');
+    guardStyle: 'lightning',
+    guardThickness: 0.016,
+    wrapStyle: 'diamond',
+  }, {
+    gripColor: KRYSTAL_GRIP_COLOR,
+    threadColor: KRYSTAL_THREAD_COLOR,
+    ...options,
+    bladeMist: true,
+  }), 'Krystal Sword');
 }
 
 export function createKrystalDagger(GFX, options = {}) {
@@ -79,21 +88,15 @@ export function createKrystalDagger(GFX, options = {}) {
     ...DAGGER_SPEC,
     name: 'krystal-dagger',
     pommelStyle: 'krystal',
-    guardStyle: 'swept',
-    wrapStyle: 'banded',
-  }, { ...options, bladeMist: true }), 'Krystal Dagger');
-}
-
-/** A broad fantasy sword with a swept three-bend lightning guard and diamond-stitched grip. */
-export function createLightningSword(GFX, options = {}) {
-  return named(buildWeapon(GFX, {
-    ...BROADSWORD_SPEC,
-    name: 'lightning-sword',
-    pommelStyle: 'marble',
     guardStyle: 'lightning',
     guardThickness: 0.016,
     wrapStyle: 'diamond',
-  }, options), 'Lightning Sword');
+  }, {
+    gripColor: KRYSTAL_GRIP_COLOR,
+    threadColor: KRYSTAL_THREAD_COLOR,
+    ...options,
+    bladeMist: true,
+  }), 'Krystal Dagger');
 }
 
 /** Marc's family uses the engine metal egg, upward horn guard and diagonal grip wrap. */

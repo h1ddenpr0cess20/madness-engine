@@ -11,5 +11,4 @@ export {
   createRegularSword, createRegularDagger, createRegularGreatsword, createRegularMorningstar,
   createMarcsSword, createMarcsDagger, createMarcsGreatsword, createMarcsMorningstar,
   createKrystalSword, createKrystalDagger,
-  createLightningSword,
 } from './variants.js';

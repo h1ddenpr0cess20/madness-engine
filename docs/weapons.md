@@ -138,61 +138,47 @@ The three variants are exposed from `madness-engine/weapons` as
 corresponding `Dagger`, `Greatsword` and `Morningstar` factory names.
 
 
-## Lightning Sword
-
-`createLightningSword(GFX, options)` introduces a separate broadsword
-variant without changing the existing Madness, Regular, Marc or Krystal
-families. Its crossguard is a continuous, mirrored lightning-bolt sweep with
-three shallow directional bends per arm, a reinforced central root and
-integrated tapered points. The guard thickens to about 20.5 mm at the base,
-narrows to a roughly 15.4 mm shaft, and rises outward at a restrained angle.
-The leather grip uses two opposing helical laces that cross to form a
-diamond-stitched pattern.
-
-The blade proportions and marble pommel retain the established broadsword
-dimensions. Blade and hilt finishes and grip colour remain independently
-selectable through the usual setters.
-
-```js
-import * as GFX from 'madness-engine/gfx';
-import { createLightningSword } from 'madness-engine/weapons';
-
-const sword = createLightningSword(GFX, {
-  bladeMetal: 'steel',
-  hiltMetal: 'silver',
-  gripColor: '#633b2c',
-});
-scene.add(sword.group);
-sword.setBladeMetal('chrome');
-sword.setHiltMetal('brass');
-sword.setGripColor('#75452e');
-```
-
-
 ## Krystal sword and dagger
 
-The Krystal set is derived from the Madness sword and dagger: the blade
-profile, dimensions, swept crossguard, leather grip and banded wrap are
-unchanged. The marble pommel is replaced by Krystal's actual transmissive
-crystal orb and ray-marched vision material, scaled to the same 54 mm envelope.
-The orb's brass stand is omitted; the existing hollow metal ferrule seats the
-glass just as it seats the original marble.
+The Krystal set retains the Madness sword and dagger blade dimensions, but
+uses a dedicated lightning-bolt crossguard and diamond-stitched grip. Each
+mirrored guard arm has three shallow directional bends, a reinforced root
+(about 20.5 mm across), a substantial shaft (about 15.4 mm), and an integrated
+taper to a sharp terminal point. The steel blade keeps its full working width
+through most of its length, then transitions into a shorter, sturdier point.
 
-Both weapons carry a separate, initially hidden mist sheath around the blade.
-It uses the same GLSL/WGSL ray-marched vision shader as Krystal's orb, mapped
-into an elongated ellipsoid so the wisps stay close to the blade on both the
-full-size sword and dagger. Call `setBladeMist(true)` to show it and
-`setBladeMist(false)` to hide it. The asset viewer exposes the same control
-in its **Inside → Mist** toggle. The orb's own internal visions remain visible
-when the blade sheath is switched off.
+The leather grip is dark blue-charcoal by default (`#25364a`) with contrasting
+ice-blue thread (`#a7e6ff`). These are independently customizable: pass
+`gripColor` and `threadColor` when creating a weapon, or change them later
+with `setGripColor()` and `setThreadColor()`. Setting one does not alter the
+other. Blade and hilt metals remain independently selectable.
+
+The marble pommel is replaced by Krystal's actual transmissive crystal orb and
+ray-marched vision material, scaled to the same 54 mm envelope. The orb's
+brass stand is omitted; the existing hollow metal ferrule seats the glass.
+Both weapons carry a separate, visible mist sheath around the blade. It uses
+the same GLSL/WGSL ray-marched vision shader as Krystal's orb, mapped into an
+elongated ellipsoid so the wisps stay close to the blade on both sword and
+dagger. Call `setBladeMist(false)` to hide the blade sheath or
+`setBladeMist(true)` to show it; the orb's own internal visions remain
+visible independently.
 
 ```js
 import * as GFX from 'madness-engine/gfx';
 import { createKrystalSword, createKrystalDagger } from 'madness-engine/weapons';
 
-const sword = createKrystalSword(GFX);
+const sword = createKrystalSword(GFX, {
+  bladeMetal: 'steel',
+  hiltMetal: 'silver',
+  gripColor: '#25364a',
+  threadColor: '#a7e6ff',
+});
 const dagger = createKrystalDagger(GFX);
 scene.add(sword.group, dagger.group);
-sword.setBladeMist(true);
-dagger.setBladeMist(true);
+
+sword.setBladeMetal('chrome');
+sword.setHiltMetal('brass');
+sword.setGripColor('#75452e');
+sword.setThreadColor('#ffb04a');
+sword.setBladeMist(false);
 ```

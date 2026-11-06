@@ -512,9 +512,8 @@ const WEAPON_ASSETS = [
   { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon' },
   { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon' },
   { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar' },
-  { id: 'weapons/lightning-sword', factory: 'createLightningSword', name: 'Lightning Sword', group: 'Lightning Set', paletteKind: 'weapon' },
-  { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon' },
-  { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon' },
+  { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon', grip: '#25364a', thread: '#a7e6ff' },
+  { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon', grip: '#25364a', thread: '#a7e6ff' },
   { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
@@ -526,7 +525,7 @@ const WEAPON_ASSETS = [
 ];
 
 function weaponItems() {
-  return WEAPON_ASSETS.map(({ id, factory, name, group, paletteKind }) => ({
+  return WEAPON_ASSETS.map(({ id, factory, name, group, paletteKind, grip, thread }) => ({
     id,
     category: 'Weapons',
     group,
@@ -534,7 +533,11 @@ function weaponItems() {
     source: 'weapons/variants',
     factory,
     kind: 'object',
-    palette: { kind: paletteKind, grip: '#633b2c' },
+    palette: {
+      kind: paletteKind,
+      grip: grip ?? '#633b2c',
+      ...(thread ? { thread } : {}),
+    },
     async build({ bladeMetal = 'steel', hiltMetal = 'steel', metal = 'steel', colours = {} } = {}) {
       const [weapons, metals] = await Promise.all([
         import('../../../src/weapons/variants.js'),
@@ -545,7 +548,8 @@ function weaponItems() {
         : weapons[factory](GFX, {
           bladeMetal,
           hiltMetal,
-          gripColor: colours.gripColor ?? '#633b2c',
+          gripColor: colours.gripColor ?? grip ?? '#633b2c',
+          ...(thread ? { threadColor: colours.threadColor ?? thread } : {}),
         });
       return {
         object: made.group,

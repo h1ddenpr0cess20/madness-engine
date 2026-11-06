@@ -292,9 +292,14 @@ function animGroup(built) {
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
   if (pal.kind === 'weapon') {
-    return [
+    const rows = [
       ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
     ];
+    if (pal.thread) rows.push([
+      'Grip thread', pal.thread, c.threadColor,
+      (v) => { c.threadColor = v; }, () => { delete c.threadColor; },
+    ]);
+    return rows;
   }
   if (pal.kind === 'morningstar') {
     return [
@@ -413,7 +418,9 @@ function colourGroup(item) {
     $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
   }
   $('colourhint').textContent = isWeapon
-    ? 'Choose blade and hilt metals, then set the leather grip colour here. Metal finishes update immediately; Apply commits the grip colour.'
+    ? (item.palette.thread
+      ? 'Choose blade and hilt metals, then customize the leather and contrasting grip thread independently.'
+      : 'Choose blade and hilt metals, then set the leather grip colour here. Metal finishes update immediately; Apply commits the grip colour.')
     : isMorningstar
       ? 'Choose the morningstar head and haft metal, then set the leather grip colour. Metal finishes update immediately; Apply commits the grip colour.'
     : isDice
@@ -486,7 +493,10 @@ $('colourcopy').onclick = async () => {
       + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
       + "const " + variable + " = " + factory + "(GFX, { bladeMetal: '"
       + (options.bladeMetal ?? 'steel') + "', hiltMetal: '" + (options.hiltMetal ?? 'steel')
-      + "', gripColor: '" + (view.colours.gripColor ?? '#633b2c') + "' });";
+      + "', gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip ?? '#633b2c') + "'"
+      + (view.item.palette.thread
+        ? ", threadColor: '" + (view.colours.threadColor ?? view.item.palette.thread) + "'"
+        : '') + " });";
   } else if (view.item.palette?.kind === 'bowling-pin') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\n\n"

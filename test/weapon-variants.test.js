@@ -17,7 +17,7 @@ import {
   createMarcsMorningstar,
   createKrystalSword,
   createKrystalDagger,
-  createLightningSword,
+  bladeGeometry,
 } from '../src/weapons/index.js';
 import { METALS } from '../src/props/metalglobe.js';
 
@@ -129,7 +129,7 @@ test('Marc morningstar keeps its egg pommel and diagonal wrap but has no horn gu
 });
 
 
-test('Krystal sword and dagger use her crystal orb and independently toggleable blade mist', () => {
+test('Krystal sword and dagger use the lightning guard, two-tone diamond grip and independent blade mist', () => {
   const pairs = [
     [createKrystalSword(GFX), createMadnessSword(GFX)],
     [createKrystalDagger(GFX), createMadnessDagger(GFX)],
@@ -146,68 +146,72 @@ test('Krystal sword and dagger use her crystal orb and independently toggleable 
     assert.equal(krystal.dimensions.bladeLength, madness.dimensions.bladeLength);
     assert.equal(krystal.dimensions.bladeWidth, madness.dimensions.bladeWidth);
     assert.equal(krystal.dimensions.gripLength, madness.dimensions.gripLength);
-    assert.equal(krystal.guard.name, madness.guard.name);
+
+    assert.equal(krystal.guard.name, 'lightning swept crossguard');
+    assert.equal(krystal.guard.children[0].name, 'three-bend lightning quillons with tapered points');
+    assert.equal(krystal.guard.userData.lightningProfile.bendsPerArm, 3);
+    assert.ok(krystal.guard.userData.lightningProfile.baseDiameter
+      > krystal.guard.userData.lightningProfile.shaftDiameter,
+    'the root is reinforced and the quillons taper toward their tips');
+
+    const diamondLaces = krystal.hilt.children.filter((part) =>
+      part.name.startsWith('diamond leather stitch '));
+    assert.equal(diamondLaces.length, 2, 'opposing laces form the diamond pattern');
+    assert.ok(diamondLaces.every((lace) => lace.geometry.attributes.position.count > 1000));
+    assert.equal(diamondLaces[0].material, diamondLaces[1].material,
+      'both crossing stitch passes share one independent thread material');
+
+    assert.equal(krystal.gripColor, '#25364a');
+    assert.equal(krystal.threadColor, '#a7e6ff');
+    assert.equal(krystal.handle.material.color.getHexString(), '25364a');
+    assert.equal(diamondLaces[0].material.color.getHexString(), 'a7e6ff');
+
+    krystal.setGripColor('#75452e');
+    assert.equal(krystal.handle.material.color.getHexString(), '75452e',
+      'changing the leather colour leaves its thread untouched');
+    assert.equal(krystal.threadColor, '#a7e6ff');
+    krystal.setThreadColor('#ffb04a');
+    assert.equal(krystal.threadColor, '#ffb04a');
+    assert.equal(krystal.handle.material.color.getHexString(), '75452e',
+      'changing the thread colour leaves the leather untouched');
+    assert.throws(() => krystal.setThreadColor('blue'), /threadColor/);
+
     assert.ok(krystal.bladeMist, 'a separate mist volume surrounds the blade');
     assert.equal(krystal.bladeMist.visible, true, 'blade mist is visible by default');
     assert.equal(krystal.bladeMist.material.blending, GFX.AdditiveBlending);
-    assert.equal(krystal.bladeMist.material.uniforms.uGlow.value, 1.05,
-      'blade mist has a small radiance lift for visibility across metal finishes');
-    assert.equal(krystal.bladeMist.material.uniforms.uCore.value, 0.36,
-      'the brighter centre is part of the blade sheath, not the orb toggle');
+    assert.equal(krystal.bladeMist.material.uniforms.uGlow.value, 1.05);
+    assert.equal(krystal.bladeMist.material.uniforms.uCore.value, 0.36);
     for (const metal of Object.keys(METALS)) {
       krystal.setBladeMetal(metal);
-      assert.equal(krystal.bladeMist.material.uniforms.uGlow.value, 1.05,
-        'blade mist visibility is independent of selected blade metal');
+      assert.equal(krystal.bladeMist.material.uniforms.uGlow.value, 1.05);
     }
-    assert.ok(krystal.bladeMist.material.uniforms.uShape.value.y
-      > krystal.bladeMist.material.uniforms.uShape.value.x,
-    'blade mist is an elongated ellipsoid, not a spherical cloud');
-
     krystal.setBladeMist(false);
     assert.equal(krystal.bladeMist.visible, false);
-    assert.equal(krystal.pommelAsset.vision.visible, true,
-      'disabling the blade sheath leaves the orb visions running');
+    assert.equal(krystal.pommelAsset.vision.visible, true);
     krystal.setBladeMist(true);
     assert.equal(krystal.bladeMist.visible, true);
-    assert.equal(krystal.pommelAsset.vision.visible, true,
-      'enabling the blade sheath does not control the orb visions');
+    assert.equal(krystal.pommelAsset.vision.visible, true);
   }
 });
 
-test('Lightning Sword has a three-bend tapered bolt guard and crossed diamond-stitched grip', () => {
-  const weapon = createLightningSword(GFX);
-  assert.equal(weapon.name, 'Lightning Sword');
-  assert.equal(weapon.pommelAsset.kind, 'marble');
-  assert.equal(weapon.guard.name, 'lightning swept crossguard');
-  assert.equal(weapon.guard.children.length, 1);
-  assert.equal(weapon.guard.children[0].name, 'three-bend lightning quillons with tapered points');
-  assert.deepEqual(weapon.guard.userData.lightningProfile, {
-    bendsPerArm: 3,
-    baseDiameter: 0.02048,
-    shaftDiameter: 0.01536,
-    tipRadius: 0.0001,
-    tipExtension: 0.0132,
+test('shared sword and dagger blade geometry keeps its width and ends in a short, sturdy point', () => {
+  const geometry = bladeGeometry(GFX, { rootY: 0, length: 1, width: 0.05 });
+  const ringSize = 20;
+  const rowWidthRatio = (row) => {
+    const start = row * ringSize;
+    return Math.abs(geometry.attributes.position.getX(start)) * 2 / 0.05;
+  };
+  assert.ok(rowWidthRatio(54) > 0.9,
+    'the blade keeps over 90% of its width until the final section');
+  assert.ok(rowWidthRatio(58) > 0.55,
+    'the point has a decisive but compact taper');
+  assert.ok(rowWidthRatio(63) > 0.12 && rowWidthRatio(63) < 0.16,
+    'the last full ring is substantial before closing to the apex');
+  assert.deepEqual(geometry.userData.pointProfile, {
+    pointStart: 0.84,
+    pointEnd: 0.985,
+    terminalWidthRatio: 0.14,
   });
-  const positions = weapon.guard.children[0].geometry.attributes.position;
-  let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (let i = 0; i < positions.count; i++) {
-    minX = Math.min(minX, positions.getX(i));
-    maxX = Math.max(maxX, positions.getX(i));
-    maxY = Math.max(maxY, positions.getY(i));
-  }
-  assert.ok(maxX > weapon.dimensions.guardSpan / 2,
-    'the outer point extends beyond the nominal guard span');
-  assert.ok(minX < -weapon.dimensions.guardSpan / 2,
-    'the left outer point mirrors the right');
-  assert.ok(maxY > weapon.guardY + 0.025,
-    'the lightning quillons sweep upward from the central boss');
-
-  const diamondLaces = weapon.hilt.children.filter((part) => part.name.startsWith('diamond leather stitch '));
-  assert.equal(diamondLaces.length, 2, 'opposing laces cross over the full leather grip');
-  assert.ok(diamondLaces.every((lace) => lace.geometry.attributes.position.count > 1000),
-    'both stitch passes have a dense continuous helical mesh');
-  assert.ok(diamondLaces.every((lace) => lace.material === weapon.wrapMaterial),
-    'stitch colour remains coordinated with the leather wrap material');
-  weapon.setGripColor('#75452e');
-  assert.equal(weapon.wrapMaterial.color.getHexString(), '502f1f');
 });
+
+

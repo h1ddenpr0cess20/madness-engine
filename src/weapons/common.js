@@ -535,9 +535,11 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
 
   for (let i = 0; i < sections; i++) {
     const t = i / sections;
-    // The blade holds its width through the forte before a long, steady taper.
+    // Preserve the cutting width for most of the blade. The final ~16% forms
+    // a shorter, sturdier point, with a substantial terminal section before
+    // the apex rather than a long taper that reads as a needle.
     const shoulder = 0.94 + 0.06 * smoothstep(0, 0.11, t);
-    const taper = shoulder * (1 - 0.12 * t - 0.88 * smoothstep(0.68, 1, t));
+    const taper = shoulder * (1 - 0.06 * t - 0.80 * smoothstep(0.84, 0.985, t));
     const w = halfWidth * Math.max(0.002, taper);
     const halfThickness = Math.max(0.00055, 0.0032 * (1 - 0.48 * t));
     const fullerStart = smoothstep(0.025, 0.09, t);
@@ -588,6 +590,11 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
   geometry.setAttribute('uv', new GFX.BufferAttribute(new Float32Array(uvs), 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
+  geometry.userData.pointProfile = Object.freeze({
+    pointStart: 0.84,
+    pointEnd: 0.985,
+    terminalWidthRatio: 0.14,
+  });
   return geometry;
 }
 
@@ -655,6 +662,7 @@ function sweptGuardGeometry(GFX, points, radius, radialSegments = 12) {
 export function createWeaponHandleAssembly(GFX, group, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
+  threadColor,
   pommelStyle = spec.pommelStyle ?? 'marble',
   wrapStyle = spec.wrapStyle ?? 'banded',
 } = {}) {
@@ -663,6 +671,9 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   }
   if (!METALS[hiltMetal]) throw new Error(`no metal called ${hiltMetal}`);
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
+    throw new TypeError('threadColor must be a six-digit hex colour');
+  }
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
   const pommelAsset = createWeaponPommel(GFX, spec, {
@@ -742,9 +753,10 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   }
   hilt.add(bezel, handle);
 
+  const initialThreadColor = threadColor ?? shadeHex(gripColor, 0.68);
   const wrapMaterial = new GFX.MeshPhysicalMaterial({
-    name: 'leather wrap ridges',
-    color: new GFX.Color(shadeHex(gripColor, 0.68)),
+    name: wrapStyle === 'diamond' ? 'contrasting leather grip thread' : 'leather wrap ridges',
+    color: new GFX.Color(initialThreadColor),
     roughness: 0.9,
     metalness: 0,
   });
@@ -841,6 +853,7 @@ export function buildWeapon(GFX, spec, {
   bladeMetal = 'steel',
   hiltMetal = 'steel',
   gripColor = '#633b2c',
+  threadColor,
   bladeMist: withBladeMist = false,
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
@@ -850,16 +863,20 @@ export function buildWeapon(GFX, spec, {
     if (!METALS[name]) throw new Error(`no metal called ${name}`);
   }
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
+    throw new TypeError('threadColor must be a six-digit hex colour');
+  }
 
   const group = new GFX.Group();
   group.name = `${spec.name} display`;
 
   const bladeMaterial = metalMaterial(GFX, 'blade metal', bladeMetal);
+  let threadColorExplicit = threadColor !== undefined;
   const {
     marble, hiltMaterial, hilt, handle, bezel, gripBounds, handleBounds,
     bezelBounds, bossSeat, bossSeatBounds, leatherMaterial, wrapMaterial, pommelAsset,
   } = createWeaponHandleAssembly(GFX, group, spec, {
-    hiltMetal, gripColor,
+    hiltMetal, gripColor, threadColor,
     pommelStyle: spec.pommelStyle ?? 'marble',
     wrapStyle: spec.wrapStyle ?? 'banded',
   });
@@ -980,6 +997,7 @@ export function buildWeapon(GFX, spec, {
     get bladeMetal() { return bladeMetal; },
     get hiltMetal() { return hiltMetal; },
     get gripColor() { return gripColor; },
+    get threadColor() { return `#${wrapMaterial.color.getHexString()}`; },
     setBladeMetal(name) {
       const finish = METALS[name];
       if (!finish) throw new Error(`no metal called ${name}`);
@@ -1000,8 +1018,16 @@ export function buildWeapon(GFX, spec, {
     setGripColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
       leatherMaterial.color.set(color);
-      wrapMaterial.color.set(shadeHex(color, 0.68));
+      if (!threadColorExplicit && spec.wrapStyle !== 'diamond') {
+        wrapMaterial.color.set(shadeHex(color, 0.68));
+      }
       gripColor = color;
+      return api;
+    },
+    setThreadColor(color) {
+      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('threadColor must be a six-digit hex colour');
+      wrapMaterial.color.set(color);
+      threadColorExplicit = true;
       return api;
     },
     setBladeMist(show = true) {
