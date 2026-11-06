@@ -1,3 +1,7 @@
+import { METALS } from '../props/metalglobe.js';
+
+export { METALS };
+
 /**
  * The head of a morning star: a ball of dark forged steel with square spikes
  * set into it, the kind on the end of a chain in a museum. Chrome where the
@@ -72,7 +76,11 @@ function snapOrder(n) {
   return order;
 }
 
-export function createMorningStar(GFX, { spikes = SPIKES, detail = 1 } = {}) {
+export function createMorningStar(GFX, { spikes = SPIKES, detail = 1, metal = null } = {}) {
+  const metallic = metal !== null;
+  if (metallic && !METALS[metal]) throw new Error(`no metal called ${metal}`);
+  const finish = metallic ? METALS[metal] : null;
+
   // ———————————————————————————————— the ball
   const geometry = new GFX.SphereGeometry(CORE, Math.round(56 * detail), Math.round(36 * detail));
   const p = geometry.attributes.position.array;
@@ -86,14 +94,24 @@ export function createMorningStar(GFX, { spikes = SPIKES, detail = 1 } = {}) {
     // Forged steel: long streaks of hammer marks round the ball, a few dark scorches.
     const streak = noise(x * 2.2 + y * 9, y * 2.2 - z * 9, z * 2.2 + x * 9) * 0.5 + 0.5;
     const scorch = noise(x * 3.1 + 7, y * 3.1, z * 3.1 - 4) * 0.5 + 0.5;
-    c.copy(steel).lerp(bright, Math.pow(streak, 2.2) * 0.7);
-    if (scorch > 0.62) c.lerp(soot, Math.min(0.6, (scorch - 0.62) * 3.5));
-    colors[i] = c.r; colors[i + 1] = c.g; colors[i + 2] = c.b;
+    if (metallic) {
+      // Neutral vertex shading preserves the forged streaks while letting the reflective finish show true.
+      const shade = Math.max(0.38, 0.76 + Math.pow(streak, 2.2) * 0.2 - Math.max(0, scorch - 0.62) * 0.65);
+      colors[i] = colors[i + 1] = colors[i + 2] = shade;
+    } else {
+      c.copy(steel).lerp(bright, Math.pow(streak, 2.2) * 0.7);
+      if (scorch > 0.62) c.lerp(soot, Math.min(0.6, (scorch - 0.62) * 3.5));
+      colors[i] = c.r; colors[i + 1] = c.g; colors[i + 2] = c.b;
+    }
   }
   geometry.setAttribute('color', new GFX.BufferAttribute(colors, 3));
-  const material = new GFX.MeshStandardMaterial({ name: 'forged-steel', vertexColors: true, metalness: 0.62, roughness: 0.3 });
-  material.emissive.set('#1c2028');
-  material.emissiveIntensity = 0.8;
+  const material = metallic
+    ? new GFX.MeshPhysicalMaterial({ name: 'metal-morningstar-core', color: new GFX.Color(finish.color), vertexColors: true, metalness: 1, roughness: finish.roughness, envMapIntensity: 3 })
+    : new GFX.MeshStandardMaterial({ name: 'forged-steel', vertexColors: true, metalness: 0.62, roughness: 0.3 });
+  if (!metallic) {
+    material.emissive.set('#1c2028');
+    material.emissiveIntensity = 0.8;
+  }
   const core = new GFX.Mesh(geometry, material);
   core.name = 'ball';
 
@@ -114,7 +132,7 @@ export function createMorningStar(GFX, { spikes = SPIKES, detail = 1 } = {}) {
   const TRIS = [[0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5], [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7], [4, 5, 6], [4, 6, 7]];
   const position = new Float32Array(spikes * TRIS.length * 9);
   const color = new Float32Array(position.length);
-  const root = new GFX.Color('#8a909c');
+  const root = new GFX.Color(metallic ? '#777777' : '#8a909c');
   const tipColour = new GFX.Color('#ffffff');
   const corner = (f, k, kept) => {
     // 0 to 3 round the foot, 4 to 7 round the top.
@@ -148,9 +166,13 @@ export function createMorningStar(GFX, { spikes = SPIKES, detail = 1 } = {}) {
   spikeGeometry.setAttribute('position', new GFX.BufferAttribute(position, 3));
   spikeGeometry.setAttribute('color', new GFX.BufferAttribute(color, 3));
   spikeGeometry.computeVertexNormals();
-  const spikeMaterial = new GFX.MeshStandardMaterial({ name: 'spikes', vertexColors: true, metalness: 0.72, roughness: 0.22, flatShading: true });
-  spikeMaterial.emissive.set('#1c2028');
-  spikeMaterial.emissiveIntensity = 0.8;
+  const spikeMaterial = metallic
+    ? new GFX.MeshPhysicalMaterial({ name: 'metal-morningstar-spikes', color: new GFX.Color(finish.color), vertexColors: true, metalness: 1, roughness: finish.roughness, envMapIntensity: 3, flatShading: true })
+    : new GFX.MeshStandardMaterial({ name: 'spikes', vertexColors: true, metalness: 0.72, roughness: 0.22, flatShading: true });
+  if (!metallic) {
+    spikeMaterial.emissive.set('#1c2028');
+    spikeMaterial.emissiveIntensity = 0.8;
+  }
   const mesh = new GFX.Mesh(spikeGeometry, spikeMaterial);
   mesh.name = 'spikes';
 
@@ -161,7 +183,7 @@ export function createMorningStar(GFX, { spikes = SPIKES, detail = 1 } = {}) {
   const order = snapOrder(spikes);
   let snapped = 0;
 
-  return {
+  const api = {
     group, core, mesh, material, spikeMaterial,
     get snapped() { return snapped; },
 
@@ -179,4 +201,24 @@ export function createMorningStar(GFX, { spikes = SPIKES, detail = 1 } = {}) {
       return true;
     },
   };
+
+  if (metallic) {
+    api.metal = metal;
+    api.setMetal = (name) => {
+      const next = METALS[name];
+      if (!next) throw new Error(`no metal called ${name}`);
+      material.color.set(next.color);
+      material.roughness = next.roughness;
+      spikeMaterial.color.set(next.color);
+      spikeMaterial.roughness = next.roughness;
+      api.metal = name;
+      return api;
+    };
+  }
+  return api;
+}
+
+/** The same Morningstar geometry with a reflective finish from the coin/globe metal palette. */
+export function createMetalMorningStar(GFX, { metal = 'steel', ...options } = {}) {
+  return createMorningStar(GFX, { ...options, metal });
 }
