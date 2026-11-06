@@ -2,35 +2,28 @@ import { METALS } from '../props/metalglobe.js';
 import { createMarble, RADIUS as MARBLE_RADIUS } from '../heroes/marble.js';
 
 /**
- * Weapons are constructed in real units, not normalized for the viewer:
- * one world unit is one metre. The catalogue keeps each form's dimensions
- * in its own specification so daggers and greatswords retain their scale.
+ * Weapons are authored in metres (one engine unit = one metre). A display
+ * marble is the actual animated glass marble hero with its 3D spark, not a
+ * substitute plinth. Weapon measurements exclude that display marble.
  */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
-
-/** The actual glass-and-spark marble hero is the display base. */
-export const MARBLE_WEAPON_BASE = Object.freeze({
+export const MARBLE_DISPLAY_BASE = Object.freeze({
   radius: MARBLE_RADIUS,
   diameter: MARBLE_RADIUS * 2,
   height: MARBLE_RADIUS * 2,
 });
 
-/**
- * Place the engine's real marble hero at floor level. It is deliberately not
- * replaced with a marble-textured box or pedestal: its internal 3D spark and
- * transmissive glass remain the hero asset.
- */
-export function createWeaponBase(GFX) {
-  const marbleHero = createMarble(GFX);
-  marbleHero.marble.name = 'marble weapon base';
-  marbleHero.marble.position.set(0, MARBLE_RADIUS, 0);
-  return {
-    group: marbleHero.marble,
-    marble: marbleHero,
-    height: MARBLE_WEAPON_BASE.height,
-  };
+/** Place the engine's real glass-and-spark marble on the floor as the display base. */
+export function createWeaponDisplayBase(GFX) {
+  const asset = createMarble(GFX, { radius: MARBLE_RADIUS });
+  asset.marble.position.y = MARBLE_RADIUS;
+  const group = new GFX.Group();
+  group.name = 'marble hero display base';
+  group.add(asset.marble);
+  return { group, marble: asset, radius: MARBLE_RADIUS, height: MARBLE_RADIUS * 2 };
 }
 
+/** A grayscale leather grain; the selected grip colour tints the map at runtime. */
 function leatherMaps(GFX) {
   if (typeof document === 'undefined') return { map: null, bump: null };
   const width = 512, height = 256;
@@ -40,8 +33,6 @@ function leatherMaps(GFX) {
   const ctx = mapCanvas.getContext('2d');
   ctx.fillStyle = '#c7c7c7';
   ctx.fillRect(0, 0, width, height);
-
-  // Fine diagonal impressions cross into a close, hand-wrapped leather grain.
   for (let x = -height; x < width + height; x += 10) {
     ctx.strokeStyle = '#777777';
     ctx.lineWidth = 2.2;
@@ -71,7 +62,6 @@ function leatherMaps(GFX) {
   bumpCtx.fillStyle = '#777777';
   bumpCtx.fillRect(0, 0, width, height);
   bumpCtx.drawImage(mapCanvas, 0, 0);
-
   const map = new GFX.CanvasTexture(mapCanvas);
   map.colorSpace = GFX.SRGBColorSpace;
   map.anisotropy = 8;
@@ -104,143 +94,113 @@ function sphere(GFX, name, material, position, scale, detail = [32, 20]) {
   return mesh;
 }
 
-/** A solid, closed lenticular blade with a shallow central fuller and a true point. */
-function bladeGeometry(GFX, { rootY, length, width, thickness = 0.0068 }) {
+/** A tapered cylinder between two measured points, aligned by a quaternion. */
+function cylinderBetween(GFX, name, material, a, b, radiusA, radiusB, radial = 24) {
+  const direction = new GFX.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const length = direction.length();
+  if (length <= 1e-8) throw new RangeError('weapon component segment must have non-zero length');
+  direction.normalize();
+  const mesh = new GFX.Mesh(new GFX.CylinderGeometry(radiusB, radiusA, length, radial, 1), material);
+  mesh.name = name;
+  mesh.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+  mesh.quaternion.setFromUnitVectors(new GFX.Vector3(0, 1, 0), direction);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const smoothstep = (a, b, v) => {
+  const t = clamp01((v - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * A watertight, lenticular blade. Each cross-section is a closed 16-point
+ * bevel profile. A root cap and a shared pointed apex make the blade a solid
+ * body, not a pair of disconnected sheets. The central fuller is recessed
+ * into both faces and fades to nothing at exactly 75% of blade length.
+ */
+export function bladeGeometry(GFX, { rootY, length, width }) {
   const sections = 64;
-  // Closed perimeter in the blade's x/z cross-section. Both faces have a
-  // shallow central channel, bevel shoulders and keen outer edges.
   const profile = [
-    [-1.00, 0.00], [-0.88, 0.46], [-0.62, 0.78], [-0.42, 0.86],
-    [-0.28, 0.72], [-0.12, 0.67], [0.00, 0.66], [0.12, 0.67],
-    [0.28, 0.72], [0.42, 0.86], [0.62, 0.78], [0.88, 0.46],
-    [1.00, 0.00], [0.88, -0.46], [0.62, -0.78], [0.42, -0.86],
-    [0.28, -0.72], [0.12, -0.67], [0.00, -0.66], [-0.12, -0.67],
-    [-0.28, -0.72], [-0.42, -0.86], [-0.62, -0.78], [-0.88, -0.46],
+    [-1.00, 0.00], [-0.82, 0.48], [-0.48, 0.86], [-0.30, 0.72],
+    [0.00, 0.56], [0.30, 0.72], [0.48, 0.86], [0.82, 0.48],
+    [1.00, 0.00], [0.82, -0.48], [0.48, -0.86], [0.30, -0.72],
+    [0.00, -0.56], [-0.30, -0.72], [-0.48, -0.86], [-0.82, -0.48],
   ];
   const ringSize = profile.length;
-  const positions = [];
-  const indices = [];
+  const positions = [], uvs = [], indices = [];
   const halfWidth = width / 2;
 
-  const widthFactor = (t) => {
-    if (t < 0.14) return 0.94 + 0.06 * Math.sin((t / 0.14) * Math.PI / 2);
-    if (t < 0.68) return 1.0 - 0.035 * ((t - 0.14) / 0.54);
-    return Math.pow(Math.max(0, (1 - t) / 0.32), 0.92) * 0.965;
-  };
-  const thicknessFactor = (t) => 1 - 0.58 * t;
-
-  // Use complete rings until the last section; the final vertex is a single
-  // apex, so the cutting edges genuinely converge rather than ending bluntly.
   for (let i = 0; i < sections; i++) {
     const t = i / sections;
-    const w = halfWidth * widthFactor(t);
-    const halfThickness = (thickness / 2) * thicknessFactor(t);
-    for (const [x, z] of profile) {
-      positions.push(x * w, rootY + t * length, z * halfThickness);
+    // Retain broad parallel shoulders, then carry a continuous distal taper
+    // to the point rather than abruptly pinching the final quarter.
+    const taper = 1 - 0.30 * t - 0.70 * smoothstep(0.70, 1, t);
+    const w = halfWidth * Math.max(0.002, taper);
+    // A sword blade is thin at the forte and becomes thinner toward its tip.
+    const halfThickness = Math.max(0.00055, 0.0031 * (1 - 0.56 * t));
+    // Fuller starts a short distance below the guard and ends at 3/4 length.
+    const along = smoothstep(0.025, 0.14, t) * (1 - smoothstep(0.69, 0.75, t));
+    for (let j = 0; j < ringSize; j++) {
+      const [x, z] = profile[j];
+      const across = Math.exp(-((x / 0.37) ** 2));
+      const groove = 0.42 * along * across;
+      positions.push(x * w, rootY + t * length, z * halfThickness * (1 - groove));
+      uvs.push(j / ringSize, t);
     }
   }
 
-  const rootCenter = positions.length / 3;
-  positions.push(0, rootY, 0);
+  // The distal point is one shared vertex: this closes the blade and avoids a
+  // flat, clipped end or a set of overlapping sliver faces.
   const tip = positions.length / 3;
   positions.push(0, rootY + length, 0);
+  uvs.push(0.5, 1);
 
-  // Closed sides, with outward winding, then a solid root cap and a pointed tip.
+  // Root end cap: its outward normal faces down the hilt.
+  const rootCenter = positions.length / 3;
+  positions.push(0, rootY, 0);
+  uvs.push(0.5, 0);
+  for (let j = 0; j < ringSize; j++) {
+    const next = (j + 1) % ringSize;
+    indices.push(rootCenter, next, j);
+  }
+
   for (let i = 0; i < sections - 1; i++) {
     for (let j = 0; j < ringSize; j++) {
       const a = i * ringSize + j;
       const b = i * ringSize + (j + 1) % ringSize;
       const c = (i + 1) * ringSize + j;
       const d = (i + 1) * ringSize + (j + 1) % ringSize;
-      indices.push(a, b, c, b, d, c);
+      indices.push(a, c, b, b, c, d);
     }
   }
   const lastRing = (sections - 1) * ringSize;
   for (let j = 0; j < ringSize; j++) {
     const a = lastRing + j;
     const b = lastRing + (j + 1) % ringSize;
-    indices.push(a, b, tip);
-    // Root cap is wound toward -y (the pommel).
-    const next = (j + 1) % ringSize;
-    indices.push(rootCenter, next, j);
+    indices.push(a, tip, b);
   }
 
   const geometry = new GFX.BufferGeometry();
   geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setAttribute('uv', new GFX.BufferAttribute(new Float32Array(uvs), 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
 }
 
-/** A real helical leather thong, not a stack of disconnected metal-looking rings. */
-function makeGripWrap(GFX, { radius, bottom, height, turns, tubeRadius }) {
-  const along = turns * 48;
-  const around = 7;
-  const positions = [];
-  const indices = [];
-  const pitch = height / (turns * Math.PI * 2);
-
-  for (let i = 0; i <= along; i++) {
-    const t = i / along;
-    const angle = t * turns * Math.PI * 2;
-    const y = bottom + 0.002 + t * (height - 0.004);
-    const r = radius * (1 - 0.035 * t);
-    const radial = new GFX.Vector3(Math.cos(angle), 0, Math.sin(angle));
-    const tangent = new GFX.Vector3(-r * Math.sin(angle), pitch, r * Math.cos(angle)).normalize();
-    const binormal = new GFX.Vector3().crossVectors(tangent, radial).normalize();
-
-    for (let j = 0; j < around; j++) {
-      const v = (j / around) * Math.PI * 2;
-      const offset = radial.clone().multiplyScalar(Math.cos(v) * tubeRadius)
-        .addScaledVector(binormal, Math.sin(v) * tubeRadius);
-      positions.push(
-        r * Math.cos(angle) + offset.x,
-        y + offset.y,
-        r * Math.sin(angle) + offset.z,
-      );
-    }
-  }
-  for (let i = 0; i < along; i++) {
-    for (let j = 0; j < around; j++) {
-      const a = i * around + j;
-      const b = i * around + (j + 1) % around;
-      const c = (i + 1) * around + j;
-      const d = (i + 1) * around + (j + 1) % around;
-      indices.push(a, c, b, b, c, d);
-    }
-  }
-  const geometry = new GFX.BufferGeometry();
-  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  return geometry;
-}
-
-/** Join a tapered solid cylinder between measured endpoints with the right local-y orientation. */
-function cylinderBetween(GFX, name, material, a, b, radiusA, radiusB = radiusA, radial = 24) {
-  const start = new GFX.Vector3(...a);
-  const end = new GFX.Vector3(...b);
-  const direction = end.clone().sub(start);
-  const length = direction.length();
-  if (length <= 1e-6) throw new RangeError('A crossguard segment must have non-zero length');
-  const mesh = new GFX.Mesh(new GFX.CylinderGeometry(radiusB, radiusA, length, radial, 1), material);
-  mesh.name = name;
-  mesh.position.copy(start).add(end).multiplyScalar(0.5);
-  mesh.quaternion.setFromUnitVectors(new GFX.Vector3(0, 1, 0), direction.normalize());
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
-function shadedHex(hex, factor) {
+function shadeHex(hex, factor) {
   const value = hex.slice(1);
-  return `#${[0, 2, 4].map((i) =>
-    Math.round(parseInt(value.slice(i, i + 2), 16) * factor).toString(16).padStart(2, '0')).join('')}`;
+  return `#${[0, 2, 4].map((i) => Math.round(parseInt(value.slice(i, i + 2), 16) * factor).toString(16).padStart(2, '0')).join('')}`;
 }
 
 /**
- * Measured assembly shared by future sword and dagger definitions. The
- * sword's point faces up; the pommel rests against the top of the glass marble.
+ * Shared measured construction for one-handed swords and later weapon families.
+ * Individual assets provide their physical dimensions rather than arbitrary
+ * display scales. The hilt is one coherent assembly; all guard segments are
+ * aligned along their actual 3D direction.
  */
 export function buildWeapon(GFX, spec, {
   bladeMetal = 'steel',
@@ -255,158 +215,159 @@ export function buildWeapon(GFX, spec, {
   }
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
 
-  const base = createWeaponBase(GFX);
+  const display = createWeaponDisplayBase(GFX);
   const group = new GFX.Group();
   group.name = `${spec.name} display`;
-  group.add(base.group);
+  group.add(display.group);
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
   const bladeMaterial = metalMaterial(GFX, 'blade metal', bladeMetal);
-  const hilt = new GFX.Group();
-  hilt.name = 'hilt assembly';
-  group.add(hilt);
+  const grip = new GFX.Group();
+  grip.name = 'leather grip assembly';
+  group.add(grip);
 
   const pommelRadius = spec.pommelDiameter / 2;
-  const pommelCenterY = base.height + pommelRadius * 0.88 - 0.001;
-  const gripBottom = pommelCenterY + pommelRadius * 0.56;
+  // Seat the pommel just into the top of the actual marble, so the sword reads
+  // as resting on the hero asset instead of floating above a display pedestal.
+  const pommelCenterY = display.height + pommelRadius * 0.66;
+  const gripBottom = pommelCenterY + pommelRadius * 0.72;
   const gripTop = gripBottom + spec.gripLength;
-  const guardY = gripTop + 0.008;
+  const guardY = gripTop + 0.012;
   const bladeRootY = guardY + 0.006;
 
-  // Peened, slightly oval pommel. One shallow equatorial engraving is flush to
-  // the pommel and cannot create the stray spikes visible in the previous pass.
-  hilt.add(sphere(GFX, 'pommel', hiltMaterial,
-    [0, pommelCenterY, 0], [pommelRadius, pommelRadius * 0.88, pommelRadius], [48, 32]));
-  const pommelEngraving = new GFX.Mesh(
-    new GFX.TorusGeometry(pommelRadius * 0.64, 0.0008, 6, 48),
+  grip.add(sphere(GFX, 'pommel', hiltMaterial,
+    [0, pommelCenterY, 0], [pommelRadius, pommelRadius * 0.88, pommelRadius], [40, 28]));
+  const pommelRing = new GFX.Mesh(
+    new GFX.TorusGeometry(pommelRadius * 0.48, 0.0017, 8, 36),
     hiltMaterial,
   );
-  pommelEngraving.name = 'pommel engraved ring';
-  pommelEngraving.position.set(0, pommelCenterY - 0.002, 0);
-  pommelEngraving.rotation.x = Math.PI / 2;
-  hilt.add(pommelEngraving);
+  pommelRing.name = 'pommel peen ring';
+  pommelRing.position.set(0, pommelCenterY + pommelRadius * 0.72, 0);
+  pommelRing.rotation.x = Math.PI / 2;
+  grip.add(pommelRing);
+  grip.add(sphere(GFX, 'pommel end cap', hiltMaterial,
+    [0, pommelCenterY + pommelRadius * 0.84, 0], [0.006, 0.003, 0.006], [24, 16]));
 
-  // One continuous tapered leather core, with a procedural grain map and a
-  // physical spiral wrap. The ferrules sit flush at both ends of the grip.
-  const leather = leatherMaps(GFX);
-  const gripMaterial = new GFX.MeshPhysicalMaterial({
-    name: 'leather grip',
+  const leatherMapsResult = leatherMaps(GFX);
+  const leatherMaterial = new GFX.MeshPhysicalMaterial({
+    name: 'wrapped leather grip',
     color: new GFX.Color(gripColor),
-    map: leather.map,
-    bumpMap: leather.bump,
-    bumpScale: 0.0012,
-    roughness: 0.88,
+    map: leatherMapsResult.map,
+    bumpMap: leatherMapsResult.bump,
+    bumpScale: 0.0014,
+    roughness: 0.86,
     metalness: 0,
-    clearcoat: 0.025,
-    clearcoatRoughness: 0.74,
+    clearcoat: 0.04,
+    clearcoatRoughness: 0.72,
   });
-  const gripRadius = spec.gripDiameter / 2;
+  const handleRadius = spec.gripDiameter / 2;
   const handle = new GFX.Mesh(
-    new GFX.CylinderGeometry(gripRadius * 0.96, gripRadius, spec.gripLength, 48, 1),
-    gripMaterial,
+    new GFX.CylinderGeometry(handleRadius * 0.94, handleRadius, spec.gripLength, 48, 1),
+    leatherMaterial,
   );
   handle.name = 'leather grip';
   handle.position.set(0, (gripBottom + gripTop) / 2, 0);
   handle.castShadow = true;
   handle.receiveShadow = true;
-  hilt.add(handle);
+  grip.add(handle);
 
+  // Closely spaced cord ridges add real relief over the fine leather grain.
   const wrapMaterial = new GFX.MeshPhysicalMaterial({
-    name: 'leather grip wrap',
-    color: new GFX.Color(shadedHex(gripColor, 0.66)),
-    roughness: 0.94,
+    name: 'leather wrap ridges',
+    color: new GFX.Color(shadeHex(gripColor, 0.68)),
+    roughness: 0.9,
     metalness: 0,
   });
-  const wrap = new GFX.Mesh(makeGripWrap(GFX, {
-    radius: gripRadius * 1.002,
-    bottom: gripBottom,
-    height: spec.gripLength,
-    turns: 7,
-    tubeRadius: 0.00082,
-  }), wrapMaterial);
-  wrap.name = 'helical leather cord';
-  wrap.castShadow = true;
-  wrap.receiveShadow = true;
-  hilt.add(wrap);
+  const wraps = 13;
+  for (let i = 1; i < wraps; i++) {
+    const y = gripBottom + (spec.gripLength * i) / wraps;
+    const radius = handleRadius * (1 - 0.045 * (i / wraps));
+    const ring = new GFX.Mesh(new GFX.TorusGeometry(radius, 0.00072, 6, 40), wrapMaterial);
+    ring.name = 'leather wrap ridge';
+    ring.position.set(0, y, 0);
+    ring.rotation.x = Math.PI / 2;
+    ring.castShadow = true;
+    grip.add(ring);
+  }
 
-  for (const [label, y] of [
-    ['lower grip ferrule', gripBottom + 0.0025],
-    ['upper grip ferrule', gripTop - 0.0025],
+  for (const [label, y, radius] of [
+    ['lower grip ferrule', gripBottom + 0.002, handleRadius * 1.08],
+    ['upper grip ferrule', gripTop - 0.002, handleRadius * 1.03],
   ]) {
-    const ferrule = new GFX.Mesh(
-      new GFX.CylinderGeometry(gripRadius * 1.045, gripRadius * 1.045, 0.004, 48),
-      hiltMaterial,
-    );
+    const ferrule = new GFX.Mesh(new GFX.TorusGeometry(radius, 0.0014, 8, 48), hiltMaterial);
     ferrule.name = label;
     ferrule.position.set(0, y, 0);
+    ferrule.rotation.x = Math.PI / 2;
     ferrule.castShadow = true;
-    ferrule.receiveShadow = true;
-    hilt.add(ferrule);
+    grip.add(ferrule);
   }
 
-  // A single swept crossguard: joined segments and small blended knuckles.
-  // Its quillons curve down away from the blade, not up into stray metal tabs.
-  const halfSpan = spec.guardSpan / 2;
+  // A gently swept, continuous crossguard: each quillon segment follows the
+  // path in the hilt's x/y plane, with no spurious vertical metal prongs.
+  const span = spec.guardSpan / 2;
   const guardPoints = [
-    [-halfSpan, guardY - 0.014, 0],
-    [-halfSpan * 0.72, guardY - 0.010, 0],
-    [-halfSpan * 0.36, guardY + 0.004, 0],
-    [0, guardY + 0.008, 0],
-    [halfSpan * 0.36, guardY + 0.004, 0],
-    [halfSpan * 0.72, guardY - 0.010, 0],
-    [halfSpan, guardY - 0.014, 0],
+    [-span, guardY - 0.016, 0],
+    [-span * 0.72, guardY - 0.010, 0],
+    [-span * 0.36, guardY + 0.002, 0],
+    [0, guardY + 0.009, 0],
+    [span * 0.36, guardY + 0.002, 0],
+    [span * 0.72, guardY - 0.010, 0],
+    [span, guardY - 0.016, 0],
   ];
   for (let i = 0; i < guardPoints.length - 1; i++) {
-    const start = i === 0 ? 0.0058 : 0.0064;
-    const end = i === guardPoints.length - 2 ? 0.0058 : 0.0064;
-    hilt.add(cylinderBetween(GFX, 'curved crossguard', hiltMaterial,
-      guardPoints[i], guardPoints[i + 1], start, end, 28));
+    grip.add(cylinderBetween(GFX, 'swept crossguard quillon', hiltMaterial,
+      guardPoints[i], guardPoints[i + 1], 0.0068, 0.0068, 24));
   }
-  guardPoints.forEach((point, i) => {
-    const r = i === 0 || i === guardPoints.length - 1 ? 0.0061 : 0.0064;
-    hilt.add(sphere(GFX, i === 0 || i === guardPoints.length - 1 ? 'rounded quillon tip' : 'crossguard blend',
-      hiltMaterial, point, [r, r, r], [20, 12]));
-  });
-  hilt.add(sphere(GFX, 'crossguard central boss', hiltMaterial,
-    [0, guardY + 0.003, 0], [0.024, 0.010, 0.014], [32, 20]));
+  for (const side of [-1, 1]) {
+    grip.add(sphere(GFX, 'crossguard terminal', hiltMaterial,
+      [side * (span - 0.001), guardY - 0.016, 0], [0.0085, 0.0085, 0.0085], [24, 16]));
+    const collar = new GFX.Mesh(new GFX.TorusGeometry(0.0072, 0.0011, 8, 28), hiltMaterial);
+    collar.name = 'quillon terminal collar';
+    collar.position.set(side * (span - 0.012), guardY - 0.016, 0);
+    collar.rotation.x = Math.PI / 2;
+    grip.add(collar);
+  }
+  grip.add(sphere(GFX, 'crossguard central boss', hiltMaterial,
+    [0, guardY + 0.006, 0], [0.022, 0.012, 0.014], [32, 20]));
+  for (const side of [-1, 1]) {
+    grip.add(sphere(GFX, 'guard face rivet', hiltMaterial,
+      [0, guardY + 0.006, side * 0.013], [0.004, 0.004, 0.002], [20, 12]));
+  }
 
   const blade = new GFX.Mesh(bladeGeometry(GFX, {
     rootY: bladeRootY,
     length: spec.bladeLength,
     width: spec.bladeWidth,
-    thickness: spec.bladeThickness,
   }), bladeMaterial);
-  blade.name = 'solid double-edged blade with central fuller';
+  blade.name = 'solid double-edged blade with 75% fuller';
   blade.castShadow = true;
   blade.receiveShadow = true;
   group.add(blade);
 
-  const pommelBottom = pommelCenterY - pommelRadius * 0.88;
-  const overallLength = bladeRootY + spec.bladeLength - pommelBottom;
   const api = {
     group,
-    base: base.group,
-    marble: base.marble,
     blade,
-    hilt,
+    hilt: grip,
+    displayBase: display.group,
+    marble: display.marble,
     dimensions: Object.freeze({
-      overallLength,
+      overallLength: bladeRootY + spec.bladeLength - (pommelCenterY - pommelRadius * 0.88),
       bladeLength: spec.bladeLength,
       bladeWidth: spec.bladeWidth,
-      bladeThickness: spec.bladeThickness,
       gripLength: spec.gripLength,
       guardSpan: spec.guardSpan,
+      fullerLength: spec.bladeLength * 0.75,
       unit: 'm',
     }),
     info: {
-      'Weapon length': `${overallLength.toFixed(3)} m`,
+      'Weapon length': `${(bladeRootY + spec.bladeLength - (pommelCenterY - pommelRadius * 0.88)).toFixed(3)} m`,
       'Blade length': `${spec.bladeLength.toFixed(3)} m`,
       'Blade width': `${(spec.bladeWidth * 1000).toFixed(0)} mm`,
-      'Blade thickness': `${(spec.bladeThickness * 1000).toFixed(1)} mm at the ricasso`,
       'Grip length': `${(spec.gripLength * 1000).toFixed(0)} mm`,
       'Guard span': `${(spec.guardSpan * 1000).toFixed(0)} mm`,
-      'Base': 'Madness Engine glass marble with 3D spark',
+      'Fuller length': `${(spec.bladeLength * 750).toFixed(0)} mm (75%)`,
       'Scale': '1 world unit = 1 metre',
+      'Display base': 'Glass marble with 3D spark',
     },
     get bladeMetal() { return bladeMetal; },
     get hiltMetal() { return hiltMetal; },
@@ -429,8 +390,8 @@ export function buildWeapon(GFX, spec, {
     },
     setGripColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
-      gripMaterial.color.set(color);
-      wrapMaterial.color.set(shadedHex(color, 0.66));
+      leatherMaterial.color.set(color);
+      wrapMaterial.color.set(shadeHex(color, 0.68));
       gripColor = color;
       return api;
     },
