@@ -252,7 +252,7 @@ pommel; a compact chrome end cap suggests the dark banana tip.
 
 Defaults are a chrome blade, brass peel exterior and chrome peel interior.
 These finishes are independently selectable with \`setBladeMetal()\`,
-\`setHiltMetal()\` and \`setInnerMetal()\`. The design is approximately 405 mm
+\`setHiltMetal()\` and \`setInnerMetal()\`. The design is approximately 358 mm
 overall, with a 244 mm blade and a 96 mm grip.
 
 \`\`\`js
