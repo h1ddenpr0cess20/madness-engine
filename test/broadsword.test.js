@@ -31,8 +31,9 @@ test('broadsword is modelled at real-world scale with the spark marble as its po
   assert.equal(sword.handle.geometry.parameters.height, 0.14, 'leather core remains the actual 140 mm length');
   assert.equal(sword.handleBounds.bottom, sword.gripBounds.bottom);
   assert.equal(sword.handleBounds.top, sword.gripBounds.top);
-  assert.ok(Math.abs(sword.handleBounds.top - (sword.guardBoss.position.y - sword.guardBoss.scale.y)) < 1e-9,
-    'handle stops flush at the lower face of the guard boss');
+  const bossBottom = sword.guardBoss.position.y - sword.guardBoss.scale.y;
+  assert.ok(sword.handleBounds.top > bossBottom, 'handle slightly intersects the guard boss to close the joint');
+  assert.ok(sword.handleBounds.top - bossBottom <= 0.004, 'handle does not penetrate deeply into the guard boss');
   assert.equal(sword.bezel.name, 'marble-to-leather metal bezel');
   assert.ok(sword.bezelBounds.bottom < sword.marble.height, 'bezel collar seats on the marble shoulder');
   assert.equal(sword.bezelBounds.top, sword.handleBounds.bottom, 'bezel meets the handle at its lower end');
@@ -147,8 +148,9 @@ test('handle is not buried in either the spark marble or the guard', () => {
   const glassTop = sword.marble.height;
   assert.ok(sword.handleBounds.bottom > glassTop, 'leather begins above the glass surface');
   assert.equal(sword.handleBounds.length, BROADSWORD_DIMENSIONS.gripLength);
-  assert.ok(sword.handleBounds.top <= sword.guardBoss.position.y - sword.guardBoss.scale.y + 1e-9,
-    'leather does not penetrate the guard boss');
+  const bossBottom = sword.guardBoss.position.y - sword.guardBoss.scale.y;
+  assert.ok(sword.handleBounds.top > bossBottom, 'handle has a small positive overlap into the guard boss');
+  assert.ok(sword.handleBounds.top - bossBottom <= 0.004, 'handle remains outside the deeper guard centre');
   assert.ok(sword.bezelBounds.outerRadius > sword.handle.geometry.parameters.radiusTop,
     'bezel gives the leather-to-marble joint a visible metal shoulder');
 });
