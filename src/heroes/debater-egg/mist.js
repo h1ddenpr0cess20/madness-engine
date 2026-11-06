@@ -1,5 +1,5 @@
 import { createVisionMaterial } from '../krystal/vision.js';
-import { shapeEgg } from './shell.js';
+import { shapeEgg, smoothEggSeams } from './shell.js';
 
 /**
  * A white, slow-moving vision inside the clear egg. The existing glass-object
@@ -12,22 +12,24 @@ export function createEggMist(GFX, { visible = false } = {}) {
   u.uSwirl.value = 1.15;
   u.uChurn.value = 0.42;
   u.uGlow.value = 0.72;
-  u.uHue.value = 0.08;
+  // The white palette is uniform through the mist. The warm tint comes from
+  // the shader's radial core term (exp(-distance² * 7)), so it sits in the
+  // centre of the egg rather than forming a yellow equatorial band.
+  u.uHue.value = 0.4;
   u.uSpread.value = 0;
   u.uTint.value.set(1, 1, 1);
-  u.uCore.value = 0;
+  u.uCore.value = 0.9;
   u.uBands.value = 0.18;
   u.uDuo.value = 1;
   u.uDuoA.value.set(0.96, 0.98, 1.0);
   u.uDuoB.value.set(1.0, 0.985, 0.94);
-  u.uDuoC.value.set(1.0, 0.82, 0.48);
+  u.uDuoC.value.set(1.0, 0.985, 0.94);
   u.uRadius.value = 1.02;
 
   const geometry = new GFX.SphereGeometry(1, 80, 56);
   const positions = shapeEgg(geometry.attributes.position.array);
-  for (let i = 0; i < positions.length; i++) positions[i] *= 0.91;
-  geometry.attributes.position.needsUpdate = true;
-  geometry.computeVertexNormals();
+  for (let i = 0; i < positions.length; i++) positions[i] *= 0.985;
+  smoothEggSeams(geometry);
 
   const mesh = new GFX.Mesh(geometry, material);
   mesh.name = 'mist';
