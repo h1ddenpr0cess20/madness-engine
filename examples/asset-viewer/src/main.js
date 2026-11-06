@@ -296,6 +296,11 @@ function colourRows(item) {
       ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
     ];
   }
+  if (pal.kind === 'morningstar') {
+    return [
+      ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
+    ];
+  }
   if (pal.kind === 'bowling-ball') {
     return [
       ['Base resin', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
@@ -375,9 +380,11 @@ function colourGroup(item) {
   const isBowlingBall = item.palette.kind === 'bowling-ball';
   const isBowlingPin = item.palette.kind === 'bowling-pin';
   const isWeapon = item.palette.kind === 'weapon';
-  $('colourdiverse').style.display = isDice || isWeapon ? 'none' : '';
-  if (isWeapon) {
-    for (const [key, label] of [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']]) {
+  const isMorningstar = item.palette.kind === 'morningstar';
+  $('colourdiverse').style.display = isDice || isWeapon || isMorningstar ? 'none' : '';
+  if (isWeapon || isMorningstar) {
+    const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
+    for (const [key, label] of metalOptions) {
       options[key] ??= 'steel';
       const select = el('select', { className: 'weapon-metal-select' },
         ...METAL_CHOICES.map((metal) => el('option', { value: metal }, metal)));
@@ -407,6 +414,8 @@ function colourGroup(item) {
   }
   $('colourhint').textContent = isWeapon
     ? 'Choose blade and hilt metals, then set the leather grip colour here. Metal finishes update immediately; Apply commits the grip colour.'
+    : isMorningstar
+      ? 'Choose the morningstar head and haft metal, then set the leather grip colour. Metal finishes update immediately; Apply commits the grip colour.'
     : isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
     : isBowlingBall
@@ -462,12 +471,22 @@ $('colourcopy').onclick = async () => {
       + "import { createBowlingBall } from 'madness-engine/props/bowling-ball';\n\n"
       + "const bowlingBall = createBowlingBall(GFX, { colors: "
       + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'marble') + "' });";
-  } else if (view.item.palette?.kind === 'weapon') {
+  } else if (view.item.palette?.kind === 'morningstar') {
+    const factory = view.item.factory;
+    const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
     code = "import * as GFX from 'madness-engine/gfx';\n"
-      + "import { createBroadsword } from 'madness-engine/weapons';\n\n"
-      + "const broadsword = createBroadsword(GFX, { bladeMetal: '" + (options.bladeMetal ?? 'steel')
-      + "', hiltMetal: '" + (options.hiltMetal ?? 'steel') + "', gripColor: '"
+      + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
+      + "const " + variable + " = " + factory + "(GFX, { metal: '"
+      + (options.metal ?? 'steel') + "', gripColor: '"
       + (view.colours.gripColor ?? '#633b2c') + "' });";
+  } else if (view.item.palette?.kind === 'weapon') {
+    const factory = view.item.factory;
+    const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
+      + "const " + variable + " = " + factory + "(GFX, { bladeMetal: '"
+      + (options.bladeMetal ?? 'steel') + "', hiltMetal: '" + (options.hiltMetal ?? 'steel')
+      + "', gripColor: '" + (view.colours.gripColor ?? '#633b2c') + "' });";
   } else if (view.item.palette?.kind === 'bowling-pin') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\n\n"

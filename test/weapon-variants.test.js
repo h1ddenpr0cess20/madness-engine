@@ -1,0 +1,110 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+import * as GFX from '../src/gfx/index.js';
+import {
+  createMadnessSword,
+  createMadnessDagger,
+  createMadnessGreatsword,
+  createMadnessMorningstar,
+  createRegularSword,
+  createRegularDagger,
+  createRegularGreatsword,
+  createRegularMorningstar,
+  createMarcsSword,
+  createMarcsDagger,
+  createMarcsGreatsword,
+  createMarcsMorningstar,
+} from '../src/weapons/index.js';
+import { METALS } from '../src/props/metalglobe.js';
+
+test('Madness and Regular retain their original guard shape and differ only at the pommel', () => {
+  const pairs = [
+    [createMadnessSword(GFX), createRegularSword(GFX)],
+    [createMadnessDagger(GFX), createRegularDagger(GFX)],
+    [createMadnessGreatsword(GFX), createRegularGreatsword(GFX)],
+  ];
+
+  for (const [madness, regular] of pairs) {
+    assert.equal(madness.pommelAsset.kind, 'marble');
+    assert.equal(regular.pommelAsset.kind, 'metal-ball');
+    assert.equal(regular.dimensions.bladeLength, madness.dimensions.bladeLength);
+    assert.equal(regular.dimensions.bladeWidth, madness.dimensions.bladeWidth);
+    assert.equal(regular.dimensions.gripLength, madness.dimensions.gripLength);
+    assert.equal(regular.guard.name, madness.guard.name);
+    regular.setHiltMetal('gold');
+    assert.equal(regular.pommelAsset.mesh.material.color.getHexString(), METALS.gold.color.slice(1));
+  }
+
+  assert.equal(createMadnessMorningstar(GFX).pommelAsset.kind, 'marble');
+  assert.equal(createRegularMorningstar(GFX).pommelAsset.kind, 'metal-ball');
+});
+
+test('Marc blade guards reuse the inverted Madness sweep with integrated pointed ends', () => {
+  for (const weapon of [
+    createMarcsSword(GFX),
+    createMarcsDagger(GFX),
+    createMarcsGreatsword(GFX),
+  ]) {
+    assert.equal(weapon.pommelAsset.kind, 'metal-egg');
+    assert.equal(weapon.guard.name, 'Marc inverted Madness swept guard');
+    assert.equal(weapon.guard.children.length, 1,
+      'guard arch and both pointed terminals are a single mesh');
+    const guardMesh = weapon.guard.children[0];
+    assert.equal(guardMesh.name, 'Madness swept guard with integrated pointed terminals');
+
+    const position = guardMesh.geometry.attributes.position;
+    let minY = Infinity, maxY = -Infinity, minX = Infinity, maxX = -Infinity;
+    for (let i = 0; i < position.count; i++) {
+      minY = Math.min(minY, position.getY(i));
+      maxY = Math.max(maxY, position.getY(i));
+      minX = Math.min(minX, position.getX(i));
+      maxX = Math.max(maxX, position.getX(i));
+    }
+    assert.ok(minY < weapon.guardY - 0.004,
+      'the centre of the flipped Madness arch sits below the guard root');
+    assert.ok(maxY > weapon.guardY + 0.02,
+      'the sharpened terminal tips rise above the guard root');
+    assert.ok(maxX > weapon.dimensions.guardSpan / 2);
+    assert.ok(minX < -weapon.dimensions.guardSpan / 2);
+  }
+});
+
+test('Marc metal egg is a stationary engine shell with its broad end joined to the grip', () => {
+  const weapon = createMarcsSword(GFX);
+  const egg = weapon.pommelAsset.mesh;
+  assert.equal(egg.name, 'stationary metal egg shell');
+  assert.equal(egg.geometry.type, 'SphereGeometry');
+  assert.ok(egg.scale.y < 0, 'the engine egg shell is flipped so its broad end faces the grip');
+  assert.equal(egg.parent, weapon.pommel);
+  assert.equal(weapon.pommel.parent, weapon.group);
+  assert.equal(weapon.pommelAsset.kind, 'metal-egg');
+
+  const source = egg.geometry.attributes.position;
+  let broadEndRadius = 0, narrowEndRadius = 0;
+  for (let i = 0; i < source.count; i++) {
+    const y = source.getY(i);
+    const radius = Math.hypot(source.getX(i), source.getZ(i));
+    if (y < -0.2) broadEndRadius = Math.max(broadEndRadius, radius);
+    if (y > 0.2) narrowEndRadius = Math.max(narrowEndRadius, radius);
+  }
+  assert.ok(broadEndRadius > narrowEndRadius,
+    'engine egg has its broader end toward the handle');
+  let eggTop = -Infinity;
+  for (let i = 0; i < source.count; i++) {
+    eggTop = Math.max(eggTop, source.getY(i) * egg.scale.y + egg.position.y);
+  }
+  const gripBottom = weapon.handle.position.y - weapon.handle.geometry.parameters.height / 2;
+  assert.ok(eggTop > gripBottom, 'egg shell overlaps the handle instead of floating below it');
+
+  weapon.setHiltMetal('gold');
+  assert.equal(egg.material.color.getHexString(), METALS.gold.color.slice(1));
+});
+
+test('Marc morningstar keeps its egg pommel and diagonal wrap but has no horn guard', () => {
+  const weapon = createMarcsMorningstar(GFX);
+  assert.equal(weapon.pommelAsset.kind, 'metal-egg');
+  assert.equal(weapon.guard, null);
+  assert.ok(weapon.hilt.children.some((part) => part.name === 'diagonal leather wrap'));
+  assert.ok(!weapon.hilt.children.some((part) => /horn|quillon/i.test(part.name)));
+});

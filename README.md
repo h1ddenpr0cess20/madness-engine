@@ -274,3 +274,10 @@ npm run verify -- --games ..   # every game beside this folder; --only a,b to pi
 ## Weapons
 
 Measured, display-ready weapon assets are documented in [docs/weapons.md](docs/weapons.md). The first is a one-metre-class broadsword, built at real-world scale with independent blade and hilt metal finishes, a selectable leather grip colour, and the glass-and-spark marble hero integrated into the bottom of its grip as the pommel, with a tapered, handle-fitted metal bezel.
+
+
+The Weapons shelf includes a broadsword, dagger, greatsword and a handled
+morningstar. The dagger and greatsword retain the broadsword's blade profile;
+the greatsword has a two-hand grip. The morningstar reuses the existing
+spiked head with a selectable metal haft, leather grip and marble pommel.
+See [docs/weapons.md](docs/weapons.md) for dimensions and construction.
