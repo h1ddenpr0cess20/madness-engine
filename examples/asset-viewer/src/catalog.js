@@ -508,7 +508,7 @@ function bowlingPinItems() {
 
 /** Dedicated shelf for measured, display-ready weapons. */
 const WEAPON_ASSETS = [
-  { id: 'weapons/banana-dagger', factory: 'createBananaDagger', name: 'Banana Dagger', group: 'Novelty Set', paletteKind: 'banana-weapon', bladeMetal: 'chrome', hiltMetal: 'brass', innerMetal: 'chrome' },
+  { id: 'weapons/banana-dagger', factory: 'createBananaDagger', name: 'Banana Dagger', group: 'Novelty Set', paletteKind: 'banana-weapon', source: 'weapons/banana-dagger', bladeMetal: 'chrome', hiltMetal: 'brass', innerMetal: 'chrome' },
 
   { id: 'weapons/madness-sword', factory: 'createMadnessSword', name: 'Madness Sword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
   { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
@@ -531,14 +531,14 @@ const WEAPON_ASSETS = [
 
 function weaponItems() {
   return WEAPON_ASSETS.map(({
-    id, factory, name, group, paletteKind, grip, thread,
-    bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault,
+    id, factory, name, group, paletteKind, grip, thread, source: factorySource,
+    bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault, innerMetal: innerMetalDefault,
   }) => ({
     id,
     category: 'Weapons',
     group,
     name,
-    source: 'weapons/variants',
+    source: factorySource ?? 'weapons/variants',
     factory,
     kind: 'object',
     palette: {
@@ -548,16 +548,19 @@ function weaponItems() {
       ...(bladeMetalDefault ? { bladeMetal: bladeMetalDefault } : {}),
       ...(hiltMetalDefault ? { hiltMetal: hiltMetalDefault } : {}),
       ...(metalDefault ? { metal: metalDefault } : {}),
+      ...(innerMetalDefault ? { innerMetal: innerMetalDefault } : {}),
     },
     async build({
       bladeMetal = bladeMetalDefault ?? 'steel',
       hiltMetal = hiltMetalDefault ?? 'steel',
       metal = metalDefault ?? 'steel',
-      innerMetal = 'chrome',
+      innerMetal = innerMetalDefault ?? 'chrome',
       colours = {},
     } = {}) {
       const [weapons, metals] = await Promise.all([
-        import('../../../src/weapons/variants.js'),
+        factorySource === 'weapons/banana-dagger'
+          ? import('../../../src/weapons/banana-dagger.js')
+          : import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
       const made = paletteKind === 'morningstar'
@@ -577,7 +580,7 @@ function weaponItems() {
           get: () => made.bladeMist.visible,
           set: (on) => made.setBladeMist(on),
         } : null,
-        info: { Source: `weapons/variants#${factory}`, ...made.info, ...countOf(made.group) },
+        info: { Source: `${factorySource ?? 'weapons/variants'}#${factory}`, ...made.info, ...countOf(made.group) },
       };
     },
   }));
