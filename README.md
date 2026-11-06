@@ -273,4 +273,4 @@ npm run verify -- --games ..   # every game beside this folder; --only a,b to pi
 
 ## Weapons
 
-Measured, display-ready weapon assets are documented in [docs/weapons.md](docs/weapons.md). The first is a one-metre-class broadsword, built at real-world scale with independent blade and hilt metal finishes, a selectable leather grip colour, and a marble display plinth.
+Measured, display-ready weapon assets are documented in [docs/weapons.md](docs/weapons.md). The first is a one-metre-class broadsword, built at real-world scale with independent blade and hilt metal finishes, a selectable leather grip colour, and the glass-and-spark marble hero integrated into the bottom of its grip as the pommel.
