@@ -627,11 +627,36 @@ export class WebGPUBackend {
         size: [image.width, image.height], format, mipLevelCount: levels,
         usage: T.TEXTURE_BINDING | T.COPY_DST | T.RENDER_ATTACHMENT,
       });
-      this.device.queue.copyExternalImageToTexture(
-        { source: image, flipY: texture.flipY },
-        { texture: entry.texture, premultipliedAlpha: texture.premultiplyAlpha },
-        [image.width, image.height],
-      );
+      if (image.data && ArrayBuffer.isView(image.data)) {
+        // DataTexture is raw RGBA bytes, not an external image/canvas source.
+        // WebGPU's copyExternalImageToTexture accepts DOM image sources only;
+        // upload typed texels with writeTexture and pad rows to 256 bytes.
+        const tightBytesPerRow = image.width * 4;
+        if (image.data.byteLength !== tightBytesPerRow * image.height) {
+          throw new Error('WebGPU DataTexture expects RGBA8 texels');
+        }
+        const bytesPerRow = alignTo(tightBytesPerRow, 256);
+        let data = new Uint8Array(image.data.buffer, image.data.byteOffset, image.data.byteLength);
+        if (bytesPerRow !== tightBytesPerRow) {
+          const padded = new Uint8Array(bytesPerRow * image.height);
+          for (let row = 0; row < image.height; row++) {
+            padded.set(data.subarray(row * tightBytesPerRow, (row + 1) * tightBytesPerRow), row * bytesPerRow);
+          }
+          data = padded;
+        }
+        this.device.queue.writeTexture(
+          { texture: entry.texture },
+          data,
+          { offset: 0, bytesPerRow, rowsPerImage: image.height },
+          [image.width, image.height],
+        );
+      } else {
+        this.device.queue.copyExternalImageToTexture(
+          { source: image, flipY: texture.flipY },
+          { texture: entry.texture, premultipliedAlpha: texture.premultiplyAlpha },
+          [image.width, image.height],
+        );
+      }
       if (mipmaps) this._generateMipmaps(entry.texture, format);
       entry.sampler = this._sampler(mipmaps, texture.anisotropy, texture.wrapS, texture.wrapT);
       entry.version = texture.version;

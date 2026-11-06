@@ -355,7 +355,15 @@ export class WebGLBackend {
       gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
       const internal = texture.colorSpace === SRGBColorSpace ? gl.SRGB8_ALPHA8 : gl.RGBA8;
       gl.texStorage2D(gl.TEXTURE_2D, levels, internal, image.width, image.height);
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      if (image.data && ArrayBuffer.isView(image.data)) {
+        // DataTexture stores tightly packed RGBA8 texels, not a DOM image.
+        if (image.data.byteLength !== image.width * image.height * 4) {
+          throw new Error('WebGL DataTexture expects RGBA8 texels');
+        }
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, image.width, image.height, gl.RGBA, gl.UNSIGNED_BYTE, image.data);
+      } else {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      }
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapS === RepeatWrapping ? gl.REPEAT : gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapT === RepeatWrapping ? gl.REPEAT : gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
