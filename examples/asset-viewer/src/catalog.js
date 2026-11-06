@@ -20,10 +20,6 @@ import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
-// Procedural props register themselves through an assetViewer descriptor.
-// Keep a dedicated root-props glob so stand-alone factory modules (coins, globes, etc.)
-// are reliably discovered independently of the sculpted-definition scan.
-const proceduralProps = import.meta.glob(['../../../src/props/*.js', '../../../src/props/**/*.js']);
 const textures = import.meta.glob('../../../src/textures/**/*.js');
 
 // Street furniture (trees, lamps, benches) has no skeleton: it stands on one root bone.
@@ -33,7 +29,7 @@ const where = (path) => path.replace('../../../src/', '');
 const stem = (path) => where(path).split('/').pop().replace(/\.js$/, '');
 const CLIPS = ['idle', 'walk', 'run', 'attack', 'cast', 'hit', 'ko', 'win', 'jump', 'leap', 'sit', 'talk'];
 const CATEGORY = { characters: 'Characters', props: 'Props', scenery: 'Scenery & vehicles' };
-const METAL_CHOICES = Object.keys(METAL_FINISHES);
+export const METAL_CHOICES = Object.keys(METAL_FINISHES);
 
 /** The bounding box of everything drawn in `object`, in its own units, as { min, max, size }. */
 export function boundsOf(object) {
@@ -284,26 +280,14 @@ const MOVING = [
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
   }), 'props/resinglobe']),
+  // A coin of the logo, raised, in the same metals.
+  ['coin', 'Animated props', 'coin', ({ metal = 'gold' } = {}) => Promise.all([import('../../../src/props/coin.js'), import('../../../src/props/metalglobe.js'), import('../../../src/textures/coin/logo.js')]).then(async ([c, m, t]) => {
+    const coin = c.createCoin(GFX, { radius: 0.3, logo: await t.loadCoinLogo(), metal });
+    coin.spinRate = 0.9;
+    return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
+  }), 'props/coin', { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
-
-/** A procedural prop's opt-in viewer descriptor. New props register by exporting `assetViewer`. */
-function proceduralPropItem(def, path) {
-  const source = where(path);
-  const name = def.name ?? stem(path).replaceAll('-', ' ');
-  const category = def.category ?? 'Animated props';
-  const group = def.group ?? 'props';
-  return {
-    id: `props/${def.id ?? stem(path)}`, category, group, name, source, kind: 'object', options: def.options ?? null,
-    async build(opts = {}) {
-      const made = await def.build({ GFX, ...opts, renderer: globalThis.assetViewer?.renderer ?? null });
-      const object = objectOf(made);
-      if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
-      return { object, frame: made?.frame, mist: made?.mist, ...dressOf(made), info: { Source: source, ...countOf(object) } };
-    },
-  };
-}
-
 function movingItem([name, category, group, make, from = null, options = null]) {
   const source = from ?? (category === 'Props' ? 'props/pan' : `heroes/${name}`);
   return {
@@ -522,12 +506,59 @@ function bowlingPinItems() {
   }];
 }
 
+/** Dedicated shelf for measured, display-ready weapons. */
+const WEAPON_ASSETS = [
+  { id: 'weapons/madness-sword', factory: 'createMadnessSword', name: 'Madness Sword', group: 'Madness Set', paletteKind: 'weapon' },
+  { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon' },
+  { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon' },
+  { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar' },
+  { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
+  { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
+  { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
+  { id: 'weapons/regular-morningstar', factory: 'createRegularMorningstar', name: 'Regular Morningstar', group: 'Regular Set', paletteKind: 'morningstar' },
+  { id: 'weapons/marcs-sword', factory: 'createMarcsSword', name: "Marc's Sword", group: "Marc's Set", paletteKind: 'weapon' },
+  { id: 'weapons/marcs-dagger', factory: 'createMarcsDagger', name: "Marc's Dagger", group: "Marc's Set", paletteKind: 'weapon' },
+  { id: 'weapons/marcs-greatsword', factory: 'createMarcsGreatsword', name: "Marc's Greatsword", group: "Marc's Set", paletteKind: 'weapon' },
+  { id: 'weapons/marcs-morningstar', factory: 'createMarcsMorningstar', name: "Marc's Morningstar", group: "Marc's Set", paletteKind: 'morningstar' },
+];
+
+function weaponItems() {
+  return WEAPON_ASSETS.map(({ id, factory, name, group, paletteKind }) => ({
+    id,
+    category: 'Weapons',
+    group,
+    name,
+    source: 'weapons/variants',
+    factory,
+    kind: 'object',
+    palette: { kind: paletteKind, grip: '#633b2c' },
+    async build({ bladeMetal = 'steel', hiltMetal = 'steel', metal = 'steel', colours = {} } = {}) {
+      const [weapons, metals] = await Promise.all([
+        import('../../../src/weapons/variants.js'),
+        import('../../../src/props/metalglobe.js'),
+      ]);
+      const made = paletteKind === 'morningstar'
+        ? weapons[factory](GFX, { metal, gripColor: colours.gripColor ?? '#633b2c' })
+        : weapons[factory](GFX, {
+          bladeMetal,
+          hiltMetal,
+          gripColor: colours.gripColor ?? '#633b2c',
+        });
+      return {
+        object: made.group,
+        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+        info: { Source: `weapons/variants#${factory}`, ...made.info, ...countOf(made.group) },
+      };
+    },
+  }));
+}
+
 /** Walks the library and returns every item, in category order. */
 export async function loadCatalog(onProgress = () => {}) {
   const items = [];
   const seen = new Set();
   let n = 0;
-  const total = Object.keys(sculpted).length + Object.keys(proceduralProps).length + Object.keys(textures).length;
+  const total = Object.keys(sculpted).length + Object.keys(textures).length;
 
   // Defaults before their versions: where a version is only the default under another name (rat.dungeon-roller), the
   // one model is listed once, under its own name.
@@ -557,19 +588,9 @@ export async function loadCatalog(onProgress = () => {}) {
       }
     }
   }
-
-  // Factory-based props are registered separately from sculpted definitions.
-  // This includes the original logo coin, Bitcoin coin and political coin, and
-  // lets future top-level prop modules appear by exporting only assetViewer.
-  for (const [path, load] of Object.entries(proceduralProps)) {
-    onProgress(++n / total);
-    let mod;
-    try { mod = await load(); } catch (err) { console.warn(`${where(path)}: ${err.message}`); continue; }
-    if (mod.assetViewer) items.push(proceduralPropItem(mod.assetViewer, path));
-  }
-
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
+  items.push(...weaponItems());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
@@ -593,7 +614,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['Characters', 'Props', 'Weapons', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   // By category, and within one by shelf, so that each shelf's things are together under its heading.
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }

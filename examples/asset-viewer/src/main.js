@@ -15,7 +15,7 @@ import { texture } from '../../../src/textures/painters.js';
 import { paintRoom } from '../../../src/textures/rooms/studio.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { diverse } from '../../../src/characters/person.js';
-import { boundsOf, loadCatalog } from './catalog.js';
+import { boundsOf, loadCatalog, METAL_CHOICES } from './catalog.js';
 import { randomBowlingBallPalette } from './bowling-ball-palettes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -281,7 +281,8 @@ function animGroup(built) {
     if (!values.includes(options[name])) options[name] = values[0];
     select.value = options[name];
     select.onchange = () => { options[name] = numeric ? Number(select.value) : select.value; show(view.item); };
-    $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, name), select));
+    const label = ({ bladeMetal: 'Blade metal', hiltMetal: 'Hilt metal' })[name] ?? name.replace(/([A-Z])/g, ' $1');
+    $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, label), select));
   }
 }
 
@@ -290,6 +291,16 @@ function animGroup(built) {
 /** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
+  if (pal.kind === 'weapon') {
+    return [
+      ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
+    ];
+  }
+  if (pal.kind === 'morningstar') {
+    return [
+      ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
+    ];
+  }
   if (pal.kind === 'bowling-ball') {
     return [
       ['Base resin', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
@@ -361,11 +372,31 @@ const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.col
 function colourGroup(item) {
   const group = $('colourgroup');
   group.style.display = item.palette ? '' : 'none';
+  const weaponRows = $('weaponmetalrows');
+  weaponRows.style.display = 'none';
+  weaponRows.replaceChildren();
   if (!item.palette) return;
   const isDice = item.palette.kind === 'dice';
   const isBowlingBall = item.palette.kind === 'bowling-ball';
   const isBowlingPin = item.palette.kind === 'bowling-pin';
-  $('colourdiverse').style.display = isDice ? 'none' : '';
+  const isWeapon = item.palette.kind === 'weapon';
+  const isMorningstar = item.palette.kind === 'morningstar';
+  $('colourdiverse').style.display = isDice || isWeapon || isMorningstar ? 'none' : '';
+  if (isWeapon || isMorningstar) {
+    const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
+    for (const [key, label] of metalOptions) {
+      options[key] ??= 'steel';
+      const select = el('select', { className: 'weapon-metal-select' },
+        ...METAL_CHOICES.map((metal) => el('option', { value: metal }, metal)));
+      select.value = options[key];
+      select.onchange = () => { options[key] = select.value; show(view.item); };
+      const row = el('div', { className: 'line' }, el('label', {}, label), select);
+      row.style.justifyContent = 'space-between';
+      row.style.width = '100%';
+      weaponRows.append(row);
+    }
+    weaponRows.style.display = 'grid';
+  }
   $('colourdiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall ? 'Randomise colours' : 'Randomise';
   $('colourdiverse').title = isBowlingPin
     ? 'Generate a coordinated random resin and enamel palette for this pin'
@@ -381,7 +412,11 @@ function colourGroup(item) {
     $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : 'marble');
     $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
   }
-  $('colourhint').textContent = isDice
+  $('colourhint').textContent = isWeapon
+    ? 'Choose blade and hilt metals, then set the leather grip colour here. Metal finishes update immediately; Apply commits the grip colour.'
+    : isMorningstar
+      ? 'Choose the morningstar head and haft metal, then set the leather grip colour. Metal finishes update immediately; Apply commits the grip colour.'
+    : isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
     : isBowlingBall
       ? 'Choose a surface design and change the base resin, swirl, accent veins, and recessed finger-hole colour. Apply updates the ball.'
@@ -436,6 +471,22 @@ $('colourcopy').onclick = async () => {
       + "import { createBowlingBall } from 'madness-engine/props/bowling-ball';\n\n"
       + "const bowlingBall = createBowlingBall(GFX, { colors: "
       + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'marble') + "' });";
+  } else if (view.item.palette?.kind === 'morningstar') {
+    const factory = view.item.factory;
+    const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
+      + "const " + variable + " = " + factory + "(GFX, { metal: '"
+      + (options.metal ?? 'steel') + "', gripColor: '"
+      + (view.colours.gripColor ?? '#633b2c') + "' });";
+  } else if (view.item.palette?.kind === 'weapon') {
+    const factory = view.item.factory;
+    const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
+      + "const " + variable + " = " + factory + "(GFX, { bladeMetal: '"
+      + (options.bladeMetal ?? 'steel') + "', hiltMetal: '" + (options.hiltMetal ?? 'steel')
+      + "', gripColor: '" + (view.colours.gripColor ?? '#633b2c') + "' });";
   } else if (view.item.palette?.kind === 'bowling-pin') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\n\n"
