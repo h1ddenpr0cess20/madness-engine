@@ -1,6 +1,8 @@
 import { METALS } from '../props/metalglobe.js';
 import { createMarble } from '../heroes/marble.js';
-import { createShell } from '../heroes/debater-egg/shell.js';
+import { createMetalEgg, createGlassEgg } from '../heroes/debater-egg/index.js';
+import { createBall } from '../heroes/krystal/model.js';
+import { createBladeMist } from './blade-mist.js';
 
 /** Weapon geometry is expressed in metres: one engine unit equals one metre. */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
@@ -33,32 +35,142 @@ function createMetalBallPommel(GFX, radius, material) {
   return { group, mesh, radius, height: radius * 2, kind: 'metal-ball' };
 }
 
+/**
+ * Krystal's actual crystal orb, scaled to the existing 54 mm pommel envelope.
+ * Keep its transmissive glass and ray-marched vision mesh, but omit the brass
+ * stand, lip and collar: the sword's hollow ferrule takes their place.
+ */
+function createKrystalOrbPommel(GFX, radius) {
+  const { ball, glass, vision, visionMaterial } = createBall(GFX);
+  ball.remove(glass, vision);
+
+  const group = new GFX.Group();
+  group.name = 'Krystal crystal orb pommel';
+  const scale = radius / 0.8;
+  group.scale.setScalar(scale);
+  group.position.y = radius;
+  group.add(glass, vision);
+
+  // Scale the optical depth with the measured glass size. The shader works
+  // in the orb's original local units, so its 0.95-radius vision stays intact.
+  glass.material.thickness *= scale;
+  glass.material.attenuationDistance *= scale;
+  glass.castShadow = false;
+  vision.castShadow = false;
+  vision.receiveShadow = false;
+  vision.visible = true;
+  visionMaterial.uniforms.uShape.value.set(scale, scale, scale);
+
+  const timer = new GFX.Timer();
+  glass.onBeforeRender = () => {
+    timer.update();
+    visionMaterial.uniforms.uFlow.value += Math.min(timer.getDelta(), 0.05) * 0.18;
+    vision.updateWorldMatrix?.(true, false);
+    visionMaterial.uniforms.uCenter.value.setFromMatrixPosition(vision.matrixWorld);
+  };
+
+  return {
+    group, glass, vision, material: visionMaterial, radius, height: radius * 2,
+    kind: 'krystal-orb',
+  };
+}
+
 /** Reuse Marc's actual engine Metal Egg, with its broad end against the grip. */
 function createMetalEggPommel(GFX, radius, metal) {
-  // Use the actual egg shell mesh, not Marc's animated character rig. The
-  // lower end of the engine egg is broader; flip Y so that broad end seats
-  // against the leather grip. This mesh has no animation or render callback.
-  const asset = createShell(GFX, { map: null, bumpMap: null }, { appearance: 'metal', metal });
+  // Instantiate the repository's real Metal Egg asset, then take its actual
+  // shell mesh out of the animated hero rig. The shell retains its original
+  // geometry and material; only its display scale and orientation change.
+  const asset = createMetalEgg({ GFX, metal });
+  const mesh = asset.shell;
+  mesh.parent?.remove(mesh);
+
+  // The hero drives motion from this callback. Detaching the mesh from the
+  // animated body and removing its render callback leaves the exact asset
+  // completely stationary while keeping the hero implementation intact.
+  // The renderer calls this hook unconditionally for renderable objects.
+  // Keep a no-op rather than null: the detached pommel must remain stationary.
+  mesh.onBeforeRender = () => {};
+
   const group = new GFX.Group();
-  group.name = 'static engine metal egg pommel';
+  group.name = 'stationary engine Metal Egg pommel';
   const radialScale = 0.032;
   const verticalScale = radius / 1.03;
-  asset.mesh.scale.set(radialScale, -verticalScale, radialScale);
-  asset.mesh.position.y = radius + 0.0125;
-  asset.mesh.castShadow = true;
-  asset.mesh.receiveShadow = true;
-  asset.mesh.name = 'stationary metal egg shell';
-  group.add(asset.mesh);
+  mesh.scale.set(radialScale, -verticalScale, radialScale);
+  // shapeEgg adds 0.01 to its local Y coordinate. Cancel that offset and
+  // centre the 54 mm shell in the pommel envelope: narrow point outward,
+  // broader shoulder toward the grip, with only the ferrule bridging the seam.
+  mesh.position.y = radius + verticalScale * 0.01;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.name = 'stationary Metal Egg asset shell';
+  group.add(mesh);
+
   let selectedMetal = metal;
   return {
-    group, asset, mesh: asset.mesh, radius, height: radius * 2, kind: 'metal-egg',
+    group, asset, mesh, radius, height: radius * 2, kind: 'metal-egg',
     get metal() { return selectedMetal; },
     setMetal(name) {
-      const finish = METALS[name];
-      if (!finish) throw new Error(`no metal called ${name}`);
-      asset.material.color.set(finish.color);
-      asset.material.roughness = finish.roughness;
+      asset.setMetal(name);
       selectedMetal = name;
+      return this;
+    },
+  };
+}
+
+/**
+ * The real transmissive glass egg and its white/yellow ray-marched mist,
+ * detached from the hero rig and fitted into the same 54 mm pommel envelope.
+ * The broad end faces the grip, matching the stationary Metal Egg orientation.
+ */
+function createMagicEggPommel(GFX, radius) {
+  const asset = createGlassEgg({ GFX, mist: true });
+  const glass = asset.glass;
+  const mist = asset.mist;
+  // createGlassEgg's shell callback drives the original hero rig's wobble.
+  // The pommel is a stationary detached asset, like the Metal Egg pommel:
+  // replace only the shell callback, while retaining mist.onBeforeRender so
+  // the white/yellow vision continues to flow inside the glass.
+  glass.onBeforeRender = () => {};
+  glass.parent?.remove(glass);
+  mist.parent?.remove(mist);
+
+  const group = new GFX.Group();
+  group.name = 'Magic Egg glass pommel';
+  const radialScale = 0.032;
+  const verticalScale = radius / 1.03;
+  const eggPositionY = radius + verticalScale * 0.01;
+  for (const mesh of [glass, mist]) {
+    mesh.scale.set(radialScale, -verticalScale, radialScale);
+    mesh.position.y = eggPositionY;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    group.add(mesh);
+  }
+
+  glass.material.thickness *= radialScale;
+  glass.material.attenuationDistance *= radialScale;
+  // The vision shader marches through a world-space ellipsoid. Once the
+  // original hero egg is fitted into the pommel, its default unit-sphere axes
+  // are no longer valid: describe the actual transformed egg volume here.
+  // shapeEgg narrows the horizontal radius to about 0.84 and stretches y 1.03.
+  mist.material.uniforms.uShape.value.set(
+    radialScale * 0.84,
+    verticalScale * 1.03,
+    radialScale * 0.84,
+  );
+  mist.material.uniforms.uRadius.value = 1.02;
+  mist.material.uniforms.uGlow.value = 1.15;
+  mist.material.uniforms.uDuoA.value.set(0.96, 0.98, 1.0);
+  mist.material.uniforms.uDuoB.value.set(1.0, 0.985, 0.94);
+  mist.material.uniforms.uDuoC.value.set(1.0, 0.82, 0.38);
+  mist.visible = true;
+  mist.renderOrder = 1;
+
+  return {
+    group, asset, glass, mist, material: mist.material, radius,
+    height: radius * 2, kind: 'magic-egg',
+    setMist(show = true) {
+      asset.setMist(show);
       return this;
     },
   };
@@ -68,24 +180,31 @@ function createWeaponPommel(GFX, spec, { style = 'marble', metal, material } = {
   if (style === 'marble') return { ...createWeaponPommelMarble(GFX, spec.marbleRadius), kind: 'marble' };
   if (style === 'metal-ball') return createMetalBallPommel(GFX, spec.marbleRadius, material);
   if (style === 'metal-egg') return createMetalEggPommel(GFX, spec.marbleRadius, metal);
+  if (style === 'krystal') return createKrystalOrbPommel(GFX, spec.marbleRadius);
+  if (style === 'magic-egg') return createMagicEggPommel(GFX, spec.marbleRadius);
   throw new Error(`unknown weapon pommel style: ${style}`);
 }
 
 /** A continuous helical leather cord laid over the cylindrical grip. */
 function diagonalWrapGeometry(GFX, {
   radius, startY, height, pitch = 0.0117, tubeRadius = 0.00105, radialSegments = 8,
+  direction = 1, phase = 0,
 } = {}) {
   const turns = height / pitch;
   const tubularSegments = Math.max(24, Math.ceil(turns * 28));
   const positions = [], indices = [];
-  const angularTravel = turns * Math.PI * 2;
-  const risePerRadian = height / angularTravel;
+  const angularTravel = turns * Math.PI * 2 * Math.sign(direction || 1);
+  const risePerRadian = height / (turns * Math.PI * 2);
   for (let i = 0; i <= tubularSegments; i++) {
     const t = i / tubularSegments;
-    const angle = t * angularTravel;
+    const angle = phase + t * angularTravel;
     const cos = Math.cos(angle), sin = Math.sin(angle);
     const center = new GFX.Vector3(radius * cos, startY + height * t, radius * sin);
-    const tangent = new GFX.Vector3(-radius * sin, risePerRadian, radius * cos).normalize();
+    const tangent = new GFX.Vector3(
+      -radius * sin * Math.sign(direction || 1),
+      risePerRadian,
+      radius * cos * Math.sign(direction || 1),
+    ).normalize();
     const normal = new GFX.Vector3(cos, 0, sin);
     const binormal = tangent.clone().cross(normal).normalize();
     for (let j = 0; j < radialSegments; j++) {
@@ -238,6 +357,151 @@ export function createDevilHornGuard(GFX, parent, material, {
   return guard;
 }
 
+/**
+ * A single, mirrored lightning-bolt crossguard. Each arm has three deliberate
+ * bends and sweeps upward at a shallow angle. The root is reinforced and the
+ * outer terminals taper continuously into sharp points.
+ */
+export function createLightningGuard(GFX, parent, material, {
+  centerY, span = 0.22, thickness = 0.016, invert = false,
+} = {}) {
+  if (!GFX?.Vector3 || !GFX?.BufferGeometry || !GFX?.BufferAttribute) {
+    throw new TypeError('createLightningGuard requires the Madness Engine GFX module');
+  }
+  if (!Number.isFinite(centerY) || !Number.isFinite(span) || span <= 0
+    || !Number.isFinite(thickness) || thickness <= 0) {
+    throw new TypeError('lightning guard requires a finite centre, positive span and thickness');
+  }
+
+  const halfSpan = span / 2;
+  const vertical = invert ? -1 : 1;
+  const tipExtension = Math.min(0.014, Math.max(0.008, span * 0.06));
+  // Three changes of direction on each arm: outward/up, shallow return, then
+  // outward/up again. The final point continues on a restrained ~20 degree rise.
+  const stations = [
+    [-halfSpan - tipExtension, centerY + vertical * 0.030, 0],
+    [-halfSpan * 0.88, centerY + vertical * 0.023, 0],
+    [-halfSpan * 0.68, centerY + vertical * 0.009, 0],
+    [-halfSpan * 0.47, centerY + vertical * 0.021, 0],
+    [-halfSpan * 0.25, centerY + vertical * 0.006, 0],
+    [0, centerY + vertical * 0.004, 0],
+    [halfSpan * 0.25, centerY + vertical * 0.006, 0],
+    [halfSpan * 0.47, centerY + vertical * 0.021, 0],
+    [halfSpan * 0.68, centerY + vertical * 0.009, 0],
+    [halfSpan * 0.88, centerY + vertical * 0.023, 0],
+    [halfSpan + tipExtension, centerY + vertical * 0.030, 0],
+  ];
+  // The 20.5 mm centre-root diameter gives the quillons extra visual weight;
+  // the 15 mm shaft eases into fine, fully integrated terminals.
+  const radii = [
+    0.00010,
+    thickness * 0.22,
+    thickness * 0.39,
+    thickness * 0.48,
+    thickness * 0.57,
+    thickness * 0.64,
+    thickness * 0.57,
+    thickness * 0.48,
+    thickness * 0.39,
+    thickness * 0.22,
+    0.00010,
+  ];
+
+  const centres = stations.map((point) => new GFX.Vector3(...point));
+  const radialSegments = 24;
+  const samplesPerSegment = 8;
+  const sampledCentres = [];
+  const sampledRadii = [];
+  const catmullRom = (p0, p1, p2, p3, t) => {
+    const t2 = t * t, t3 = t2 * t;
+    return p1.clone().multiplyScalar(2)
+      .add(p2.clone().sub(p0).multiplyScalar(t))
+      .add(p0.clone().multiplyScalar(2).sub(p1.clone().multiplyScalar(5))
+        .add(p2.clone().multiplyScalar(4)).sub(p3).multiplyScalar(t2))
+      .add(p1.clone().multiplyScalar(3).sub(p0).sub(p2.clone().multiplyScalar(3)).add(p3)
+        .multiplyScalar(t3))
+      .multiplyScalar(0.5);
+  };
+
+  for (let segment = 0; segment < centres.length - 1; segment++) {
+    const p0 = centres[Math.max(0, segment - 1)];
+    const p1 = centres[segment];
+    const p2 = centres[segment + 1];
+    const p3 = centres[Math.min(centres.length - 1, segment + 2)];
+    for (let step = 0; step < samplesPerSegment; step++) {
+      const t = step / samplesPerSegment;
+      sampledCentres.push(catmullRom(p0, p1, p2, p3, t));
+      const smooth = t * t * (3 - 2 * t);
+      sampledRadii.push(radii[segment] * (1 - smooth) + radii[segment + 1] * smooth);
+    }
+  }
+  sampledCentres.push(centres.at(-1).clone());
+  sampledRadii.push(radii.at(-1));
+
+  const positions = [];
+  const indices = [];
+  const ringStarts = [];
+  positions.push(sampledCentres[0].x, sampledCentres[0].y, sampledCentres[0].z);
+  for (let i = 1; i < sampledCentres.length - 1; i++) {
+    const tangent = sampledCentres[i + 1].clone()
+      .sub(sampledCentres[i - 1]).normalize();
+    const normal = new GFX.Vector3(-tangent.y, tangent.x, 0).normalize();
+    const binormal = new GFX.Vector3(0, 0, 1);
+    ringStarts.push(positions.length / 3);
+    for (let j = 0; j < radialSegments; j++) {
+      const angle = (j / radialSegments) * Math.PI * 2;
+      const vertex = sampledCentres[i].clone()
+        .addScaledVector(normal, Math.cos(angle) * sampledRadii[i])
+        .addScaledVector(binormal, Math.sin(angle) * sampledRadii[i]);
+      positions.push(vertex.x, vertex.y, vertex.z);
+    }
+  }
+  const endTip = positions.length / 3;
+  const finalPoint = sampledCentres.at(-1);
+  positions.push(finalPoint.x, finalPoint.y, finalPoint.z);
+
+  for (let j = 0; j < radialSegments; j++) {
+    indices.push(0, ringStarts[0] + (j + 1) % radialSegments, ringStarts[0] + j);
+  }
+  for (let ring = 0; ring < ringStarts.length - 1; ring++) {
+    const a0 = ringStarts[ring], b0 = ringStarts[ring + 1];
+    for (let j = 0; j < radialSegments; j++) {
+      const a = a0 + j;
+      const b = a0 + (j + 1) % radialSegments;
+      const c = b0 + j;
+      const d = b0 + (j + 1) % radialSegments;
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+  const finalRing = ringStarts.at(-1);
+  for (let j = 0; j < radialSegments; j++) {
+    indices.push(finalRing + j, finalRing + (j + 1) % radialSegments, endTip);
+  }
+
+  const geometry = new GFX.BufferGeometry();
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+
+  const guard = new GFX.Group();
+  guard.name = invert ? 'inverted lightning swept crossguard' : 'lightning swept crossguard';
+  guard.userData.lightningProfile = Object.freeze({
+    orientation: invert ? 'inverted' : 'upright',
+    bendsPerArm: 3,
+    baseDiameter: radii[5] * 2,
+    shaftDiameter: thickness * 0.96,
+    tipRadius: radii[0],
+    tipExtension,
+  });
+  const mesh = new GFX.Mesh(geometry, material);
+  mesh.name = 'three-bend lightning quillons with tapered points';
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  guard.add(mesh);
+  parent.add(guard);
+  return guard;
+}
+
 function leatherMaps(GFX) {
   if (typeof document === 'undefined') return { map: null, bump: null };
   const width = 512, height = 256;
@@ -336,9 +600,11 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
 
   for (let i = 0; i < sections; i++) {
     const t = i / sections;
-    // The blade holds its width through the forte before a long, steady taper.
+    // Preserve the cutting width for most of the blade. The final ~16% forms
+    // a shorter, sturdier point, with a substantial terminal section before
+    // the apex rather than a long taper that reads as a needle.
     const shoulder = 0.94 + 0.06 * smoothstep(0, 0.11, t);
-    const taper = shoulder * (1 - 0.12 * t - 0.88 * smoothstep(0.68, 1, t));
+    const taper = shoulder * (1 - 0.06 * t - 0.94 * smoothstep(0.84, 1.0, t));
     const w = halfWidth * Math.max(0.002, taper);
     const halfThickness = Math.max(0.00055, 0.0032 * (1 - 0.48 * t));
     const fullerStart = smoothstep(0.025, 0.09, t);
@@ -389,6 +655,11 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
   geometry.setAttribute('uv', new GFX.BufferAttribute(new Float32Array(uvs), 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
+  geometry.pointProfile = Object.freeze({
+    pointStart: 0.84,
+    pointEnd: 1.0,
+    terminalWidthRatio: 0.026,
+  });
   return geometry;
 }
 
@@ -453,9 +724,73 @@ function sweptGuardGeometry(GFX, points, radius, radialSegments = 12) {
  * metal ferrule, wrapped leather grip and fitted upper metal seat. Sword and
  * hafted weapon families use this same construction.
  */
+/**
+ * An open, egg-following ferrule sleeve. The Magic Egg and Metal Egg share
+ * the same sculpted shell profile and scale; following that profile keeps the
+ * metal bezel outside the shell instead of letting a straight frustum pass
+ * through the egg's broad shoulder.
+ */
+function createEggFittedBezelGeometry(GFX, {
+  bottom, top, centerY, pommelRadius, topRadius,
+  radialScale = 0.032, clearance = 0.0008,
+  radialSegments = 64, axialSegments = 32,
+} = {}) {
+  const positions = [];
+  const indices = [];
+  const centerOffset = (bottom + top) / 2;
+  const shellRadiusAt = (worldY) => {
+    const y = (centerY - worldY) / pommelRadius;
+    if (Math.abs(y) >= 1) return 0;
+    const taper = 1 - 0.075 * y - 0.055 * y * y;
+    return radialScale * 0.84 * taper * Math.sqrt(1 - y * y);
+  };
+  const outerRadiusAt = (worldY) => {
+    const t = Math.max(0, Math.min(1, (worldY - bottom) / (top - bottom)));
+    const eased = t * t * (3 - 2 * t);
+    const shellBase = shellRadiusAt(bottom) + clearance;
+    const transition = shellBase + (topRadius - shellBase) * eased;
+    return Math.max(shellRadiusAt(worldY) + clearance, transition);
+  };
+
+  for (let row = 0; row <= axialSegments; row++) {
+    const t = row / axialSegments;
+    const worldY = bottom + (top - bottom) * t;
+    const r = outerRadiusAt(worldY);
+    const localY = worldY - centerOffset;
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const angle = (segment / radialSegments) * Math.PI * 2;
+      positions.push(Math.cos(angle) * r, localY, Math.sin(angle) * r);
+    }
+  }
+
+  for (let row = 0; row < axialSegments; row++) {
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const a = row * radialSegments + segment;
+      const b = row * radialSegments + (segment + 1) % radialSegments;
+      const d = (row + 1) * radialSegments + segment;
+      const e = (row + 1) * radialSegments + (segment + 1) % radialSegments;
+      indices.push(a, d, b, b, d, e);
+    }
+  }
+
+  const geometry = new GFX.BufferGeometry();
+  geometry.type = 'EggFittedBezelGeometry';
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.clearance = clearance;
+  geometry.radialSegments = radialSegments;
+  geometry.axialSegments = axialSegments;
+  geometry.centerOffset = centerOffset;
+  geometry.shellRadiusAt = shellRadiusAt;
+  geometry.outerRadiusAt = outerRadiusAt;
+  return geometry;
+}
+
 export function createWeaponHandleAssembly(GFX, group, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
+  threadColor,
   pommelStyle = spec.pommelStyle ?? 'marble',
   wrapStyle = spec.wrapStyle ?? 'banded',
 } = {}) {
@@ -464,6 +799,9 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   }
   if (!METALS[hiltMetal]) throw new Error(`no metal called ${hiltMetal}`);
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
+    throw new TypeError('threadColor must be a six-digit hex colour');
+  }
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
   const pommelAsset = createWeaponPommel(GFX, spec, {
@@ -476,9 +814,12 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   hilt.name = 'connected hilt assembly';
   group.add(hilt);
 
-  // Every pommel variant preserves the same 54 mm attachment envelope.
+  // Egg pommels occupy the full 54 mm envelope with their broad shoulder
+  // meeting the grip. Seat the leather 1 mm over that shoulder; marble and
+  // metal-ball pommels retain the original 5 mm stand-off.
   const radius = pommelAsset.radius;
-  const gripBottom = pommelAsset.height + 0.005;
+  const isEggPommel = pommelAsset.kind === 'metal-egg' || pommelAsset.kind === 'magic-egg';
+  const gripBottom = pommelAsset.height - (isEggPommel ? 0.001 : -0.005);
   const gripTop = gripBottom + spec.gripLength;
   // The leather grip stops at gripTop. A short metal cap overlaps its end by
   // 2 mm, and the raised boss sits above that cap to conceal the joint.
@@ -514,22 +855,57 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   // The opening stays clear of the spark; the upper lip slips 1.2 mm over the
   // leather so the metal-to-leather joint reads as a fitted ferrule.
   const bezelTopRadius = handleRadius * 1.08;
-  const bezelBottomRadius = Math.min(radius * 0.86, handleRadius * 1.34);
-  const bezelBottom = radius + Math.sqrt(radius * radius - bezelBottomRadius * bezelBottomRadius);
+  const eggCenterY = radius;
   const bezelTop = gripBottom + 0.0012;
+  const bezelBottomRadius = Math.min(radius * 0.86, handleRadius * 1.34);
+  // The marble keeps its bell-shaped frustum. Egg pommels use a short,
+  // flared ferrule around the upper shoulder, not a band across the equator.
+  const bezelBottom = isEggPommel
+    ? gripBottom - 0.0153
+    : radius + Math.sqrt(radius * radius - bezelBottomRadius * bezelBottomRadius);
+  const eggRadiusAt = (worldY) => {
+    const y = (eggCenterY - worldY) / radius;
+    if (Math.abs(y) >= 1) return 0;
+    return 0.032 * 0.84 * (1 - 0.075 * y - 0.055 * y * y) * Math.sqrt(1 - y * y);
+  };
+  const eggClearance = 0.0008;
+  const eggBaseRadius = eggRadiusAt(bezelBottom) + eggClearance;
+  const eggFittedRadiusAt = (worldY) => {
+    const t = Math.max(0, Math.min(1, (worldY - bezelBottom) / (bezelTop - bezelBottom)));
+    const eased = t * t * (3 - 2 * t);
+    return Math.max(
+      eggRadiusAt(worldY) + eggClearance,
+      eggBaseRadius + (bezelTopRadius - eggBaseRadius) * eased,
+    );
+  };
+  const eggLowerRimY = bezelBottom + 0.0006;
+  const fittedBottomRadius = isEggPommel
+    ? eggFittedRadiusAt(eggLowerRimY)
+    : bezelBottomRadius;
+  const fittedTopRadius = isEggPommel
+    ? eggFittedRadiusAt(bezelTop - 0.0006)
+    : bezelTopRadius;
   const bezelHeight = bezelTop - bezelBottom;
-  const bezelSleeve = new GFX.Mesh(
-    new GFX.CylinderGeometry(bezelTopRadius, bezelBottomRadius, bezelHeight, 48, 1, true),
-    hiltMaterial,
-  );
+  const bezelGeometry = isEggPommel
+    ? createEggFittedBezelGeometry(GFX, {
+      bottom: bezelBottom,
+      top: bezelTop,
+      centerY: eggCenterY,
+      pommelRadius: radius,
+      topRadius: bezelTopRadius,
+      radialScale: 0.032,
+      clearance: eggClearance,
+    })
+    : new GFX.CylinderGeometry(bezelTopRadius, bezelBottomRadius, bezelHeight, 48, 1, true);
+  const bezelSleeve = new GFX.Mesh(bezelGeometry, hiltMaterial);
   bezelSleeve.name = 'pommel bezel tapered hollow sleeve';
-  bezelSleeve.position.set(0, (bezelBottom + bezelTop) / 2, 0);
+  bezelSleeve.position.set(0, isEggPommel ? bezelGeometry.centerOffset : (bezelBottom + bezelTop) / 2, 0);
   bezelSleeve.castShadow = true;
   bezelSleeve.receiveShadow = true;
   bezel.add(bezelSleeve);
   for (const [name, y, rimRadius, rimThickness] of [
-    ['pommel bezel lower flared rim', bezelBottom + 0.0006, bezelBottomRadius, 0.0008],
-    ['pommel bezel upper handle-fit rim', bezelTop - 0.0006, bezelTopRadius, 0.00065],
+    ['pommel bezel lower flared rim', eggLowerRimY, fittedBottomRadius, 0.0008],
+    ['pommel bezel upper handle-fit rim', bezelTop - 0.0006, fittedTopRadius, 0.00065],
   ]) {
     const rim = new GFX.Mesh(
       new GFX.TorusGeometry(rimRadius, rimThickness, 10, 48),
@@ -543,9 +919,10 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   }
   hilt.add(bezel, handle);
 
+  const initialThreadColor = threadColor ?? shadeHex(gripColor, 0.68);
   const wrapMaterial = new GFX.MeshPhysicalMaterial({
-    name: 'leather wrap ridges',
-    color: new GFX.Color(shadeHex(gripColor, 0.68)),
+    name: wrapStyle === 'diamond' ? 'contrasting leather grip thread' : 'leather wrap ridges',
+    color: new GFX.Color(initialThreadColor),
     roughness: 0.9,
     metalness: 0,
   });
@@ -560,6 +937,23 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
     helix.castShadow = true;
     helix.receiveShadow = true;
     hilt.add(helix);
+  } else if (wrapStyle === 'diamond') {
+    const pitch = spec.diamondWrapPitch ?? 0.019;
+    for (const [label, direction] of [['rising', 1], ['falling', -1]]) {
+      const lace = new GFX.Mesh(diagonalWrapGeometry(GFX, {
+        radius: handleRadius + 0.00072,
+        startY: gripBottom,
+        height: spec.gripLength,
+        pitch,
+        tubeRadius: 0.00058,
+        radialSegments: 8,
+        direction,
+      }), wrapMaterial);
+      lace.name = `diamond leather stitch ${label}`;
+      lace.castShadow = true;
+      lace.receiveShadow = true;
+      hilt.add(lace);
+    }
   } else if (wrapStyle === 'banded') {
     const wraps = spec.gripWrapDivisions ?? 13;
     for (let i = 1; i < wraps; i++) {
@@ -609,9 +1003,9 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
     bezelBounds: Object.freeze({
       bottom: bezelBottom,
       top: bezelTop,
-      bottomRadius: bezelBottomRadius,
+      bottomRadius: fittedBottomRadius,
       topRadius: bezelTopRadius,
-      outerRadius: bezelBottomRadius,
+      outerRadius: fittedBottomRadius,
     }),
     bossSeat,
     bossSeatBounds: Object.freeze({ bottom: bossSeatBottom, top: bossSeatTop }),
@@ -625,6 +1019,8 @@ export function buildWeapon(GFX, spec, {
   bladeMetal = 'steel',
   hiltMetal = 'steel',
   gripColor = '#633b2c',
+  threadColor,
+  bladeMist: withBladeMist = false,
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
@@ -633,16 +1029,20 @@ export function buildWeapon(GFX, spec, {
     if (!METALS[name]) throw new Error(`no metal called ${name}`);
   }
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
+    throw new TypeError('threadColor must be a six-digit hex colour');
+  }
 
   const group = new GFX.Group();
   group.name = `${spec.name} display`;
 
   const bladeMaterial = metalMaterial(GFX, 'blade metal', bladeMetal);
+  let threadColorExplicit = threadColor !== undefined;
   const {
     marble, hiltMaterial, hilt, handle, bezel, gripBounds, handleBounds,
     bezelBounds, bossSeat, bossSeatBounds, leatherMaterial, wrapMaterial, pommelAsset,
   } = createWeaponHandleAssembly(GFX, group, spec, {
-    hiltMetal, gripColor,
+    hiltMetal, gripColor, threadColor,
     pommelStyle: spec.pommelStyle ?? 'marble',
     wrapStyle: spec.wrapStyle ?? 'banded',
   });
@@ -655,7 +1055,18 @@ export function buildWeapon(GFX, spec, {
   let guardBoss;
   const guardThickness = spec.guardThickness ?? 0.0136;
   const span = spec.guardSpan / 2;
-  if ((spec.guardStyle ?? 'swept') === 'horns') {
+  if (spec.guardStyle === 'lightning') {
+    const guardDirection = spec.guardInverted ? -1 : 1;
+    guardBoss = sphere(GFX, 'lightning guard reinforced central boss', hiltMaterial,
+      [0, guardY + guardDirection * 0.003, 0], [0.028, 0.017, 0.018], [40, 24]);
+    hilt.add(guardBoss);
+    guard = createLightningGuard(GFX, hilt, hiltMaterial, {
+      centerY: guardY,
+      span: spec.guardSpan,
+      thickness: guardThickness,
+      invert: spec.guardInverted === true,
+    });
+  } else if ((spec.guardStyle ?? 'swept') === 'horns') {
     guard = createDevilHornGuard(GFX, hilt, hiltMaterial, {
       centerY: guardY, span: spec.guardSpan, thickness: guardThickness,
     });
@@ -700,9 +1111,21 @@ export function buildWeapon(GFX, spec, {
   blade.receiveShadow = true;
   group.add(blade);
 
+  // Krystal's variants add a separate, hidden-by-default mist volume that
+  // follows the exact blade dimensions without changing the steel geometry.
+  const bladeMistLayer = withBladeMist
+    ? createBladeMist(GFX, group, {
+      rootY: bladeRootY,
+      length: spec.bladeLength,
+      width: spec.bladeWidth,
+      palette: spec.bladeMistPalette ?? 'krystal',
+    })
+    : null;
+
   const api = {
     group,
     blade,
+    bladeMist: bladeMistLayer?.mesh ?? null,
     hilt,
     handle,
     guard,
@@ -739,11 +1162,15 @@ export function buildWeapon(GFX, spec, {
       'Fuller length': `${(spec.bladeLength * 750).toFixed(0)} mm (75%)`,
       'Scale': '1 world unit = 1 metre',
       'Pommel': pommelAsset.kind === 'marble' ? 'Glass marble with 3D spark'
-        : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball' : 'Engine metal egg',
+        : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball'
+          : pommelAsset.kind === 'metal-egg' ? 'Engine metal egg'
+          : pommelAsset.kind === 'magic-egg' ? 'Glass egg with white/yellow animated mist'
+            : 'Krystal glass orb with animated mist',
     },
     get bladeMetal() { return bladeMetal; },
     get hiltMetal() { return hiltMetal; },
     get gripColor() { return gripColor; },
+    get threadColor() { return `#${wrapMaterial.color.getHexString()}`; },
     setBladeMetal(name) {
       const finish = METALS[name];
       if (!finish) throw new Error(`no metal called ${name}`);
@@ -764,8 +1191,20 @@ export function buildWeapon(GFX, spec, {
     setGripColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
       leatherMaterial.color.set(color);
-      wrapMaterial.color.set(shadeHex(color, 0.68));
+      if (!threadColorExplicit && spec.wrapStyle !== 'diamond') {
+        wrapMaterial.color.set(shadeHex(color, 0.68));
+      }
       gripColor = color;
+      return api;
+    },
+    setThreadColor(color) {
+      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('threadColor must be a six-digit hex colour');
+      wrapMaterial.color.set(color);
+      threadColorExplicit = true;
+      return api;
+    },
+    setBladeMist(show = true) {
+      if (bladeMistLayer) bladeMistLayer.mesh.visible = Boolean(show);
       return api;
     },
   };

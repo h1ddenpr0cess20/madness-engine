@@ -41,6 +41,9 @@ export function visionUniforms(GFX) {
     uCore: { value: 0.3 },
     uRadius: { value: 1 },
     uCenter: { value: new GFX.Vector3() },
+    // Semi-axes of the ray-marched ellipsoid, in world-space units.
+    // One on every axis preserves the original spherical Krystal volume.
+    uShape: { value: new GFX.Vector3(1, 1, 1) },
     // Added last (the WGSL struct follows this order): `bands` stretches the mist into horizontal belts that
     // shear past each other; `duo` (0 or 1) colors it, in place of the palette, with A (red) along Jupiter's belts, B (cream) between them, mostly B, and a little C (blue-green) around the equator.
     uBands: { value: 0 },
@@ -71,6 +74,7 @@ uniform vec3 uTint;
 uniform float uCore;
 uniform float uRadius;
 uniform vec3 uCenter;
+uniform vec3 uShape;
 uniform float uBands;
 uniform vec3 uDuoA;
 uniform vec3 uDuoB;
@@ -104,21 +108,23 @@ float mist(vec3 p, out float shade) {
 }
 
 void main() {
-  vec3 ro = cameraPosition;
-  vec3 rd = normalize(vWorld - cameraPosition);
-  vec3 oc = ro - uCenter;
-  float b = dot(oc, rd);
-  float h = b * b - (dot(oc, oc) - uRadius * uRadius);
+  // Transform the normalized world ray into unit-ellipsoid space. Keep the
+  // ray parameter in world units by not normalizing the transformed direction.
+  vec3 ro = (cameraPosition - uCenter) / uShape;
+  vec3 rd = normalize(vWorld - cameraPosition) / uShape;
+  float a = dot(rd, rd);
+  float b = dot(ro, rd);
+  float h = b * b - a * (dot(ro, ro) - uRadius * uRadius);
   if (h <= 0.0) discard;
   h = sqrt(h);
-  float t0 = max(-b - h, 0.0);
-  float t1 = -b + h;
+  float t0 = max((-b - h) / a, 0.0);
+  float t1 = (-b + h) / a;
   float dt = (t1 - t0) / float(STEPS);
   float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
   vec3 light = palette(uHue + 0.5);
   vec3 col = vec3(0.0);
   for (int i = 0; i < STEPS; i++) {
-    vec3 p = (ro + rd * (t0 + (float(i) + jitter) * dt) - uCenter) / uRadius;
+    vec3 p = (ro + rd * (t0 + (float(i) + jitter) * dt)) / uRadius;
     float d2 = dot(p, p);
     float edge = clamp(1.0 - d2, 0.0, 1.0);
     float shade;
@@ -131,7 +137,10 @@ void main() {
     col += tone * dens;
     col += light * uCore * exp(-d2 * 7.0) * 0.35;
   }
-  col *= uGlow * 2.6 * dt / uRadius * uTint;
+  // Each step is measured in world units. Convert it to the volume's
+  // normalized ellipsoid space before integrating density; using the ray's
+  // transformed length keeps a thin blade sheath as bright as the orb.
+  col *= uGlow * 2.6 * length(rd) * dt / uRadius * uTint;
   col = vec3(1.0) - exp(-col);
   gl_FragColor = vec4(col, 1.0);
 }
@@ -183,21 +192,23 @@ fn mist(at: vec3f) -> Mist {
 
 @fragment
 fn fs(v: VOut) -> @location(0) vec4f {
-  let ro = object.cameraPosition;
-  let rd = normalize(v.world - ro);
-  let oc = ro - material.uCenter;
-  let b = dot(oc, rd);
-  var h = b * b - (dot(oc, oc) - material.uRadius * material.uRadius);
+  // Unit-ellipsoid space supports a slender blade sheath while retaining the
+  // original sphere when uShape is (1, 1, 1).
+  let ro = (object.cameraPosition - material.uCenter) / material.uShape;
+  let rd = normalize(v.world - object.cameraPosition) / material.uShape;
+  let a = dot(rd, rd);
+  let b = dot(ro, rd);
+  var h = b * b - a * (dot(ro, ro) - material.uRadius * material.uRadius);
   if (h <= 0.0) { discard; }
   h = sqrt(h);
-  let t0 = max(-b - h, 0.0);
-  let t1 = -b + h;
+  let t0 = max((-b - h) / a, 0.0);
+  let t1 = (-b + h) / a;
   let dt = (t1 - t0) / f32(STEPS);
   let jitter = fract(52.9829189 * fract(dot(v.position.xy, vec2f(0.06711056, 0.00583715))));
   let light = palette(material.uHue + 0.5);
   var col = vec3f(0.0);
   for (var i = 0; i < STEPS; i++) {
-    let p = (ro + rd * (t0 + (f32(i) + jitter) * dt) - material.uCenter) / material.uRadius;
+    let p = (ro + rd * (t0 + (f32(i) + jitter) * dt)) / material.uRadius;
     let d2 = dot(p, p);
     let edge = clamp(1.0 - d2, 0.0, 1.0);
     let m = mist(p);
@@ -209,7 +220,9 @@ fn fs(v: VOut) -> @location(0) vec4f {
     col += tone * m.density * edge * edge;
     col += light * material.uCore * exp(-d2 * 7.0) * 0.35;
   }
-  col *= material.uGlow * 2.6 * dt / material.uRadius * material.uTint;
+  // Integrate each world-space step by its distance in normalized ellipsoid
+  // space so thin sheaths retain the same density as the original round orb.
+  col *= material.uGlow * 2.6 * length(rd) * dt / material.uRadius * material.uTint;
   col = vec3f(1.0) - exp(-col);
   return vec4f(col, 1.0);
 }

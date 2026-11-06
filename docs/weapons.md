@@ -38,8 +38,8 @@ import * as GFX from 'madness-engine/gfx';
 import { createBroadsword } from 'madness-engine/weapons/broadsword';
 
 const sword = createBroadsword(GFX, {
-  bladeMetal: 'steel',
-  hiltMetal: 'silver',
+  bladeMetal: 'platinum',
+  hiltMetal: 'platinum',
   gripColor: '#633b2c',
 });
 scene.add(sword.group);
@@ -122,10 +122,13 @@ greatsword and morningstar:
   crossguard/wrap construction.
 - **Regular** keeps the same weapon geometry and banded leather wrap, replacing
   the marble with a solid metal ball that follows the hilt metal selection.
-- **Marc's** uses the stationary engine metal eggshell as the pommel, broad end
-  seated into the grip with the existing metal bezel, and a continuous
-  diagonal leather wrap. Sword, dagger and greatsword guards reuse the original
-  Madness swept crossguard: its curve is flipped upward and increased slightly,
+- **Marc's** extracts the exact shell mesh from the repository's
+  `createMetalEgg({ GFX, metal })` asset and detaches it from the animated hero
+  rig. The original mesh and geometry are retained; its render callback is
+  removed so it stays stationary as the pommel, broad end seated into the grip
+  with the existing metal bezel, and a continuous diagonal leather wrap.
+  Sword, dagger and greatsword guards reuse the original Madness swept
+  crossguard: its curve is flipped upward and increased slightly,
   while the two original rounded terminals are tapered into points as part of
   the same continuous guard mesh. Marc's Morningstar keeps its plain
   haft-to-head connection and has no horns.
@@ -133,3 +136,106 @@ greatsword and morningstar:
 The three variants are exposed from `madness-engine/weapons` as
 `createMadnessSword`, `createRegularSword`, `createMarcsSword`, and the
 corresponding `Dagger`, `Greatsword` and `Morningstar` factory names.
+
+
+## Default finishes
+
+The Madness sword, dagger and greatsword factories default to rose-gold blade
+and hilt metal with a white leather grip. The Madness Morningstar uses the
+same rose-gold metal and white grip. Marc's Sword defaults to gold blade and
+hilt metal with a black wrap. Krystal Sword and Dagger default to platinum
+metal with their independently customizable blue-charcoal leather and
+ice-blue thread. These remain factory defaults; callers can override the
+metals, leather and thread independently.
+
+## Krystal sword and dagger
+
+The Krystal set retains the Madness sword and dagger blade dimensions, but
+uses a dedicated lightning-bolt crossguard and diamond-stitched grip. Each
+mirrored guard arm has three shallow directional bends, a reinforced root
+(about 20.5 mm across), a substantial shaft (about 15.4 mm), and an integrated
+taper to a sharp terminal point. The steel blade keeps its full working width
+through most of its length, then transitions into a shorter, sturdier point.
+
+The leather grip is dark blue-charcoal by default (`#25364a`) with contrasting
+ice-blue thread (`#a7e6ff`). These are independently customizable: pass
+`gripColor` and `threadColor` when creating a weapon, or change them later
+with `setGripColor()` and `setThreadColor()`. Setting one does not alter the
+other. Blade and hilt metals remain independently selectable.
+
+The marble pommel is replaced by Krystal's actual transmissive crystal orb and
+ray-marched vision material, scaled to the same 54 mm envelope. The orb's
+brass stand is omitted; the existing hollow metal ferrule seats the glass.
+Both weapons carry a separate, visible mist sheath around the blade. It uses
+the same GLSL/WGSL ray-marched vision shader as Krystal's orb, mapped into an
+elongated ellipsoid so the wisps stay close to the blade on both sword and
+dagger. Call `setBladeMist(false)` to hide the blade sheath or
+`setBladeMist(true)` to show it; the orb's own internal visions remain
+visible independently.
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createKrystalSword, createKrystalDagger } from 'madness-engine/weapons';
+
+const sword = createKrystalSword(GFX, {
+  bladeMetal: 'steel',
+  hiltMetal: 'silver',
+  gripColor: '#25364a',
+  threadColor: '#a7e6ff',
+});
+const dagger = createKrystalDagger(GFX);
+scene.add(sword.group, dagger.group);
+
+sword.setBladeMetal('chrome');
+sword.setHiltMetal('brass');
+sword.setGripColor('#75452e');
+sword.setThreadColor('#ffb04a');
+sword.setBladeMist(false);
+```
+
+
+## Magic Egg Sword, Dagger and Greatsword
+
+`createMagicEggSword(GFX, options)` follows the Krystal sword construction
+but replaces the crystal orb pommel with the repository's actual transmissive
+Glass Egg shell and its white/yellow ray-marched mist. Sword, dagger and
+greatsword share the same detached, stationary egg pommel, correctly fitted
+with its narrow point facing outward and its broad shoulder meeting the grip.
+The gold bezel forms a short collar around that upper shoulder and follows
+the outside contour of the glass shell rather than passing through the egg;
+the same fitted outer ferrule is used for Marc's Metal Egg pommel. The internal egg mist remains
+visible independently of the separate blade sheath.
+
+All three variants use the same three-bend lightning quillons as Krystal,
+mirrored vertically so both arms sweep down. Their default blades are silver
+and their hilts are gold. The grip uses silver leather (`#c0c0c0`) with gold diamond
+stitching (`#ffd264`). Metal finishes, leather and thread remain
+independently customizable through the factory options; grip and thread can
+also be changed later with `setGripColor()` and `setThreadColor()`. Its
+blade sheath uses the egg's white/yellow palette and can be toggled with
+`setBladeMist()`.
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import {
+  createMagicEggSword,
+  createMagicEggDagger,
+  createMagicEggGreatsword,
+} from 'madness-engine/weapons';
+
+const options = {
+  bladeMetal: 'silver',
+  hiltMetal: 'gold',
+  gripColor: '#c0c0c0',
+  threadColor: '#ffd264',
+};
+const sword = createMagicEggSword(GFX, options);
+const dagger = createMagicEggDagger(GFX, options);
+const greatsword = createMagicEggGreatsword(GFX, options);
+scene.add(sword.group, dagger.group, greatsword.group);
+
+sword.setGripColor('#d0d0d0');
+sword.setThreadColor('#e8b62f');
+sword.setBladeMist(false);
+```
+
