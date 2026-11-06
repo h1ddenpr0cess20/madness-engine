@@ -539,7 +539,7 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
     // a shorter, sturdier point, with a substantial terminal section before
     // the apex rather than a long taper that reads as a needle.
     const shoulder = 0.94 + 0.06 * smoothstep(0, 0.11, t);
-    const taper = shoulder * (1 - 0.06 * t - 0.80 * smoothstep(0.84, 0.985, t));
+    const taper = shoulder * (1 - 0.06 * t - 0.94 * smoothstep(0.84, 1.0, t));
     const w = halfWidth * Math.max(0.002, taper);
     const halfThickness = Math.max(0.00055, 0.0032 * (1 - 0.48 * t));
     const fullerStart = smoothstep(0.025, 0.09, t);
@@ -592,8 +592,8 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
   geometry.computeVertexNormals();
   geometry.pointProfile = Object.freeze({
     pointStart: 0.84,
-    pointEnd: 0.985,
-    terminalWidthRatio: 0.14,
+    pointEnd: 1.0,
+    terminalWidthRatio: 0.026,
   });
   return geometry;
 }

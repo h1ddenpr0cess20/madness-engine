@@ -205,12 +205,12 @@ test('shared sword and dagger blade geometry keeps its width and ends in a short
     'the blade keeps over 90% of its width until the final section');
   assert.ok(rowWidthRatio(58) > 0.55,
     'the point has a decisive but compact taper');
-  assert.ok(rowWidthRatio(63) > 0.12 && rowWidthRatio(63) < 0.16,
-    'the last full ring is substantial before closing to the apex');
+  assert.ok(rowWidthRatio(63) > 0.02 && rowWidthRatio(63) < 0.03,
+    'the final ring is narrow enough to close into a crisp point');
   assert.deepEqual(geometry.pointProfile, {
     pointStart: 0.84,
-    pointEnd: 0.985,
-    terminalWidthRatio: 0.14,
+    pointEnd: 1,
+    terminalWidthRatio: 0.026,
   });
 });
 
