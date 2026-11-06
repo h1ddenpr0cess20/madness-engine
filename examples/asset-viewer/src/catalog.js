@@ -506,6 +506,36 @@ function bowlingPinItems() {
   }];
 }
 
+/** Dedicated shelf for measured, display-ready weapons. */
+function weaponItems() {
+  return [{
+    id: 'weapons/broadsword',
+    category: 'Weapons',
+    group: 'swords',
+    name: 'Broadsword',
+    source: 'weapons/broadsword',
+    kind: 'object',
+    options: { bladeMetal: METAL_CHOICES, hiltMetal: METAL_CHOICES },
+    palette: { kind: 'weapon', grip: '#633b2c' },
+    async build({ bladeMetal = 'steel', hiltMetal = 'steel', colours = {} } = {}) {
+      const [weapon, metals] = await Promise.all([
+        import('../../../src/weapons/broadsword.js'),
+        import('../../../src/props/metalglobe.js'),
+      ]);
+      const made = weapon.createBroadsword(GFX, {
+        bladeMetal,
+        hiltMetal,
+        gripColor: colours.gripColor ?? '#633b2c',
+      });
+      return {
+        object: made.group,
+        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+        info: { Source: 'weapons/broadsword', ...made.info, ...countOf(made.group) },
+      };
+    },
+  }];
+}
+
 /** Walks the library and returns every item, in category order. */
 export async function loadCatalog(onProgress = () => {}) {
   const items = [];
@@ -543,6 +573,7 @@ export async function loadCatalog(onProgress = () => {}) {
   }
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
+  items.push(...weaponItems());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
@@ -566,7 +597,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['Characters', 'Props', 'Weapons', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   // By category, and within one by shelf, so that each shelf's things are together under its heading.
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }
