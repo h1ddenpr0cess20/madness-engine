@@ -1,4 +1,4 @@
-import { createLavaMaterial, createLavaBubbler } from '../textures/lava.js';
+import { createLavaMaterial } from '../textures/lava.js';
 
 /**
  * The dungeon as it is drawn: flagstone floors, brick walls falling away into
@@ -221,27 +221,17 @@ export function createDungeonMeshes(GFX, built) {
     group.add(m);
   }
   let lavaMaterial = null;
-  let lavaBubbler = null;
   if (built.lava.position.length) {
     lavaMaterial = createLavaMaterial(GFX);
-    lavaBubbler = createLavaBubbler(GFX, geometry(built.lava), { segments: 6, spacing: 1.05 });
-    const lava = new GFX.Mesh(lavaBubbler.geometry, lavaMaterial);
-    const molten = new GFX.Mesh(lavaBubbler.geometry, lavaMaterial.hotMaterial);
-    lava.name = 'lava-basalt-floor';
-    molten.name = 'lava-molten-flow-floor';
+    const lava = new GFX.Mesh(geometry(built.lava), lavaMaterial);
     lava.frustumCulled = false;
-    molten.frustumCulled = false;
-    molten.castShadow = false;
-    molten.receiveShadow = false;
-    molten.renderOrder = 1;
-    group.add(lava, molten);
+    group.add(lava);
   }
   return {
     group,
-    /** The crust swells in localized gas bubbles while the magma re-forms above it. */
+    /** The original floor lava shader animates its plates, pools, embers and bubbles. */
     update(time) {
       if (!lavaMaterial) return;
-      lavaBubbler.update(time);
       lavaMaterial.uniforms.uTime.value = time;
       lavaMaterial.uniforms.uBright.value = 0.94 + 0.06 * Math.sin(time * 1.7);
     },
