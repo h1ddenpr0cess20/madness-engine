@@ -286,6 +286,12 @@ const MOVING = [
     coin.spinRate = 0.9;
     return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
   }), 'props/coin', { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }],
+  // The Bitcoin alternate: its own struck symbol and motto, with the same metals and display treatment.
+  ['bitcoin coin', 'Animated props', 'coin', ({ metal = 'gold' } = {}) => Promise.all([import('../../../src/props/bitcoin-coin.js'), import('../../../src/props/metalglobe.js')]).then(([b, m]) => {
+    const coin = b.createBitcoinCoin(GFX, { radius: 0.3, metal });
+    coin.spinRate = 0.9;
+    return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
+  }), 'props/bitcoin-coin', { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
 function movingItem([name, category, group, make, from = null, options = null]) {
