@@ -186,7 +186,7 @@ export function createDiamond(GFX, {
 
   return {
     group, stone, geometry, material, volume, mistMaterial, radius, height, sectors,
-    get mist() { return mistVisible; },
+    get mistEnabled() { return mistVisible; },
     setMist(show = true) { mistVisible = Boolean(show); volume.visible = mistVisible; return this; },
     update(dt = 0) {
       if (!Number.isFinite(dt) || dt < 0) throw new RangeError('Diamond update dt must be a non-negative finite number');
@@ -213,17 +213,17 @@ export const assetViewer = Object.freeze({
   build({ GFX = GFX_DEFAULT } = {}) {
     const diamond = createDiamond(GFX);
     let last = 0;
-    return {
-      object: diamond.group,
-      pose: ({ time }) => { const dt = Math.max(0, time - last); last = time; diamond.update(dt); },
-      mist: { get: () => diamond.mist, set: (show) => diamond.setMist(show) },
-      info: {
-        Source: 'props/diamond.js + heroes/krystal/vision.js',
-        Cut: 'Round brilliant · 48 sectors',
-        Material: 'Diamond-like transmissive glass · IOR 2.12',
-        Interior: 'White and pale ice-blue ray-marched mist',
-        Vertices: diamond.geometry.attributes.position.count,
+    return Object.assign(diamond, {
+      frame: { center: [0, 0, 0], radius: Math.hypot(diamond.radius, diamond.height / 2) * 1.05 },
+      pose: ({ time }) => {
+        const dt = Math.max(0, time - last);
+        last = time;
+        diamond.update(dt);
       },
-    };
-  },
+      mist: {
+        get: () => diamond.mistEnabled,
+        set: (show) => diamond.setMist(show),
+      },
+    });
+  }
 });
