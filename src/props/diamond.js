@@ -146,7 +146,7 @@ export function createDiamond(GFX, {
   const mistMaterial = createVisionMaterial(GFX);
   const uniforms = mistMaterial.uniforms;
   uniforms.uRadius.value = 1;
-  uniforms.uShape.value.set(radius * 0.69, height * 0.36, radius * 0.69);
+  uniforms.uShape.value.set(radius * 0.72, Math.max(0.035, height * 0.35), radius * 0.72);
   uniforms.uSwirl.value = MIST.swirl;
   uniforms.uChurn.value = MIST.churn;
   uniforms.uGlow.value = MIST.glow;
