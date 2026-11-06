@@ -32,8 +32,15 @@ test('broadsword is modelled at real-world scale with the spark marble as its po
   assert.equal(sword.handleBounds.bottom, sword.gripBounds.bottom);
   assert.equal(sword.handleBounds.top, sword.gripBounds.top);
   const bossBottom = sword.guardBoss.position.y - sword.guardBoss.scale.y;
-  assert.ok(sword.handleBounds.top > bossBottom, 'handle slightly intersects the guard boss to close the joint');
-  assert.ok(sword.handleBounds.top - bossBottom <= 0.004, 'handle does not penetrate deeply into the guard boss');
+  assert.equal(sword.bossSeat.name, 'guard boss lower cap');
+  assert.ok(Math.abs(sword.bossSeatBounds.bottom - (sword.handleBounds.top - 0.002)) < 1e-9,
+    'boss seat overlaps the grip end by exactly 2 mm');
+  assert.ok(sword.bossSeatBounds.top > sword.handleBounds.top,
+    'boss seat caps the top of the leather grip');
+  assert.ok(sword.bossSeat.geometry.parameters.radiusTop > sword.handle.geometry.parameters.radiusTop,
+    'boss seat fully covers the grip end');
+  assert.ok(bossBottom < sword.bossSeatBounds.top && sword.guardBoss.position.y > sword.bossSeatBounds.top,
+    'central guard boss sits on top of the cap and its overlap');
   assert.equal(sword.bezel.name, 'marble-to-leather metal bezel');
   assert.ok(sword.bezelBounds.bottom < sword.marble.height, 'bezel collar seats on the marble shoulder');
   assert.equal(sword.bezelBounds.top, sword.handleBounds.bottom, 'bezel meets the handle at its lower end');
@@ -148,9 +155,9 @@ test('handle is not buried in either the spark marble or the guard', () => {
   const glassTop = sword.marble.height;
   assert.ok(sword.handleBounds.bottom > glassTop, 'leather begins above the glass surface');
   assert.equal(sword.handleBounds.length, BROADSWORD_DIMENSIONS.gripLength);
-  const bossBottom = sword.guardBoss.position.y - sword.guardBoss.scale.y;
-  assert.ok(sword.handleBounds.top > bossBottom, 'handle has a small positive overlap into the guard boss');
-  assert.ok(sword.handleBounds.top - bossBottom <= 0.004, 'handle remains outside the deeper guard centre');
+  assert.ok(sword.handleBounds.top > sword.bossSeatBounds.bottom, 'boss cap slightly overlaps the handle top');
+  assert.ok(sword.bossSeatBounds.top > sword.handleBounds.top, 'boss cap sits above the leather end');
+  assert.ok(sword.guardBoss.position.y > sword.bossSeatBounds.top, 'domed guard boss is above the overlap cap');
   assert.ok(sword.bezelBounds.outerRadius > sword.handle.geometry.parameters.radiusTop,
     'bezel gives the leather-to-marble joint a visible metal shoulder');
 });
