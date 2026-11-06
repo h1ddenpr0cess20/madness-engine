@@ -145,6 +145,20 @@ function createMagicEggPommel(GFX, radius) {
 
   glass.material.thickness *= radialScale;
   glass.material.attenuationDistance *= radialScale;
+  // The vision shader marches through a world-space ellipsoid. Once the
+  // original hero egg is fitted into the pommel, its default unit-sphere axes
+  // are no longer valid: describe the actual transformed egg volume here.
+  // shapeEgg narrows the horizontal radius to about 0.84 and stretches y 1.03.
+  mist.material.uniforms.uShape.value.set(
+    radialScale * 0.84,
+    verticalScale * 1.03,
+    radialScale * 0.84,
+  );
+  mist.material.uniforms.uRadius.value = 1.02;
+  mist.material.uniforms.uGlow.value = 1.15;
+  mist.material.uniforms.uDuoA.value.set(0.96, 0.98, 1.0);
+  mist.material.uniforms.uDuoB.value.set(1.0, 0.985, 0.94);
+  mist.material.uniforms.uDuoC.value.set(1.0, 0.82, 0.38);
   mist.visible = true;
   mist.renderOrder = 1;
 

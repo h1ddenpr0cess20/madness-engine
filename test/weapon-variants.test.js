@@ -289,6 +289,16 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
     'the egg mist animation is not replaced by the stationary shell hook');
   assert.equal(weapon.pommelAsset.asset.mist, weapon.pommelAsset.mist);
   assert.equal(weapon.pommelAsset.mist.material.uniforms.uDuo.value, 1);
+  const eggMistUniforms = weapon.pommelAsset.mist.material.uniforms;
+  assert.deepEqual(eggMistUniforms.uShape.value.toArray(), [
+    0.032 * 0.84,
+    (0.027 / 1.03) * 1.03,
+    0.032 * 0.84,
+  ], 'the ray-marched ellipsoid matches the fitted egg shell dimensions');
+  assert.equal(eggMistUniforms.uGlow.value, 1.15,
+    'the internal egg mist has enough radiance to read through the glass');
+  assert.deepEqual(eggMistUniforms.uDuoC.value.toArray(), [1, 0.82, 0.38],
+    'the central mist tone is distinctly warm yellow');
 
   assert.equal(weapon.guard.name, 'inverted lightning swept crossguard');
   assert.equal(weapon.guard.userData.lightningProfile.orientation, 'inverted');
