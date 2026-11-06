@@ -6,6 +6,8 @@ import * as GFX from '../src/gfx/index.js';
 /** The main characters, by name, and what each gives. */
 const HEROES = {
   marble: ['createMarble', 'RADIUS'],
+  'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
+  'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'METALS'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
@@ -80,4 +82,92 @@ test('the metal player shares the original mace scale, roll transform, and damag
   assert.deepEqual(metal.group.position.toArray(), [2, 3, 4]);
   metal.setMetal('chrome');
   assert.equal(metal.metal, 'chrome');
+});
+
+
+test('metal Slimey keeps the orb geometry and controls while switching shared metal finishes', async () => {
+  const { createSlimeOrb, createMetalSlimeOrb, METALS } = await import('../src/heroes/slimey/index.js');
+  const originalStage = { setObject(object) { this.object = object; } };
+  const metalStage = { setObject(object) { this.object = object; } };
+  const original = createSlimeOrb({ stage: originalStage, GFX });
+  const metal = createMetalSlimeOrb({ stage: metalStage, GFX, metal: 'silver' });
+  const originalShell = originalStage.object.children.find((child) => child.name === 'shell');
+  const metalShell = metalStage.object.children.find((child) => child.name === 'shell');
+
+  assert.equal(metalShell.geometry.attributes.position.count, originalShell.geometry.attributes.position.count);
+  assert.equal(metal.metal, 'silver');
+  assert.equal(metalShell.material.metalness, 1);
+  assert.equal(metalShell.material.roughness, METALS.silver.roughness);
+  assert.equal(metalShell.material.transmission, 0);
+  const metalGlow = metalStage.object.children.find((child) => child.name === 'glow');
+  const metalCore = metalStage.object.children.find((child) => child.name === 'core');
+  const metalBubbles = metalStage.object.children.filter((child) => child.name.startsWith('bubble_'));
+  assert.equal(metalGlow.visible, false, 'the additive slime rim is hidden');
+  assert.equal(metalCore.material.emissiveIntensity, 0, 'the core does not emit non-metal light');
+  assert.ok(metalBubbles.length > 0);
+  for (const bubble of metalBubbles) {
+    assert.equal(bubble.material.metalness, 1);
+    assert.equal(bubble.material.transmission, 0);
+    assert.equal(bubble.material.opacity, 1);
+  }
+  metal.setMetal('copper');
+  assert.equal(metal.metal, 'copper');
+  assert.equal(metalShell.material.roughness, METALS.copper.roughness);
+  assert.equal(metalShell.material.color.r, new GFX.Color(METALS.copper.color).r);
+  assert.throws(() => metal.setMetal('unobtainium'), /no metal/);
+
+  metal.setState('speaking');
+  metal.setLevel(0.7);
+  metal.pulse(0.4);
+  assert.equal(metal.state, 'speaking');
+  assert.equal(typeof original.setState, 'function');
+  assert.equal(typeof metal.pulse, 'function');
+});
+
+
+test('Slimey deformation keeps the duplicated longitude seam position and normal continuous', async () => {
+  const { createDeformer } = await import('../src/heroes/slimey/deform.js');
+  const geometry = new GFX.SphereGeometry(1, 24, 16);
+  const base = geometry.attributes.position.array.slice();
+  const lobes = [
+    { dir: new GFX.Vector3(1, 2, 3).normalize(), amp: 0.12, freq: 1.3, speed: 0.7, phase: 0.4 },
+    { dir: new GFX.Vector3(-2, 1, 0.5).normalize(), amp: 0.08, freq: 1.8, speed: 0.4, phase: 1.2 },
+  ];
+
+  createDeformer(GFX)(geometry, base, lobes, {
+    wobble: 1.4, phase: 2.1, scale: 1.03, ampScale: 1, freqScale: 2.35, phaseScale: 2.2,
+  });
+
+  const { uv, position, normal } = geometry.attributes;
+  const starts = new Map();
+  const ends = new Map();
+  for (let i = 0; i < uv.count; i++) {
+    const u = uv.getX(i), row = Math.round(uv.getY(i) * 1e6);
+    if (u <= 1e-6) starts.set(row, i);
+    else if (u >= 1 - 1e-6) ends.set(row, i);
+  }
+
+  assert.ok(starts.size > 0, 'sphere has duplicated wrap vertices');
+  for (const pole of [1, 0]) {
+    const indices = Array.from({ length: uv.count }, (_, i) => i)
+      .filter((i) => Math.abs(uv.getY(i) - pole) < 1e-6);
+    assert.ok(indices.length > 1, 'sphere pole has duplicated UV vertices');
+    for (const attr of [position, normal]) {
+      const first = [attr.getX(indices[0]), attr.getY(indices[0]), attr.getZ(indices[0])];
+      for (const index of indices.slice(1)) {
+        assert.ok(Math.abs(attr.getX(index) - first[0]) < 1e-7);
+        assert.ok(Math.abs(attr.getY(index) - first[1]) < 1e-7);
+        assert.ok(Math.abs(attr.getZ(index) - first[2]) < 1e-7);
+      }
+    }
+  }
+  for (const [row, a] of starts) {
+    const b = ends.get(row);
+    if (b === undefined) continue;
+    for (const attr of [position, normal]) {
+      assert.ok(Math.abs(attr.getX(a) - attr.getX(b)) < 1e-7);
+      assert.ok(Math.abs(attr.getY(a) - attr.getY(b)) < 1e-7);
+      assert.ok(Math.abs(attr.getZ(a) - attr.getZ(b)) < 1e-7);
+    }
+  }
 });

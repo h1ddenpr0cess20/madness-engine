@@ -4,8 +4,11 @@ import { createLobes } from './lobes.js';
 import { ENERGY_GAIN, MODES } from './modes.js';
 import { createPalette } from './palette.js';
 import { createBubbles, createCore, createGlow, createShell } from './parts.js';
+import { METALS } from '../../props/metalglobe.js';
 
-export function createSlimeOrb({ stage, GFX }) {
+export { METALS };
+
+export function createSlimeOrb({ stage, GFX, metal = null }) {
   buildEnvironment({ stage, GFX });
 
   const paletteAt = createPalette(GFX);
@@ -35,6 +38,29 @@ export function createSlimeOrb({ stage, GFX }) {
   let hue = 0;
   let phase = 0;
   const timer = new GFX.Timer();
+  let selectedMetal = null;
+
+  const applyMetal = (name) => {
+    const finish = METALS[name];
+    if (!finish) throw new Error(`no metal called ${name}`);
+    selectedMetal = name;
+    for (const material of [shell.material, core.material, bubbles.material]) {
+      material.color.set(finish.color);
+      material.metalness = 1;
+      material.roughness = finish.roughness;
+      material.envMapIntensity = 3;
+      material.transparent = false;
+      material.opacity = 1;
+      if ('transmission' in material) material.transmission = 0;
+      if ('clearcoat' in material) material.clearcoat = 0;
+      if ('iridescence' in material) material.iridescence = 0;
+      if ('sheen' in material) material.sheen = 0;
+    }
+    shell.material.attenuationColor.set(finish.color);
+    core.material.emissive.set('#000000');
+    core.material.emissiveIntensity = 0;
+    glow.mesh.visible = false;
+  };
 
   shell.mesh.onBeforeRender = () => {
     timer.update();
@@ -71,11 +97,12 @@ export function createSlimeOrb({ stage, GFX }) {
       phaseScale: -3,
     });
 
-    paletteAt(hue, tmpColor);
+    if (selectedMetal) tmpColor.set(METALS[selectedMetal].color);
+    else paletteAt(hue, tmpColor);
     shell.material.color.copy(tmpColor);
     shell.material.attenuationColor.copy(tmpColor).lerp(white, 0.35);
     core.material.emissive.copy(tmpColor);
-    core.material.emissiveIntensity = m.glow + energy * ENERGY_GAIN.glow;
+    core.material.emissiveIntensity = selectedMetal ? 0 : m.glow + energy * ENERGY_GAIN.glow;
     glow.material.uniforms.uColor.value.copy(tmpColor);
     glow.material.uniforms.uStrength.value = halo * 6.0 * (0.85 + Math.sin(phase * 2.1) * 0.15);
 
@@ -99,22 +126,25 @@ export function createSlimeOrb({ stage, GFX }) {
   glow.mesh.castShadow = glow.mesh.receiveShadow = false;
   for (const b of bubbles.meshes) b.castShadow = b.receiveShadow = false;
 
-  return {
+  const api = {
     get state() { return state; },
-
     setState(next) {
       if (!Object.hasOwn(MODES, next) || next === state) return;
       state = next;
       mode = MODES[next];
       if (next === 'idle' || next === 'thinking') sustain = 0;
     },
-
-    setLevel(level) {
-      sustain = Math.min(1, Math.max(0, level));
-    },
-
-    pulse(weight = 0.3) {
-      impulse = Math.min(1, impulse + Math.min(1, Math.max(0, weight)));
-    },
+    setLevel(level) { sustain = Math.min(1, Math.max(0, level)); },
+    pulse(weight = 0.3) { impulse = Math.min(1, impulse + Math.min(1, Math.max(0, weight))); },
   };
+  if (metal !== null) {
+    applyMetal(metal);
+    Object.defineProperty(api, 'metal', { enumerable: true, get: () => selectedMetal });
+    api.setMetal = (name) => { applyMetal(name); return api; };
+  }
+  return api;
+}
+
+export function createMetalSlimeOrb({ stage, GFX, metal = 'steel' }) {
+  return createSlimeOrb({ stage, GFX, metal });
 }

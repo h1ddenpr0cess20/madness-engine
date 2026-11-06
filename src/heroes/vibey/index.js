@@ -2,6 +2,9 @@ import { buildEnvironment } from './environment.js';
 import { buildStar, createLobes } from './geometry.js';
 import { createGrab } from './grab.js';
 import { DEAD, ENERGY_GAIN, MOODS, PALETTE, STALLED } from './moods.js';
+import { METALS } from '../../props/metalglobe.js';
+
+export { METALS };
 
 function spring(s, k, c, dt, to = 0) {
   s.v += (to - s.p) * k * dt - s.v * c * dt;
@@ -13,14 +16,14 @@ function spring(s, k, c, dt, to = 0) {
 const MARGIN = 1.22;
 const SWELL = 1.12;
 
-export function createStar({ stage, GFX }) {
+export function createStar({ stage, GFX, metal = null }) {
   buildEnvironment({ stage, GFX });
 
   const {
     group, body, shell,
     shellGeo, shellMat, shellDirs, shellBase,
     core, coreGeo, coreMat, coreDirs, coreBase,
-    glowMat, halo, haloMat, haloWide, haloWideMat,
+    glow, glowMat, halo, haloMat, haloWide, haloWideMat,
   } = buildStar(GFX);
 
   const LOBES = createLobes(GFX);
@@ -68,6 +71,31 @@ export function createStar({ stage, GFX }) {
     const f = ((at % palette.length) + palette.length) % palette.length;
     const i = Math.floor(f);
     return out.copy(palette[i]).lerp(palette[(i + 1) % palette.length], f - i);
+  };
+
+  let selectedMetal = null;
+  const applyMetal = (name) => {
+    const finish = METALS[name];
+    if (!finish) throw new Error(`no metal called ${name}`);
+    selectedMetal = name;
+    for (const material of [shellMat, coreMat]) {
+      material.color.set(finish.color);
+      material.metalness = 1;
+      material.roughness = finish.roughness;
+      material.envMapIntensity = 3;
+      material.transparent = false;
+      material.opacity = 1;
+    }
+    shellMat.transmission = 0;
+    shellMat.clearcoat = 0;
+    shellMat.iridescence = 0;
+    shellMat.sheen = 0;
+    shellMat.attenuationColor.set(finish.color);
+    coreMat.emissive.set('#000000');
+    coreMat.emissiveIntensity = 0;
+    glow.visible = false;
+    halo.visible = false;
+    haloWide.visible = false;
   };
 
   const land = (force) => {
@@ -223,17 +251,23 @@ export function createStar({ stage, GFX }) {
     coreGeo.computeVertexNormals();
 
     // ---- the light ----
-    paletteAt(hue, tint).lerp(deadTint, dead);
+    if (selectedMetal) tint.set(METALS[selectedMetal].color).lerp(deadTint, dead);
+    else paletteAt(hue, tint).lerp(deadTint, dead);
     const lit = m.glow + energy * gain.glow;
     const bloom = m.halo + energy * gain.halo;
 
     shellMat.color.copy(tint);
-    shellMat.attenuationColor.copy(tint).lerp(warm, 0.35);
-    shellMat.transmission = 0.9 - dead * 0.55;
-    shellMat.iridescence = 0.35 * (1 - dead);
-
+    shellMat.attenuationColor.copy(tint).lerp(warm, selectedMetal ? 0 : 0.35);
+    if (selectedMetal) {
+      shellMat.transmission = 0;
+      shellMat.iridescence = 0;
+      coreMat.color.copy(tint);
+    } else {
+      shellMat.transmission = 0.9 - dead * 0.55;
+      shellMat.iridescence = 0.35 * (1 - dead);
+    }
     coreMat.emissive.copy(tint);
-    coreMat.emissiveIntensity = lit;
+    coreMat.emissiveIntensity = selectedMetal ? 0 : lit;
 
     glowMat.uniforms.uColor.value.copy(tint);
     glowMat.uniforms.uStrength.value = bloom * 8.5 * (0.94 + Math.sin(phase * 2.1) * 0.06);
@@ -390,36 +424,24 @@ export function createStar({ stage, GFX }) {
     if (o.isMesh || o.isSprite) o.castShadow = o.receiveShadow = false;
   });
 
+  if (metal !== null) applyMetal(metal);
+
   (function loop() {
     requestAnimationFrame(loop);
     frame();
   })();
 
-  return {
-    get state() {
-      return state;
-    },
-
+  const api = {
+    get state() { return state; },
     setState(next) {
       if (!Object.hasOwn(MOODS, next) || next === state) return;
       state = next;
       if (next === 'idle' || next === 'thinking') sustain = 0;
       if (next === 'thinking' && !broken) kick();
     },
-
-    setLevel(level) {
-      sustain = Math.min(1, Math.max(0, level));
-    },
-
-    pulse(weight = 0.3) {
-      impulse = Math.min(1, impulse + Math.min(1, Math.max(0, weight)));
-    },
-
-    spin() {
-      if (broken) return;
-      kick();
-    },
-
+    setLevel(level) { sustain = Math.min(1, Math.max(0, level)); },
+    pulse(weight = 0.3) { impulse = Math.min(1, impulse + Math.min(1, Math.max(0, weight))); },
+    spin() { if (broken) return; kick(); },
     jolt(weight = 1) {
       if (broken || airborne || hand?.held) return;
       yV = 1.3 + Math.random() * 0.6 * weight;
@@ -428,7 +450,6 @@ export function createStar({ stage, GFX }) {
       sq.v -= 2.2 * weight;
       impulse = Math.min(1, impulse + 0.5 * weight);
     },
-
     stall(on = true) {
       const next = Boolean(on);
       if (next === broken) return;
@@ -442,4 +463,13 @@ export function createStar({ stage, GFX }) {
       }
     },
   };
+  if (metal !== null) {
+    Object.defineProperty(api, 'metal', { enumerable: true, get: () => selectedMetal });
+    api.setMetal = (name) => { applyMetal(name); return api; };
+  }
+  return api;
+}
+
+export function createMetalStar({ stage, GFX, metal = 'steel' }) {
+  return createStar({ stage, GFX, metal });
 }
