@@ -208,3 +208,17 @@ export function createCoin(GFX, { radius = 0.3, logo = null, backLogo = logo, me
   };
   return api.setMetal(metal);
 }
+
+export const assetViewer = {
+  id: 'coin',
+  name: 'coin',
+  category: 'Animated props',
+  group: 'coin',
+  options: { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] },
+  async build({ GFX, metal = 'gold', renderer = null } = {}) {
+    const [{ studioEnvironment }, texture] = await Promise.all([import('./metalglobe.js'), import('../textures/coin/logo.js')]);
+    const coin = createCoin(GFX, { radius: 0.3, logo: await texture.loadCoinLogo(), metal });
+    coin.spinRate = 0.9;
+    return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: studioEnvironment(GFX, renderer) });
+  },
+};

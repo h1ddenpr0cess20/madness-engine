@@ -49,3 +49,17 @@ export function createBitcoinCoin(GFX, { radius = 0.3, metal = 'gold' } = {}) {
     motto: 'IN CHAINS WE RUST',
   });
 }
+
+export const assetViewer = {
+  id: 'bitcoin-coin',
+  name: 'bitcoin coin',
+  category: 'Animated props',
+  group: 'coin',
+  options: { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] },
+  async build({ GFX, metal = 'gold', renderer = null } = {}) {
+    const { studioEnvironment } = await import('./metalglobe.js');
+    const coin = createBitcoinCoin(GFX, { radius: 0.3, metal });
+    coin.spinRate = 0.9;
+    return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: studioEnvironment(GFX, renderer) });
+  },
+};
