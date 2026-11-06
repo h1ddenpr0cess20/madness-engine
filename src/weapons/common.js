@@ -294,7 +294,7 @@ export function buildWeapon(GFX, spec, {
   // shoulder, then necked down to the same diameter as the upper guard seat.
   // The opening stays clear of the spark; the upper lip slips 1.2 mm over the
   // leather so the metal-to-leather joint reads as a fitted ferrule.
-  const bezelTopRadius = handleRadius * 1.18;
+  const bezelTopRadius = handleRadius * 1.08;
   const bezelBottomRadius = Math.min(radius * 0.86, handleRadius * 1.34);
   const bezelBottom = radius + Math.sqrt(radius * radius - bezelBottomRadius * bezelBottomRadius);
   const bezelTop = gripBottom + 0.0012;
