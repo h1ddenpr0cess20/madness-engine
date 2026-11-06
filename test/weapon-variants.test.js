@@ -149,6 +149,15 @@ test('Krystal sword and dagger use her crystal orb and independently toggleable 
     assert.ok(krystal.bladeMist, 'a separate mist volume surrounds the blade');
     assert.equal(krystal.bladeMist.visible, true, 'blade mist is visible by default');
     assert.equal(krystal.bladeMist.material.blending, GFX.AdditiveBlending);
+    assert.equal(krystal.bladeMist.material.uniforms.uGlow.value, 1.05,
+      'blade mist has a small radiance lift for visibility across metal finishes');
+    assert.equal(krystal.bladeMist.material.uniforms.uCore.value, 0.36,
+      'the brighter centre is part of the blade sheath, not the orb toggle');
+    for (const metal of Object.keys(METALS)) {
+      krystal.setBladeMetal(metal);
+      assert.equal(krystal.bladeMist.material.uniforms.uGlow.value, 1.05,
+        'blade mist visibility is independent of selected blade metal');
+    }
     assert.ok(krystal.bladeMist.material.uniforms.uShape.value.y
       > krystal.bladeMist.material.uniforms.uShape.value.x,
     'blade mist is an elongated ellipsoid, not a spherical cloud');

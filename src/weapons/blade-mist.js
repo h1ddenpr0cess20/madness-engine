@@ -26,6 +26,10 @@ export function createBladeMist(GFX, parent, {
   // Use Krystal's own unmodified vision palette and motion values. The blade
   // volume changes only its shape; its colour, density and wisp character
   // remain the same as the effect inside the glass orb.
+  // Lift the ray-marched radiance modestly so the cool wisps stay legible
+  // over both bright chrome and darker metal finishes.
+  uniforms.uGlow.value = 1.05;
+  uniforms.uCore.value = 0.36;
   uniforms.uDuo.value = 0;
 
   const axes = {
