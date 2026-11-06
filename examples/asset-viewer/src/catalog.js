@@ -29,7 +29,7 @@ const where = (path) => path.replace('../../../src/', '');
 const stem = (path) => where(path).split('/').pop().replace(/\.js$/, '');
 const CLIPS = ['idle', 'walk', 'run', 'attack', 'cast', 'hit', 'ko', 'win', 'jump', 'leap', 'sit', 'talk'];
 const CATEGORY = { characters: 'Characters', props: 'Props', scenery: 'Scenery & vehicles' };
-const METAL_CHOICES = Object.keys(METAL_FINISHES);
+export const METAL_CHOICES = Object.keys(METAL_FINISHES);
 
 /** The bounding box of everything drawn in `object`, in its own units, as { min, max, size }. */
 export function boundsOf(object) {
@@ -515,8 +515,7 @@ function weaponItems() {
     name: 'Broadsword',
     source: 'weapons/broadsword',
     kind: 'object',
-    options: { bladeMetal: METAL_CHOICES, hiltMetal: METAL_CHOICES },
-    palette: { kind: 'weapon', grip: '#633b2c' },
+      palette: { kind: 'weapon', grip: '#633b2c' },
     async build({ bladeMetal = 'steel', hiltMetal = 'steel', colours = {} } = {}) {
       const [weapon, metals] = await Promise.all([
         import('../../../src/weapons/broadsword.js'),
