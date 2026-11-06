@@ -19,8 +19,16 @@ import { createVisionMaterial } from '../heroes/krystal/vision.js';
 export const DIAMOND_RADIUS = 0.62;
 export const DIAMOND_HEIGHT = 0.36;
 
-/** Eighty-four crown/pavilion facet sectors read as a round brilliant. */
-export const DIAMOND_CUT = Object.freeze({ sectors: 48, table: 0.43, crown: 0.24, girdle: 0.055, pavilion: 0.34 });
+/** Radial proportions of the round brilliant: crown, narrow girdle and pavilion. */
+export const DIAMOND_CUT = Object.freeze({
+  sectors: 48,
+  tableRatio: 0.43,
+  crownRise: 0.22,
+  girdleThickness: 0.11,
+  pavilionShoulder: 0.28,
+  upperCrownRadius: 0.78,
+  lowerPavilionRadius: 0.78,
+});
 
 const MIST = Object.freeze({
   speed: 0.16,
@@ -35,16 +43,16 @@ const MIST = Object.freeze({
   duo: [[0.68, 0.86, 1], [0.94, 0.98, 1], [0.53, 0.76, 1]],
 });
 
-function brilliantGeometry(GFX, { radius, height, sectors }) {
+function brilliantGeometry(GFX, { radius, height, sectors, cut }) {
   const half = height / 2;
   const tableY = half;
-  const crownY = half - height * 0.22;
-  const girdleTop = height * 0.055;
-  const girdleBottom = -height * 0.055;
+  const crownY = half - height * cut.crownRise;
+  const girdleTop = height * cut.girdleThickness / 2;
+  const girdleBottom = -girdleTop;
   const culetY = -half;
-  const tableR = radius * 0.43;
-  const crownR = radius * 0.78;
-  const pavilionR = radius * 0.78;
+  const tableR = radius * cut.tableRatio;
+  const crownR = radius * cut.upperCrownRadius;
+  const pavilionR = radius * cut.lowerPavilionRadius;
   const positions = [];
   const normals = [];
   const uvs = [];
@@ -73,7 +81,7 @@ function brilliantGeometry(GFX, { radius, height, sectors }) {
   const crown = Array.from({ length: sectors }, (_, i) => point(crownR, crownY, i));
   const upperGirdle = Array.from({ length: sectors }, (_, i) => point(radius, girdleTop, i));
   const lowerGirdle = Array.from({ length: sectors }, (_, i) => point(radius, girdleBottom, i));
-  const pavilion = Array.from({ length: sectors }, (_, i) => point(pavilionR, culetY * 0.28, i));
+  const pavilion = Array.from({ length: sectors }, (_, i) => point(pavilionR, culetY * cut.pavilionShoulder, i));
   const culet = [0, culetY, 0];
 
   for (let i = 0; i < sectors; i++) {
@@ -120,7 +128,7 @@ export function createDiamond(GFX, {
   if (!Number.isFinite(radius) || radius <= 0 || !Number.isFinite(height) || height <= 0) throw new RangeError('Diamond radius and height must be positive finite numbers');
   if (!Number.isInteger(sectors) || sectors < 12 || sectors > 128) throw new RangeError('Diamond sectors must be an integer from 12 to 128');
 
-  const geometry = brilliantGeometry(GFX, { radius, height, sectors });
+  const geometry = brilliantGeometry(GFX, { radius, height, sectors, cut: DIAMOND_CUT });
   const material = new GFX.MeshPhysicalMaterial({
     name: 'diamond · brilliant cut',
     color: new GFX.Color('#f7fcff'),
@@ -128,7 +136,7 @@ export function createDiamond(GFX, {
     roughness: 0.018,
     transmission: 1,
     thickness: 0.42,
-    ior: 2.12,
+    ior: 2.417,
     attenuationColor: new GFX.Color('#d9efff'),
     attenuationDistance: 2.8,
     clearcoat: 1,
