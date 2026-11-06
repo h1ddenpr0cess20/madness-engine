@@ -57,8 +57,9 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
       if ('sheen' in material) material.sheen = 0;
     }
     shell.material.attenuationColor.set(finish.color);
-    core.material.emissive.set(finish.color);
-    core.material.emissiveIntensity = 0.35;
+    core.material.emissive.set('#000000');
+    core.material.emissiveIntensity = 0;
+    glow.mesh.visible = false;
   };
 
   shell.mesh.onBeforeRender = () => {
@@ -101,7 +102,7 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
     shell.material.color.copy(tmpColor);
     shell.material.attenuationColor.copy(tmpColor).lerp(white, 0.35);
     core.material.emissive.copy(tmpColor);
-    core.material.emissiveIntensity = selectedMetal ? 0.35 + energy * 0.18 : m.glow + energy * ENERGY_GAIN.glow;
+    core.material.emissiveIntensity = selectedMetal ? 0 : m.glow + energy * ENERGY_GAIN.glow;
     glow.material.uniforms.uColor.value.copy(tmpColor);
     glow.material.uniforms.uStrength.value = halo * 6.0 * (0.85 + Math.sin(phase * 2.1) * 0.15);
 

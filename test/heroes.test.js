@@ -112,3 +112,38 @@ test('metal Slimey keeps the orb geometry and controls while switching shared me
   assert.equal(typeof original.setState, 'function');
   assert.equal(typeof metal.pulse, 'function');
 });
+
+
+test('Slimey deformation keeps the duplicated longitude seam position and normal continuous', async () => {
+  const { createDeformer } = await import('../src/heroes/slimey/deform.js');
+  const geometry = new GFX.SphereGeometry(1, 24, 16);
+  const base = geometry.attributes.position.array.slice();
+  const lobes = [
+    { dir: new GFX.Vector3(1, 2, 3).normalize(), amp: 0.12, freq: 1.3, speed: 0.7, phase: 0.4 },
+    { dir: new GFX.Vector3(-2, 1, 0.5).normalize(), amp: 0.08, freq: 1.8, speed: 0.4, phase: 1.2 },
+  ];
+
+  createDeformer(GFX)(geometry, base, lobes, {
+    wobble: 1.4, phase: 2.1, scale: 1.03, ampScale: 1, freqScale: 2.35, phaseScale: 2.2,
+  });
+
+  const { uv, position, normal } = geometry.attributes;
+  const starts = new Map();
+  const ends = new Map();
+  for (let i = 0; i < uv.count; i++) {
+    const u = uv.getX(i), row = Math.round(uv.getY(i) * 1e6);
+    if (u <= 1e-6) starts.set(row, i);
+    else if (u >= 1 - 1e-6) ends.set(row, i);
+  }
+
+  assert.ok(starts.size > 0, 'sphere has duplicated wrap vertices');
+  for (const [row, a] of starts) {
+    const b = ends.get(row);
+    if (b === undefined) continue;
+    for (const attr of [position, normal]) {
+      assert.ok(Math.abs(attr.getX(a) - attr.getX(b)) < 1e-7);
+      assert.ok(Math.abs(attr.getY(a) - attr.getY(b)) < 1e-7);
+      assert.ok(Math.abs(attr.getZ(a) - attr.getZ(b)) < 1e-7);
+    }
+  }
+});

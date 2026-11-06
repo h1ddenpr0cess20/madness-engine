@@ -91,7 +91,11 @@ export function createStar({ stage, GFX, metal = null }) {
     shellMat.iridescence = 0;
     shellMat.sheen = 0;
     shellMat.attenuationColor.set(finish.color);
-    coreMat.emissive.set(finish.color);
+    coreMat.emissive.set('#000000');
+    coreMat.emissiveIntensity = 0;
+    glow.visible = false;
+    halo.visible = false;
+    haloWide.visible = false;
   };
 
   const land = (force) => {
@@ -263,7 +267,7 @@ export function createStar({ stage, GFX, metal = null }) {
       shellMat.iridescence = 0.35 * (1 - dead);
     }
     coreMat.emissive.copy(tint);
-    coreMat.emissiveIntensity = selectedMetal ? 0.5 + energy * 0.25 : lit;
+    coreMat.emissiveIntensity = selectedMetal ? 0 : lit;
 
     glowMat.uniforms.uColor.value.copy(tint);
     glowMat.uniforms.uStrength.value = bloom * 8.5 * (0.94 + Math.sin(phase * 2.1) * 0.06);
