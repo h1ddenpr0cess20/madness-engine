@@ -7,9 +7,9 @@ Weapons are separate from generic props and heroes. The viewer lists them under
 ## Scale convention
 
 Weapon dimensions use metres: **one Madness Engine world unit represents one
-metre**. The weapon's published overall length excludes its display stand.
-The viewer's bounds include the marble stand so the entire presentation is
-framed. Keep each weapon at its real dimensions; do not normalize different
+metre**. The published overall length includes the pommel marble and excludes only
+any surrounding scene or display environment. The glass-and-spark marble is
+integrated into the hilt as its pommel, not placed under the sword as a stand. Keep each weapon at its real dimensions; do not normalize different
 weapon classes to the same screen height.
 
 Useful historical proportion targets for future assets:
@@ -26,7 +26,7 @@ one standard dimension.
 ## Broadsword
 
 `createBroadsword(GFX, options)` builds a point-up broadsword on a separate
-two-tier marble display block. The blade and hilt each accept one of the 12
+glass-and-spark marble pommel. The blade and hilt each accept one of the 12
 shared `METALS` finishes and change independently; the grip has a live hex
 colour setter.
 
@@ -45,5 +45,5 @@ sword.setHiltMetal('brass');
 sword.setGripColor('#75452e');
 ```
 
-Published dimensions (excluding the stand): 0.99 m overall, 0.786 m blade,
-52 mm maximum blade width, 140 mm grip, and 220 mm crossguard span.
+Published dimensions: approximately 0.99 m overall, 0.81 m blade,
+52 mm maximum blade width, 140 mm grip, 220 mm crossguard span, and a 54 mm glass marble pommel. Its solid blade has a fuller that fades out at 75% of blade length.
