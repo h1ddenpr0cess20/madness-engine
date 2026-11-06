@@ -158,15 +158,27 @@ export function createMarcsSword(GFX, options = {}) {
 }
 
 export function createMarcsDagger(GFX, options = {}) {
-  return swordVariant(GFX, DAGGER_SPEC, "Marc's Dagger", 'metal-egg', 'horns', 'diagonal', options);
+  return swordVariant(GFX, DAGGER_SPEC, "Marc's Dagger", 'metal-egg', 'horns', 'diagonal', {
+    bladeMetal: 'gold',
+    hiltMetal: 'gold',
+    gripColor: '#101010',
+    ...options,
+  });
 }
 
 export function createMarcsGreatsword(GFX, options = {}) {
-  return swordVariant(GFX, GREATSWORD_SPEC, "Marc's Greatsword", 'metal-egg', 'horns', 'diagonal', options);
+  return swordVariant(GFX, GREATSWORD_SPEC, "Marc's Greatsword", 'metal-egg', 'horns', 'diagonal', {
+    bladeMetal: 'gold',
+    hiltMetal: 'gold',
+    gripColor: '#101010',
+    ...options,
+  });
 }
 
 export function createMarcsMorningstar(GFX, options = {}) {
   return named(createMorningstar(GFX, {
+    metal: 'gold',
+    gripColor: '#101010',
     ...options,
     pommelStyle: 'metal-egg',
     guardStyle: 'none',
