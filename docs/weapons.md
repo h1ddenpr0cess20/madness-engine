@@ -239,3 +239,8 @@ sword.setThreadColor('#e8b62f');
 sword.setBladeMist(false);
 ```
 
+
+
+## Marc's family default finishes
+
+Marc's sword, dagger, greatsword and morningstar default to gold metal with a black leather grip and diagonal black wrap. Caller-provided `bladeMetal`, `hiltMetal`, `metal` and `gripColor` options override these defaults.
