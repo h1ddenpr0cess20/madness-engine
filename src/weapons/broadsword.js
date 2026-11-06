@@ -3,9 +3,9 @@ import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
 
 /**
  * A one-handed, double-edged medieval broadsword with a broad lenticular blade,
- * a real central fuller, a swept crossguard, a peened pommel and a wrapped
+ * a real central fuller, a swept crossguard, the glass-and-spark marble as its pommel and a wrapped
  * leather grip. It is built at measured real-world scale, in metres, and
- * displayed point-up on the engine's marble plinth.
+ * displayed point-up with the engine's marble hero replacing the pommel.
  *
  *     const sword = createBroadsword(GFX, { bladeMetal: 'steel', hiltMetal: 'silver' });
  *     scene.add(sword.group);
@@ -15,11 +15,12 @@ import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
  */
 export const BROADSWORD_DIMENSIONS = Object.freeze({
   overallLength: 0.99,
-  bladeLength: 0.786,
+  bladeLength: 0.795,
   bladeWidth: 0.052,
   gripLength: 0.14,
   gripDiameter: 0.034,
-  pommelDiameter: 0.048,
+  marbleRadius: 0.036,
+  marbleDiameter: 0.072,
   guardSpan: 0.22,
   unit: 'm',
 });
