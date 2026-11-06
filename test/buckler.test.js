@@ -62,7 +62,7 @@ test('buckler uses the exact OpenAI Blossom vector and skips canvas only in non-
   assert.ok(CHATGPT_BLOSSOM_PATH.endsWith('-.052-32.434Z'));
   assert.ok(CHATGPT_BLOSSOM_PATH.length > 1500);
   assert.ok(CHATGPT_BLOSSOM_PATH.includes('C219.452 28.459 191 15.784 163.213 21.74'));
-  assert.ok(CHATGPT_BLOSSOM_PATH.includes('v32.434Z'));
+  assert.ok(CHATGPT_BLOSSOM_PATH.endsWith('-.052-32.434Z'));
   assert.equal(createChatGPTMarkCanvas(), null);
   const buckler = createBuckler(GFX);
   assert.equal(buckler.logoTexture, null);
