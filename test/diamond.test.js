@@ -12,7 +12,7 @@ test('the diamond is a real round brilliant with a table, crown, girdle and pavi
   assert.equal(diamond.stone.name, 'brilliant-cut diamond');
   assert.ok(diamond.geometry.attributes.position.count >= DIAMOND_CUT.sectors * 30);
   assert.equal(diamond.material.transmission, 1);
-  assert.equal(diamond.material.ior, 2.12);
+  assert.equal(diamond.material.ior, 2.417);
   assert.equal(diamond.material.roughness, 0.018);
   assert.equal(diamond.volume.visible, false);
   assert.equal(diamond.group.children.includes(diamond.stone), true);
