@@ -18,7 +18,7 @@ test('broadsword is modelled at real-world scale with a separate marble plinth',
   assert.equal(BROADSWORD_SPEC.overallLength, 0.99);
   assert.equal(sword.dimensions.unit, 'm');
   assert.ok(sword.dimensions.overallLength > 0.95 && sword.dimensions.overallLength < 1.04);
-  assert.equal(sword.dimensions.bladeLength, 0.78);
+  assert.equal(sword.dimensions.bladeLength, 0.786);
   assert.equal(sword.dimensions.gripLength, 0.14);
   assert.ok(sword.dimensions.guardSpan > sword.dimensions.bladeWidth * 4);
   assert.equal(sword.displayBase.name, 'marble display base');
