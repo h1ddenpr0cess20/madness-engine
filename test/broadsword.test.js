@@ -43,9 +43,16 @@ test('broadsword is modelled at real-world scale with the spark marble as its po
     'central guard boss sits on top of the cap and its overlap');
   assert.equal(sword.bezel.name, 'marble-to-leather metal bezel');
   assert.ok(sword.bezelBounds.bottom < sword.marble.height, 'bezel collar seats on the marble shoulder');
-  assert.equal(sword.bezelBounds.top, sword.handleBounds.bottom, 'bezel meets the handle at its lower end');
-  const sleeve = sword.bezel.children.find((part) => part.name === 'pommel bezel hollow sleeve');
+  assert.ok(Math.abs(sword.bezelBounds.top - sword.handleBounds.bottom - 0.0012) < 1e-9,
+    'ferrule overlaps the leather by 1.2 mm');
+  const sleeve = sword.bezel.children.find((part) => part.name === 'pommel bezel tapered hollow sleeve');
   assert.ok(sleeve.geometry.parameters.openEnded, 'bezel is hollow and does not cap the marble');
+  assert.ok(sleeve.geometry.parameters.radiusBottom > sleeve.geometry.parameters.radiusTop,
+    'ferrule flares outward toward the marble');
+  assert.ok(Math.abs(sleeve.geometry.parameters.radiusTop - sword.handle.geometry.parameters.radiusTop * 1.08) < 1e-9,
+    'ferrule top closely matches the handle diameter');
+  assert.ok(Math.abs(sword.bezelBounds.bottomRadius - sleeve.geometry.parameters.radiusBottom) < 1e-9);
+  assert.ok(Math.abs(sword.bezelBounds.topRadius - sleeve.geometry.parameters.radiusTop) < 1e-9);
   assert.equal(sleeve.material.name, 'hilt metal', 'bezel uses the independently selected hilt metal');
   assert.equal(sword.dimensions.marbleDiameter, 0.054);
   assert.equal(sword.blade.name, 'solid double-edged blade with 75% fuller');
@@ -158,8 +165,8 @@ test('handle is not buried in either the spark marble or the guard', () => {
   assert.ok(sword.handleBounds.top > sword.bossSeatBounds.bottom, 'boss cap slightly overlaps the handle top');
   assert.ok(sword.bossSeatBounds.top > sword.handleBounds.top, 'boss cap sits above the leather end');
   assert.ok(sword.guardBoss.position.y > sword.bossSeatBounds.top, 'domed guard boss is above the overlap cap');
-  assert.ok(sword.bezelBounds.outerRadius > sword.handle.geometry.parameters.radiusTop,
-    'bezel gives the leather-to-marble joint a visible metal shoulder');
+  assert.ok(sword.bezelBounds.bottomRadius > sword.bezelBounds.topRadius,
+    'bezel widens toward the marble and narrows toward the grip');
   assert.ok(sword.bezelBounds.outerRadius > MARBLE_POMMEL_RADIUS * 0.82,
     'hollow bezel opening clears the marble spark reach');
 });
