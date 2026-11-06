@@ -445,6 +445,12 @@ $('colourcopy').onclick = async () => {
       + "import { createBowlingBall } from 'madness-engine/props/bowling-ball';\n\n"
       + "const bowlingBall = createBowlingBall(GFX, { colors: "
       + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'marble') + "' });";
+  } else if (view.item.palette?.kind === 'weapon') {
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { createBroadsword } from 'madness-engine/weapons';\n\n"
+      + "const broadsword = createBroadsword(GFX, { bladeMetal: '" + (options.bladeMetal ?? 'steel')
+      + "', hiltMetal: '" + (options.hiltMetal ?? 'steel') + "', gripColor: '"
+      + (view.colours.gripColor ?? '#633b2c') + "' });";
   } else if (view.item.palette?.kind === 'bowling-pin') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\n\n"
