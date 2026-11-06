@@ -74,8 +74,8 @@ function assertEggBezelOutsideShell(weapon) {
 
   const gripBottom = weapon.handle.position.y - weapon.handle.geometry.parameters.height / 2;
   const shellTop = broadEndWorldY;
-  assert.ok(shellTop <= gripBottom + 0.001,
-    'the egg broad end only meets the grip instead of disappearing deeply inside it');
+  assert.ok(Math.abs(shellTop - gripBottom) <= 0.0011,
+    'the broad egg shoulder meets the grip with only a 1 mm fitted overlap');
 }
 
 test('Madness and Regular retain their original guard shape and differ only at the pommel', () => {
@@ -172,7 +172,10 @@ test('Marc metal egg is a stationary engine shell with its broad end joined to t
     eggTop = Math.max(eggTop, source.getY(i) * egg.scale.y + egg.position.y);
   }
   const gripBottom = weapon.handle.position.y - weapon.handle.geometry.parameters.height / 2;
-  assert.ok(eggTop > gripBottom, 'egg shell overlaps the handle instead of floating below it');
+  assert.ok(eggTop >= gripBottom - 0.0011,
+    'the broad Metal Egg shoulder seats against the handle');
+  assert.ok(eggTop <= gripBottom + 0.0001,
+    'the Metal Egg only overlaps the handle by the fitted 1 mm seat');
 
   weapon.setHiltMetal('gold');
   assert.equal(egg.material.color.getHexString(), METALS.gold.color.slice(1));

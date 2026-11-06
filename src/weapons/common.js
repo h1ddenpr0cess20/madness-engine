@@ -814,9 +814,12 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   hilt.name = 'connected hilt assembly';
   group.add(hilt);
 
-  // Every pommel variant preserves the same 54 mm attachment envelope.
+  // Egg pommels occupy the full 54 mm envelope with their broad shoulder
+  // meeting the grip. Seat the leather 1 mm over that shoulder; marble and
+  // metal-ball pommels retain the original 5 mm stand-off.
   const radius = pommelAsset.radius;
-  const gripBottom = pommelAsset.height + 0.005;
+  const isEggPommel = pommelAsset.kind === 'metal-egg' || pommelAsset.kind === 'magic-egg';
+  const gripBottom = pommelAsset.height - (isEggPommel ? 0.001 : -0.005);
   const gripTop = gripBottom + spec.gripLength;
   // The leather grip stops at gripTop. A short metal cap overlaps its end by
   // 2 mm, and the raised boss sits above that cap to conceal the joint.
@@ -852,7 +855,6 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   // The opening stays clear of the spark; the upper lip slips 1.2 mm over the
   // leather so the metal-to-leather joint reads as a fitted ferrule.
   const bezelTopRadius = handleRadius * 1.08;
-  const isEggPommel = pommelAsset.kind === 'metal-egg' || pommelAsset.kind === 'magic-egg';
   const eggCenterY = radius;
   const bezelTop = gripBottom + 0.0012;
   const bezelBottomRadius = Math.min(radius * 0.86, handleRadius * 1.34);
