@@ -79,8 +79,18 @@ test('Marc metal egg is a stationary engine shell with its broad end joined to t
   assert.equal(egg, weapon.pommelAsset.asset.shell,
     'the pommel uses the exact shell mesh returned by the repo Metal Egg asset factory');
   assert.equal(egg.geometry.type, 'SphereGeometry');
-  assert.equal(egg.onBeforeRender, null,
-    'the extracted shell no longer runs the hero animation callback');
+  assert.equal(typeof egg.onBeforeRender, 'function',
+    'the renderer still receives a callable hook for the detached shell');
+  const stationaryTransform = {
+    position: egg.position.toArray(),
+    rotation: egg.rotation.toArray(),
+    scale: egg.scale.toArray(),
+  };
+  egg.onBeforeRender();
+  assert.deepEqual(egg.position.toArray(), stationaryTransform.position);
+  assert.deepEqual(egg.rotation.toArray(), stationaryTransform.rotation);
+  assert.deepEqual(egg.scale.toArray(), stationaryTransform.scale,
+    'the detached asset shell stays stationary when its render hook runs');
   assert.equal(egg.parent, weapon.pommel,
     'the shell is reparented to the stationary weapon pommel');
   assert.ok(egg.scale.y < 0, 'the engine egg shell is flipped so its broad end faces the grip');
@@ -128,6 +138,8 @@ test('Krystal sword and dagger use her crystal orb and independently toggleable 
     assert.equal(krystal.pommelAsset.kind, 'krystal-orb');
     assert.equal(krystal.pommelAsset.glass.material.transmission, 1);
     assert.ok(krystal.pommelAsset.vision, 'the orb retains Krystal ray-marched mist');
+    assert.equal(krystal.pommelAsset.vision.visible, true,
+      'Krystal mist inside the glass is always visible');
     assert.equal(krystal.pommelAsset.vision.material, krystal.pommelAsset.material);
     assert.equal(krystal.dimensions.pommelDiameter, madness.dimensions.pommelDiameter);
     assert.equal(krystal.dimensions.bladeLength, madness.dimensions.bladeLength);
@@ -143,7 +155,11 @@ test('Krystal sword and dagger use her crystal orb and independently toggleable 
 
     krystal.setBladeMist(true);
     assert.equal(krystal.bladeMist.visible, true);
+    assert.equal(krystal.pommelAsset.vision.visible, true,
+      'enabling the blade sheath does not control the orb visions');
     krystal.setBladeMist(false);
     assert.equal(krystal.bladeMist.visible, false);
+    assert.equal(krystal.pommelAsset.vision.visible, true,
+      'disabling the blade sheath leaves the orb visions running');
   }
 });

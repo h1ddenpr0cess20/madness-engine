@@ -58,6 +58,7 @@ function createKrystalOrbPommel(GFX, radius) {
   glass.castShadow = false;
   vision.castShadow = false;
   vision.receiveShadow = false;
+  vision.visible = true;
   visionMaterial.uniforms.uShape.value.set(scale, scale, scale);
 
   const timer = new GFX.Timer();
@@ -86,7 +87,9 @@ function createMetalEggPommel(GFX, radius, metal) {
   // The hero drives motion from this callback. Detaching the mesh from the
   // animated body and removing its render callback leaves the exact asset
   // completely stationary while keeping the hero implementation intact.
-  mesh.onBeforeRender = null;
+  // The renderer calls this hook unconditionally for renderable objects.
+  // Keep a no-op rather than null: the detached pommel must remain stationary.
+  mesh.onBeforeRender = () => {};
 
   const group = new GFX.Group();
   group.name = 'stationary engine Metal Egg pommel';
