@@ -76,6 +76,6 @@ export function createBitcoinCoin(GFX, { radius = 0.3, metal = 'gold' } = {}) {
     logo,
     metal,
     year: '2009',
-    motto: 'IN CHAINS WE TRUST',
+    motto: 'IN CHAINS WE RUST',
   });
 }
