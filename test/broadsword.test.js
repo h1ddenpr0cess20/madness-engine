@@ -14,12 +14,12 @@ import { MARBLE_POMMEL_RADIUS } from '../src/weapons/common.js';
 test('broadsword is modelled at real-world scale with the spark marble as its pommel', () => {
   const sword = createBroadsword(GFX);
   assert.equal(WORLD_UNITS_PER_METRE, 1);
-  assert.equal(BROADSWORD_DIMENSIONS.bladeLength, 0.81);
-  assert.equal(BROADSWORD_SPEC.bladeLength, 0.81);
+  assert.equal(BROADSWORD_DIMENSIONS.bladeLength, 0.786);
+  assert.equal(BROADSWORD_SPEC.bladeLength, 0.786);
   assert.equal(BROADSWORD_SPEC.overallLength, 0.99);
   assert.equal(sword.dimensions.unit, 'm');
   assert.ok(Math.abs(sword.dimensions.overallLength - 0.99) < 0.015, 'overall length is close to one metre');
-  assert.equal(sword.dimensions.bladeLength, 0.81);
+  assert.equal(sword.dimensions.bladeLength, 0.786);
   assert.equal(sword.dimensions.gripLength, 0.14);
   assert.ok(sword.dimensions.guardSpan > sword.dimensions.bladeWidth * 4);
   assert.equal(sword.pommel.name, 'marble');
@@ -28,6 +28,17 @@ test('broadsword is modelled at real-world scale with the spark marble as its po
   assert.equal(sword.marble.asset.glass.name, 'glass');
   assert.equal(sword.pommel.parent, sword.group);
   assert.equal(sword.handle.parent, sword.hilt);
+  assert.equal(sword.handle.geometry.parameters.height, 0.14, 'leather core remains the actual 140 mm length');
+  assert.equal(sword.handleBounds.bottom, sword.gripBounds.bottom);
+  assert.equal(sword.handleBounds.top, sword.gripBounds.top);
+  assert.ok(Math.abs(sword.handleBounds.top - (sword.guardBoss.position.y - sword.guardBoss.scale.y)) < 1e-9,
+    'handle stops flush at the lower face of the guard boss');
+  assert.equal(sword.bezel.name, 'marble-to-leather metal bezel');
+  assert.ok(sword.bezelBounds.bottom < sword.marble.height, 'bezel collar seats on the marble shoulder');
+  assert.equal(sword.bezelBounds.top, sword.handleBounds.bottom, 'bezel meets the handle at its lower end');
+  const sleeve = sword.bezel.children.find((part) => part.name === 'pommel bezel hollow sleeve');
+  assert.ok(sleeve.geometry.parameters.openEnded, 'bezel is hollow and does not cap the marble');
+  assert.equal(sleeve.material.name, 'hilt metal', 'bezel uses the independently selected hilt metal');
   assert.equal(sword.dimensions.marbleDiameter, 0.054);
   assert.equal(sword.blade.name, 'solid double-edged blade with 75% fuller');
   assert.ok(sword.blade.geometry.attributes.position.count > 800);
@@ -128,4 +139,16 @@ test('blade is a watertight solid with a fuller that ends at 75 percent', () => 
   const afterFuller = thicknessAt(49);
   assert.ok(atHalf < thicknessAt(8) * 0.9, 'fuller visibly depresses the central section');
   assert.ok(afterFuller > nearThreeQuarter, 'fuller fades away at 75 percent');
+});
+
+
+test('handle is not buried in either the spark marble or the guard', () => {
+  const sword = createBroadsword(GFX);
+  const glassTop = sword.marble.height;
+  assert.ok(sword.handleBounds.bottom > glassTop, 'leather begins above the glass surface');
+  assert.equal(sword.handleBounds.length, BROADSWORD_DIMENSIONS.gripLength);
+  assert.ok(sword.handleBounds.top <= sword.guardBoss.position.y - sword.guardBoss.scale.y + 1e-9,
+    'leather does not penetrate the guard boss');
+  assert.ok(sword.bezelBounds.outerRadius > sword.handle.geometry.parameters.radiusTop,
+    'bezel gives the leather-to-marble joint a visible metal shoulder');
 });
