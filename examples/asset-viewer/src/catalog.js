@@ -508,6 +508,8 @@ function bowlingPinItems() {
 
 /** Dedicated shelf for measured, display-ready weapons. */
 const WEAPON_ASSETS = [
+  { id: 'weapons/banana-dagger', factory: 'createBananaDagger', name: 'Banana Dagger', group: 'Novelty Set', paletteKind: 'banana-weapon', bladeMetal: 'chrome', hiltMetal: 'brass', innerMetal: 'chrome' },
+
   { id: 'weapons/madness-sword', factory: 'createMadnessSword', name: 'Madness Sword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
   { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
   { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
@@ -551,6 +553,7 @@ function weaponItems() {
       bladeMetal = bladeMetalDefault ?? 'steel',
       hiltMetal = hiltMetalDefault ?? 'steel',
       metal = metalDefault ?? 'steel',
+      innerMetal = 'chrome',
       colours = {},
     } = {}) {
       const [weapons, metals] = await Promise.all([
@@ -559,7 +562,9 @@ function weaponItems() {
       ]);
       const made = paletteKind === 'morningstar'
         ? weapons[factory](GFX, { metal, gripColor: colours.gripColor ?? grip ?? '#633b2c' })
-        : weapons[factory](GFX, {
+        : paletteKind === 'banana-weapon'
+          ? weapons[factory](GFX, { bladeMetal, hiltMetal, innerMetal })
+          : weapons[factory](GFX, {
           bladeMetal,
           hiltMetal,
           gripColor: colours.gripColor ?? grip ?? '#633b2c',
