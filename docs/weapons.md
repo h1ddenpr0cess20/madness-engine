@@ -27,7 +27,9 @@ one standard dimension.
 
 `createBroadsword(GFX, options)` builds a point-up broadsword with the actual
 engine glass-and-spark marble integrated into the bottom of the leather grip
-as the pommel. The blade and hilt each accept one of the 12
+as the pommel. A hollow metal bezel follows the marble's shoulder, while a
+small upper cap and domed guard boss cover the grip end without burying the
+handle. The blade and hilt each accept one of the 12
 shared `METALS` finishes and change independently; the grip has a live hex
 colour setter.
 
