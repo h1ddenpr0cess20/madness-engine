@@ -14,12 +14,12 @@ import { MARBLE_POMMEL_RADIUS } from '../src/weapons/common.js';
 test('broadsword is modelled at real-world scale with the spark marble as its pommel', () => {
   const sword = createBroadsword(GFX);
   assert.equal(WORLD_UNITS_PER_METRE, 1);
-  assert.equal(BROADSWORD_DIMENSIONS.bladeLength, 0.795);
-  assert.equal(BROADSWORD_SPEC.bladeLength, 0.795);
+  assert.equal(BROADSWORD_DIMENSIONS.bladeLength, 0.81);
+  assert.equal(BROADSWORD_SPEC.bladeLength, 0.81);
   assert.equal(BROADSWORD_SPEC.overallLength, 0.99);
   assert.equal(sword.dimensions.unit, 'm');
   assert.ok(Math.abs(sword.dimensions.overallLength - 0.99) < 0.015, 'overall length is close to one metre');
-  assert.equal(sword.dimensions.bladeLength, 0.795);
+  assert.equal(sword.dimensions.bladeLength, 0.81);
   assert.equal(sword.dimensions.gripLength, 0.14);
   assert.ok(sword.dimensions.guardSpan > sword.dimensions.bladeWidth * 4);
   assert.equal(sword.pommel.name, 'marble');
@@ -28,12 +28,13 @@ test('broadsword is modelled at real-world scale with the spark marble as its po
   assert.equal(sword.marble.asset.glass.name, 'glass');
   assert.equal(sword.pommel.parent, sword.group);
   assert.equal(sword.handle.parent, sword.hilt);
-  assert.equal(sword.dimensions.marbleDiameter, 0.072);
+  assert.equal(sword.dimensions.marbleDiameter, 0.054);
   assert.equal(sword.blade.name, 'solid double-edged blade with 75% fuller');
   assert.ok(sword.blade.geometry.attributes.position.count > 800);
   assert.ok(sword.blade.geometry.index.count > 4000);
   assert.equal(sword.blade.material.metalness, 1);
   assert.equal(sword.blade.material.name, 'blade metal');
+  assert.ok(sword.blade.geometry.attributes.normal.getZ(64) > 0.7, 'upper blade skin normals face outward');
   assert.equal(sword.hilt.name, 'connected hilt assembly');
 });
 
