@@ -1,9 +1,9 @@
 import { createCoin } from './coin.js';
 
 /**
- * Creates the Bitcoin alternate of the struck coin. The Bitcoin mark is
- * supplied as a high-contrast canvas so the existing relief machinery raises
- * it from both faces. Bitcoin's creation year is struck beneath the symbol.
+ * Bitcoin's familiar Bitboy mark, rendered from the published vector path
+ * rather than a font glyph or an approximation. The shared coin builder
+ * handles the year and lettering, preserving the original date geometry.
  *
  * @param {object} GFX
  * @param {object} [options]
@@ -20,52 +20,22 @@ export function createBitcoinCoin(GFX, { radius = 0.3, metal = 'gold' } = {}) {
     canvas.height = size;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (ctx) {
-      // Build the ₿ mark from paths so its appearance does not depend on a
-      // platform font having the Bitcoin currency glyph.
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#fff';
+
+      // White Bitcoin B from Bitcoin Design's published Bitboy vector.
+      // Its orange circular surround is intentionally omitted: the coin
+      // itself supplies the circular field and metallic relief.
+      const mark = new Path2D('M48.3110008,84.375c-.3920021.9720001-1.3850021,2.4309998-3.6210022,1.8769989.0790024.1139984-5.7449989-1.4329987-5.7449989-1.4329987l-3.9199982,9.0410004,10.2799988,2.5629959c1.9109993.4790039,3.7879982.9790039,5.632,1.4530029l-3.2670021,13.1269989,7.8910027,1.9690018,3.2369995-12.9869995c2.1580009.5839996,4.25,1.125,6.2980003,1.6340027l-3.2260017,12.9259949,7.8999977,1.9690018,3.2700043-13.1019974c13.4729996,2.5479965,23.6039963,1.5199966,27.8659973-10.663002,3.4370041-9.8099976-.1699982-15.4690018-7.2579956-19.1600037,5.1609955-1.1899948,9.0509949-4.5859985,10.0879974-11.5979958,1.4329987-9.5820007-5.8629996-14.7310028-15.8379974-18.1669998l3.2350006-12.9780006-7.8990021-1.9689999-3.151001,12.6359997c-2.0790024-.5180016-4.2099991-1.0060005-6.3310013-1.4890022l3.1709976-12.7199974-7.8939972-1.9690018-3.2389984,12.9760017-15.9309998-3.9459991-2.1020012,8.4369965s5.8610001,1.3430023,5.7369995,1.427002c3.2000008.7989998,3.7770004,2.9160004,3.6809998,4.5940018l-8.8639984,35.5519981ZM85.6869965,87.302002c-2.4440002,9.810997-18.9599991,4.5069962-24.317997,3.1759949l4.3380013-17.3889999c5.3549957,1.3350067,22.5299988,3.9810028,19.9799957,14.2130051ZM88.1269989,61.8499985c-2.2259979,8.9240036-15.9749985,4.3889999-20.4349976,3.2770004l3.9319992-15.7719994c4.4589996,1.1119995,18.8239975,3.1870003,16.5029984,12.4949989Z');
       ctx.save();
-      // Scale the mark inward to leave room for the builder's year engraving.
-      ctx.translate(256, 256);
-      ctx.scale(0.82, 0.78);
-      ctx.translate(-299, -256);
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.moveTo(172, 82);
-      ctx.lineTo(281, 82);
-      ctx.bezierCurveTo(373, 82, 408, 127, 408, 197);
-      ctx.bezierCurveTo(408, 245, 386, 272, 348, 286);
-      ctx.bezierCurveTo(401, 301, 426, 338, 426, 391);
-      ctx.bezierCurveTo(426, 469, 369, 497, 277, 497);
-      ctx.lineTo(172, 497);
-      ctx.closePath();
-      ctx.fill();
-
-      // The two counters make the character read as a B rather than a solid bar.
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.moveTo(239, 143);
-      ctx.lineTo(281, 143);
-      ctx.bezierCurveTo(326, 143, 344, 160, 344, 198);
-      ctx.bezierCurveTo(344, 233, 323, 249, 281, 249);
-      ctx.lineTo(239, 249);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(239, 316);
-      ctx.lineTo(285, 316);
-      ctx.bezierCurveTo(333, 316, 360, 332, 360, 376);
-      ctx.bezierCurveTo(360, 420, 333, 436, 285, 436);
-      ctx.lineTo(239, 436);
-      ctx.closePath();
-      ctx.fill();
-
-      // Bitcoin's paired vertical strokes extend beyond the top and bottom of B.
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(195, 52, 17, 136);
-      ctx.fillRect(230, 52, 17, 136);
-      ctx.fillRect(195, 391, 17, 100);
-      ctx.fillRect(230, 391, 17, 100);
+      // The source vector uses a 144 × 145 viewBox. Fit its B mark into the
+      // same 512 px square canvas used by the original coin-logo pipeline.
+      ctx.translate(size / 2, size / 2);
+      ctx.rotate(14 * Math.PI / 180);
+      ctx.scale(3.35, 3.35);
+      ctx.translate(-72, -72.5);
+      ctx.fill(mark);
       ctx.restore();
       logo = canvas;
     }
