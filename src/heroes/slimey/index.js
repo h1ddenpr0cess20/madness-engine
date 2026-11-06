@@ -11,7 +11,7 @@ export { METALS };
 
 export function createSlimeOrb({ stage, GFX, metal = null, lava = false }) {
   if (lava && metal !== null) throw new Error('Slimey cannot be both lava and metal');
-  if (!lava) buildEnvironment({ stage, GFX });
+  buildEnvironment({ stage, GFX });
 
   const paletteAt = createPalette(GFX);
   const deform = createDeformer(GFX);
@@ -23,8 +23,11 @@ export function createSlimeOrb({ stage, GFX, metal = null, lava = false }) {
   const glow = createGlow(GFX, shell.geometry);
   const bubbles = createBubbles(GFX);
   const lavaMaterial = lava ? createLavaMaterial(GFX, { mapping: 'local', scale: 4.35 }) : null;
+  const lavaGlowMesh = lava ? new GFX.Mesh(shell.geometry, lavaMaterial.hotMaterial) : null;
   if (lava) {
     shell.mesh.material = lavaMaterial;
+    lavaGlowMesh.name = 'lava-glow';
+    lavaGlowMesh.scale.setScalar(1.0015);
     core.mesh.visible = false;
     glow.mesh.visible = false;
     for (const bubble of bubbles.meshes) bubble.visible = false;
@@ -32,7 +35,7 @@ export function createSlimeOrb({ stage, GFX, metal = null, lava = false }) {
 
   const orb = new GFX.Group();
   orb.name = 'slime_orb';
-  orb.add(shell.mesh, core.mesh, glow.mesh, ...bubbles.meshes);
+  orb.add(shell.mesh, ...(lavaGlowMesh ? [lavaGlowMesh] : []), core.mesh, glow.mesh, ...bubbles.meshes);
 
   let mode = MODES.idle;
   let state = 'idle';
@@ -140,6 +143,7 @@ export function createSlimeOrb({ stage, GFX, metal = null, lava = false }) {
   stage.setObject(orb);
 
   glow.mesh.castShadow = glow.mesh.receiveShadow = false;
+  if (lavaGlowMesh) lavaGlowMesh.castShadow = lavaGlowMesh.receiveShadow = false;
   for (const b of bubbles.meshes) b.castShadow = b.receiveShadow = false;
 
   const api = {
