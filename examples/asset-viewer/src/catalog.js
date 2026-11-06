@@ -303,6 +303,7 @@ function proceduralPropItem(def, path) {
       return {
         object,
         frame: made?.frame,
+        pose: made?.pose,
         mist: made?.mist,
         ...dressOf(made),
         info: { Source: source, ...countOf(object) },
