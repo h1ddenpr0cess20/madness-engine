@@ -172,10 +172,10 @@ test('Marc metal egg is a stationary engine shell with its broad end joined to t
     eggTop = Math.max(eggTop, source.getY(i) * egg.scale.y + egg.position.y);
   }
   const gripBottom = weapon.handle.position.y - weapon.handle.geometry.parameters.height / 2;
-  assert.ok(eggTop >= gripBottom - 0.0011,
-    'the broad Metal Egg shoulder seats against the handle');
-  assert.ok(eggTop <= gripBottom + 0.0001,
-    'the Metal Egg only overlaps the handle by the fitted 1 mm seat');
+  assert.ok(eggTop >= gripBottom,
+    'the broad Metal Egg shoulder reaches the handle');
+  assert.ok(eggTop <= gripBottom + 0.0011,
+    'the Metal Egg overlaps the handle by no more than the fitted 1 mm seat');
 
   weapon.setHiltMetal('gold');
   assert.equal(egg.material.color.getHexString(), METALS.gold.color.slice(1));
