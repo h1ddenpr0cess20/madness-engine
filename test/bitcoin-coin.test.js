@@ -3,10 +3,10 @@ import { test } from 'node:test';
 
 import { readFileSync } from 'node:fs';
 import { createBitcoinCoin } from '../src/props/index.js';
+import { assetViewer as bitcoinViewerAsset } from '../src/props/bitcoin-coin.js';
 
 const bitcoinCoin = readFileSync(new URL('../src/props/bitcoin-coin.js', import.meta.url), 'utf8');
 const catalog = readFileSync(new URL('../examples/asset-viewer/src/catalog.js', import.meta.url), 'utf8');
-import { assetViewer as bitcoinViewerAsset } from '../src/props/bitcoin-coin.js';
 
 test('the Bitcoin coin factory is exported from the props library', () => {
   assert.equal(typeof createBitcoinCoin, 'function');
