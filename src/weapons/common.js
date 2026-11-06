@@ -590,7 +590,7 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
   geometry.setAttribute('uv', new GFX.BufferAttribute(new Float32Array(uvs), 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
-  geometry.userData.pointProfile = Object.freeze({
+  geometry.pointProfile = Object.freeze({
     pointStart: 0.84,
     pointEnd: 0.985,
     terminalWidthRatio: 0.14,
