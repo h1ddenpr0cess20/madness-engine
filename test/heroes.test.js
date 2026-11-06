@@ -8,6 +8,7 @@ const HEROES = {
   marble: ['createMarble', 'RADIUS'],
   'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
   'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'METALS'],
+  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'METALS', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
@@ -168,6 +169,96 @@ test('Slimey deformation keeps the duplicated longitude seam position and normal
       assert.ok(Math.abs(attr.getX(a) - attr.getX(b)) < 1e-7);
       assert.ok(Math.abs(attr.getY(a) - attr.getY(b)) < 1e-7);
       assert.ok(Math.abs(attr.getZ(a) - attr.getZ(b)) < 1e-7);
+    }
+  }
+});
+
+
+test('metal and clear-glass Egg keep Marc geometry and behaviour with optional white-yellow mist', async () => {
+  const { createEgg, createMetalEgg, createGlassEgg, METALS, ROLL_REACH } = await import('../src/heroes/debater-egg/index.js');
+  const original = createEgg({ GFX });
+  const metal = createMetalEgg({ GFX, metal: 'silver' });
+  const clear = createGlassEgg({ GFX });
+  const misty = createGlassEgg({ GFX, mist: true });
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+
+  const originalShell = shellOf(original);
+  const metalShell = shellOf(metal);
+  const glassShell = shellOf(clear);
+  assert.deepEqual(metalShell.geometry.attributes.position.array, originalShell.geometry.attributes.position.array);
+  assert.deepEqual(glassShell.geometry.attributes.position.array, originalShell.geometry.attributes.position.array);
+  assert.equal(metalShell.material.metalness, 1);
+  assert.equal(metalShell.material.roughness, METALS.silver.roughness);
+  assert.equal(metal.metal, 'silver');
+  assert.equal(metal.reach, ROLL_REACH);
+  metal.setMetal('copper');
+  assert.equal(metal.metal, 'copper');
+  assert.equal(metalShell.material.roughness, METALS.copper.roughness);
+  assert.throws(() => metal.setMetal('unobtainium'), /no metal/);
+
+  assert.equal(glassShell.material.transmission, 1);
+  assert.equal(glassShell.material.metalness, 0);
+  assert.equal(glassShell.material.roughness, 0.02);
+  assert.equal(clear.mist.visible, false);
+  clear.setMist(true);
+  assert.equal(clear.mist.visible, true);
+  clear.setMist(false);
+  assert.equal(clear.mist.visible, false);
+
+  assert.equal(misty.mist.visible, true);
+  assert.equal(misty.mist.material.uniforms.uDuo.value, 1);
+  const white = misty.mist.material.uniforms.uDuoB.value;
+  const centre = misty.mist.material.uniforms.uDuoC.value;
+  const uniforms = misty.mist.material.uniforms;
+  assert.ok(white.x > 0.95 && white.y > 0.95 && white.z > 0.9);
+  assert.ok(Math.abs(centre.x - white.x) < 1e-7 && Math.abs(centre.y - white.y) < 1e-7 && Math.abs(centre.z - white.z) < 1e-7,
+    'the mist colour is white away from its radial centre, with no yellow side band');
+  assert.equal(uniforms.uCore.value, 0.9, 'the yellow accent comes from the radial centre glow');
+  assert.ok(uniforms.uHue.value > 0.3 && uniforms.uHue.value < 0.5, 'the radial core hue is warm yellow');
+  assert.equal(misty.mist.renderOrder, 1);
+  const inner = misty.mist.geometry.attributes.position;
+  const outer = glassShell.geometry.attributes.position;
+  const maxY = (attribute) => {
+    let max = -Infinity;
+    for (let i = 0; i < attribute.count; i++) max = Math.max(max, attribute.getY(i));
+    return max;
+  };
+  assert.ok(maxY(inner) / maxY(outer) > 0.98, 'mist fills the egg almost to the inner shell');
+});
+
+
+test('metal Egg has continuous UV-seam and pole normals for unbroken reflections', async () => {
+  const { createMetalEgg } = await import('../src/heroes/debater-egg/index.js');
+  const metal = createMetalEgg({ GFX, metal: 'chrome' });
+  const shell = metal.shell.geometry;
+  const { uv, position, normal } = shell.attributes;
+  const starts = new Map();
+  const ends = new Map();
+  for (let i = 0; i < uv.count; i++) {
+    const u = uv.getX(i), v = uv.getY(i), row = Math.round(v * 1e6);
+    if (u <= 1e-6) starts.set(row, i);
+    else if (u >= 1 - 1e-6) ends.set(row, i);
+  }
+  assert.ok(starts.size > 0);
+  for (const [row, a] of starts) {
+    const b = ends.get(row);
+    if (b === undefined) continue;
+    for (const attr of [position, normal]) {
+      assert.ok(Math.abs(attr.getX(a) - attr.getX(b)) < 1e-7, `row ${row} x matches`);
+      assert.ok(Math.abs(attr.getY(a) - attr.getY(b)) < 1e-7, `row ${row} y matches`);
+      assert.ok(Math.abs(attr.getZ(a) - attr.getZ(b)) < 1e-7, `row ${row} z matches`);
+    }
+  }
+  for (const pole of [0, 1]) {
+    const indices = Array.from({ length: uv.count }, (_, i) => i).filter((i) => Math.abs(uv.getY(i) - pole) < 1e-6);
+    assert.ok(indices.length > 1);
+    for (const attr of [position, normal]) {
+      const first = [attr.getX(indices[0]), attr.getY(indices[0]), attr.getZ(indices[0])];
+      for (const i of indices.slice(1)) {
+        assert.ok(Math.abs(attr.getX(i) - first[0]) < 1e-7);
+        assert.ok(Math.abs(attr.getY(i) - first[1]) < 1e-7);
+        assert.ok(Math.abs(attr.getZ(i) - first[2]) < 1e-7);
+      }
     }
   }
 });

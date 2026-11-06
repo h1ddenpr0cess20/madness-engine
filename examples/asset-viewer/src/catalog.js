@@ -157,6 +157,14 @@ const HEROES = [
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
   ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],
   ['egg (debater)', () => import('../../../src/heroes/debater-egg/index.js').then((m) => m.createEgg({ GFX }))],
+  ['metal egg (debater)', ({ metal = 'steel' } = {}) => Promise.all([import('../../../src/heroes/debater-egg/index.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
+    h.createMetalEgg({ GFX, metal }),
+    { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
+  )), null, { metal: METAL_CHOICES }],
+  ['glass egg (debater)', () => Promise.all([import('../../../src/heroes/debater-egg/index.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
+    h.createGlassEgg({ GFX }),
+    { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
+  ))],
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
   ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
   ['metal vibey', ({ metal = 'steel' } = {}) => avatar('../../../src/heroes/vibey/index.js', 'createMetalStar', { metal }), null, { metal: METAL_CHOICES }],
@@ -306,7 +314,10 @@ function heroItem([name, make, palette = null, options = null]) {
       let last = 0;
       const pose = typeof made?.update === 'function' && made.update.length === 1 ? ({ time }) => { made.update(Math.max(0, time - last)); last = time; } : undefined;
       pose?.({ time: 0.016 });
-      return { object, pose, frame: made?.frame, ...dressOf(made), info: { Source: 'heroes', ...countOf(object) } };
+      const mist = made?.mist && typeof made.setMist === 'function'
+        ? { get: () => made.mist.visible, set: (on) => made.setMist(on) }
+        : made?.mist;
+      return { object, pose, frame: made?.frame, mist, ...dressOf(made), info: { Source: 'heroes', ...countOf(object) } };
     },
   };
 }
