@@ -160,4 +160,6 @@ test('handle is not buried in either the spark marble or the guard', () => {
   assert.ok(sword.guardBoss.position.y > sword.bossSeatBounds.top, 'domed guard boss is above the overlap cap');
   assert.ok(sword.bezelBounds.outerRadius > sword.handle.geometry.parameters.radiusTop,
     'bezel gives the leather-to-marble joint a visible metal shoulder');
+  assert.ok(sword.bezelBounds.outerRadius > MARBLE_POMMEL_RADIUS * 0.82,
+    'hollow bezel opening clears the marble spark reach');
 });
