@@ -33,16 +33,49 @@ function assertEggBezelOutsideShell(weapon) {
   const segments = geometry.radialSegments;
   const rows = geometry.axialSegments;
   const radius = weapon.pommelAsset.radius;
-  const centerY = radius + 0.0125 - radius * 0.01 / 1.03;
+  const centerY = radius;
+
   for (let row = 0; row <= rows; row++) {
     const index = row * segments;
     const sleeveRadius = Math.hypot(positions.getX(index), positions.getZ(index));
-    const y = (centerY - positions.getY(index)) / radius;
+    const worldY = positions.getY(index) + sleeve.position.y;
+    const y = (centerY - worldY) / radius;
     const eggRadius = Math.abs(y) >= 1 ? 0
       : 0.032 * 0.84 * (1 - 0.075 * y - 0.055 * y * y) * Math.sqrt(1 - y * y);
     assert.ok(sleeveRadius >= eggRadius + 0.00079,
       `bezel remains outside egg shell at sleeve row ${row}`);
   }
+
+  assert.ok(sleeve.position.y > centerY + radius * 0.25,
+    'the ferrule is around the upper shoulder, not the egg equator');
+  const shell = weapon.pommelAsset.mesh ?? weapon.pommelAsset.glass;
+  assert.ok(shell.scale.y < 0,
+    'the shell is flipped so its narrow point faces outward, away from the grip');
+
+  let maxLocalY = -Infinity;
+  let minLocalY = Infinity;
+  let positiveEndRadius = 0;
+  let negativeEndRadius = 0;
+  const shellPositions = shell.geometry.attributes.position;
+  for (let i = 0; i < shellPositions.count; i++) {
+    const y = shellPositions.getY(i);
+    maxLocalY = Math.max(maxLocalY, y);
+    minLocalY = Math.min(minLocalY, y);
+    const r = Math.hypot(shellPositions.getX(i), shellPositions.getZ(i));
+    if (y > 0.65) positiveEndRadius = Math.max(positiveEndRadius, r);
+    if (y < -0.65) negativeEndRadius = Math.max(negativeEndRadius, r);
+  }
+  const narrowTipWorldY = shell.position.y + maxLocalY * shell.scale.y;
+  const broadEndWorldY = shell.position.y + minLocalY * shell.scale.y;
+  assert.ok(narrowTipWorldY < broadEndWorldY,
+    'the narrow egg tip is at the pommel end, not buried in the grip');
+  assert.ok(positiveEndRadius < negativeEndRadius,
+    'the outward-facing end is the narrower, more pointed end');
+
+  const gripBottom = weapon.handle.position.y - weapon.handle.geometry.parameters.height / 2;
+  const shellTop = broadEndWorldY;
+  assert.ok(shellTop <= gripBottom + 0.001,
+    'the egg broad end only meets the grip instead of disappearing deeply inside it');
 }
 
 test('Madness and Regular retain their original guard shape and differ only at the pommel', () => {
