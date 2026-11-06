@@ -280,14 +280,26 @@ const MOVING = [
     globe.spinRate = 0.12;
     return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
   }), 'props/resinglobe']),
-  // A coin of the logo, raised, in the same metals.
-  ['coin', 'Animated props', 'coin', ({ metal = 'gold' } = {}) => Promise.all([import('../../../src/props/coin.js'), import('../../../src/props/metalglobe.js'), import('../../../src/textures/coin/logo.js')]).then(async ([c, m, t]) => {
-    const coin = c.createCoin(GFX, { radius: 0.3, logo: await t.loadCoinLogo(), metal });
-    coin.spinRate = 0.9;
-    return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) });
-  }), 'props/coin', { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }],
   ['frying pan', 'Props', 'debater', () => import('../../../src/props/pan/index.js').then((m) => m.buildPan(GFX))],
 ];
+
+/** A procedural prop's opt-in viewer descriptor. New props register by exporting `assetViewer`. */
+function proceduralPropItem(def, path) {
+  const source = where(path);
+  const name = def.name ?? stem(path).replaceAll('-', ' ');
+  const category = def.category ?? 'Animated props';
+  const group = def.group ?? 'props';
+  return {
+    id: `props/${def.id ?? stem(path)}`, category, group, name, source, kind: 'object', options: def.options ?? null,
+    async build(opts = {}) {
+      const made = await def.build({ GFX, ...opts, renderer: globalThis.assetViewer?.renderer ?? null });
+      const object = objectOf(made);
+      if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
+      return { object, frame: made?.frame, mist: made?.mist, ...dressOf(made), info: { Source: source, ...countOf(object) } };
+    },
+  };
+}
+
 function movingItem([name, category, group, make, from = null, options = null]) {
   const source = from ?? (category === 'Props' ? 'props/pan' : `heroes/${name}`);
   return {
@@ -524,6 +536,7 @@ export async function loadCatalog(onProgress = () => {}) {
     let mod;
     try { mod = await load(); } catch (err) { console.warn(`${where(path)}: ${err.message}`); continue; }
     const folder = where(path).split('/')[0];
+    if (folder === 'props' && mod.assetViewer) items.push(proceduralPropItem(mod.assetViewer, path));
     const group = folder === 'scenery' ? file.split('.')[0] : folder;
     for (const [key, value] of Object.entries(mod)) {
       const defs = isDef(value) ? [[key, value]] : value && typeof value === 'object' && !Array.isArray(value) ? Object.entries(value).filter(([, v]) => isDef(v)) : [];

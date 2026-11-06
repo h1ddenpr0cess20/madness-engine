@@ -14,12 +14,13 @@ import { METALS } from './metalglobe.js';
  * @param {object} GFX
  * @param {object} [options]
  * @param {number} [options.radius]
- * @param {HTMLCanvasElement} [options.logo]  the logo, white on black, square
+ * @param {HTMLCanvasElement} [options.logo]  the front logo, white on black, square
+ * @param {HTMLCanvasElement} [options.backLogo]  the reverse logo; defaults to `logo`
  * @param {string} [options.metal]  a key of `METALS`
  * @param {string} [options.year]  struck small under the logo's right-hand end
  * @param {string} [options.motto]  struck in an arc round the top of the face
  */
-export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold', year = '2027', motto = 'In Claude We Trust' } = {}) {
+export function createCoin(GFX, { radius = 0.3, logo = null, backLogo = logo, metal = 'gold', year = '2027', motto = 'In Claude We Trust' } = {}) {
   const half = radius * 0.09;                 // half the coin's thickness at the field
   const lip = radius * 0.05;                  // how far the rim stands above the field
   const material = new GFX.MeshPhysicalMaterial({ name: 'coin metal', color: new GFX.Color('#ffffff'), metalness: 1, roughness: 0.25, envMapIntensity: 3 });
@@ -122,8 +123,9 @@ export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold', yea
     return { geometry, x: ((x0 + x1) / 2 - W / 2) * perPixel, y: -((y0 + y1) / 2 - H / 2) * perPixel };
   };
   const reliefMaterial = new GFX.MeshPhysicalMaterial({ name: 'coin relief', color: new GFX.Color('#ffffff'), metalness: 1, roughness: 0.25, envMapIntensity: 3 });
-  const strike = ({ geometry, x, y }) => {
-    for (const side of [1, -1]) {
+  const strike = ({ geometry, x, y }, face = null) => {
+    const faces = face === null ? [1, -1] : [face];
+    for (const side of faces) {
       const mesh = new GFX.Mesh(geometry, reliefMaterial);
       mesh.name = 'coin relief';
       mesh.castShadow = true;
@@ -134,32 +136,31 @@ export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold', yea
   };
   material.userData.logos = [reliefMaterial];
 
-  if (logo) {
-    const W = logo.width, H = logo.height;
-    const [, y0, x1, y1] = boxOf(logo.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data, W, H);
-    // The year, small, under the logo's right-hand end, on a canvas of its own the logo's size, so it can be struck lower and finer than the logo is.
-    const S = 1;
+  const strikeFace = (faceLogo, side) => {
+    const W = faceLogo.width, H = faceLogo.height;
+    const [, y0, x1, y1] = boxOf(faceLogo.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data, W, H);
     const dated = document.createElement('canvas');
-    dated.width = W * S; dated.height = H * S;
+    dated.width = W; dated.height = H;
     const dctx = dated.getContext('2d', { willReadFrequently: true });
-    dctx.fillStyle = '#000'; dctx.fillRect(0, 0, W * S, H * S);
+    dctx.fillStyle = '#000'; dctx.fillRect(0, 0, W, H);
     dctx.fillStyle = '#ffffff';
-    dctx.font = `600 ${Math.round((y1 - y0) * 0.1 * S)}px Georgia, 'Times New Roman', serif`;
+    dctx.font = `600 ${Math.round((y1 - y0) * 0.1)}px Georgia, 'Times New Roman', serif`;
     dctx.textAlign = 'right'; dctx.textBaseline = 'top';
-    dctx.fillText(year, x1 * S, (y1 + (y1 - y0) * 0.05) * S);
-    // The logo and its year together set the scale: as wide as the field allows, inside the ring of lettering
-    // (their corners reach 0.72 of the radius).
+    dctx.fillText(year, x1, y1 + (y1 - y0) * 0.05);
     const both = document.createElement('canvas');
     both.width = W; both.height = H;
     const bctx = both.getContext('2d', { willReadFrequently: true });
-    bctx.drawImage(logo, 0, 0);
-    bctx.globalCompositeOperation = 'lighten';         // the year's black ground must not cover the logo
-    bctx.drawImage(dated, 0, 0, W, H);
+    bctx.drawImage(faceLogo, 0, 0);
+    bctx.globalCompositeOperation = 'lighten';
+    bctx.drawImage(dated, 0, 0);
     const [bx0, by0, bx1, by1] = boxOf(bctx.getImageData(0, 0, W, H).data, W, H);
     const fit = (R * 0.72 * 2) / Math.hypot(bx1 - bx0 + 17, by1 - by0 + 17);
-    strike(reliefOf(logo, fit));
-    // The year is struck low and fine: it is small, and a ridge as high and strokes as bold as the logo's would be out of all proportion.
-    strike(reliefOf(dated, fit / S, { grow: 1, ridge: 0.8, pad: 4, soften: 1, gain: 2.2 }));
+    strike(reliefOf(faceLogo, fit), side);
+    strike(reliefOf(dated, fit, { grow: 1, ridge: 0.8, pad: 4, soften: 1, gain: 2.2 }), side);
+  };
+  if (logo || backLogo) {
+    strikeFace(logo ?? backLogo, 1);
+    strikeFace(backLogo ?? logo, -1);
   }
 
   // The motto, round the top of the rim as an arc, each letter turned to stand on the circle.
@@ -207,3 +208,17 @@ export function createCoin(GFX, { radius = 0.3, logo = null, metal = 'gold', yea
   };
   return api.setMetal(metal);
 }
+
+export const assetViewer = {
+  id: 'coin',
+  name: 'coin',
+  category: 'Animated props',
+  group: 'coin',
+  options: { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] },
+  async build({ GFX, metal = 'gold', renderer = null } = {}) {
+    const [{ studioEnvironment }, texture] = await Promise.all([import('./metalglobe.js'), import('../textures/coin/logo.js')]);
+    const coin = createCoin(GFX, { radius: 0.3, logo: await texture.loadCoinLogo(), metal });
+    coin.spinRate = 0.9;
+    return Object.assign(coin, { frame: { center: [0, 0, 0], radius: 0.34 }, environment: studioEnvironment(GFX, renderer) });
+  },
+};
