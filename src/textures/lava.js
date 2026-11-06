@@ -88,24 +88,6 @@ function fbm2(u, v, seed, cells = 3, octaves = 4) {
   return sum / total;
 }
 
-function heatColour(h) {
-  const stops = [
-    [0.00, [76, 8, 3]],
-    [0.34, [135, 17, 4]],
-    [0.67, [235, 66, 7]],
-    [0.86, [255, 151, 24]],
-    [1.00, [255, 231, 155]],
-  ];
-  for (let i = 1; i < stops.length; i++) {
-    if (h <= stops[i][0]) {
-      const a = stops[i - 1][0], ca = stops[i - 1][1];
-      const b = stops[i][0], cb = stops[i][1];
-      const t = smooth(a, b, h);
-      return ca.map((v, k) => Math.round(mix(v, cb[k], t)));
-    }
-  }
-  return stops[stops.length - 1][1];
-}
 
 function sphereField(u, v, scale) {
   const phi = v * Math.PI;
