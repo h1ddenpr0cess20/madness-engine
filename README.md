@@ -269,3 +269,8 @@ npm run lint
 npm run extract -- --games ..  # rebuilds the library from the games
 npm run verify -- --games ..   # every game beside this folder; --only a,b to pick; --skip-tests for the quick part; --package for the package install and build
 ```
+
+
+## Weapons
+
+Measured, display-ready weapon assets are documented in [docs/weapons.md](docs/weapons.md). The first is a one-metre-class broadsword, built at real-world scale with independent blade and hilt metal finishes, a selectable leather grip colour, and a marble display plinth.
