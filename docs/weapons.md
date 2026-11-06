@@ -45,5 +45,5 @@ sword.setHiltMetal('brass');
 sword.setGripColor('#75452e');
 ```
 
-Published dimensions (excluding the stand): 0.99 m overall, 0.78 m blade,
+Published dimensions (excluding the stand): 0.99 m overall, 0.786 m blade,
 52 mm maximum blade width, 140 mm grip, and 220 mm crossguard span.
