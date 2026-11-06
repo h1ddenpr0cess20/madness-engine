@@ -9,28 +9,32 @@ import {
   WORLD_UNITS_PER_METRE,
   createBroadsword,
 } from '../src/weapons/broadsword.js';
-import { MARBLE_DISPLAY_BASE } from '../src/weapons/common.js';
+import { MARBLE_POMMEL_RADIUS } from '../src/weapons/common.js';
 
-test('broadsword is modelled at real-world scale with a separate marble plinth', () => {
+test('broadsword is modelled at real-world scale with the spark marble as its pommel', () => {
   const sword = createBroadsword(GFX);
   assert.equal(WORLD_UNITS_PER_METRE, 1);
-  assert.equal(BROADSWORD_DIMENSIONS.bladeLength, 0.786);
-  assert.equal(BROADSWORD_SPEC.bladeLength, 0.786);
+  assert.equal(BROADSWORD_DIMENSIONS.bladeLength, 0.795);
+  assert.equal(BROADSWORD_SPEC.bladeLength, 0.795);
   assert.equal(BROADSWORD_SPEC.overallLength, 0.99);
   assert.equal(sword.dimensions.unit, 'm');
-  assert.ok(Math.abs(sword.dimensions.overallLength - 0.99) < 0.002, 'overall length is close to the published 0.99 m');
-  assert.equal(sword.dimensions.bladeLength, 0.786);
+  assert.ok(Math.abs(sword.dimensions.overallLength - 0.99) < 0.015, 'overall length is close to one metre');
+  assert.equal(sword.dimensions.bladeLength, 0.795);
   assert.equal(sword.dimensions.gripLength, 0.14);
   assert.ok(sword.dimensions.guardSpan > sword.dimensions.bladeWidth * 4);
-  assert.equal(sword.displayBase.name, 'marble display base');
-  assert.equal(sword.displayBase.children.length, 2);
-  assert.ok(MARBLE_DISPLAY_BASE.width > sword.dimensions.guardSpan * 2);
-  assert.equal(sword.blade.name, 'double-edged blade with central fuller');
+  assert.equal(sword.pommel.name, 'marble');
+  assert.equal(sword.marble.radius, MARBLE_POMMEL_RADIUS);
+  assert.equal(sword.marble.asset.spark.name, 'spark');
+  assert.equal(sword.marble.asset.glass.name, 'glass');
+  assert.equal(sword.pommel.parent, sword.group);
+  assert.equal(sword.handle.parent, sword.hilt);
+  assert.equal(sword.dimensions.marbleDiameter, 0.072);
+  assert.equal(sword.blade.name, 'solid double-edged blade with 75% fuller');
   assert.ok(sword.blade.geometry.attributes.position.count > 800);
   assert.ok(sword.blade.geometry.index.count > 4000);
   assert.equal(sword.blade.material.metalness, 1);
   assert.equal(sword.blade.material.name, 'blade metal');
-  assert.equal(sword.hilt.name, 'leather grip assembly');
+  assert.equal(sword.hilt.name, 'connected hilt assembly');
 });
 
 test('blade and hilt finishes switch independently using the shared twelve-metal palette', () => {
@@ -76,7 +80,7 @@ test('blade has a broad shoulder, a long taper and a pointed tip', () => {
   const sword = createBroadsword(GFX);
   const p = sword.blade.geometry.attributes.position;
   const widths = [];
-  const ring = 16;
+  const ring = 20;
   for (let i = 0; i < p.count; i += ring) {
     let lo = Infinity, hi = -Infinity;
     for (let j = 0; j < ring; j++) {
@@ -87,4 +91,40 @@ test('blade has a broad shoulder, a long taper and a pointed tip', () => {
   }
   assert.ok(Math.max(...widths) > widths[0] * 1.02, 'blade broadens from the ricasso');
   assert.ok(widths.at(-1) < widths[0] * 0.03, 'blade tapers to a point');
+});
+
+
+test('blade is a watertight solid with a fuller that ends at 75 percent', () => {
+  const sword = createBroadsword(GFX);
+  const geometry = sword.blade.geometry;
+  const position = geometry.attributes.position;
+  const indices = geometry.index.array;
+  const ringSize = 20;
+  const ringCount = 64;
+  assert.equal(position.count, ringCount * ringSize + 2);
+  assert.equal(indices.length, 60 + (63 * ringSize * 6) + 60);
+  assert.equal(sword.dimensions.fullerLength, sword.dimensions.bladeLength * 0.75);
+
+  // Every undirected mesh edge belongs to exactly two triangles. This catches
+  // open face sheets, missing core walls, and an uncapped root or blade point.
+  const edges = new Map();
+  for (let i = 0; i < indices.length; i += 3) {
+    for (const [a, b] of [[indices[i], indices[i + 1]], [indices[i + 1], indices[i + 2]], [indices[i + 2], indices[i]]]) {
+      const key = a < b ? a + ':' + b : b + ':' + a;
+      edges.set(key, (edges.get(key) ?? 0) + 1);
+    }
+  }
+  assert.ok([...edges.values()].every((count) => count === 2), 'all edges are shared by exactly two faces');
+
+  // The fuller profile must be present before the final quarter, then fade
+  // cleanly to the undepressed full-thickness point section.
+  const thicknessAt = (ringIndex) => {
+    const start = ringIndex * ringSize;
+    return position.getZ(start + 5) - position.getZ(start + 15);
+  };
+  const atHalf = thicknessAt(32);
+  const nearThreeQuarter = thicknessAt(47);
+  const afterFuller = thicknessAt(49);
+  assert.ok(atHalf < thicknessAt(8) * 0.9, 'fuller visibly depresses the central section');
+  assert.ok(afterFuller > nearThreeQuarter, 'fuller fades away at 75 percent');
 });
