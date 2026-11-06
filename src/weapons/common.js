@@ -290,9 +290,11 @@ export function buildWeapon(GFX, spec, {
   // visible rather than covering the marble with a cap or socket.
   const bezel = new GFX.Group();
   bezel.name = 'marble-to-leather metal bezel';
-  const bezelOuterRadius = handleRadius * 1.23;
-  const bezelBottom = marble.height;
-  const bezelTop = gripBottom + 0.004;
+  // Lower bezel rim follows the marble's spherical shoulder. Its clear
+  // opening is wider than the spark's reach, so the 3D centre remains visible.
+  const bezelOuterRadius = radius * 0.89;
+  const bezelBottom = radius + Math.sqrt(radius * radius - bezelOuterRadius * bezelOuterRadius);
+  const bezelTop = gripBottom;
   const bezelHeight = bezelTop - bezelBottom;
   const bezelSleeve = new GFX.Mesh(
     new GFX.CylinderGeometry(bezelOuterRadius, bezelOuterRadius, bezelHeight, 48, 1, true),
@@ -308,7 +310,7 @@ export function buildWeapon(GFX, spec, {
     ['pommel bezel upper rim', bezelTop - 0.0007],
   ]) {
     const rim = new GFX.Mesh(
-      new GFX.TorusGeometry(bezelOuterRadius - 0.0012, 0.0012, 10, 48),
+      new GFX.TorusGeometry(bezelOuterRadius, 0.0012, 10, 48),
       hiltMaterial,
     );
     rim.name = name;
@@ -381,6 +383,13 @@ export function buildWeapon(GFX, spec, {
     marble,
     pommel: marble.group,
     gripBounds: Object.freeze({ bottom: gripBottom, top: gripTop }),
+    handleBounds: Object.freeze({
+      bottom: handle.position.y - spec.gripLength / 2,
+      top: handle.position.y + spec.gripLength / 2,
+      length: spec.gripLength,
+    }),
+    bezelBounds: Object.freeze({ bottom: bezelBottom, top: bezelTop, outerRadius: bezelOuterRadius }),
+    guardY,
     guardBoss: hilt.children.find((part) => part.name === 'guard central boss'),
     dimensions: Object.freeze({
       overallLength: bladeRootY + spec.bladeLength,
