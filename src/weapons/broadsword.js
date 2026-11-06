@@ -19,7 +19,7 @@ export const BROADSWORD_DIMENSIONS = Object.freeze({
   bladeWidth: 0.052,
   gripLength: 0.14,
   gripDiameter: 0.034,
-  marbleRadius: 0.036,
+  marbleRadius: 0.027,
   marbleDiameter: 0.054,
   guardSpan: 0.22,
   unit: 'm',
