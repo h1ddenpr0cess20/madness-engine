@@ -268,7 +268,11 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
   assert.equal(weapon.name, 'Magic Egg Sword');
   assert.equal(weapon.pommelAsset.kind, 'magic-egg');
   assert.equal(weapon.pommelAsset.glass.material.transmission, 1);
+  assert.equal(weapon.pommelAsset.glass.onBeforeRender(), undefined,
+    'the detached glass shell no longer runs the hero wobble callback');
   assert.equal(weapon.pommelAsset.mist.visible, true);
+  assert.notEqual(weapon.pommelAsset.mist.onBeforeRender, weapon.pommelAsset.glass.onBeforeRender,
+    'the egg mist retains its independent animation callback');
   assert.equal(weapon.pommelAsset.asset.mist, weapon.pommelAsset.mist);
   assert.equal(weapon.pommelAsset.mist.material.uniforms.uDuo.value, 1);
 

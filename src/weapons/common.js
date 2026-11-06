@@ -123,6 +123,11 @@ function createMagicEggPommel(GFX, radius) {
   const asset = createGlassEgg({ GFX, mist: true });
   const glass = asset.glass;
   const mist = asset.mist;
+  // createGlassEgg's shell callback drives the original hero rig's wobble.
+  // The pommel is a stationary detached asset, like the Metal Egg pommel:
+  // replace only the shell callback, while retaining mist.onBeforeRender so
+  // the white/yellow vision continues to flow inside the glass.
+  glass.onBeforeRender = () => {};
   glass.parent?.remove(glass);
   mist.parent?.remove(mist);
 
