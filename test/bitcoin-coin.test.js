@@ -17,6 +17,8 @@ test('the Bitcoin coin has its own rust motto and is registered in the asset vie
   assert.ok(bitcoinCoin.includes("motto: 'IN CHAINS WE RUST'"));
   assert.equal(bitcoinViewerAsset.name, 'bitcoin coin');
   assert.equal(bitcoinViewerAsset.category, 'Animated props');
-  assert.ok(catalog.includes("if (folder === 'props' && mod.assetViewer) items.push(proceduralPropItem(mod.assetViewer, path));"));
+  assert.ok(catalog.includes("const proceduralProps = import.meta.glob(['../../../src/props/*.js', '../../../src/props/**/*.js']);"));
+  assert.ok(catalog.includes('for (const [path, load] of Object.entries(proceduralProps))'));
+  assert.ok(catalog.includes('if (mod.assetViewer) items.push(proceduralPropItem(mod.assetViewer, path));'));
   assert.ok(!catalog.includes("['bitcoin coin', 'Animated props', 'coin'"));
 });
