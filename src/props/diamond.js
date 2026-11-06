@@ -13,6 +13,7 @@
  *     diamond.update(dt);
  *     diamond.setMist(false);
  */
+import * as GFX_DEFAULT from '../gfx/index.js';
 import { createVisionMaterial } from '../heroes/krystal/vision.js';
 
 export const DIAMOND_RADIUS = 0.62;
@@ -142,10 +143,8 @@ export function createDiamond(GFX, {
   stone.castShadow = false;
   stone.receiveShadow = true;
 
-  const volumeRadius = Math.min(radius * 0.76, height * 1.28);
   const mistMaterial = createVisionMaterial(GFX);
   const uniforms = mistMaterial.uniforms;
-  Object.assign(MIST, {});
   uniforms.uRadius.value = 1;
   uniforms.uShape.value.set(radius * 0.69, height * 0.36, radius * 0.69);
   uniforms.uSwirl.value = MIST.swirl;
@@ -203,18 +202,19 @@ export const assetViewer = Object.freeze({
   category: 'Props',
   group: 'glass & crystal',
   name: 'Diamond · brilliant cut · white / ice-blue mist',
-  build() {
+  build({ GFX = GFX_DEFAULT } = {}) {
     const diamond = createDiamond(GFX);
+    let last = 0;
     return {
       object: diamond.group,
-      pose: ({ time }) => diamond.update(time),
+      pose: ({ time }) => { const dt = Math.max(0, time - last); last = time; diamond.update(dt); },
       mist: { get: () => diamond.mist, set: (show) => diamond.setMist(show) },
       info: {
         Source: 'props/diamond.js + heroes/krystal/vision.js',
         Cut: 'Round brilliant · 48 sectors',
         Material: 'Diamond-like transmissive glass · IOR 2.12',
         Interior: 'White and pale ice-blue ray-marched mist',
-        Vertices: geometry.attributes.position.count,
+        Vertices: diamond.geometry.attributes.position.count,
       },
     };
   },
