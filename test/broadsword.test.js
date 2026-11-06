@@ -14,10 +14,11 @@ import { MARBLE_DISPLAY_BASE } from '../src/weapons/common.js';
 test('broadsword is modelled at real-world scale with a separate marble plinth', () => {
   const sword = createBroadsword(GFX);
   assert.equal(WORLD_UNITS_PER_METRE, 1);
-  assert.equal(BROADSWORD_SPEC.bladeLength, 0.78);
+  assert.equal(BROADSWORD_DIMENSIONS.bladeLength, 0.786);
+  assert.equal(BROADSWORD_SPEC.bladeLength, 0.786);
   assert.equal(BROADSWORD_SPEC.overallLength, 0.99);
   assert.equal(sword.dimensions.unit, 'm');
-  assert.ok(sword.dimensions.overallLength > 0.95 && sword.dimensions.overallLength < 1.04);
+  assert.ok(Math.abs(sword.dimensions.overallLength - 0.99) < 0.002, 'overall length is close to the published 0.99 m');
   assert.equal(sword.dimensions.bladeLength, 0.786);
   assert.equal(sword.dimensions.gripLength, 0.14);
   assert.ok(sword.dimensions.guardSpan > sword.dimensions.bladeWidth * 4);
