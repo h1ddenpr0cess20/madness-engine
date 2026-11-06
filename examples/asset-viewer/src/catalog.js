@@ -515,7 +515,7 @@ function weaponItems() {
     name: 'Broadsword',
     source: 'weapons/broadsword',
     kind: 'object',
-      palette: { kind: 'weapon', grip: '#633b2c' },
+    palette: { kind: 'weapon', grip: '#633b2c' },
     async build({ bladeMetal = 'steel', hiltMetal = 'steel', colours = {} } = {}) {
       const [weapon, metals] = await Promise.all([
         import('../../../src/weapons/broadsword.js'),
