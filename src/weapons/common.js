@@ -3,7 +3,7 @@ import { createMarble } from '../heroes/marble.js';
 
 /** Weapon geometry is expressed in metres: one engine unit equals one metre. */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
-export const MARBLE_POMMEL_RADIUS = 0.036;
+export const MARBLE_POMMEL_RADIUS = 0.027;
 export const MARBLE_POMMEL = Object.freeze({
   radius: MARBLE_POMMEL_RADIUS,
   diameter: MARBLE_POMMEL_RADIUS * 2,
@@ -151,7 +151,7 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
       const b = i * ringSize + (j + 1) % ringSize;
       const c = (i + 1) * ringSize + j;
       const d = (i + 1) * ringSize + (j + 1) % ringSize;
-      indices.push(a, c, b, b, c, d);
+      indices.push(a, b, c, b, d, c);
     }
   }
   // Single solid point closes the distal end.
@@ -159,7 +159,7 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
   for (let j = 0; j < ringSize; j++) {
     const a = lastRing + j;
     const b = lastRing + (j + 1) % ringSize;
-    indices.push(a, tip, b);
+    indices.push(a, b, tip);
   }
 
   const geometry = new GFX.BufferGeometry();
