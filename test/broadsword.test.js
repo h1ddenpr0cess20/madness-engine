@@ -82,7 +82,7 @@ test('blade has a broad shoulder, a long taper and a pointed tip', () => {
   const p = sword.blade.geometry.attributes.position;
   const widths = [];
   const ring = 20;
-  for (let i = 0; i < p.count; i += ring) {
+  for (let i = 0; i < 64 * ring; i += ring) {
     let lo = Infinity, hi = -Infinity;
     for (let j = 0; j < ring; j++) {
       lo = Math.min(lo, p.getX(i + j));
