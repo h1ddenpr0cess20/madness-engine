@@ -11,7 +11,6 @@ export const BANANA_DAGGER_DIMENSIONS = Object.freeze({
   bladeWidth: 0.043,
   gripLength: 0.096,
   gripDiameter: 0.036,
-  pommelLength: 0.014,
   guardSpan: 0.118,
   unit: 'm',
 });
@@ -78,7 +77,7 @@ function bananaPeelLobeGeometry(GFX, { length, width, curl, side = 1, inner = fa
       const u = j / across * 2 - 1;
       const x = u * half;
       const z = side * (0.004 + curl * t * t + 0.005 * (1 - u * u));
-      const cup = (1 - u * u) * (inner ? -0.001 : 0.0018);
+      const cup = side * (1 - u * u) * (inner ? -0.001 : 0.0018);
       positions.push(x, y, z + cup);
       uv.push(j / across, t);
     }
@@ -134,10 +133,10 @@ function createBananaPeelGuard(GFX, parent, brass, chrome, centerY, span) {
     }), chrome);
     inner.name = 'chrome banana peel inner face ' + (i + 1);
     inner.material.side = GFX.DoubleSide;
-    inner.position.z = part.side * 0.0012;
+    inner.position.z = -part.side * 0.0012;
     inner.castShadow = true;
     lobe.add(outer, inner);
-    lobe.position.set((i - 1) * span * 0.24, centerY - 0.003, (i - 1) * 0.004);
+    lobe.position.set((i - 1) * span * 0.24, centerY + 0.001, (i - 1) * 0.004);
     guard.add(lobe);
   });
   const root = new GFX.Mesh(new GFX.SphereGeometry(0.019, 32, 20), brass);
