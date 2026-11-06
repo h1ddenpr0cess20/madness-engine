@@ -6,8 +6,8 @@ import * as GFX from '../src/gfx/index.js';
 /** The main characters, by name, and what each gives. */
 const HEROES = {
   marble: ['createMarble', 'RADIUS'],
-  vibey: ['createStar', 'createMetalStar', 'METALS'],
-  slimey: ['createSlimeOrb', 'createMetalSlimeOrb', 'METALS'],
+  'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
+  'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'METALS'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],

@@ -23,7 +23,7 @@ export function createStar({ stage, GFX, metal = null }) {
     group, body, shell,
     shellGeo, shellMat, shellDirs, shellBase,
     core, coreGeo, coreMat, coreDirs, coreBase,
-    glowMat, halo, haloMat, haloWide, haloWideMat,
+    glow, glowMat, halo, haloMat, haloWide, haloWideMat,
   } = buildStar(GFX);
 
   const LOBES = createLobes(GFX);
