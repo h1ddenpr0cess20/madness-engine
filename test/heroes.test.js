@@ -8,6 +8,7 @@ const HEROES = {
   marble: ['createMarble', 'RADIUS'],
   'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
   'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'METALS'],
+  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'METALS', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
@@ -170,4 +171,45 @@ test('Slimey deformation keeps the duplicated longitude seam position and normal
       assert.ok(Math.abs(attr.getZ(a) - attr.getZ(b)) < 1e-7);
     }
   }
+});
+
+
+test('metal and clear-glass Egg keep Marc geometry and behaviour with optional white-yellow mist', async () => {
+  const { createEgg, createMetalEgg, createGlassEgg, METALS, ROLL_REACH } = await import('../src/heroes/debater-egg/index.js');
+  const original = createEgg({ GFX });
+  const metal = createMetalEgg({ GFX, metal: 'silver' });
+  const clear = createGlassEgg({ GFX });
+  const misty = createGlassEgg({ GFX, mist: true });
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+
+  const originalShell = shellOf(original);
+  const metalShell = shellOf(metal);
+  const glassShell = shellOf(clear);
+  assert.deepEqual(metalShell.geometry.attributes.position.array, originalShell.geometry.attributes.position.array);
+  assert.deepEqual(glassShell.geometry.attributes.position.array, originalShell.geometry.attributes.position.array);
+  assert.equal(metalShell.material.metalness, 1);
+  assert.equal(metalShell.material.roughness, METALS.silver.roughness);
+  assert.equal(metal.metal, 'silver');
+  assert.equal(metal.reach, ROLL_REACH);
+  metal.setMetal('copper');
+  assert.equal(metal.metal, 'copper');
+  assert.equal(metalShell.material.roughness, METALS.copper.roughness);
+  assert.throws(() => metal.setMetal('unobtainium'), /no metal/);
+
+  assert.equal(glassShell.material.transmission, 1);
+  assert.equal(glassShell.material.metalness, 0);
+  assert.equal(glassShell.material.roughness, 0.02);
+  assert.equal(clear.mist.visible, false);
+  clear.setMist(true);
+  assert.equal(clear.mist.visible, true);
+  clear.setMist(false);
+  assert.equal(clear.mist.visible, false);
+
+  assert.equal(misty.mist.visible, true);
+  assert.equal(misty.mist.material.uniforms.uDuo.value, 1);
+  const white = misty.mist.material.uniforms.uDuoB.value;
+  const yellow = misty.mist.material.uniforms.uDuoC.value;
+  assert.ok(white.x > 0.95 && white.y > 0.95 && white.z > 0.9);
+  assert.ok(yellow.x > 0.95 && yellow.y < white.y && yellow.z < white.z);
+  assert.equal(misty.mist.renderOrder, 1);
 });

@@ -157,6 +157,14 @@ const HEROES = [
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
   ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],
   ['egg (debater)', () => import('../../../src/heroes/debater-egg/index.js').then((m) => m.createEgg({ GFX }))],
+  ['metal egg (debater)', ({ metal = 'steel' } = {}) => Promise.all([import('../../../src/heroes/debater-egg/index.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
+    h.createMetalEgg({ GFX, metal }),
+    { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
+  )), null, { metal: METAL_CHOICES }],
+  ['glass egg (debater)', ({ mist = 'clear' } = {}) => Promise.all([import('../../../src/heroes/debater-egg/index.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
+    h.createGlassEgg({ GFX, mist: mist === 'mist' }),
+    { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
+  )), null, { mist: ['clear', 'mist'] }],
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
   ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
   ['metal vibey', ({ metal = 'steel' } = {}) => avatar('../../../src/heroes/vibey/index.js', 'createMetalStar', { metal }), null, { metal: METAL_CHOICES }],

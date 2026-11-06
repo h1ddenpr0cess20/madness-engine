@@ -2,6 +2,10 @@ import { ENERGY_GAIN, MOODS } from './moods.js';
 import { approach, spring } from '../motion.js';
 import { createShell } from './shell.js';
 import { createShellSkin } from './skin.js';
+import { createEggMist } from './mist.js';
+import { METALS } from '../../props/metalglobe.js';
+
+export { METALS };
 
 const RADIUS = 0.78;
 
@@ -17,9 +21,10 @@ export const ROLL_REACH = 0.22;
  * where he stands — this returns the group to hang off a podium, and the three
  * handles the debate drives him by.
  */
-export function createEgg({ GFX, shadow = null }) {
-  const skin = createShellSkin(GFX);
-  const shell = createShell(GFX, skin);
+function buildEgg({ GFX, shadow = null }, { appearance = 'original', metal = 'steel', mist: withMist = false } = {}) {
+  const skin = appearance === 'original' ? createShellSkin(GFX) : { map: null, bumpMap: null };
+  const shell = createShell(GFX, skin, { appearance, metal });
+  const mistLayer = appearance === 'glass' ? createEggMist(GFX, { visible: withMist }) : null;
 
   const marc = new GFX.Group();
   marc.name = 'marc';
@@ -31,6 +36,7 @@ export function createEgg({ GFX, shadow = null }) {
   marc.add(spinner);
   spinner.add(body);
   body.add(shell.mesh);
+  if (mistLayer) body.add(mistLayer.mesh);
 
   let mood = MOODS.idle;
   let state = 'idle';
@@ -155,8 +161,9 @@ export function createEgg({ GFX, shadow = null }) {
     }
   };
 
-  return {
+  const api = {
     group: marc,
+    shell: shell.mesh,
     /** How far he gets from where he was put. The stage keeps that much clear. */
     reach: ROLL_REACH,
     get state() { return state; },
@@ -179,4 +186,40 @@ export function createEgg({ GFX, shadow = null }) {
       tz.v += (Math.random() - 0.5) * w * 2.6;
     },
   };
+
+  if (appearance === 'metal') {
+    let selectedMetal = metal;
+    Object.defineProperty(api, 'metal', { enumerable: true, get: () => selectedMetal });
+    api.setMetal = (name) => {
+      const finish = METALS[name];
+      if (!finish) throw new Error(`no metal called ${name}`);
+      shell.material.color.set(finish.color);
+      shell.material.roughness = finish.roughness;
+      selectedMetal = name;
+      return api;
+    };
+  }
+
+  if (appearance === 'glass') {
+    api.glass = shell.mesh;
+    api.mist = mistLayer.mesh;
+    api.setMist = (show = true) => {
+      mistLayer.mesh.visible = Boolean(show);
+      return api;
+    };
+  }
+
+  return api;
+}
+
+export function createEgg(options) {
+  return buildEgg(options);
+}
+
+export function createMetalEgg({ GFX, shadow = null, metal = 'steel' } = {}) {
+  return buildEgg({ GFX, shadow }, { appearance: 'metal', metal });
+}
+
+export function createGlassEgg({ GFX, shadow = null, mist = false } = {}) {
+  return buildEgg({ GFX, shadow }, { appearance: 'glass', mist });
 }
