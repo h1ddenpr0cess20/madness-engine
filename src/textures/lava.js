@@ -131,51 +131,40 @@ function sphereField(u, v, scale) {
 }
 
 function floorField(u, v, scale) {
-  const cells = Math.max(2, Math.round(2.4 + scale * 0.65));
-  const warpU = (fbm2(u, v, 41, 2, 3) - 0.5) * 0.11;
-  const warpV = (fbm2(u, v, 47, 2, 3) - 0.5) * 0.11;
-  const uu = (u + warpU + 1) % 1;
-  const vv = (v + warpV + 1) % 1;
-  const flow = fbm2(uu, vv, 53, cells, 4);
-  const bend = fbm2(uu, vv, 59, 2, 3);
-  const contour = Math.abs(flow - (0.505 + (bend - 0.5) * 0.11));
-  const channel = 1 - smooth(0.025, 0.075, contour);
-  const core = 1 - smooth(0.006, 0.022, contour);
-  const pool = smooth(0.78, 0.89, fbm2(uu, vv, 61, 2, 3)) * 0.58;
-  const molten = Math.max(channel, pool);
-
-  const stone = fbm2(uu, vv, 67, 8, 4);
-  const grain = fbm2(uu, vv, 71, 22, 2);
-  const warmEdge = Math.exp(-contour * 36) * (1 - core);
+  // Periodic mineral variation only. Molten areas are rendered by the same
+  // animated shader used on Slimey; no fixed lava lines are baked into this map.
+  const broad = fbm2(u, v, 67, 5, 4);
+  const grain = fbm2(u, v, 71, 19, 2);
+  const warmth = fbm2(u, v, 73, 2, 3);
   const base = [
-    mix(9, 36, stone) * (0.84 + grain * 0.28) + warmEdge * 20,
-    mix(10, 23, stone) * (0.84 + grain * 0.28) + warmEdge * 4,
-    mix(15, 20, stone) * (0.84 + grain * 0.28),
+    mix(11, 34, broad) * (0.91 + grain * 0.16) + warmth * 2,
+    mix(12, 24, broad) * (0.91 + grain * 0.16) + warmth * 0.55,
+    mix(17, 23, broad) * (0.91 + grain * 0.16),
   ];
-  const temp = clamp01(0.28 + channel * 0.34 + core * 0.52 + pool * 0.27);
-  const moltenRGB = heatColour(temp);
-  const albedo = base.map((c, k) => Math.round(mix(c, moltenRGB[k], molten)));
-  const glowRGB = heatColour(clamp01(0.48 + core * 0.5 + pool * 0.16));
-  const alpha = Math.round(clamp01(channel * 0.98 + pool * 0.82) * 245);
-  const relief = Math.round(clamp01(0.62 + (stone - 0.5) * 0.12 + (grain - 0.5) * 0.05 - molten * 0.19) * 255);
-  return { albedo, glowRGB, alpha, relief };
+  const albedo = base.map((c) => Math.round(Math.max(0, Math.min(255, c))));
+  const relief = Math.round(clamp01(0.66 + (broad - 0.5) * 0.055 + (grain - 0.5) * 0.025) * 255);
+  return { albedo, glowRGB: [0, 0, 0], alpha: 0, relief };
 }
 
 
 
-const HOT_VERTEX = `
+const HOT_VERTEX = \`
+uniform float uLocal;
 varying vec3 vMoltenPoint;
 void main() {
-  vec3 p = position * 1.002;
-  vMoltenPoint = p;
+  vec3 p = position;
+  if (uLocal > 0.5) p *= 1.002;
+  else p += normalize(normal) * 0.0015;
+  vMoltenPoint = position;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
 }
-`;
+\`;
 
-const HOT_FRAGMENT = `
+const HOT_FRAGMENT = \`
 uniform float uTime;
 uniform float uScale;
+uniform float uLocal;
 varying vec3 vMoltenPoint;
 
 float hash31(vec3 p) {
@@ -215,67 +204,76 @@ float fbm3(vec3 p) {
 }
 
 vec3 heat(float x) {
-  vec3 c = mix(vec3(0.24, 0.012, 0.002), vec3(0.82, 0.075, 0.006), smoothstep(0.05, 0.48, x));
-  c = mix(c, vec3(1.0, 0.31, 0.025), smoothstep(0.42, 0.78, x));
-  return mix(c, vec3(1.0, 0.78, 0.35), smoothstep(0.82, 1.0, x));
+  vec3 c = mix(vec3(0.20, 0.009, 0.001), vec3(0.66, 0.045, 0.003), smoothstep(0.12, 0.48, x));
+  c = mix(c, vec3(1.0, 0.22, 0.012), smoothstep(0.42, 0.76, x));
+  c = mix(c, vec3(1.0, 0.62, 0.13), smoothstep(0.73, 0.94, x));
+  return mix(c, vec3(1.0, 0.88, 0.52), smoothstep(0.94, 1.0, x));
 }
 
 void main() {
   float t = uTime;
-  vec3 p = normalize(vMoltenPoint) * uScale;
-  vec3 drift = vec3(t * 0.055, -t * 0.037, t * 0.029);
+  vec3 p = (uLocal > 0.5 ? normalize(vMoltenPoint) : vMoltenPoint) * uScale;
 
-  // A gently advected, domain-warped field: deliberately only one main
-  // channel field, so the surface has a few broad rivers instead of line noise.
+  // The field itself is advected and re-warped over time. Broad noise masses
+  // merge into irregular molten rivers and pools; there is no fixed contour
+  // or repeated line pattern beneath the animation.
+  vec3 drift = vec3(t * 0.032, -t * 0.024, t * 0.019);
   vec3 warp = vec3(
     fbm3(p * 0.42 + drift + vec3(2.1, 5.4, 1.7)),
     fbm3(p.yzx * 0.42 - drift.zxy + vec3(7.2, 1.8, 4.3)),
     fbm3(p.zxy * 0.42 + drift.yzx + vec3(3.4, 8.1, 6.2))
   );
-  vec3 q = p * 0.9 + (warp - 0.5) * 0.72;
+  vec3 q = p * 0.78 + (warp - 0.5) * 1.18;
 
-  float field = fbm3(q * 0.88 + drift * 0.28 + vec3(4.1, 2.8, 7.3));
-  float bend = fbm3(q * 0.52 - drift * 0.17 + vec3(8.4, 6.3, 1.2));
-  float centre = 0.505 + (bend - 0.5) * 0.12;
-  float distance = abs(field - centre);
+  float broadFlow = fbm3(q * 0.62 + drift * 0.42 + vec3(4.1, 2.8, 7.3));
+  float mediumFlow = fbm3(q * 1.08 - drift.yzx * 0.52 + vec3(8.4, 6.3, 1.2));
+  float reservoir = fbm3(q * 0.30 + drift.zxy * 0.22 + vec3(9.7, 3.2, 5.8));
+  float detailHeat = fbm3(q * 1.85 + drift * 0.78 + vec3(2.7, 5.1, 8.2));
 
-  // Derivative-aware widths keep the soft lava edges antialiased as the orb
-  // fills the screen or the camera moves closer.
-  float edgeAA = clamp(fwidth(distance) * 1.25, 0.001, 0.018);
-  float channel = 1.0 - smoothstep(0.025 - edgeAA, 0.105 + edgeAA, distance);
-  float core = 1.0 - smoothstep(max(0.0, 0.004 - edgeAA * 0.35), 0.027 + edgeAA, distance);
-  float poolField = fbm3(q * 0.44 - drift * 0.12 + vec3(9.7, 3.2, 5.8));
-  float poolAA = clamp(fwidth(poolField) * 1.25, 0.008, 0.045);
-  float pools = smoothstep(0.73 - poolAA, 0.86 + poolAA, poolField) * 0.35;
+  // Large connected bodies, with a small amount of secondary structure.
+  // Smooth time-varying thresholds make regions widen, pinch off and join.
+  float magma = broadFlow * 0.70 + mediumFlow * 0.20 + reservoir * 0.10;
+  float edgeAA = clamp(fwidth(magma) * 1.35, 0.008, 0.045);
+  float body = smoothstep(0.485 - edgeAA, 0.585 + edgeAA, magma);
+  float shoulder = smoothstep(0.43 - edgeAA, 0.55 + edgeAA, magma);
+  float pools = smoothstep(0.70, 0.86, reservoir) * 0.44;
 
-  // This independent, slow life field fades individual sections locally;
-  // new regions kindle as its smooth noise moves through the channel network.
-  float life = fbm3(q * 0.58 + drift * 0.19 + vec3(t * 0.012, 6.1, 2.7));
-  float lifeAA = clamp(fwidth(life) * 1.35, 0.008, 0.045);
-  float activity = smoothstep(0.32 - lifeAA, 0.68 + lifeAA, life);
-  float thermal = fbm3(q * 1.12 - drift * 0.43 + vec3(2.7, t * 0.018, 8.2));
-  float pulse = 0.84 + 0.16 * sin(t * 0.72 + thermal * 4.2);
-  float mask = clamp(max(channel * 0.68, pools) * activity * pulse, 0.0, 0.72);
+  // Bubbles of trapped gas periodically swell under the melt. Their influence
+  // is broad and independent of flow direction, rather than sliding linework.
+  float bubbleField = fbm3(q * 0.48 + vec3(t * 0.021, -t * 0.017, t * 0.014) + vec3(1.8, 6.4, 3.2));
+  float bubbleAA = clamp(fwidth(bubbleField) * 1.2, 0.01, 0.05);
+  float bubbles = smoothstep(0.66 - bubbleAA, 0.82 + bubbleAA, bubbleField);
+  float bubblePulse = 0.78 + 0.22 * sin(t * 0.82 + detailHeat * 5.4);
 
-  float temperature = clamp(0.28 + core * 0.55 + pools * 0.48 + thermal * 0.12, 0.0, 1.0);
+  // A second low-frequency field changes which areas are hot. Unlike a static
+  // mask over contour lines, this changes the actual connected magma shapes.
+  float life = fbm3(q * 0.54 + vec3(t * 0.037, -t * 0.029, t * 0.023) + vec3(6.1, 2.5, 9.3));
+  float activity = smoothstep(0.34, 0.70, life);
+  float mask = clamp(max(shoulder * 0.76, pools) * mix(0.52, 1.0, activity) * bubblePulse, 0.0, 0.82);
+  if (mask < 0.006) discard;
+
+  float core = smoothstep(0.565, 0.67, magma + detailHeat * 0.055);
+  float temperature = clamp(0.24 + core * 0.48 + pools * 0.28 + bubbles * 0.16 + detailHeat * 0.13, 0.0, 1.0);
   vec3 colour = heat(temperature);
-  float edgeHeat = exp(-distance * 28.0) * (1.0 - core);
-  colour = mix(colour * 0.66, colour, 1.0 - edgeHeat * 0.32);
+  float coolingRim = smoothstep(0.47, 0.57, magma) * (1.0 - smoothstep(0.57, 0.65, magma));
+  colour = mix(colour * 0.58, colour, coolingRim * 0.65);
   gl_FragColor = vec4(colour * 1.12, mask);
 }
-`;
+\`;
 
-const HOT_WGSL = `
+const HOT_WGSL = \`
 struct Varyings {
   @builtin(position) position: vec4f,
   @location(0) point: vec3f,
 };
 
 @vertex
-fn vs(@location(0) position: vec3f) -> Varyings {
+fn vs(@location(0) position: vec3f, @location(1) normal: vec3f) -> Varyings {
   var out: Varyings;
-  let p = position * 1.002;
-  out.point = p;
+  var p = position;
+  if (material.uLocal > 0.5) { p *= 1.002; }
+  else { p += normalize(normal) * 0.0015; }
+  out.point = position;
   out.position = object.projectionMatrix * object.modelViewMatrix * vec4f(p, 1.0);
   return out;
 }
@@ -318,51 +316,49 @@ fn fbm3(p0: vec3f) -> f32 {
 }
 
 fn heat(x: f32) -> vec3f {
-  var c = mix(vec3f(0.24, 0.012, 0.002), vec3f(0.82, 0.075, 0.006), smoothstep(0.05, 0.48, x));
-  c = mix(c, vec3f(1.0, 0.31, 0.025), smoothstep(0.42, 0.78, x));
-  return mix(c, vec3f(1.0, 0.78, 0.35), smoothstep(0.82, 1.0, x));
+  var c = mix(vec3f(0.20, 0.009, 0.001), vec3f(0.66, 0.045, 0.003), smoothstep(0.12, 0.48, x));
+  c = mix(c, vec3f(1.0, 0.22, 0.012), smoothstep(0.42, 0.76, x));
+  c = mix(c, vec3f(1.0, 0.62, 0.13), smoothstep(0.73, 0.94, x));
+  return mix(c, vec3f(1.0, 0.88, 0.52), smoothstep(0.94, 1.0, x));
 }
 
 @fragment
 fn fs(in: Varyings) -> @location(0) vec4f {
   let t = material.uTime;
-  let p = normalize(in.point) * material.uScale;
-  let drift = vec3f(t * 0.055, -t * 0.037, t * 0.029);
-
+  let p = select(in.point, normalize(in.point), material.uLocal > 0.5) * material.uScale;
+  let drift = vec3f(t * 0.032, -t * 0.024, t * 0.019);
   let warp = vec3f(
     fbm3(p * 0.42 + drift + vec3f(2.1, 5.4, 1.7)),
     fbm3(p.yzx * 0.42 - drift.zxy + vec3f(7.2, 1.8, 4.3)),
     fbm3(p.zxy * 0.42 + drift.yzx + vec3f(3.4, 8.1, 6.2))
   );
-  let q = p * 0.9 + (warp - vec3f(0.5)) * 0.72;
+  let q = p * 0.78 + (warp - vec3f(0.5)) * 1.18;
 
-  let field = fbm3(q * 0.88 + drift * 0.28 + vec3f(4.1, 2.8, 7.3));
-  let bend = fbm3(q * 0.52 - drift * 0.17 + vec3f(8.4, 6.3, 1.2));
-  let centre = 0.505 + (bend - 0.5) * 0.12;
-  let distance = abs(field - centre);
-
-  // Derivative-aware widths smooth the channels at close camera distances.
-  let edgeAA = clamp(fwidth(distance) * 1.25, 0.001, 0.018);
-  let channel = 1.0 - smoothstep(0.025 - edgeAA, 0.105 + edgeAA, distance);
-  let core = 1.0 - smoothstep(max(0.0, 0.004 - edgeAA * 0.35), 0.027 + edgeAA, distance);
-  let poolField = fbm3(q * 0.44 - drift * 0.12 + vec3f(9.7, 3.2, 5.8));
-  let poolAA = clamp(fwidth(poolField) * 1.25, 0.008, 0.045);
-  let pools = smoothstep(0.73 - poolAA, 0.86 + poolAA, poolField) * 0.35;
-
-  let life = fbm3(q * 0.58 + drift * 0.19 + vec3f(t * 0.012, 6.1, 2.7));
-  let lifeAA = clamp(fwidth(life) * 1.35, 0.008, 0.045);
-  let activity = smoothstep(0.32 - lifeAA, 0.68 + lifeAA, life);
-  let thermal = fbm3(q * 1.12 - drift * 0.43 + vec3f(2.7, t * 0.018, 8.2));
-  let pulse = 0.84 + 0.16 * sin(t * 0.72 + thermal * 4.2);
-  let mask = clamp(max(channel * 0.68, pools) * activity * pulse, 0.0, 0.72);
-
-  let temperature = clamp(0.28 + core * 0.55 + pools * 0.48 + thermal * 0.12, 0.0, 1.0);
+  let broadFlow = fbm3(q * 0.62 + drift * 0.42 + vec3f(4.1, 2.8, 7.3));
+  let mediumFlow = fbm3(q * 1.08 - drift.yzx * 0.52 + vec3f(8.4, 6.3, 1.2));
+  let reservoir = fbm3(q * 0.30 + drift.zxy * 0.22 + vec3f(9.7, 3.2, 5.8));
+  let detailHeat = fbm3(q * 1.85 + drift * 0.78 + vec3f(2.7, 5.1, 8.2));
+  let magma = broadFlow * 0.70 + mediumFlow * 0.20 + reservoir * 0.10;
+  let edgeAA = clamp(fwidth(magma) * 1.35, 0.008, 0.045);
+  let body = smoothstep(0.485 - edgeAA, 0.585 + edgeAA, magma);
+  let shoulder = smoothstep(0.43 - edgeAA, 0.55 + edgeAA, magma);
+  let pools = smoothstep(0.70, 0.86, reservoir) * 0.44;
+  let bubbleField = fbm3(q * 0.48 + vec3f(t * 0.021, -t * 0.017, t * 0.014) + vec3f(1.8, 6.4, 3.2));
+  let bubbleAA = clamp(fwidth(bubbleField) * 1.2, 0.01, 0.05);
+  let bubbles = smoothstep(0.66 - bubbleAA, 0.82 + bubbleAA, bubbleField);
+  let bubblePulse = 0.78 + 0.22 * sin(t * 0.82 + detailHeat * 5.4);
+  let life = fbm3(q * 0.54 + vec3f(t * 0.037, -t * 0.029, t * 0.023) + vec3f(6.1, 2.5, 9.3));
+  let activity = smoothstep(0.34, 0.70, life);
+  let mask = clamp(max(shoulder * 0.76, pools) * mix(0.52, 1.0, activity) * bubblePulse, 0.0, 0.82);
+  if (mask < 0.006) { discard; }
+  let core = smoothstep(0.565, 0.67, magma + detailHeat * 0.055);
+  let temperature = clamp(0.24 + core * 0.48 + pools * 0.28 + bubbles * 0.16 + detailHeat * 0.13, 0.0, 1.0);
   var colour = heat(temperature);
-  let edgeHeat = exp(-distance * 28.0) * (1.0 - core);
-  colour = mix(colour * 0.66, colour, 1.0 - edgeHeat * 0.32);
+  let coolingRim = smoothstep(0.47, 0.57, magma) * (1.0 - smoothstep(0.57, 0.65, magma));
+  colour = mix(colour * 0.58, colour, coolingRim * 0.65);
   return vec4f(colour * 1.12, mask);
 }
-`;
+\`;
 
 function writePixel(data, offset, rgb, alpha = 255) {
   data[offset] = rgb[0];
@@ -454,6 +450,140 @@ function textureSet(GFX, mapping, scale) {
   return result;
 }
 
+
+/**
+ * Subdivide a lava surface and apply Slimey-style localized gas swells.
+ * The same height field is sampled every frame, so the surface inflates and
+ * subsides in place rather than translating its texture. Dungeon floors are
+ * horizontal (Y up); the deformer preserves the source surface and attributes.
+ */
+export function createLavaBubbler(GFX, sourceGeometry, { segments = 6, spacing = 1.05 } = {}) {
+  const sourcePosition = sourceGeometry.attributes.position;
+  if (!sourcePosition || sourcePosition.count < 3) throw new Error('lava bubbler needs triangle geometry');
+  if (!Number.isInteger(segments) || segments < 2 || segments > 12) throw new Error('lava bubble segments must be 2–12');
+  if (!Number.isFinite(spacing) || spacing <= 0) throw new Error('lava bubble spacing must be positive');
+
+  const sourceIndex = sourceGeometry.index;
+  const triangleCount = (sourceIndex ? sourceIndex.count : sourcePosition.count) / 3;
+  if (!Number.isInteger(triangleCount)) throw new Error('lava bubbler geometry must contain complete triangles');
+  const subdivisions = triangleCount * segments * segments * 3 > 360000 ? 4 : segments;
+  const output = Object.fromEntries(Object.entries(sourceGeometry.attributes).map(([name]) => [name, []]));
+
+  const vertexIndex = (i) => sourceIndex ? sourceIndex.getX(i) : i;
+  const point = (ia, ib, ic, i, j, n, flip = false) => {
+    const wb = i / n, wc = j / n, wa = 1 - wb - wc;
+    for (const [name, attribute] of Object.entries(sourceGeometry.attributes)) {
+      const list = output[name];
+      const base = ia * attribute.itemSize, bi = ib * attribute.itemSize, ci = ic * attribute.itemSize;
+      for (let k = 0; k < attribute.itemSize; k++) {
+        list.push(
+          attribute.array[base + k] * wa +
+          attribute.array[bi + k] * wb +
+          attribute.array[ci + k] * wc
+        );
+      }
+    }
+  };
+  const emit = (tri, a, b, c) => {
+    point(tri[0], tri[1], tri[2], a[0], a[1], subdivisions);
+    point(tri[0], tri[1], tri[2], b[0], b[1], subdivisions);
+    point(tri[0], tri[1], tri[2], c[0], c[1], subdivisions);
+  };
+  for (let t = 0; t < (sourceIndex ? sourceIndex.count : sourcePosition.count); t += 3) {
+    const tri = [vertexIndex(t), vertexIndex(t + 1), vertexIndex(t + 2)];
+    for (let i = 0; i < subdivisions; i++) {
+      for (let j = 0; j < subdivisions - i; j++) {
+        emit(tri, [i,j], [i+1,j], [i,j+1]);
+        if (j < subdivisions - i - 1) emit(tri, [i+1,j], [i+1,j+1], [i,j+1]);
+      }
+    }
+  }
+
+  const geometry = new GFX.BufferGeometry();
+  for (const [name, values] of Object.entries(output)) {
+    const source = sourceGeometry.attributes[name];
+    geometry.setAttribute(name, new GFX.BufferAttribute(new Float32Array(values), source.itemSize, source.normalized));
+  }
+  const position = geometry.attributes.position;
+  const normal = geometry.attributes.normal;
+  if (!normal) throw new Error('lava bubbler needs surface normals');
+  const basePositions = position.array.slice();
+  const baseNormals = normal.array.slice();
+
+  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  for(let i=0;i<position.count;i++){
+    minX=Math.min(minX,position.getX(i)); maxX=Math.max(maxX,position.getX(i));
+    minZ=Math.min(minZ,position.getZ(i)); maxZ=Math.max(maxZ,position.getZ(i));
+  }
+
+  const hash = (x,z,seed) => {
+    let h = Math.imul(x|0,0x8da6b343)^Math.imul(z|0,0xd8163841)^Math.imul(seed|0,0xcb1ab31f);
+    h=Math.imul(h^(h>>>16),0x7feb352d);
+    h=Math.imul(h^(h>>>15),0x846ca68b);
+    h^=h>>>16;
+    return (h>>>0)/4294967295;
+  };
+  const cells = new Map();
+  for(let iz=Math.floor(minZ/spacing)-1;iz<=Math.ceil(maxZ/spacing)+1;iz++){
+    for(let ix=Math.floor(minX/spacing)-1;ix<=Math.ceil(maxX/spacing)+1;ix++){
+      const rx=hash(ix,iz,17), rz=hash(ix,iz,41);
+      cells.set(ix+','+iz,{
+        x:(ix+0.2+rx*0.6)*spacing,
+        z:(iz+0.2+rz*0.6)*spacing,
+        radius:(0.34+hash(ix,iz,73)*0.24)*spacing,
+        height:0.10+hash(ix,iz,97)*0.085,
+        phase:hash(ix,iz,131)*Math.PI*2,
+        speed:0.68+hash(ix,iz,157)*0.46,
+      });
+    }
+  }
+
+  const sample=(x,z,time)=>{
+    let h=0,dx=0,dz=0;
+    const ix=Math.floor(x/spacing),iz=Math.floor(z/spacing);
+    for(let oz=-1;oz<=1;oz++) for(let ox=-1;ox<=1;ox++){
+      const bubble=cells.get((ix+ox)+','+(iz+oz));
+      if(!bubble) continue;
+      const px=x-bubble.x,pz=z-bubble.z;
+      const pulse=0.5+0.5*Math.sin(time*bubble.speed+bubble.phase);
+      const rise=Math.pow(pulse,2.0);
+      const radius=bubble.radius*(0.82+0.24*pulse);
+      const inv=1/(radius*radius);
+      const dome=bubble.height*rise*Math.exp(-3.4*(px*px+pz*pz)*inv);
+      h+=dome;
+      dx+=dome*(-6.8*px*inv);
+      dz+=dome*(-6.8*pz*inv);
+    }
+    return [h,dx,dz];
+  };
+
+  const update=(time)=>{
+    for(let i=0;i<position.count;i++){
+      const k=i*3,x=basePositions[k],y=basePositions[k+1],z=basePositions[k+2];
+      const ny=Math.max(0,baseNormals[k+1]);
+      if(ny<0.35){
+        position.array[k]=x;position.array[k+1]=y;position.array[k+2]=z;
+        normal.array[k]=baseNormals[k];normal.array[k+1]=baseNormals[k+1];normal.array[k+2]=baseNormals[k+2];
+        continue;
+      }
+      const [height,dhx,dhz]=sample(x,z,time);
+      position.array[k]=x;
+      position.array[k+1]=y+height*ny;
+      position.array[k+2]=z;
+      let nx=baseNormals[k]-dhx*ny;
+      let nz=baseNormals[k+2]-dhz*ny;
+      let nn=Math.hypot(nx,baseNormals[k+1],nz)||1;
+      normal.array[k]=nx/nn;normal.array[k+1]=baseNormals[k+1]/nn;normal.array[k+2]=nz/nn;
+    }
+    position.needsUpdate=true;
+    normal.needsUpdate=true;
+  };
+
+  geometry.computeBoundingSphere();
+  return {geometry,update,segments:subdivisions,bubbleCount:cells.size};
+}
+
+
 /**
  * A lava material that behaves like the engine's metal finishes: physical
  * reflections and surface relief, with an emissive molten layer where needed.
@@ -482,11 +612,12 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
     toneMapped: false,
   });
 
-  const hotMaterial = mapping === 'local' ? new GFX.ShaderMaterial({
+  const hotMaterial = new GFX.ShaderMaterial({
     name: 'lava-molten-flow',
     uniforms: {
       uTime: { value: 0 },
-      uScale: { value: 2.2 },
+      uScale: { value: mapping === 'local' ? 2.2 : 0.78 },
+      uLocal: { value: mapping === 'local' ? 1 : 0 },
     },
     glsl: { vertex: HOT_VERTEX, fragment: HOT_FRAGMENT },
     wgsl: HOT_WGSL,
@@ -495,7 +626,7 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
     depthWrite: false,
     toneMapped: false,
     side: GFX.FrontSide,
-  }) : null;
+  });
   material.hotMaterial = hotMaterial;
   material.textures = maps;
   material.mapping = mapping;
@@ -503,15 +634,9 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
   let currentTime = 0;
   let brightness = 1;
   const applyTime = () => {
-    // Keep local basalt anchored to the deforming surface. The molten layer
-    // receives time directly and fades/re-forms in its own smooth 3D field.
-    // World-space floor textures retain a slow continuous drift.
-    const u = currentTime * (mapping === 'local' ? 0 : 0.014);
-    const v = currentTime * (mapping === 'local' ? 0 : 0.005);
-    if (mapping === 'world') {
-      for (const tex of [maps.map, maps.hot, maps.bump]) tex.offset.set(u % 1, v % 1);
-    }
-    if (hotMaterial) hotMaterial.uniforms.uTime.value = currentTime;
+    // The crust stays anchored in both modes. The molten shader evolves its
+    // own 3D field and the floor geometry is physically bubbled by its caller.
+    hotMaterial.uniforms.uTime.value = currentTime;
   };
 
   const time = {};

@@ -20,13 +20,19 @@ test('lava is a physically based basalt material with an optional emissive hot l
   assert.equal(world.roughness, 0.62);
   assert.equal(world.clearcoat, 0.14);
   assert.equal(world.bumpScale, 0.02);
-  assert.equal(world.hotMaterial, null);
+  assert.equal(world.hotMaterial.type, 'ShaderMaterial');
+  assert.equal(world.hotMaterial.uniforms.uLocal.value, 0);
+  assert.match(world.hotMaterial.glsl.fragment, /broadFlow/);
+  assert.match(world.hotMaterial.glsl.fragment, /bubbleField/);
+  assert.match(world.hotMaterial.wgsl, /broadFlow/);
+  assert.match(world.hotMaterial.wgsl, /bubbleField/);
 
   const local = createLavaMaterial(GFX, { mapping: 'local', scale: 4.35 });
   assert.equal(local.type, 'MeshPhysicalMaterial');
   assert.equal(local.mapping, 'local');
   assert.equal(local.hotMaterial.type, 'ShaderMaterial');
   assert.equal(local.hotMaterial.blending, GFX.AdditiveBlending);
+  assert.equal(local.hotMaterial.uniforms.uLocal.value, 1);
   assert.match(local.hotMaterial.glsl.fragment, /fwidth\(distance\)/);
   assert.match(local.hotMaterial.glsl.fragment, /lifeAA/);
   assert.match(local.hotMaterial.wgsl, /fwidth\(distance\)/);
@@ -99,9 +105,9 @@ test('lava time and brightness controls animate the molten layer while keeping l
 test('world lava textures continue to drift for existing floor callers', () => {
   const material = createLavaMaterial(GFX, { mapping: 'world' });
   material.uniforms.uTime.value = 24;
-  assert.ok(material.textures.map.offset.x > 0);
-  assert.ok(material.textures.map.offset.y > 0);
-  assert.equal(material.hotMaterial, null);
+  assert.equal(material.textures.map.offset.x, 0, 'floor crust does not merely scroll');
+  assert.equal(material.textures.map.offset.y, 0, 'floor crust does not merely scroll');
+  assert.equal(material.hotMaterial.uniforms.uTime.value, 24, 'floor molten field is animated');
 });
 
 
@@ -125,4 +131,41 @@ test('lava bubbling adds smooth, localized surface inflation without changing ot
   let largestDelta = 0;
   for (let i = 0; i < plain.length; i++) largestDelta = Math.max(largestDelta, Math.abs(plain[i] - bubbled[i]));
   assert.ok(largestDelta > 0.005, 'bubbling should visibly inflate local patches');
+});
+
+
+test('floor lava geometry is subdivided and physically bubbles in localized patches', async () => {
+  const { createLavaBubbler } = await import('../src/textures/lava.js');
+  const source = new GFX.BufferGeometry();
+  source.setAttribute('position', new GFX.BufferAttribute(new Float32Array([
+    0,0,0,  4,0,0,  0,0,4,
+    4,0,0,  4,0,4,  0,0,4,
+  ]),3));
+  source.setAttribute('normal', new GFX.BufferAttribute(new Float32Array([
+    0,1,0, 0,1,0, 0,1,0,
+    0,1,0, 0,1,0, 0,1,0,
+  ]),3));
+  source.setAttribute('uv', new GFX.BufferAttribute(new Float32Array([
+    0,0, 1,0, 0,1,
+    1,0, 1,1, 0,1,
+  ]),2));
+
+  const bubbler = createLavaBubbler(GFX,source,{segments:6,spacing:1.05});
+  assert.ok(bubbler.geometry.attributes.position.count > source.attributes.position.count * 10,
+    'floor mesh is subdivided enough to make round swells');
+  const positions=bubbler.geometry.attributes.position;
+  const normals=bubbler.geometry.attributes.normal;
+  bubbler.update(0);
+  const first=positions.array.slice();
+  let peak=0;
+  for(let i=1;i<positions.array.length;i+=3) peak=Math.max(peak,positions.array[i]);
+  assert.ok(peak>0.04,'bubbles rise visibly above the floor');
+  assert.ok(normals.array.some((v)=>Math.abs(v)>0.01),'bubble slopes update the surface normals');
+  bubbler.update(2.4);
+  let changed=0;
+  for(let i=0;i<positions.array.length;i++) changed=Math.max(changed,Math.abs(positions.array[i]-first[i]));
+  assert.ok(changed>0.01,'each bubble swells and subsides independently over time');
+  bubbler.update(2.4);
+  assert.deepEqual(Array.from(positions.array),Array.from(positions.array),
+    'the same time value yields a stable surface');
 });
