@@ -1,6 +1,6 @@
 import { METALS } from '../props/metalglobe.js';
 import { createMarble } from '../heroes/marble.js';
-import { createShell } from '../heroes/debater-egg/shell.js';
+import { createMetalEgg } from '../heroes/debater-egg/index.js';
 import { createBall } from '../heroes/krystal/model.js';
 import { createBladeMist } from './blade-mist.js';
 
@@ -76,29 +76,35 @@ function createKrystalOrbPommel(GFX, radius) {
 
 /** Reuse Marc's actual engine Metal Egg, with its broad end against the grip. */
 function createMetalEggPommel(GFX, radius, metal) {
-  // Use the actual egg shell mesh, not Marc's animated character rig. The
-  // lower end of the engine egg is broader; flip Y so that broad end seats
-  // against the leather grip. This mesh has no animation or render callback.
-  const asset = createShell(GFX, { map: null, bumpMap: null }, { appearance: 'metal', metal });
+  // Instantiate the repository's real Metal Egg asset, then take its actual
+  // shell mesh out of the animated hero rig. The shell retains its original
+  // geometry and material; only its display scale and orientation change.
+  const asset = createMetalEgg({ GFX, metal });
+  const mesh = asset.shell;
+  mesh.parent?.remove(mesh);
+
+  // The hero drives motion from this callback. Detaching the mesh from the
+  // animated body and removing its render callback leaves the exact asset
+  // completely stationary while keeping the hero implementation intact.
+  mesh.onBeforeRender = null;
+
   const group = new GFX.Group();
-  group.name = 'static engine metal egg pommel';
+  group.name = 'stationary engine Metal Egg pommel';
   const radialScale = 0.032;
   const verticalScale = radius / 1.03;
-  asset.mesh.scale.set(radialScale, -verticalScale, radialScale);
-  asset.mesh.position.y = radius + 0.0125;
-  asset.mesh.castShadow = true;
-  asset.mesh.receiveShadow = true;
-  asset.mesh.name = 'stationary metal egg shell';
-  group.add(asset.mesh);
+  mesh.scale.set(radialScale, -verticalScale, radialScale);
+  mesh.position.y = radius + 0.0125;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.name = 'stationary Metal Egg asset shell';
+  group.add(mesh);
+
   let selectedMetal = metal;
   return {
-    group, asset, mesh: asset.mesh, radius, height: radius * 2, kind: 'metal-egg',
+    group, asset, mesh, radius, height: radius * 2, kind: 'metal-egg',
     get metal() { return selectedMetal; },
     setMetal(name) {
-      const finish = METALS[name];
-      if (!finish) throw new Error(`no metal called ${name}`);
-      asset.material.color.set(finish.color);
-      asset.material.roughness = finish.roughness;
+      asset.setMetal(name);
       selectedMetal = name;
       return this;
     },

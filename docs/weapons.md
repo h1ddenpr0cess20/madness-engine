@@ -122,10 +122,13 @@ greatsword and morningstar:
   crossguard/wrap construction.
 - **Regular** keeps the same weapon geometry and banded leather wrap, replacing
   the marble with a solid metal ball that follows the hilt metal selection.
-- **Marc's** uses the stationary engine metal eggshell as the pommel, broad end
-  seated into the grip with the existing metal bezel, and a continuous
-  diagonal leather wrap. Sword, dagger and greatsword guards reuse the original
-  Madness swept crossguard: its curve is flipped upward and increased slightly,
+- **Marc's** extracts the exact shell mesh from the repository's
+  `createMetalEgg({ GFX, metal })` asset and detaches it from the animated hero
+  rig. The original mesh and geometry are retained; its render callback is
+  removed so it stays stationary as the pommel, broad end seated into the grip
+  with the existing metal bezel, and a continuous diagonal leather wrap.
+  Sword, dagger and greatsword guards reuse the original Madness swept
+  crossguard: its curve is flipped upward and increased slightly,
   while the two original rounded terminals are tapered into points as part of
   the same continuous guard mesh. Marc's Morningstar keeps its plain
   haft-to-head connection and has no horns.

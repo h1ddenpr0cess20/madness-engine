@@ -75,8 +75,14 @@ test('Marc blade guards reuse the inverted Madness sweep with integrated pointed
 test('Marc metal egg is a stationary engine shell with its broad end joined to the grip', () => {
   const weapon = createMarcsSword(GFX);
   const egg = weapon.pommelAsset.mesh;
-  assert.equal(egg.name, 'stationary metal egg shell');
+  assert.equal(egg.name, 'stationary Metal Egg asset shell');
+  assert.equal(egg, weapon.pommelAsset.asset.shell,
+    'the pommel uses the exact shell mesh returned by the repo Metal Egg asset factory');
   assert.equal(egg.geometry.type, 'SphereGeometry');
+  assert.equal(egg.onBeforeRender, null,
+    'the extracted shell no longer runs the hero animation callback');
+  assert.equal(egg.parent, weapon.pommel,
+    'the shell is reparented to the stationary weapon pommel');
   assert.ok(egg.scale.y < 0, 'the engine egg shell is flipped so its broad end faces the grip');
   assert.equal(egg.parent, weapon.pommel);
   assert.equal(weapon.pommel.parent, weapon.group);
