@@ -73,19 +73,29 @@ test('world lava textures tile in both directions without an image frame', () =>
   }
 });
 
-test('lava time and brightness controls keep their original public shape', () => {
+test('lava time and brightness controls animate the molten layer while keeping local basalt anchored', () => {
   const material = createLavaMaterial(GFX, { mapping: 'local' });
   material.uniforms.uTime.value = 24;
   assert.equal(material.uniforms.uTime.value, 24);
-  assert.ok(material.textures.map.offset.x > 0);
-  assert.ok(material.textures.map.offset.x >= 0.4, 'lava drift is visible rather than imperceptibly slow');
-  assert.equal(material.textures.hot.offset.x, material.textures.map.offset.x);
-  assert.equal(material.textures.bump.offset.x, material.textures.map.offset.x);
+  assert.equal(material.textures.map.offset.x, 0);
+  assert.equal(material.textures.bump.offset.x, 0);
+  assert.equal(material.hotMaterial.uniforms.uTime.value, 24);
+  assert.match(material.hotMaterial.glsl.fragment, /activity/);
+  assert.match(material.hotMaterial.wgsl, /activity/);
   material.uniforms.uBright.value = 0.8;
   assert.equal(material.uniforms.uBright.value, 0.8);
   assert.equal(material.color.r, 0.8);
   material.update(36);
   assert.equal(material.uniforms.uTime.value, 36);
+  assert.equal(material.hotMaterial.uniforms.uTime.value, 36);
+});
+
+test('world lava textures continue to drift for existing floor callers', () => {
+  const material = createLavaMaterial(GFX, { mapping: 'world' });
+  material.uniforms.uTime.value = 24;
+  assert.ok(material.textures.map.offset.x > 0);
+  assert.ok(material.textures.map.offset.y > 0);
+  assert.equal(material.hotMaterial, null);
 });
 
 

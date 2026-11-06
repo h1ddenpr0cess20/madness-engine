@@ -115,47 +115,19 @@ function sphereField(u, v, scale) {
   const dy = Math.cos(phi);
   const dz = Math.abs(sinPhi) < 1e-7 ? 0 : sinPhi * Math.sin(theta);
 
-  // One broad, warped low-frequency field creates a few continuous molten
-  // rivers. A second field bends them gently; it is not another line layer.
-  const density = 0.78 + Math.min(0.2, Math.max(0, scale - 1) * 0.035);
-  const wx = fbm3(dx * 1.05 + 2.4, dy * 1.05 + 7.1, dz * 1.05 + 3.2, 3, 2) - 0.5;
-  const wy = fbm3(dx * 1.05 + 8.2, dy * 1.05 + 2.6, dz * 1.05 + 5.4, 7, 2) - 0.5;
-  const wz = fbm3(dx * 1.05 + 4.1, dy * 1.05 + 9.3, dz * 1.05 + 1.7, 11, 2) - 0.5;
-  const qx = dx * density + wx * 0.58;
-  const qy = dy * density + wy * 0.58;
-  const qz = dz * density + wz * 0.58;
-
-  const flow = fbm3(qx * 0.88, qy * 0.88, qz * 0.88, 13, 3);
-  const bend = fbm3(dx * 0.86 + 5.2, dy * 0.86 + 1.8, dz * 0.86 + 6.3, 19, 2);
-  const contour = Math.abs(flow - (0.505 + (bend - 0.5) * 0.085));
-  // Soft shoulders and a narrower hot centre keep a few broad rivers readable
-  // without a busy mesh of hairline channels.
-  const channel = 1 - smooth(0.022, 0.092, contour);
-  const channelCore = 1 - smooth(0.006, 0.025, contour);
-  const pocket = fbm3(dx * 1.45 + 9.1, dy * 1.45 + 4.3, dz * 1.45 + 2.7, 23, 2);
-  const pool = smooth(0.775, 0.88, pocket) * 0.62;
-  const molten = Math.max(channel, pool);
-
-  const stone = fbm3(dx * 10.0 + 1.3, dy * 10.0 + 4.7, dz * 10.0 + 8.1, 29, 3);
-  const grain = fbm3(dx * 27.0 + 8.4, dy * 27.0 + 2.1, dz * 27.0 + 6.8, 31, 2);
-  const warmEdge = Math.exp(-contour * 36) * (1 - channelCore);
+  // Stable basalt only. The molten channels are computed per-pixel by the
+  // animated overlay instead of being baked into a fixed spherical line map.
+  const broad = fbm3(dx * 7.0 + 1.3, dy * 7.0 + 4.7, dz * 7.0 + 8.1, 29, 3);
+  const grain = fbm3(dx * 21.0 + 8.4, dy * 21.0 + 2.1, dz * 21.0 + 6.8, 31, 2);
+  const warmth = fbm3(dx * 2.0 + 3.1, dy * 2.0 + 5.7, dz * 2.0 + 1.9, 37, 2);
   const base = [
-    mix(9, 36, stone) * (0.84 + grain * 0.28) + warmEdge * 20,
-    mix(10, 23, stone) * (0.84 + grain * 0.28) + warmEdge * 4,
-    mix(15, 20, stone) * (0.84 + grain * 0.28),
+    mix(11, 34, broad) * (0.91 + grain * 0.16) + warmth * 2.0,
+    mix(12, 24, broad) * (0.91 + grain * 0.16) + warmth * 0.55,
+    mix(17, 23, broad) * (0.91 + grain * 0.16),
   ];
-
-  const temperature = clamp01(0.28 + channel * 0.34 + channelCore * 0.52 + pool * 0.27);
-  const moltenRGB = heatColour(temperature);
-  const albedo = base.map((c, k) => Math.round(mix(c, moltenRGB[k], molten)));
-  const glowTemp = clamp01(0.48 + channelCore * 0.5 + pool * 0.16);
-  const glowRGB = heatColour(glowTemp);
-  const alpha = Math.round(clamp01(channel * 0.98 + pool * 0.82) * 245);
-
-  // Subtle relief: basalt is slightly pebbled, while molten channels are
-  // lower and smoother. No crater pits, holes or sharp random pinpricks.
-  const relief = Math.round(clamp01(0.62 + (stone - 0.5) * 0.12 + (grain - 0.5) * 0.05 - molten * 0.19) * 255);
-  return { albedo, glowRGB, alpha, relief };
+  const albedo = base.map((c) => Math.round(Math.max(0, Math.min(255, c))));
+  const relief = Math.round(clamp01(0.66 + (broad - 0.5) * 0.055 + (grain - 0.5) * 0.025) * 255);
+  return { albedo, glowRGB: [0, 0, 0], alpha: 0, relief };
 }
 
 function floorField(u, v, scale) {
@@ -188,6 +160,201 @@ function floorField(u, v, scale) {
   const relief = Math.round(clamp01(0.62 + (stone - 0.5) * 0.12 + (grain - 0.5) * 0.05 - molten * 0.19) * 255);
   return { albedo, glowRGB, alpha, relief };
 }
+
+
+
+const HOT_VERTEX = \`
+varying vec3 vMoltenPoint;
+void main() {
+  vec3 p = position * 1.002;
+  vMoltenPoint = p;
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  gl_Position = projectionMatrix * mv;
+}
+\`;
+
+const HOT_FRAGMENT = \`
+uniform float uTime;
+uniform float uScale;
+varying vec3 vMoltenPoint;
+
+float hash31(vec3 p) {
+  vec3 q = fract(p * 0.1031);
+  q += dot(q, q.yzx + 33.33);
+  return fract((q.x + q.y) * q.z);
+}
+
+float noise3(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  vec3 u = f * f * (3.0 - 2.0 * f);
+  float a = hash31(i + vec3(0.0, 0.0, 0.0));
+  float b = hash31(i + vec3(1.0, 0.0, 0.0));
+  float c = hash31(i + vec3(0.0, 1.0, 0.0));
+  float d = hash31(i + vec3(1.0, 1.0, 0.0));
+  float e = hash31(i + vec3(0.0, 0.0, 1.0));
+  float f1 = hash31(i + vec3(1.0, 0.0, 1.0));
+  float g = hash31(i + vec3(0.0, 1.0, 1.0));
+  float h = hash31(i + vec3(1.0, 1.0, 1.0));
+  return mix(
+    mix(mix(a, b, u.x), mix(c, d, u.x), u.y),
+    mix(mix(e, f1, u.x), mix(g, h, u.x), u.y),
+    u.z
+  );
+}
+
+float fbm3(vec3 p) {
+  float sum = 0.0;
+  float amp = 0.5;
+  for (int i = 0; i < 4; i++) {
+    sum += noise3(p) * amp;
+    p = p.yzx * 2.01 + vec3(13.1, 7.7, 3.3);
+    amp *= 0.5;
+  }
+  return sum / 0.9375;
+}
+
+vec3 heat(float x) {
+  vec3 c = mix(vec3(0.24, 0.012, 0.002), vec3(0.82, 0.075, 0.006), smoothstep(0.05, 0.48, x));
+  c = mix(c, vec3(1.0, 0.31, 0.025), smoothstep(0.42, 0.78, x));
+  return mix(c, vec3(1.0, 0.78, 0.35), smoothstep(0.82, 1.0, x));
+}
+
+void main() {
+  float t = uTime;
+  vec3 p = normalize(vMoltenPoint) * uScale;
+  vec3 drift = vec3(t * 0.055, -t * 0.037, t * 0.029);
+
+  // A gently advected, domain-warped field: deliberately only one main
+  // channel field, so the surface has a few broad rivers instead of line noise.
+  vec3 warp = vec3(
+    fbm3(p * 0.42 + drift + vec3(2.1, 5.4, 1.7)),
+    fbm3(p.yzx * 0.42 - drift.zxy + vec3(7.2, 1.8, 4.3)),
+    fbm3(p.zxy * 0.42 + drift.yzx + vec3(3.4, 8.1, 6.2))
+  );
+  vec3 q = p * 0.9 + (warp - 0.5) * 0.72;
+
+  float field = fbm3(q * 0.88 + drift * 0.28 + vec3(4.1, 2.8, 7.3));
+  float bend = fbm3(q * 0.52 - drift * 0.17 + vec3(8.4, 6.3, 1.2));
+  float centre = 0.505 + (bend - 0.5) * 0.12;
+  float distance = abs(field - centre);
+
+  // Soft shoulders fade into rock; the narrow core supplies the hot centre.
+  float channel = 1.0 - smoothstep(0.025, 0.105, distance);
+  float core = 1.0 - smoothstep(0.004, 0.027, distance);
+  float poolField = fbm3(q * 0.44 - drift * 0.12 + vec3(9.7, 3.2, 5.8));
+  float pools = smoothstep(0.73, 0.86, poolField) * 0.35;
+
+  // This independent, slow life field fades individual sections locally;
+  // new regions kindle as its smooth noise moves through the channel network.
+  float life = fbm3(q * 0.58 + drift * 0.19 + vec3(t * 0.012, 6.1, 2.7));
+  float activity = smoothstep(0.32, 0.68, life);
+  float thermal = fbm3(q * 1.12 - drift * 0.43 + vec3(2.7, t * 0.018, 8.2));
+  float pulse = 0.84 + 0.16 * sin(t * 0.72 + thermal * 4.2);
+  float mask = clamp(max(channel * 0.68, pools) * activity * pulse, 0.0, 0.72);
+
+  float temperature = clamp(0.28 + core * 0.55 + pools * 0.48 + thermal * 0.12, 0.0, 1.0);
+  vec3 colour = heat(temperature);
+  float edgeHeat = exp(-distance * 28.0) * (1.0 - core);
+  colour = mix(colour * 0.66, colour, 1.0 - edgeHeat * 0.32);
+  gl_FragColor = vec4(colour * mask * 1.35, mask);
+}
+\`;
+
+const HOT_WGSL = \`
+struct Varyings {
+  @builtin(position) position: vec4f,
+  @location(0) point: vec3f,
+};
+
+@vertex
+fn vs(@location(0) position: vec3f) -> Varyings {
+  var out: Varyings;
+  let p = position * 1.002;
+  out.point = p;
+  out.position = object.projectionMatrix * object.modelViewMatrix * vec4f(p, 1.0);
+  return out;
+}
+
+fn hash31(p: vec3f) -> f32 {
+  var q = fract(p * 0.1031);
+  q += dot(q, q.yzx + vec3f(33.33));
+  return fract((q.x + q.y) * q.z);
+}
+
+fn noise3(p: vec3f) -> f32 {
+  let i = floor(p);
+  let f = fract(p);
+  let u = f * f * (vec3f(3.0) - 2.0 * f);
+  let a = hash31(i + vec3f(0.0, 0.0, 0.0));
+  let b = hash31(i + vec3f(1.0, 0.0, 0.0));
+  let c = hash31(i + vec3f(0.0, 1.0, 0.0));
+  let d = hash31(i + vec3f(1.0, 1.0, 0.0));
+  let e = hash31(i + vec3f(0.0, 0.0, 1.0));
+  let f1 = hash31(i + vec3f(1.0, 0.0, 1.0));
+  let g = hash31(i + vec3f(0.0, 1.0, 1.0));
+  let h = hash31(i + vec3f(1.0, 1.0, 1.0));
+  return mix(
+    mix(mix(a, b, u.x), mix(c, d, u.x), u.y),
+    mix(mix(e, f1, u.x), mix(g, h, u.x), u.y),
+    u.z
+  );
+}
+
+fn fbm3(p0: vec3f) -> f32 {
+  var p = p0;
+  var sum = 0.0;
+  var amp = 0.5;
+  for (var i = 0; i < 4; i++) {
+    sum += noise3(p) * amp;
+    p = p.yzx * 2.01 + vec3f(13.1, 7.7, 3.3);
+    amp *= 0.5;
+  }
+  return sum / 0.9375;
+}
+
+fn heat(x: f32) -> vec3f {
+  var c = mix(vec3f(0.24, 0.012, 0.002), vec3f(0.82, 0.075, 0.006), smoothstep(0.05, 0.48, x));
+  c = mix(c, vec3f(1.0, 0.31, 0.025), smoothstep(0.42, 0.78, x));
+  return mix(c, vec3f(1.0, 0.78, 0.35), smoothstep(0.82, 1.0, x));
+}
+
+@fragment
+fn fs(in: Varyings) -> @location(0) vec4f {
+  let t = material.uTime;
+  let p = normalize(in.point) * material.uScale;
+  let drift = vec3f(t * 0.055, -t * 0.037, t * 0.029);
+
+  let warp = vec3f(
+    fbm3(p * 0.42 + drift + vec3f(2.1, 5.4, 1.7)),
+    fbm3(p.yzx * 0.42 - drift.zxy + vec3f(7.2, 1.8, 4.3)),
+    fbm3(p.zxy * 0.42 + drift.yzx + vec3f(3.4, 8.1, 6.2))
+  );
+  let q = p * 0.9 + (warp - vec3f(0.5)) * 0.72;
+
+  let field = fbm3(q * 0.88 + drift * 0.28 + vec3f(4.1, 2.8, 7.3));
+  let bend = fbm3(q * 0.52 - drift * 0.17 + vec3f(8.4, 6.3, 1.2));
+  let centre = 0.505 + (bend - 0.5) * 0.12;
+  let distance = abs(field - centre);
+
+  let channel = 1.0 - smoothstep(0.025, 0.105, distance);
+  let core = 1.0 - smoothstep(0.004, 0.027, distance);
+  let poolField = fbm3(q * 0.44 - drift * 0.12 + vec3f(9.7, 3.2, 5.8));
+  let pools = smoothstep(0.73, 0.86, poolField) * 0.35;
+
+  let life = fbm3(q * 0.58 + drift * 0.19 + vec3f(t * 0.012, 6.1, 2.7));
+  let activity = smoothstep(0.32, 0.68, life);
+  let thermal = fbm3(q * 1.12 - drift * 0.43 + vec3f(2.7, t * 0.018, 8.2));
+  let pulse = 0.84 + 0.16 * sin(t * 0.72 + thermal * 4.2);
+  let mask = clamp(max(channel * 0.68, pools) * activity * pulse, 0.0, 0.72);
+
+  let temperature = clamp(0.28 + core * 0.55 + pools * 0.48 + thermal * 0.12, 0.0, 1.0);
+  var colour = heat(temperature);
+  let edgeHeat = exp(-distance * 28.0) * (1.0 - core);
+  colour = mix(colour * 0.66, colour, 1.0 - edgeHeat * 0.32);
+  return vec4f(colour * mask * 1.35, mask);
+}
+\`;
 
 function writePixel(data, offset, rgb, alpha = 255) {
   data[offset] = rgb[0];
@@ -307,12 +474,15 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
     toneMapped: false,
   });
 
-  const hotMaterial = mapping === 'local' ? new GFX.MeshBasicMaterial({
-    name: 'lava-molten-glow',
-    color: new GFX.Color('#ffffff'),
-    map: maps.hot,
+  const hotMaterial = mapping === 'local' ? new GFX.ShaderMaterial({
+    name: 'lava-molten-flow',
+    uniforms: {
+      uTime: { value: 0 },
+      uScale: { value: 2.2 },
+    },
+    glsl: { vertex: HOT_VERTEX, fragment: HOT_FRAGMENT },
+    wgsl: HOT_WGSL,
     transparent: true,
-    opacity: 1,
     blending: GFX.AdditiveBlending,
     depthWrite: false,
     toneMapped: false,
@@ -325,11 +495,15 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
   let currentTime = 0;
   let brightness = 1;
   const applyTime = () => {
-    // Local mapping drifts around the orb's longitude only: this remains
-    // seamless at both poles. Floor mapping moves slowly in both directions.
-    const u = currentTime * (mapping === 'local' ? 0.018 : 0.014);
+    // Keep local basalt anchored to the deforming surface. The molten layer
+    // receives time directly and fades/re-forms in its own smooth 3D field.
+    // World-space floor textures retain a slow continuous drift.
+    const u = currentTime * (mapping === 'local' ? 0 : 0.014);
     const v = currentTime * (mapping === 'local' ? 0 : 0.005);
-    for (const tex of [maps.map, maps.hot, maps.bump]) tex.offset.set(u % 1, v % 1);
+    if (mapping === 'world') {
+      for (const tex of [maps.map, maps.hot, maps.bump]) tex.offset.set(u % 1, v % 1);
+    }
+    if (hotMaterial) hotMaterial.uniforms.uTime.value = currentTime;
   };
 
   const time = {};

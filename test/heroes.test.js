@@ -192,6 +192,8 @@ test('lava Slimey reuses the deforming orb while replacing every slime layer wit
   assert.equal(lavaShell.material.name, 'lava');
   assert.equal(lavaShell.material.uniforms.uLocal.value, 1);
   assert.equal(lavaShell.material.uniforms.uScale.value, 4.35);
+  assert.equal(lavaShell.material.hotMaterial.type, 'ShaderMaterial');
+  assert.equal(lavaShell.material.hotMaterial.uniforms.uTime.value, 0);
   assert.equal(core.visible, false, 'no green slime core remains');
   assert.equal(glow.visible, false, 'no slime rim glow remains');
   assert.ok(bubbles.every((bubble) => !bubble.visible), 'no translucent slime bubbles remain');
