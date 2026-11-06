@@ -137,11 +137,10 @@ void main() {
     col += tone * dens;
     col += light * uCore * exp(-d2 * 7.0) * 0.35;
   }
-  // The ray parameter and dt are in world units, whereas uRadius is in the
-  // volume's unscaled local units. Account for the largest ellipsoid axis so
-  // a physically small orb remains as luminous as Krystal's full-size ball.
-  float worldRadius = uRadius * max(max(uShape.x, uShape.y), uShape.z);
-  col *= uGlow * 2.6 * dt / worldRadius * uTint;
+  // Each step is measured in world units. Convert it to the volume's
+  // normalized ellipsoid space before integrating density; using the ray's
+  // transformed length keeps a thin blade sheath as bright as the orb.
+  col *= uGlow * 2.6 * length(rd) * dt / uRadius * uTint;
   col = vec3(1.0) - exp(-col);
   gl_FragColor = vec4(col, 1.0);
 }
@@ -221,10 +220,9 @@ fn fs(v: VOut) -> @location(0) vec4f {
     col += tone * m.density * edge * edge;
     col += light * material.uCore * exp(-d2 * 7.0) * 0.35;
   }
-  // dt is in world units; uRadius is local. Restore the same integrated
-  // brightness after uniformly shrinking the glass orb, and for blade sheaths.
-  let worldRadius = material.uRadius * max(max(material.uShape.x, material.uShape.y), material.uShape.z);
-  col *= material.uGlow * 2.6 * dt / worldRadius * material.uTint;
+  // Integrate each world-space step by its distance in normalized ellipsoid
+  // space so thin sheaths retain the same density as the original round orb.
+  col *= material.uGlow * 2.6 * length(rd) * dt / material.uRadius * material.uTint;
   col = vec3f(1.0) - exp(-col);
   return vec4f(col, 1.0);
 }

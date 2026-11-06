@@ -5,11 +5,11 @@ import { createVisionMaterial } from '../heroes/krystal/vision.js';
  * but ray-marches in ellipsoid space so the same curled wisps follow both a
  * full-length sword and a compact dagger without reading as a spherical cloud.
  *
- * Dimensions are local weapon-space metres. The returned mesh starts hidden;
- * the weapon factory exposes its visibility through setBladeMist().
+ * Dimensions are local weapon-space metres. The sheath starts visible and
+ * can be toggled independently of the mist that remains inside the orb.
  */
 export function createBladeMist(GFX, parent, {
-  rootY, length, width, visible = false,
+  rootY, length, width, visible = true,
 } = {}) {
   if (!GFX?.SphereGeometry || !GFX?.Mesh || !GFX?.Timer) {
     throw new TypeError('createBladeMist requires the Madness Engine GFX module');
@@ -23,22 +23,15 @@ export function createBladeMist(GFX, parent, {
 
   const material = createVisionMaterial(GFX);
   const uniforms = material.uniforms;
-  // Keep the same folded, turbulent wisps as Krystal's orb, with a cool
-  // pearlescent palette and reduced glow so the steel remains readable.
-  uniforms.uSwirl.value = 1.25;
-  uniforms.uChurn.value = 0.48;
-  uniforms.uGlow.value = 0.66;
-  uniforms.uHue.value = 0.76;
-  uniforms.uSpread.value = 0.72;
-  uniforms.uTint.value.set(0.86, 0.94, 1.0);
-  uniforms.uCore.value = 0.22;
-  uniforms.uBands.value = 0.12;
+  // Use Krystal's own unmodified vision palette and motion values. The blade
+  // volume changes only its shape; its colour, density and wisp character
+  // remain the same as the effect inside the glass orb.
   uniforms.uDuo.value = 0;
 
   const axes = {
     x: width * 0.5 + 0.006,
     y: length * 0.5 + 0.012,
-    z: 0.010,
+    z: 0.022,
   };
   uniforms.uRadius.value = 1;
   uniforms.uShape.value.set(axes.x, axes.y, axes.z);

@@ -147,19 +147,19 @@ test('Krystal sword and dagger use her crystal orb and independently toggleable 
     assert.equal(krystal.dimensions.gripLength, madness.dimensions.gripLength);
     assert.equal(krystal.guard.name, madness.guard.name);
     assert.ok(krystal.bladeMist, 'a separate mist volume surrounds the blade');
-    assert.equal(krystal.bladeMist.visible, false, 'blade mist is opt-in');
+    assert.equal(krystal.bladeMist.visible, true, 'blade mist is visible by default');
     assert.equal(krystal.bladeMist.material.blending, GFX.AdditiveBlending);
     assert.ok(krystal.bladeMist.material.uniforms.uShape.value.y
       > krystal.bladeMist.material.uniforms.uShape.value.x,
     'blade mist is an elongated ellipsoid, not a spherical cloud');
 
-    krystal.setBladeMist(true);
-    assert.equal(krystal.bladeMist.visible, true);
-    assert.equal(krystal.pommelAsset.vision.visible, true,
-      'enabling the blade sheath does not control the orb visions');
     krystal.setBladeMist(false);
     assert.equal(krystal.bladeMist.visible, false);
     assert.equal(krystal.pommelAsset.vision.visible, true,
       'disabling the blade sheath leaves the orb visions running');
+    krystal.setBladeMist(true);
+    assert.equal(krystal.bladeMist.visible, true);
+    assert.equal(krystal.pommelAsset.vision.visible, true,
+      'enabling the blade sheath does not control the orb visions');
   }
 });
