@@ -16,6 +16,7 @@ import { tiled } from '../../../src/textures/painters.js';
 import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
+import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
@@ -28,6 +29,7 @@ const where = (path) => path.replace('../../../src/', '');
 const stem = (path) => where(path).split('/').pop().replace(/\.js$/, '');
 const CLIPS = ['idle', 'walk', 'run', 'attack', 'cast', 'hit', 'ko', 'win', 'jump', 'leap', 'sit', 'talk'];
 const CATEGORY = { characters: 'Characters', props: 'Props', scenery: 'Scenery & vehicles' };
+const METAL_CHOICES = Object.keys(METAL_FINISHES);
 
 /** The bounding box of everything drawn in `object`, in its own units, as { min, max, size }. */
 export function boundsOf(object) {
@@ -149,7 +151,7 @@ const HEROES = [
   ['metal morningstar', ({ metal = 'steel' } = {}) => Promise.all([import('../../../src/heroes/morningstar.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
     h.createMetalMorningStar(GFX, { metal }),
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
-  )), null, { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] }],
+  )), null, { metal: METAL_CHOICES }],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
@@ -157,7 +159,9 @@ const HEROES = [
   ['egg (debater)', () => import('../../../src/heroes/debater-egg/index.js').then((m) => m.createEgg({ GFX }))],
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
   ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
+  ['metal vibey', ({ metal = 'steel' } = {}) => avatar('../../../src/heroes/vibey/index.js', 'createMetalStar', { metal }), null, { metal: METAL_CHOICES }],
   ['slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createSlimeOrb')],
+  ['metal slimey', ({ metal = 'steel' } = {}) => avatar('../../../src/heroes/slimey/index.js', 'createMetalSlimeOrb', { metal }), null, { metal: METAL_CHOICES }],
   // Floating at its own height, framed on the berry rather than on its halos, which spread far wider.
   ['blubber', () => import('../../../src/heroes/blubber.js').then((m) => {
     const b = m.createBlubber(GFX, { size: 1 });
@@ -168,11 +172,11 @@ const HEROES = [
 
 /** The avatar apps' models, made on a stand-in for their stage (heroes/standin.js). */
 const avatars = import.meta.glob('../../../src/heroes/{vibey,slimey,krystal,alan}/index.js');
-async function avatar(path, fn) {
+async function avatar(path, fn, buildOptions = {}) {
   const [{ standIn }, mod] = await Promise.all([import('../../../src/heroes/standin.js'), avatars[path]()]);
   const { group, stage } = standIn(GFX, globalThis.assetViewer?.renderer ?? null);
   // Its night painted at half the width the app paints it: a quarter of the work, and still sharp behind it here.
-  const made = mod[fn]({ stage, GFX, sky: 2048 });
+  const made = mod[fn]({ stage, GFX, sky: 2048, ...buildOptions });
   // Shown where it lives: what it reflects is what it set for its own stage, and its sky is its backdrop's.
   let sky = null;
   stage._scene.traverse((o) => { if (o.name === 'backdrop' && o.material?.map?.image) sky = o.material.map.image; });
