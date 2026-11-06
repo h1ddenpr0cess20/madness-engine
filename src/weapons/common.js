@@ -254,9 +254,13 @@ export function buildWeapon(GFX, spec, {
 
   // Grip overlaps the marble at its base and the guard/boss at its upper end.
   const radius = marble.radius;
-  const gripBottom = radius * 1.55;
+  // The leather stops 5 mm above the glass. A hollow metal bezel bridges
+  // the joint around the handle without burying the marble's spark inside it.
+  const gripBottom = marble.height + 0.005;
   const gripTop = gripBottom + spec.gripLength;
-  const guardY = gripTop + 0.006;
+  // The guard boss starts exactly at the handle end: no leather is buried
+  // inside its centre piece, but the tang still enters the boss from above.
+  const guardY = gripTop + 0.012;
   const bladeRootY = guardY - 0.007;
 
   const leatherMapsResult = leatherMaps(GFX);
@@ -273,14 +277,47 @@ export function buildWeapon(GFX, spec, {
   });
   const handleRadius = spec.gripDiameter / 2;
   const handle = new GFX.Mesh(
-    new GFX.CylinderGeometry(handleRadius, handleRadius * 0.96, spec.gripLength + 0.012, 48, 1),
+    new GFX.CylinderGeometry(handleRadius, handleRadius * 0.96, spec.gripLength, 48, 1),
     leatherMaterial,
   );
   handle.name = 'leather grip';
   handle.position.set(0, (gripBottom + gripTop) / 2, 0);
   handle.castShadow = true;
   handle.receiveShadow = true;
-  hilt.add(handle);
+
+  // Hollow, turned-metal bezel. Its lower lip kisses the marble surface and
+  // its upper lip overlaps the leather end; the opening leaves the spark
+  // visible rather than covering the marble with a cap or socket.
+  const bezel = new GFX.Group();
+  bezel.name = 'marble-to-leather metal bezel';
+  const bezelOuterRadius = handleRadius * 1.23;
+  const bezelBottom = marble.height;
+  const bezelTop = gripBottom + 0.004;
+  const bezelHeight = bezelTop - bezelBottom;
+  const bezelSleeve = new GFX.Mesh(
+    new GFX.CylinderGeometry(bezelOuterRadius, bezelOuterRadius, bezelHeight, 48, 1, true),
+    hiltMaterial,
+  );
+  bezelSleeve.name = 'pommel bezel hollow sleeve';
+  bezelSleeve.position.set(0, (bezelBottom + bezelTop) / 2, 0);
+  bezelSleeve.castShadow = true;
+  bezelSleeve.receiveShadow = true;
+  bezel.add(bezelSleeve);
+  for (const [name, y] of [
+    ['pommel bezel lower rim', bezelBottom + 0.0007],
+    ['pommel bezel upper rim', bezelTop - 0.0007],
+  ]) {
+    const rim = new GFX.Mesh(
+      new GFX.TorusGeometry(bezelOuterRadius - 0.0012, 0.0012, 10, 48),
+      hiltMaterial,
+    );
+    rim.name = name;
+    rim.position.set(0, y, 0);
+    rim.rotation.x = Math.PI / 2;
+    rim.castShadow = true;
+    bezel.add(rim);
+  }
+  hilt.add(bezel, handle);
 
   const wrapMaterial = new GFX.MeshPhysicalMaterial({
     name: 'leather wrap ridges',
@@ -340,8 +377,11 @@ export function buildWeapon(GFX, spec, {
     blade,
     hilt,
     handle,
+    bezel,
     marble,
     pommel: marble.group,
+    gripBounds: Object.freeze({ bottom: gripBottom, top: gripTop }),
+    guardBoss: hilt.children.find((part) => part.name === 'guard central boss'),
     dimensions: Object.freeze({
       overallLength: bladeRootY + spec.bladeLength,
       bladeLength: spec.bladeLength,
