@@ -20,6 +20,10 @@ import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
+// Procedural props register themselves through an assetViewer descriptor.
+// Keep a dedicated root-props glob so stand-alone factory modules (coins, globes, etc.)
+// are reliably discovered independently of the sculpted-definition scan.
+const proceduralProps = import.meta.glob(['../../../src/props/*.js', '../../../src/props/**/*.js']);
 const textures = import.meta.glob('../../../src/textures/**/*.js');
 
 // Street furniture (trees, lamps, benches) has no skeleton: it stands on one root bone.
@@ -523,7 +527,7 @@ export async function loadCatalog(onProgress = () => {}) {
   const items = [];
   const seen = new Set();
   let n = 0;
-  const total = Object.keys(sculpted).length + Object.keys(textures).length;
+  const total = Object.keys(sculpted).length + Object.keys(proceduralProps).length + Object.keys(textures).length;
 
   // Defaults before their versions: where a version is only the default under another name (rat.dungeon-roller), the
   // one model is listed once, under its own name.
@@ -536,7 +540,6 @@ export async function loadCatalog(onProgress = () => {}) {
     let mod;
     try { mod = await load(); } catch (err) { console.warn(`${where(path)}: ${err.message}`); continue; }
     const folder = where(path).split('/')[0];
-    if (folder === 'props' && mod.assetViewer) items.push(proceduralPropItem(mod.assetViewer, path));
     const group = folder === 'scenery' ? file.split('.')[0] : folder;
     for (const [key, value] of Object.entries(mod)) {
       const defs = isDef(value) ? [[key, value]] : value && typeof value === 'object' && !Array.isArray(value) ? Object.entries(value).filter(([, v]) => isDef(v)) : [];
@@ -554,6 +557,17 @@ export async function loadCatalog(onProgress = () => {}) {
       }
     }
   }
+
+  // Factory-based props are registered separately from sculpted definitions.
+  // This includes the original logo coin, Bitcoin coin and political coin, and
+  // lets future top-level prop modules appear by exporting only assetViewer.
+  for (const [path, load] of Object.entries(proceduralProps)) {
+    onProgress(++n / total);
+    let mod;
+    try { mod = await load(); } catch (err) { console.warn(`${where(path)}: ${err.message}`); continue; }
+    if (mod.assetViewer) items.push(proceduralPropItem(mod.assetViewer, path));
+  }
+
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
   items.push(...buildingItems());
