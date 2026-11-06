@@ -127,7 +127,7 @@ function sphereField(u, v, scale) {
   ];
   const albedo = base.map((c) => Math.round(Math.max(0, Math.min(255, c))));
   const relief = Math.round(clamp01(0.66 + (broad - 0.5) * 0.055 + (grain - 0.5) * 0.025) * 255);
-  return { albedo, glowRGB: [0, 0, 0], alpha: 0, relief };
+  return { albedo, relief };
 }
 
 function floorField(u, v, scale) {
@@ -143,7 +143,7 @@ function floorField(u, v, scale) {
   ];
   const albedo = base.map((c) => Math.round(Math.max(0, Math.min(255, c))));
   const relief = Math.round(clamp01(0.66 + (broad - 0.5) * 0.055 + (grain - 0.5) * 0.025) * 255);
-  return { albedo, glowRGB: [0, 0, 0], alpha: 0, relief };
+  return { albedo, relief };
 }
 
 
@@ -376,7 +376,6 @@ function textureSet(GFX, mapping, scale) {
   const width = mapping === 'local' ? 1024 : 1024;
   const height = mapping === 'local' ? 512 : 512;
   const albedo = new Uint8Array(width * height * 4);
-  const glow = new Uint8Array(width * height * 4);
   const relief = new Uint8Array(width * height * 4);
 
   for (let y = 0; y < height; y++) {
@@ -386,7 +385,6 @@ function textureSet(GFX, mapping, scale) {
       const sample = mapping === 'local' ? sphereField(u, v, scale) : floorField(u, v, scale);
       const i = (y * width + x) * 4;
       writePixel(albedo, i, sample.albedo);
-      writePixel(glow, i, sample.glowRGB, sample.alpha);
       writePixel(relief, i, [sample.relief, sample.relief, sample.relief]);
     }
   }
@@ -398,7 +396,6 @@ function textureSet(GFX, mapping, scale) {
     const last = (y * width + width - 1) * 4;
     for (let c = 0; c < 4; c++) {
       albedo[last + c] = albedo[first + c];
-      glow[last + c] = glow[first + c];
       relief[last + c] = relief[first + c];
     }
   }
@@ -406,13 +403,11 @@ function textureSet(GFX, mapping, scale) {
     for (const y of [0, height - 1]) {
       const base = y * width * 4;
       const first = [albedo[base], albedo[base + 1], albedo[base + 2], albedo[base + 3]];
-      const hot = [glow[base], glow[base + 1], glow[base + 2], glow[base + 3]];
       const bump = [relief[base], relief[base + 1], relief[base + 2], relief[base + 3]];
       for (let x = 1; x < width; x++) {
         const i = (y * width + x) * 4;
         for (let c = 0; c < 4; c++) {
           albedo[i + c] = first[c];
-          glow[i + c] = hot[c];
           relief[i + c] = bump[c];
         }
       }
@@ -423,7 +418,6 @@ function textureSet(GFX, mapping, scale) {
       const last = ((height - 1) * width + x) * 4;
       for (let c = 0; c < 4; c++) {
         albedo[last + c] = albedo[first + c];
-        glow[last + c] = glow[first + c];
         relief[last + c] = relief[first + c];
       }
     }
@@ -442,7 +436,6 @@ function textureSet(GFX, mapping, scale) {
   };
   const result = {
     map: make(albedo, GFX.SRGBColorSpace, mapping === 'local' ? GFX.ClampToEdgeWrapping : GFX.RepeatWrapping),
-    hot: make(glow, GFX.SRGBColorSpace, mapping === 'local' ? GFX.ClampToEdgeWrapping : GFX.RepeatWrapping),
     bump: make(relief, GFX.NoColorSpace, mapping === 'local' ? GFX.ClampToEdgeWrapping : GFX.RepeatWrapping),
     width, height,
   };

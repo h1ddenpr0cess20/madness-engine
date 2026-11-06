@@ -41,7 +41,7 @@ test('lava is a physically based basalt material with an optional emissive hot l
   assert.equal(local.roughness, 0.62);
   assert.equal(local.textures.width, 1024);
   assert.equal(local.textures.height, 512);
-  for (const texture of [local.textures.map, local.textures.hot, local.textures.bump]) {
+  for (const texture of [local.textures.map, local.textures.bump]) {
     assert.equal(texture.generateMipmaps, true);
     assert.equal(texture.minFilter, GFX.LinearMipmapLinearFilter);
   }
@@ -53,7 +53,7 @@ test('spherical lava textures have identical longitude borders and pole rows', (
   const material = createLavaMaterial(GFX, { mapping: 'local', scale: 4.35 });
   const maps = material.textures;
   const width = maps.width, height = maps.height;
-  for (const texture of [maps.map, maps.hot, maps.bump]) {
+  for (const texture of [maps.map, maps.bump]) {
     const data = texture.image.data;
     for (let y = 0; y < height; y++) {
       assert.deepEqual(pixel(data, width, 0, y), pixel(data, width, width - 1, y), 'UV border row ' + y);
@@ -70,7 +70,7 @@ test('spherical lava textures have identical longitude borders and pole rows', (
 test('world lava textures tile in both directions without an image frame', () => {
   const material = createLavaMaterial(GFX);
   const maps = material.textures;
-  for (const texture of [maps.map, maps.hot, maps.bump]) {
+  for (const texture of [maps.map, maps.bump]) {
     const data = texture.image.data;
     for (let y = 0; y < maps.height; y++) {
       assert.deepEqual(pixel(data, maps.width, 0, y), pixel(data, maps.width, maps.width - 1, y));
@@ -102,7 +102,7 @@ test('lava time and brightness controls animate the molten layer while keeping l
   assert.match(material.hotMaterial.wgsl, /smoothstep\(0\.32 - lifeAA, 0\.68 \+ lifeAA, life\)/);
 });
 
-test('world lava textures continue to drift for existing floor callers', () => {
+test('world lava keeps its basalt map anchored while the procedural molten layer advances', () => {
   const material = createLavaMaterial(GFX, { mapping: 'world' });
   material.uniforms.uTime.value = 24;
   assert.equal(material.textures.map.offset.x, 0, 'floor crust does not merely scroll');
