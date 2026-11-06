@@ -174,7 +174,7 @@ fn glow(h: f32) -> vec3f {
  * treatment is intentionally preserved; world-space coordinates keep it
  * continuous across separate floor and pit meshes.
  */
-function createWorldFloorLavaMaterial(GFX) {
+export function createLavaFloorMaterial(GFX) {
   return new GFX.ShaderMaterial({
     name: 'lava',
     uniforms: { uTime: { value: 0 }, uBright: { value: 1 } },
@@ -603,8 +603,8 @@ function textureSet(GFX, mapping, scale) {
  * World mapping is a seamless repeating floor texture. Local mapping is a
  * spherical 3D sample that follows a deforming mesh and has exact UV borders.
  */
-function createLocalSlimeyLavaMaterial(GFX, { mapping = 'local', scale = 1.6 } = {}) {
-  if (mapping !== 'local') throw new Error('local Slimey lava requires mapping: local');
+export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {}) {
+  if (mapping !== 'world' && mapping !== 'local') throw new Error('unknown lava mapping: ' + mapping);
   if (!Number.isFinite(scale) || scale <= 0) throw new Error('lava scale must be a positive finite number');
 
   const maps = textureSet(GFX, mapping, scale);
@@ -673,15 +673,4 @@ function createLocalSlimeyLavaMaterial(GFX, { mapping = 'local', scale = 1.6 } =
   material.update = (t) => { material.uniforms.uTime.value = t; return material; };
   material.hotMaterial = hotMaterial;
   return material;
-}
-
-
-/**
- * Public lava material factory. World/floor calls use the original single-pass
- * lava shader; only mapping:'local' opts into the newer Slimey-specific shell.
- */
-export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {}) {
-  if (mapping === 'world') return createWorldFloorLavaMaterial(GFX);
-  if (mapping === 'local') return createLocalSlimeyLavaMaterial(GFX, { mapping, scale });
-  throw new Error('unknown lava mapping: ' + mapping);
 }

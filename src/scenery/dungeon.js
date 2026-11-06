@@ -1,4 +1,4 @@
-import { createLavaMaterial } from '../textures/lava.js';
+import { createLavaFloorMaterial } from '../textures/lava.js';
 
 /**
  * The dungeon as it is drawn: flagstone floors, brick walls falling away into
@@ -222,7 +222,7 @@ export function createDungeonMeshes(GFX, built) {
   }
   let lavaMaterial = null;
   if (built.lava.position.length) {
-    lavaMaterial = createLavaMaterial(GFX);
+    lavaMaterial = createLavaFloorMaterial(GFX);
     const lava = new GFX.Mesh(geometry(built.lava), lavaMaterial);
     lava.frustumCulled = false;
     group.add(lava);

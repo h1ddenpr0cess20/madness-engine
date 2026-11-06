@@ -15,7 +15,7 @@ import { createOcean, SEAS, SKIES } from '../../../src/ocean.js';
 import { createRiver, RIVERS, riverOf } from '../../../src/river.js';
 import { createEffects, CONFETTI, WEATHER, shardGeometry } from '../../../src/effects.js';
 import { createDungeonMeshes, createExit, createTorches, flicker } from '../../../src/scenery/dungeon.js';
-import { createLavaMaterial } from '../../../src/textures/lava.js';
+import { createLavaFloorMaterial } from '../../../src/textures/lava.js';
 import { createBogMaterial } from '../../../src/textures/bog.js';
 import { createIceCube } from '../../../src/scenery/ice.js';
 import { PROPS } from '../../../src/scenery/gear/decor.js';
@@ -238,7 +238,7 @@ const dungeonItem = () => ({
 const lavaItem = () => ({
   id: 'textures/lava', category: 'Dungeon', group: 'dungeon', name: 'Lava (shader)', source: 'textures/lava.js', kind: 'object',
   build() {
-    const material = createLavaMaterial(GFX);
+    const material = createLavaFloorMaterial(GFX);
     const pool = new GFX.Mesh(new GFX.PlaneGeometry(3, 3, 1, 1), material);
     pool.rotation.x = -Math.PI / 2;
     pool.position.y = -0.04;

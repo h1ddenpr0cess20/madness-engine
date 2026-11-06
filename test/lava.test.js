@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import * as GFX from '../src/gfx/index.js';
-import { createLavaMaterial } from '../src/textures/lava.js';
+import { createLavaFloorMaterial, createLavaMaterial } from '../src/textures/lava.js';
 
 function pixel(data, width, x, y) {
   const i = (y * width + x) * 4;
@@ -10,7 +10,7 @@ function pixel(data, width, x, y) {
 }
 
 test('world lava restores the original single-pass shader while Slimey keeps its local material', () => {
-  const world = createLavaMaterial(GFX);
+  const world = createLavaFloorMaterial(GFX);
   assert.equal(world.name, 'lava');
   assert.equal(world.type, 'ShaderMaterial');
   assert.equal(world.uniforms.uTime.value, 0);
@@ -78,7 +78,7 @@ test('lava time and brightness controls animate the molten layer while keeping l
 });
 
 test('world lava retains time and brightness controls on the original shader', () => {
-  const material = createLavaMaterial(GFX);
+  const material = createLavaFloorMaterial(GFX);
   material.uniforms.uTime.value = 24;
   material.uniforms.uBright.value = 0.8;
   assert.equal(material.uniforms.uTime.value, 24);
