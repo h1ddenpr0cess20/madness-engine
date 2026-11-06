@@ -258,8 +258,8 @@ export function buildWeapon(GFX, spec, {
   // the joint around the handle without burying the marble's spark inside it.
   const gripBottom = marble.height + 0.005;
   const gripTop = gripBottom + spec.gripLength;
-  // The guard boss starts exactly at the handle end: no leather is buried
-  // inside its centre piece, but the tang still enters the boss from above.
+  // The leather grip stops at gripTop. A short metal cap overlaps its end by
+  // 2 mm, and the raised boss sits above that cap to conceal the joint.
   const guardY = gripTop + 0.012;
   const bladeRootY = guardY - 0.007;
 
