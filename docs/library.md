@@ -305,7 +305,7 @@ Painted on canvases at startup. `painters` is the toolkit and the floors and wal
 
 | Path | Versions (games) | What it is |
 |---|---|---|
-| `textures/lava` | `lava` (dungeon-roller) | Lava, as a shader of its own (GLSL for WebGL 2, WGSL for WebGPU, the same picture from each). |
+| `textures/lava` | `lava` (dungeon-roller) | A shared physical basalt material with a time-evolving procedural molten field (GLSL/WebGPU WGSL) and `createLavaBubbler()` for subdivided floor geometry that swells and subsides in localized gas bubbles. `createLavaMaterial(GFX, { mapping: 'world' })` is for floors; `mapping: 'local'` follows rounded/deforming objects such as Slimey. |
 | `textures/blubber` | `blubber` (blubber) | Every surface's texture, painted on a canvas at startup, as Dungeon Roller's stone is: a colour map near white (the tile's colour comes from the vertex colours under it) and a bump map that raises what stands out. |
 | `textures/bog` | `bog` (blubber) | The bog: something green brewing in the witch's clearings and round the edge of her wood. |
 | `textures/rooms/house` | `house` (catroller) | A room, as an equirectangular canvas: cream walls warm with lamplight, a dark window with the moon in it, a wooden floor. |

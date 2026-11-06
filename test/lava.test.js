@@ -200,7 +200,6 @@ test('dungeon floor integrates the bubbling lava geometry and time-driven molten
     color: new Float32Array(Array.from({ length: position.length }, (_, i) => i % 3 === 0 ? 0.4 : 0.4)),
     uv: new Float32Array(Array.from({ length: position.length / 3 * 2 }, () => 0)),
   });
-  const empty = parts([], []);
   const floor = parts([
     0, 0, 0,  4, 0, 0,  0, 0, 4,
     4, 0, 0,  4, 0, 4,  0, 0, 4,
@@ -208,7 +207,7 @@ test('dungeon floor integrates the bubbling lava geometry and time-driven molten
     0, 1, 0,  0, 1, 0,  0, 1, 0,
     0, 1, 0,  0, 1, 0,  0, 1, 0,
   ]);
-  const dungeon = createDungeonMeshes(GFX, { tops: empty, walls: empty, lava: floor });
+  const dungeon = createDungeonMeshes(GFX, { tops: floor, walls: floor, lava: floor });
   const basalt = dungeon.group.children.find((mesh) => mesh.name === 'lava-basalt-floor');
   const molten = dungeon.group.children.find((mesh) => mesh.name === 'lava-molten-flow-floor');
   assert.ok(basalt && molten, 'both crust and animated molten layer are present');
