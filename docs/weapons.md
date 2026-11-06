@@ -133,3 +133,32 @@ greatsword and morningstar:
 The three variants are exposed from `madness-engine/weapons` as
 `createMadnessSword`, `createRegularSword`, `createMarcsSword`, and the
 corresponding `Dagger`, `Greatsword` and `Morningstar` factory names.
+
+
+## Krystal sword and dagger
+
+The Krystal set is derived from the Madness sword and dagger: the blade
+profile, dimensions, swept crossguard, leather grip and banded wrap are
+unchanged. The marble pommel is replaced by Krystal's actual transmissive
+crystal orb and ray-marched vision material, scaled to the same 54 mm envelope.
+The orb's brass stand is omitted; the existing hollow metal ferrule seats the
+glass just as it seats the original marble.
+
+Both weapons carry a separate, initially hidden mist sheath around the blade.
+It uses the same GLSL/WGSL ray-marched vision shader as Krystal's orb, mapped
+into an elongated ellipsoid so the wisps stay close to the blade on both the
+full-size sword and dagger. Call `setBladeMist(true)` to show it and
+`setBladeMist(false)` to hide it. The asset viewer exposes the same control
+in its **Inside → Mist** toggle. The orb's own internal visions remain visible
+when the blade sheath is switched off.
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createKrystalSword, createKrystalDagger } from 'madness-engine/weapons';
+
+const sword = createKrystalSword(GFX);
+const dagger = createKrystalDagger(GFX);
+scene.add(sword.group, dagger.group);
+sword.setBladeMist(true);
+dagger.setBladeMist(true);
+```

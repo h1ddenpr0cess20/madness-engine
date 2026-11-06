@@ -15,6 +15,8 @@ import {
   createMarcsDagger,
   createMarcsGreatsword,
   createMarcsMorningstar,
+  createKrystalSword,
+  createKrystalDagger,
 } from '../src/weapons/index.js';
 import { METALS } from '../src/props/metalglobe.js';
 
@@ -107,4 +109,35 @@ test('Marc morningstar keeps its egg pommel and diagonal wrap but has no horn gu
   assert.equal(weapon.guard, null);
   assert.ok(weapon.hilt.children.some((part) => part.name === 'diagonal leather wrap'));
   assert.ok(!weapon.hilt.children.some((part) => /horn|quillon/i.test(part.name)));
+});
+
+
+test('Krystal sword and dagger use her crystal orb and independently toggleable blade mist', () => {
+  const pairs = [
+    [createKrystalSword(GFX), createMadnessSword(GFX)],
+    [createKrystalDagger(GFX), createMadnessDagger(GFX)],
+  ];
+
+  for (const [krystal, madness] of pairs) {
+    assert.equal(krystal.pommelAsset.kind, 'krystal-orb');
+    assert.equal(krystal.pommelAsset.glass.material.transmission, 1);
+    assert.ok(krystal.pommelAsset.vision, 'the orb retains Krystal ray-marched mist');
+    assert.equal(krystal.pommelAsset.vision.material, krystal.pommelAsset.material);
+    assert.equal(krystal.dimensions.pommelDiameter, madness.dimensions.pommelDiameter);
+    assert.equal(krystal.dimensions.bladeLength, madness.dimensions.bladeLength);
+    assert.equal(krystal.dimensions.bladeWidth, madness.dimensions.bladeWidth);
+    assert.equal(krystal.dimensions.gripLength, madness.dimensions.gripLength);
+    assert.equal(krystal.guard.name, madness.guard.name);
+    assert.ok(krystal.bladeMist, 'a separate mist volume surrounds the blade');
+    assert.equal(krystal.bladeMist.visible, false, 'blade mist is opt-in');
+    assert.equal(krystal.bladeMist.material.blending, GFX.AdditiveBlending);
+    assert.ok(krystal.bladeMist.material.uniforms.uShape.value.y
+      > krystal.bladeMist.material.uniforms.uShape.value.x,
+    'blade mist is an elongated ellipsoid, not a spherical cloud');
+
+    krystal.setBladeMist(true);
+    assert.equal(krystal.bladeMist.visible, true);
+    krystal.setBladeMist(false);
+    assert.equal(krystal.bladeMist.visible, false);
+  }
 });

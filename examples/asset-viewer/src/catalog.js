@@ -512,6 +512,8 @@ const WEAPON_ASSETS = [
   { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon' },
   { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon' },
   { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar' },
+  { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon' },
+  { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
@@ -547,6 +549,10 @@ function weaponItems() {
       return {
         object: made.group,
         environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+        mist: made.bladeMist ? {
+          get: () => made.bladeMist.visible,
+          set: (on) => made.setBladeMist(on),
+        } : null,
         info: { Source: `weapons/variants#${factory}`, ...made.info, ...countOf(made.group) },
       };
     },

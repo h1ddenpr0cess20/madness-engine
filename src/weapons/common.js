@@ -1,6 +1,8 @@
 import { METALS } from '../props/metalglobe.js';
 import { createMarble } from '../heroes/marble.js';
 import { createShell } from '../heroes/debater-egg/shell.js';
+import { createBall } from '../heroes/krystal/model.js';
+import { createBladeMist } from './blade-mist.js';
 
 /** Weapon geometry is expressed in metres: one engine unit equals one metre. */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
@@ -31,6 +33,45 @@ function createMetalBallPommel(GFX, radius, material) {
   mesh.receiveShadow = true;
   group.add(mesh);
   return { group, mesh, radius, height: radius * 2, kind: 'metal-ball' };
+}
+
+/**
+ * Krystal's actual crystal orb, scaled to the existing 54 mm pommel envelope.
+ * Keep its transmissive glass and ray-marched vision mesh, but omit the brass
+ * stand, lip and collar: the sword's hollow ferrule takes their place.
+ */
+function createKrystalOrbPommel(GFX, radius) {
+  const { ball, glass, vision, visionMaterial } = createBall(GFX);
+  ball.remove(glass, vision);
+
+  const group = new GFX.Group();
+  group.name = 'Krystal crystal orb pommel';
+  const scale = radius / 0.8;
+  group.scale.setScalar(scale);
+  group.position.y = radius;
+  group.add(glass, vision);
+
+  // Scale the optical depth with the measured glass size. The shader works
+  // in the orb's original local units, so its 0.95-radius vision stays intact.
+  glass.material.thickness *= scale;
+  glass.material.attenuationDistance *= scale;
+  glass.castShadow = false;
+  vision.castShadow = false;
+  vision.receiveShadow = false;
+  visionMaterial.uniforms.uShape.value.set(scale, scale, scale);
+
+  const timer = new GFX.Timer();
+  glass.onBeforeRender = () => {
+    timer.update();
+    visionMaterial.uniforms.uFlow.value += Math.min(timer.getDelta(), 0.05) * 0.18;
+    vision.updateWorldMatrix?.(true, false);
+    visionMaterial.uniforms.uCenter.value.setFromMatrixPosition(vision.matrixWorld);
+  };
+
+  return {
+    group, glass, vision, material: visionMaterial, radius, height: radius * 2,
+    kind: 'krystal-orb',
+  };
 }
 
 /** Reuse Marc's actual engine Metal Egg, with its broad end against the grip. */
@@ -68,6 +109,7 @@ function createWeaponPommel(GFX, spec, { style = 'marble', metal, material } = {
   if (style === 'marble') return { ...createWeaponPommelMarble(GFX, spec.marbleRadius), kind: 'marble' };
   if (style === 'metal-ball') return createMetalBallPommel(GFX, spec.marbleRadius, material);
   if (style === 'metal-egg') return createMetalEggPommel(GFX, spec.marbleRadius, metal);
+  if (style === 'krystal') return createKrystalOrbPommel(GFX, spec.marbleRadius);
   throw new Error(`unknown weapon pommel style: ${style}`);
 }
 
@@ -625,6 +667,7 @@ export function buildWeapon(GFX, spec, {
   bladeMetal = 'steel',
   hiltMetal = 'steel',
   gripColor = '#633b2c',
+  bladeMist: withBladeMist = false,
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
@@ -700,9 +743,20 @@ export function buildWeapon(GFX, spec, {
   blade.receiveShadow = true;
   group.add(blade);
 
+  // Krystal's variants add a separate, hidden-by-default mist volume that
+  // follows the exact blade dimensions without changing the steel geometry.
+  const bladeMistLayer = withBladeMist
+    ? createBladeMist(GFX, group, {
+      rootY: bladeRootY,
+      length: spec.bladeLength,
+      width: spec.bladeWidth,
+    })
+    : null;
+
   const api = {
     group,
     blade,
+    bladeMist: bladeMistLayer?.mesh ?? null,
     hilt,
     handle,
     guard,
@@ -739,7 +793,8 @@ export function buildWeapon(GFX, spec, {
       'Fuller length': `${(spec.bladeLength * 750).toFixed(0)} mm (75%)`,
       'Scale': '1 world unit = 1 metre',
       'Pommel': pommelAsset.kind === 'marble' ? 'Glass marble with 3D spark'
-        : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball' : 'Engine metal egg',
+        : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball'
+          : pommelAsset.kind === 'metal-egg' ? 'Engine metal egg' : 'Krystal glass orb with animated mist',
     },
     get bladeMetal() { return bladeMetal; },
     get hiltMetal() { return hiltMetal; },
@@ -766,6 +821,10 @@ export function buildWeapon(GFX, spec, {
       leatherMaterial.color.set(color);
       wrapMaterial.color.set(shadeHex(color, 0.68));
       gripColor = color;
+      return api;
+    },
+    setBladeMist(show = true) {
+      if (bladeMistLayer) bladeMistLayer.mesh.visible = Boolean(show);
       return api;
     },
   };

@@ -59,6 +59,31 @@ export function createRegularMorningstar(GFX, options = {}) {
   }), 'Regular Morningstar');
 }
 
+/**
+ * Krystal's sword and dagger retain the Madness blade, swept guard and
+ * banded grip, replacing the marble with her crystal orb and adding her
+ * animated mist as an optional sheath around the blade.
+ */
+export function createKrystalSword(GFX, options = {}) {
+  return named(buildWeapon(GFX, {
+    ...BROADSWORD_SPEC,
+    name: 'krystal-sword',
+    pommelStyle: 'krystal',
+    guardStyle: 'swept',
+    wrapStyle: 'banded',
+  }, { ...options, bladeMist: true }), 'Krystal Sword');
+}
+
+export function createKrystalDagger(GFX, options = {}) {
+  return named(buildWeapon(GFX, {
+    ...DAGGER_SPEC,
+    name: 'krystal-dagger',
+    pommelStyle: 'krystal',
+    guardStyle: 'swept',
+    wrapStyle: 'banded',
+  }, { ...options, bladeMist: true }), 'Krystal Dagger');
+}
+
 /** Marc's family uses the engine metal egg, upward horn guard and diagonal grip wrap. */
 export function createMarcsSword(GFX, options = {}) {
   return swordVariant(GFX, BROADSWORD_SPEC, "Marc's Sword", 'metal-egg', 'horns', 'diagonal', options);
