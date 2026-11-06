@@ -15,12 +15,12 @@ import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
  */
 export const BROADSWORD_DIMENSIONS = Object.freeze({
   overallLength: 0.99,
-  bladeLength: 0.795,
+  bladeLength: 0.81,
   bladeWidth: 0.052,
   gripLength: 0.14,
   gripDiameter: 0.034,
   marbleRadius: 0.036,
-  marbleDiameter: 0.072,
+  marbleDiameter: 0.054,
   guardSpan: 0.22,
   unit: 'm',
 });
