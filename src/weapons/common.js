@@ -414,7 +414,7 @@ function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, 
     thickness * 0.61, thickness * 0.46, thickness * 0.5, thickness * 0.36, thickness * 0.18];
   const points = stations.map((p) => new GFX.Vector3(...p));
   const radialSegments = 10;
-  const ringStarts = [], positions = [], indices = [], uvs = [];
+  const ringStarts = [], positions = [], indices = [];
   const startCap = positions.length / 3;
   positions.push(points[0].x, points[0].y, points[0].z);
   for (let i = 0; i < points.length; i++) {
@@ -1761,7 +1761,7 @@ export function buildWeapon(GFX, spec, {
     pommelStyle: spec.pommelStyle ?? 'marble',
     wrapStyle: spec.wrapStyle ?? 'banded',
   });
-  if (graniteWeapon) bladeMaterial = polishedGraniteMaterial(GFX, pommelAsset.material, graniteColour);
+  if (graniteWeapon) bladeMaterial = polishedGraniteMaterial(GFX, pommelAsset.material);
 
   // The boss and guard sit above the shared handle's fitted metal seat.
   const guardY = gripBounds.top + 0.012;

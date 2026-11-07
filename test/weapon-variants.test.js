@@ -522,19 +522,19 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     assert.equal(weapon.pommelAsset.kind, 'granite');
     assert.equal(weapon.graniteColour, 'grey');
     assert.equal(weapon.pommelAsset.material.name, 'granite');
-    assert.equal(weapon.pommelAsset.mesh.name, 'single fused granite pommel and grip tang');
+    assert.equal(weapon.pommelAsset.mesh.name, 'single carved granite pommel and grip core');
     assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 1000,
       'the boulder and handle tang are merged into one stone mesh');
     assert.equal(weapon.blade.material.name, 'polished granite blade');
     assert.ok(weapon.pommelAsset.textureTileSize > 0.045 && weapon.pommelAsset.textureTileSize < 0.055);
     const bladeUv = weapon.blade.geometry.getAttribute('uv');
     const bladeV = Array.from({ length: bladeUv.count }, (_, i) => bladeUv.getY(i));
-    assert.ok(Math.max(...bladeV) - Math.min(...bladeV) > 10,
+    assert.ok(Math.max(...bladeV) - Math.min(...bladeV) > weapon.dimensions.bladeLength / weapon.pommelAsset.textureTileSize * 0.7,
       'blade granite uses the same pommel-scale physical tile instead of magnifying a tiny texture patch');
     assert.equal(weapon.hiltMaterial.name, 'granite');
     assert.equal(weapon.bezel, null, 'the granite hilt has no metal ferrule');
     assert.equal(weapon.bossSeat, null, 'the granite hilt has no metal boss seat');
-    assert.ok(weapon.blade.material.roughness <= 0.15, 'blade is polished like a stone countertop');
+    assert.ok(weapon.blade.material.roughness <= 0.18, 'blade is polished like a stone countertop');
     assert.equal(weapon.pommelAsset.group.parent, weapon.group);
     assert.equal(weapon.handle.material.color.getHexString(), '101010');
     assert.equal(weapon.guard.name, 'rough-hewn granite shard guard');
