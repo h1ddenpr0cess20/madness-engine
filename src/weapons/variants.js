@@ -1,6 +1,6 @@
 import { buildWeapon } from './common.js';
 import { BROADSWORD_SPEC, createBroadsword } from './broadsword.js';
-import { DAGGER_SPEC, BANANA_DAGGER_SPEC, createDagger } from './dagger.js';
+import { DAGGER_SPEC, BANANA_DAGGER_SPEC, BANANA_BROADSWORD_SPEC, createDagger } from './dagger.js';
 import { GREATSWORD_SPEC, createGreatsword } from './greatsword.js';
 import { createMorningstar } from './morningstar.js';
 
@@ -188,4 +188,19 @@ export function createBananaDagger(GFX, options = {}) {
     bladeMistVisible: false,
     ...options,
   }), 'Banana Dagger');
+}
+
+
+/**
+ * Broadsword-sized counterpart to the banana dagger. It retains the original
+ * banana construction, materials, hooked blade and optional soft magic mist.
+ */
+export function createBananaBroadsword(GFX, options = {}) {
+  return named(buildWeapon(GFX, BANANA_BROADSWORD_SPEC, {
+    bladeMetal: 'platinum',
+    hiltMetal: 'brass',
+    bladeMist: true,
+    bladeMistVisible: false,
+    ...options,
+  }), 'Banana Broadsword');
 }
