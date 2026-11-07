@@ -48,3 +48,24 @@ export const BANANA_DAGGER_SPEC = Object.freeze({
   bladeTalon: 0.5,
   bladeMistPalette: 'egg',
 });
+
+
+/**
+ * Broadsword-scale banana: the same curved, hooked blade and half-peeled
+ * silhouette as the banana dagger, fitted to the measured broadsword envelope.
+ * The peel flaps are extended slightly to remain in proportion with the longer
+ * blade. Dimensions are in metres.
+ */
+export const BANANA_BROADSWORD_SPEC = Object.freeze({
+  ...BANANA_DAGGER_SPEC,
+  name: 'banana-broadsword',
+  overallLength: 0.99,
+  bladeLength: 0.786,
+  bladeWidth: 0.052,
+  gripLength: 0.14,
+  gripDiameter: 0.034,
+  marbleRadius: 0.027,
+  marbleDiameter: 0.054,
+  guardSpan: 0.22,
+  peelLengthScale: 1.15,
+});
