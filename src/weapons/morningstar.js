@@ -7,11 +7,13 @@ import { createWeaponHandleAssembly, createDevilHornGuard, MARBLE_POMMEL_RADIUS,
  * layout, fitted to a long polished-metal haft and the shared wrapped-leather
  * grip / marble pommel assembly. All dimensions are in metres.
  */
+const HEAD_SCALE = 0.11;
+
 export const MORNINGSTAR_DIMENSIONS = Object.freeze({
   overallLength: 1.179,
-  headScale: 0.11,
-  headDiameter: TIP * 2 * 0.11,
-  headCoreDiameter: CORE * 2 * 0.11,
+  headScale: HEAD_SCALE,
+  headDiameter: TIP * 2 * HEAD_SCALE,
+  headCoreDiameter: CORE * 2 * HEAD_SCALE,
   haftLength: 0.7,
   haftDiameter: 0.028,
   gripLength: 0.24,
@@ -55,6 +57,7 @@ export function createMorningstar(GFX, {
   const haftTop = haftBottom + MORNINGSTAR_SPEC.haftLength;
   const coreRadius = CORE * MORNINGSTAR_SPEC.headScale;
   const headCenterY = haftTop + coreRadius;
+  const overallLength = headCenterY + TIP * MORNINGSTAR_SPEC.headScale;
   const shaftMaterial = handle.hiltMaterial;
   const shaft = new GFX.Mesh(
     new GFX.CylinderGeometry(
@@ -117,7 +120,7 @@ export function createMorningstar(GFX, {
     haftBounds: Object.freeze({ bottom: haftBottom, top: haftTop, length: MORNINGSTAR_SPEC.haftLength }),
     headCenterY,
     dimensions: Object.freeze({
-      overallLength: headCenterY + TIP * MORNINGSTAR_SPEC.headScale,
+      overallLength,
       headDiameter: MORNINGSTAR_SPEC.headDiameter,
       headCoreDiameter: MORNINGSTAR_SPEC.headCoreDiameter,
       haftLength: MORNINGSTAR_SPEC.haftLength,
@@ -131,7 +134,7 @@ export function createMorningstar(GFX, {
       unit: 'm',
     }),
     info: {
-      'Weapon length': `${(headCenterY + TIP * MORNINGSTAR_SPEC.headScale).toFixed(3)} m`,
+      'Weapon length': `${overallLength.toFixed(3)} m`,
       'Spiked head envelope': `${(MORNINGSTAR_SPEC.headDiameter * 1000).toFixed(0)} mm`,
       'Metal haft': `${(MORNINGSTAR_SPEC.haftLength * 1000).toFixed(0)} mm × ${(MORNINGSTAR_SPEC.haftDiameter * 1000).toFixed(0)} mm`,
       'Leather grip': `${(MORNINGSTAR_SPEC.gripLength * 1000).toFixed(0)} mm`,

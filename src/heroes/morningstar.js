@@ -35,7 +35,7 @@ const noise = (x, y, z) => {
 
 /** The ball, and how far the tips of its spikes reach. */
 export const CORE = 0.7;
-export const SPIKE = 0.2;
+const SPIKE = 0.2;
 export const TIP = CORE + SPIKE;
 
 /** How many spikes it has. */
