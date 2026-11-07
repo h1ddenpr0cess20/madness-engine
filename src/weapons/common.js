@@ -889,7 +889,8 @@ export function peelFlapGeometries(GFX, {
   // N is the flap's inside-up normal: toward the axis as it rises, out as it hangs.
   const frames = path.map(([r, y], i) => {
     const prev = path[Math.max(0, i - 1)], next = path[Math.min(steps, i + 1)];
-    const dr = next[0] - prev[0], dy = next[1] - prev[1], len = Math.hypot(dr, dy);
+    const dr = next[0] - prev[0], dy = (next[1] - prev[1]) * lengthScale;
+    const len = Math.hypot(dr, dy);
     return { r, y: y * lengthScale, nr: -dy / len, ny: dr / len };
   });
   const at = (t, key) => {
