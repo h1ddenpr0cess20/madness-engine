@@ -1293,8 +1293,6 @@ function createGraniteGripCoreGeometry(GFX, {
   indexed.computeVertexNormals();
   const geometry = indexed.toNonIndexed();
   indexed.dispose?.();
-  geometry.userData ??= {};
-  geometry.userData.gripCoreProfile = 'pommel-shoulder-to-waisted-hilt-to-guard-flare';
   return geometry;
 }
 
@@ -1396,7 +1394,6 @@ function createGraniteHandleAssembly(GFX, group, spec, {
   fusedGeometry.setAttribute('uv', graniteSurfaceUv(GFX, fusedPosition, pommelAsset.textureTileSize));
   fusedGeometry.setAttribute('color', new GFX.BufferAttribute(colors, 3));
   fusedGeometry.computeVertexNormals();
-  fusedGeometry.userData.gripCoreProfile = 'pommel-shoulder-to-waisted-hilt-to-guard-flare';
 
   stoneGeometry.dispose?.();
   shaftGeometry.dispose?.();
@@ -1405,6 +1402,7 @@ function createGraniteHandleAssembly(GFX, group, spec, {
   stoneMesh.scale.set(1, 1, 1);
   stoneMesh.name = 'single carved granite pommel and grip core';
   pommelAsset.geometry = fusedGeometry;
+  pommelAsset.gripCoreProfile = 'pommel-shoulder-to-waisted-hilt-to-guard-flare';
   group.add(pommelAsset.group);
 
   const hilt = new GFX.Group();

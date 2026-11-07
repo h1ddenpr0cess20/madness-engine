@@ -541,7 +541,7 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     assert.equal(weapon.guard.children[0].name, 'chipped stone crossguard with tapered blunt shard tips');
     assert.ok(weapon.guard.children[0].geometry.getAttribute('uv')?.count > 0,
       'guard uses the same physical-scale granite projection');
-    assert.equal(weapon.pommelAsset.mesh.geometry.userData.gripCoreProfile,
+    assert.equal(weapon.pommelAsset.gripCoreProfile,
       'pommel-shoulder-to-waisted-hilt-to-guard-flare');
     assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
       'guard uses the same granite stone as the fused handle');
