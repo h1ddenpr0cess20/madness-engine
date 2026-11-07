@@ -252,9 +252,14 @@ Marc's sword, dagger, greatsword and morningstar default to gold metal with a bl
 dagger's blade (the same lenticular section, fuller and point, 240 mm long),
 slimmed from 47 mm to 38 mm wide, and changes the hilt and the blade's line:
 
-- **Blade:** bowed 0.3 rad (about 17°) toward the same side as the grip, so the
-  whole weapon reads as one banana. It keeps its length along the curve; the
-  root stays upright. The last tenth is chrome, like the fruit's dark stem end.
+- **Blade:** curved off the grip and drawn out into a talon. The root stays
+  upright so the blade leaves the grip tangent to it, in the same plane and
+  bowing the same way, which makes one banana crescent of grip and blade. It
+  turns 0.4 rad evenly along its length and a further 0.4 rad in the last of
+  it, so the curve tightens into a hooked point, and it narrows early to draw
+  that point out. The cutting edges, fuller and thickness all follow the
+  curve (every section stays square to the blade line). It keeps its length
+  along the curve. The last 14% is chrome, like the fruit's dark stem end.
 - **Grip:** a ridged brass tube (five ridges), 135 mm along its arc against
   the dagger's 97 mm, that bows back through 0.7 rad (about 40°) in the
   blade's plane. It is fullest at the top and tapers to a small chrome tip.
@@ -264,7 +269,7 @@ slimmed from 47 mm to 38 mm wide, and changes the hilt and the blade's line:
   peel of a half-peeled banana does. The upper face of each is chrome (the
   inside of the peel) and the lower face is brass (the skin).
 
-Published dimensions: approximately 0.380 m overall (the bows shorten the
+Published dimensions: approximately 0.369 m overall (the bows shorten the
 reach along the vertical, so length is measured from the lowest point of the
 chrome grip tip to the point), 240 mm blade along its curve, 38 mm width,
 135 mm grip along its arc and about 176 mm across the open flaps.

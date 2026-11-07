@@ -30,12 +30,11 @@ export function createDagger(GFX, options = {}) {
 }
 
 /**
- * The banana dagger is a half-peeled banana: the dagger's blade, bowed 0.3 rad,
- * rising out of four peel flaps (chrome inside, brass outside) over a curved,
- * ridged brass grip that ends in a chrome tip. The blade is the dagger's, a
- * little slimmer (38 mm against 47 mm), on a longer grip (135 mm along its arc,
- * against the dagger's 97 mm). The last tenth of the blade is chrome, like the
- * fruit's dark end.
+ * The banana dagger is a half-peeled banana: the dagger's blade, slimmed to
+ * 38 mm, curved off the grip and drawn out into a talon, rising out of four
+ * peel flaps (chrome inside, brass outside) over a curved, ridged brass grip
+ * that ends in a chrome tip. The grip is 135 mm along its arc, against the
+ * dagger's 97 mm. The last 14% of the blade is chrome, like the fruit's dark end.
  */
 export const BANANA_DAGGER_SPEC = Object.freeze({
   ...DAGGER_SPEC,
@@ -44,6 +43,8 @@ export const BANANA_DAGGER_SPEC = Object.freeze({
   bladeWidth: 0.038,
   gripLength: 0.135,
   gripCurve: 0.7,
-  bladeCurve: 0.3,
+  bladeCurve: 0.4,
+  bladeHook: 0.4,
+  bladeTalon: 0.5,
   bladeTip: true,
 });

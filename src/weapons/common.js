@@ -938,22 +938,38 @@ function splitBladeTip(GFX, geometry, fromY) {
 }
 
 /**
- * Bow a blade along a circular arc in its own plane, toward -x as it rises,
- * so it carries on the grip's banana curve. The blade keeps its length along
- * the curve and its cross-section; its root stays upright.
+ * Curve a blade in its own plane, toward -x as it rises, so it carries on the
+ * grip's banana curve and ends in a talon. The root stays upright, so the
+ * blade leaves the grip tangent to it. Its heading turns by `bend` radians
+ * evenly along the length, and by `hook` more that is saved for the last of
+ * it, so the curve tightens into the point like a claw. Past 40% of the
+ * length the blade also narrows by `talon`, drawing the point out.
+ *
+ * Each vertex keeps its distance across the blade, measured along the normal to
+ * the curve, so the cutting edges, the fuller and the thickness all follow the
+ * curve instead of being sheared. Returns how far the point stands above the root.
  */
-function bendBlade(geometry, { rootY, length, bend }) {
+function curveBlade(geometry, { rootY, length, bend, hook = 0, talon = 0 }) {
+  const heading = (u) => bend * u + hook * u ** 4;
+  const samples = 512;
+  const centre = [[0, 0]];
+  for (let i = 1; i <= samples; i++) {
+    const phi = heading(((i - 0.5) / samples));
+    const [x, y] = centre[i - 1];
+    centre.push([x - Math.sin(phi) * (length / samples), y + Math.cos(phi) * (length / samples)]);
+  }
   const position = geometry.attributes.position;
-  const R = length / bend;
   for (let i = 0; i < position.count; i++) {
-    const phi = ((position.getY(i) - rootY) / length) * bend;
-    const x = position.getX(i);
-    position.setXYZ(i,
-      -R + R * Math.cos(phi) + x * Math.cos(phi),
-      rootY + R * Math.sin(phi) + x * Math.sin(phi),
-      position.getZ(i));
+    const u = clamp01((position.getY(i) - rootY) / length);
+    const f = u * samples, k = Math.min(samples - 1, Math.floor(f)), t = f - k;
+    const cx = centre[k][0] + (centre[k + 1][0] - centre[k][0]) * t;
+    const cy = centre[k][1] + (centre[k + 1][1] - centre[k][1]) * t;
+    const phi = heading(u);
+    const across = position.getX(i) * (1 - talon * smooth01(0.4, 0.95, u));
+    position.setXYZ(i, cx + across * Math.cos(phi), rootY + cy + across * Math.sin(phi), position.getZ(i));
   }
   position.needsUpdate = true;
+  return centre[samples][1];
 }
 
 /**
@@ -1384,19 +1400,20 @@ export function buildWeapon(GFX, spec, {
     length: spec.bladeLength,
     width: spec.bladeWidth,
   });
-  // The banana's dark stem end is chrome: the last tenth of the blade has its own finish.
-  const bladeEnds = spec.bladeTip ? splitBladeTip(GFX, fullBlade, bladeRootY + 0.9 * spec.bladeLength) : null;
+  // The banana's dark stem end is chrome: the last of the blade has its own finish.
+  const bladeEnds = spec.bladeTip ? splitBladeTip(GFX, fullBlade, bladeRootY + 0.86 * spec.bladeLength) : null;
+  // How far the point stands above the root: less than the length when the blade curves.
+  let bladeReach = spec.bladeLength;
   if (spec.bladeCurve) {
-    bendBlade(fullBlade, { rootY: bladeRootY, length: spec.bladeLength, bend: spec.bladeCurve });
+    bladeReach = curveBlade(fullBlade, {
+      rootY: bladeRootY, length: spec.bladeLength,
+      bend: spec.bladeCurve, hook: spec.bladeHook, talon: spec.bladeTalon,
+    });
     for (const part of bladeEnds ? [bladeEnds.body, bladeEnds.tip] : [fullBlade]) part.computeVertexNormals();
   } else if (bladeEnds) {
     bladeEnds.body.computeVertexNormals();
     bladeEnds.tip.computeVertexNormals();
   }
-  // How far the point stands above the root: less than the length when the blade curves.
-  const bladeReach = spec.bladeCurve
-    ? (spec.bladeLength / spec.bladeCurve) * Math.sin(spec.bladeCurve)
-    : spec.bladeLength;
   const blade = new GFX.Mesh(bladeEnds ? bladeEnds.body : fullBlade, bladeMaterial);
   blade.name = 'solid double-edged blade with 75% fuller';
   blade.castShadow = true;
