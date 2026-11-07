@@ -248,35 +248,39 @@ Marc's sword, dagger, greatsword and morningstar default to gold metal with a bl
 
 ## Banana dagger
 
-`createBananaDagger(GFX, options)` reuses the dagger's blade geometry, 240 mm
-blade, 47 mm width, 112 mm guard span and metal-ball pommel unchanged. Only
-the grip and guard differ:
+`createBananaDagger(GFX, options)` is a half-peeled banana. It keeps the
+dagger's blade (the same lenticular section, fuller and point, 240 mm long),
+slimmed from 47 mm to 38 mm wide, and changes the hilt and the blade's line:
 
-- **Grip:** a fluted metal tube, 97 mm long along its arc, that bows back
-  through 0.6 rad (about 34°) in the blade's plane. Its five-lobed section
-  stands in for a banana's ridges. It takes the hilt metal (brass by default),
-  with no leather wrap.
-- **Guard:** the dagger's swept crossguard, flared upward through the middle
-  and curled back down at the tips like a splayed peel. Its upper half is
-  chrome and its lower half is brass, so the chrome reads as the inside of the
-  peel.
+- **Blade:** bowed 0.3 rad (about 17°) toward the same side as the grip, so the
+  whole weapon reads as one banana. It keeps its length along the curve; the
+  root stays upright. The last tenth is chrome, like the fruit's dark stem end.
+- **Grip:** a ridged brass tube (five ridges), 135 mm along its arc against
+  the dagger's 97 mm, that bows back through 0.7 rad (about 40°) in the
+  blade's plane. It is fullest at the top and tapers to a small chrome tip.
+  There is no pommel ball and no leather.
+- **Guard:** no crossguard bar. Four thick peel flaps split from the top of the
+  grip and open outward and up like petals, curling over at the tips, as the
+  peel of a half-peeled banana does. The upper face of each is chrome (the
+  inside of the peel) and the lower face is brass (the skin).
 
-Published dimensions: approximately 0.363 m overall (the bow shortens the
-reach along the blade axis, so the overall length is measured from the lowest
-point of the pommel), 240 mm blade, 47 mm width and 112 mm guard span.
+Published dimensions: approximately 0.380 m overall (the bows shorten the
+reach along the vertical, so length is measured from the lowest point of the
+chrome grip tip to the point), 240 mm blade along its curve, 38 mm width,
+135 mm grip along its arc and about 176 mm across the open flaps.
 
 ```js
 import * as GFX from 'madness-engine/gfx';
 import { createBananaDagger } from 'madness-engine/weapons';
 
 const banana = createBananaDagger(GFX, {
-  bladeMetal: 'steel',
+  bladeMetal: 'silver',
   hiltMetal: 'brass',
-  guardTopMetal: 'chrome',
+  accentMetal: 'chrome',
 });
 scene.add(banana.group);
-banana.setHiltMetal('gold');          // grip, boss and lower guard
-banana.setGuardTopMetal('platinum');  // the chrome inside of the peel
+banana.setHiltMetal('gold');       // grip, collar and the outside of the peel
+banana.setAccentMetal('platinum'); // inside of the peel, grip tip and blade tip
 banana.setBladeMetal('chrome');
 ```
 

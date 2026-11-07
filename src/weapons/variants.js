@@ -171,12 +171,12 @@ export function createMarcsMorningstar(GFX, options = {}) {
   }), "Marc's Morningstar");
 }
 
-/** A dagger whose grip is a fluted brass tube bowed back like a banana, under a peel guard. */
+/** A half-peeled banana: the dagger blade out of chrome-and-brass peel flaps over a curved brass grip. */
 export function createBananaDagger(GFX, options = {}) {
   return named(buildWeapon(GFX, BANANA_DAGGER_SPEC, {
-    bladeMetal: 'steel',
+    bladeMetal: 'silver',
     hiltMetal: 'brass',
-    guardTopMetal: 'chrome',
+    accentMetal: 'chrome',
     ...options,
   }), 'Banana Dagger');
 }
