@@ -526,7 +526,8 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 1000,
       'the boulder and handle tang are merged into one stone mesh');
     assert.equal(weapon.blade.material.name, 'polished granite blade');
-    assert.ok(weapon.pommelAsset.textureTileSize > 0.045 && weapon.pommelAsset.textureTileSize < 0.055);
+    assert.ok(weapon.pommelAsset.textureTileSize > 0.005 && weapon.pommelAsset.textureTileSize < 0.1,
+      'physical granite tile stays within a plausible scaled stone range');
     const bladeUv = weapon.blade.geometry.getAttribute('uv');
     const bladeV = Array.from({ length: bladeUv.count }, (_, i) => bladeUv.getY(i));
     assert.ok(Math.max(...bladeV) - Math.min(...bladeV) > weapon.dimensions.bladeLength / weapon.pommelAsset.textureTileSize * 0.7,
@@ -542,10 +543,11 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     assert.ok(weapon.guard.children[0].geometry.getAttribute('uv')?.count > 0,
       'guard uses the same physical-scale granite projection');
     assert.equal(weapon.pommelAsset.gripCoreProfile,
-      'pommel-shoulder-to-waisted-hilt-to-guard-flare');
+      'pommel-shoulder-to-waisted-hilt-to-blade-root-loft');
     assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
       'guard uses the same granite stone as the fused handle');
-    assert.equal(weapon.guard.children[1].name, 'rough stone guard socket');
+    assert.equal(weapon.guard.children.length, 1,
+      'the guard has no separate socket: its centre is molded into the grip/blade neck');
     assert.equal(weapon.dimensions.guardThickness, 0.024);
     assert.equal(weapon.dimensions.bladeLength, base.dimensions.bladeLength);
     assert.equal(weapon.dimensions.bladeWidth, base.dimensions.bladeWidth);

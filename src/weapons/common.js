@@ -471,21 +471,7 @@ function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, 
   mesh.receiveShadow = true;
   guard.add(mesh);
 
-  // Low-detail icosahedron is available in the engine GFX module; no unsupported dodecahedron primitive.
-  const indexedSocket = new GFX.IcosahedronGeometry(thickness * 0.72, 0);
-  indexedSocket.computeVertexNormals();
-  const socketGeometry = indexedSocket.toNonIndexed();
-  indexedSocket.dispose?.();
-  const socketPosition = socketGeometry.getAttribute('position');
-  socketGeometry.setAttribute('uv', graniteSurfaceUv(GFX, socketPosition, textureTileSize));
-  socketGeometry.setAttribute('color', whiteStoneVertexColors(GFX, socketPosition.count));
-  const socket = new GFX.Mesh(socketGeometry, material);
-  socket.name = 'rough stone guard socket';
-  socket.position.set(0, centerY, 0);
-  socket.scale.set(1.25, 0.85, 1.1);
-  socket.castShadow = true;
-  socket.receiveShadow = true;
-  guard.add(socket);
+  // The handle's carved neck is the central guard boss; no separate socket.
   parent.add(guard);
   return guard;
 }
@@ -1227,7 +1213,7 @@ function whiteStoneVertexColors(GFX, count) {
 
 /** A carved stone core that grows out of the pommel, waists under the wrap and flares into the guard. */
 function createGraniteGripCoreGeometry(GFX, {
-  pommelHeight, gripBottom, gripTop, guardY, radius,
+  pommelHeight, gripBottom, gripTop, bladeRootY, radius, bladeWidth,
 }) {
   const profile = [
     [pommelHeight * 0.54, radius * 0.34],
@@ -1242,36 +1228,79 @@ function createGraniteGripCoreGeometry(GFX, {
     [gripBottom + (gripTop - gripBottom) * 0.52, radius * 0.98],
     [gripBottom + (gripTop - gripBottom) * 0.82, radius * 1.01],
     [gripTop + 0.002, radius * 1.06],
-    [guardY + 0.004, radius * 1.20],
+    [bladeRootY - 0.032, radius * 1.23],
   ];
-  const axialSegments = 96, radialSegments = 48;
-  const positions = [], indices = [];
-  const firstY = profile[0][0], lastY = profile.at(-1)[0];
+  const radialSegments = 48, axialSegments = 96;
+  const positions = [], indices = [], ringYs = [], ringSections = [];
+  const firstY = profile[0][0], transitionStartY = profile.at(-1)[0];
+
   const sampleRadius = (y) => {
     let segment = 0;
     while (segment < profile.length - 2 && y > profile[segment + 1][0]) segment++;
-    const [y1, r1] = profile[segment], [y2] = profile[segment + 1];
+    const [y1, r1] = profile[segment], [y2, r2] = profile[segment + 1];
     const t = Math.max(0, Math.min(1, (y - y1) / (y2 - y1)));
     const p0 = profile[Math.max(0, segment - 1)][1];
     const p3 = profile[Math.min(profile.length - 1, segment + 2)][1];
     const t2 = t * t, t3 = t2 * t;
     const smooth = 0.5 * (
-      2 * r1 + (-p0 + profile[segment + 1][1]) * t
-      + (2 * p0 - 5 * r1 + 4 * profile[segment + 1][1] - p3) * t2
-      + (-p0 + 3 * r1 - 3 * profile[segment + 1][1] + p3) * t3
+      2 * r1 + (-p0 + r2) * t + (2 * p0 - 5 * r1 + 4 * r2 - p3) * t2
+      + (-p0 + 3 * r1 - 3 * r2 + p3) * t3
     );
     return Math.max(radius * 0.12, smooth);
   };
+
   for (let row = 0; row <= axialSegments; row++) {
-    const t = row / axialSegments, y = firstY + (lastY - firstY) * t;
+    const t = row / axialSegments;
+    const y = firstY + (transitionStartY - firstY) * t;
     const r = sampleRadius(y);
+    const ring = [];
     for (let segment = 0; segment < radialSegments; segment++) {
-      const angle = segment / radialSegments * Math.PI * 2;
+      const angle = Math.PI - segment / radialSegments * Math.PI * 2;
       const carved = 1 + 0.012 * Math.sin(angle * 5 + t * 3.4);
-      positions.push(Math.cos(angle) * r * carved, y, Math.sin(angle) * r * carved);
+      ring.push([Math.cos(angle) * r * carved, Math.sin(angle) * r * carved]);
     }
+    ringYs.push(y);
+    ringSections.push(ring);
   }
-  for (let row = 0; row < axialSegments; row++) {
+
+  const bladeSection = [
+    [-1.00, 0.00], [-0.84, 0.44], [-0.54, 0.78], [-0.34, 0.70],
+    [-0.20, 0.61], [0.00, 0.58], [0.20, 0.61], [0.34, 0.70],
+    [0.54, 0.78], [0.84, 0.44], [1.00, 0.00], [0.84, -0.44],
+    [0.54, -0.78], [0.34, -0.70], [0.20, -0.61], [0.00, -0.58],
+    [-0.20, -0.61], [-0.34, -0.70], [-0.54, -0.78], [-0.84, -0.44],
+  ];
+  const rootLoop = bladeSection.map(([x, z]) => [x * (bladeWidth / 2) * 0.94, z * 0.0032]);
+  const edgeLengths = rootLoop.map((point, i) => {
+    const next = rootLoop[(i + 1) % rootLoop.length];
+    return Math.hypot(next[0] - point[0], next[1] - point[1]);
+  });
+  const perimeter = edgeLengths.reduce((sum, value) => sum + value, 0);
+  const targetLoop = [];
+  for (let i = 0; i < radialSegments; i++) {
+    let distance = perimeter * i / radialSegments;
+    let edge = 0;
+    while (edge < edgeLengths.length - 1 && distance > edgeLengths[edge]) distance -= edgeLengths[edge++];
+    const a = rootLoop[edge], b = rootLoop[(edge + 1) % rootLoop.length];
+    const t = distance / edgeLengths[edge];
+    targetLoop.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+  }
+
+  const transitionRows = 24;
+  for (let row = 1; row <= transitionRows; row++) {
+    const t = row / transitionRows, eased = t * t * (3 - 2 * t);
+    ringYs.push(transitionStartY + (bladeRootY - transitionStartY) * t);
+    const from = ringSections.at(-1);
+    ringSections.push(from.map(([x, z], i) => [
+      x + (targetLoop[i][0] - x) * eased,
+      z + (targetLoop[i][1] - z) * eased,
+    ]));
+  }
+
+  for (let row = 0; row < ringYs.length; row++) {
+    for (const [x, z] of ringSections[row]) positions.push(x, ringYs[row], z);
+  }
+  for (let row = 0; row < ringYs.length - 1; row++) {
     for (let segment = 0; segment < radialSegments; segment++) {
       const next = (segment + 1) % radialSegments;
       const a = row * radialSegments + segment, b = row * radialSegments + next;
@@ -1280,13 +1309,12 @@ function createGraniteGripCoreGeometry(GFX, {
     }
   }
   const startCenter = positions.length / 3;
-  positions.push(0, firstY, 0);
-  const endCenter = positions.length / 3;
-  positions.push(0, lastY, 0);
+  positions.push(0, ringYs[0], 0);
   for (let segment = 0; segment < radialSegments; segment++) {
-    const next = (segment + 1) % radialSegments, lastRing = axialSegments * radialSegments;
-    indices.push(startCenter, next, segment, endCenter, lastRing + segment, lastRing + next);
+    const next = (segment + 1) % radialSegments;
+    indices.push(startCenter, next, segment);
   }
+
   const indexed = new GFX.BufferGeometry();
   indexed.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
   indexed.setIndex(indices);
@@ -1366,6 +1394,8 @@ function createGraniteHandleAssembly(GFX, group, spec, {
     gripBottom,
     gripTop,
     guardY,
+    bladeRootY: guardY - 0.007,
+    bladeWidth: spec.bladeWidth,
     radius: handleRadius,
   });
   const shaftPosition = shaftGeometry.getAttribute('position');
@@ -1796,7 +1826,7 @@ export function buildWeapon(GFX, spec, {
       centerY: guardY, span: spec.guardSpan, thickness: guardThickness,
       textureTileSize: pommelAsset.textureTileSize,
     });
-    guardBoss = guard.children[1];
+    guardBoss = pommelAsset.mesh;
   } else if (spec.guardStyle === 'lightning') {
     const guardDirection = spec.guardInverted ? -1 : 1;
     guardBoss = sphere(GFX, 'lightning guard reinforced central boss', hiltMaterial,
