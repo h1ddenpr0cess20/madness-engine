@@ -7,7 +7,6 @@ import * as farm from './farm.js';
 import * as homes from './homes.js';
 import * as industry from './industry.js';
 import * as works from './works.js';
-import { createGraniteKitchen } from '../props/granite-kitchen.js';
 
 export { castleScaffold } from './castle.js';
 export { CALIFORNIA_FOOTPRINTS } from './california.js';
