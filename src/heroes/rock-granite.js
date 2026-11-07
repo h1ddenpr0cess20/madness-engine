@@ -29,7 +29,7 @@ export const GRANITES = {
 export const GRANITE_CHOICES = Object.keys(GRANITES);
 
 /** One tile of granite spans this much of the stone (it is about 1.9 across). */
-const TILE = 1.9;
+export const GRANITE_TILE_SIZE = 1.9;
 /** The maps are painted this size, one tile across. */
 const SIZE = 1024;
 
@@ -97,8 +97,8 @@ function laySurface(p) {
       const i = t + 3 * k, o = (t / 3 + k) * 2;
       const a = axis === 0 ? p[i + 1] : p[i];
       const b = axis === 2 ? p[i + 1] : p[i + 2];
-      uv[o] = a / TILE + axis * 0.37;
-      uv[o + 1] = b / TILE;
+      uv[o] = a / GRANITE_TILE_SIZE + axis * 0.37;
+      uv[o + 1] = b / GRANITE_TILE_SIZE;
     }
   }
   return uv;
