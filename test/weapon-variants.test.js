@@ -538,7 +538,7 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     assert.equal(weapon.pommelAsset.group.parent, weapon.group);
     assert.equal(weapon.handle.material.color.getHexString(), '101010');
     assert.equal(weapon.guard.name, 'rough-hewn granite shard guard');
-    assert.equal(weapon.guard.children[0].name, 'chipped stone crossguard with tapered shard tips');
+    assert.equal(weapon.guard.children[0].name, 'chipped stone crossguard with tapered blunt shard tips');
     assert.ok(weapon.guard.children[0].geometry.getAttribute('uv')?.count > 0,
       'guard uses the same physical-scale granite projection');
     assert.equal(weapon.pommelAsset.mesh.geometry.userData.gripCoreProfile,
