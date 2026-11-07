@@ -89,6 +89,9 @@ function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   const bowl = new GFX.Mesh(geometry, metal);
+  // The first strip is the lip; reverse the inside surface so its normals face the basin cavity.
+  bowl.material = metal;
+  bowl.material.side = GFX.DoubleSide;
   bowl.name = 'formed copper bowl';
   bowl.castShadow = true;
   bowl.receiveShadow = true;
@@ -247,25 +250,19 @@ export function createGraniteKitchen(GFX, {
   const basinDepth = clamp(depth * 0.58, 0.36, 0.48);
   const basinX = -width * 0.22;
   const basinZ = z0 + depth * 0.48;
-  const basinCut = new GFX.Mesh(new GFX.BoxGeometry(basinWidth + 0.01, 0.085, basinDepth + 0.01), new GFX.MeshBasicMaterial({ color: '#000000' }));
-  basinCut.name = 'basin aperture reference volume';
-  basinCut.position.set(basinX, topY - 0.03, basinZ);
   // Boolean operations are intentionally not required by the engine. The slab is split into three stone pieces
   // around the aperture, preserving the continuous stone material on every exposed cut edge.
   group.remove(slab);
   slab.geometry.dispose();
   const leftW = width * 0.5 + basinX - basinWidth * 0.5;
   const rightW = width * 0.5 - (basinX + basinWidth * 0.5);
-  const rearD = depth * 0.5 - (basinZ - z0) - basinDepth * 0.5;
-  const frontD = depth * 0.5 - (z0 + depth - basinZ - basinDepth * 0.5);
-  const halfT = 0.075 / 2;
   const topPos = topY - 0.03;
   box(GFX, group, 'granite countertop left wing', [leftW, 0.075, depth + 0.035], [x0 + leftW / 2, topPos, z0 + depth / 2], graniteMaterial);
   box(GFX, group, 'granite countertop right wing', [rightW, 0.075, depth + 0.035], [basinX + basinWidth / 2 + rightW / 2, topPos, z0 + depth / 2], graniteMaterial);
-  const frontD = basinDepth * 0.5;
-  const backD = depth - (basinZ - z0) - basinDepth * 0.5;
-  box(GFX, group, 'granite countertop front rail', [basinWidth, 0.075, frontD], [basinX, topPos, basinZ + basinDepth / 2 + frontD / 2], graniteMaterial);
-  box(GFX, group, 'granite countertop rear rail', [basinWidth, 0.075, backD], [basinX, topPos, z0 + backD / 2], graniteMaterial);
+  const frontRailDepth = basinZ + basinDepth * 0.5 - z0;
+  const rearRailDepth = depth - frontRailDepth;
+  box(GFX, group, 'granite countertop front rail', [basinWidth, 0.075, frontRailDepth], [basinX, topPos, z0 + frontRailDepth / 2], graniteMaterial);
+  box(GFX, group, 'granite countertop rear rail', [basinWidth, 0.075, rearRailDepth], [basinX, topPos, z0 + frontRailDepth + rearRailDepth / 2], graniteMaterial);
 
   const basin = makeCopperBasin(GFX, group, copper, basinX, topY - 0.07, basinZ, basinWidth - 0.012, basinDepth - 0.012);
   makeFaucet(GFX, group, brass, basinX, topY + 0.01, basinZ - basinDepth / 2 - 0.07);
