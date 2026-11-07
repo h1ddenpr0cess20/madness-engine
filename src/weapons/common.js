@@ -4,6 +4,7 @@ import { createMetalEgg, createGlassEgg } from '../heroes/debater-egg/index.js';
 import { createBall } from '../heroes/krystal/model.js';
 import { createBladeMist, createCurvedBladeMist } from './blade-mist.js';
 import { bladeCentreline } from './blade-curve.js';
+import { hammeredFinish } from './hammered.js';
 
 /** Weapon geometry is expressed in metres: one engine unit equals one metre. */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
@@ -800,9 +801,10 @@ const smooth01 = (a, b, v) => {
  */
 export function bentGripGeometry(GFX, {
   top, length, bend, radius, tipRadius,
-  ridges = 5, ridgeDepth = 0.06, sections = 56, radialSegments = 40,
+  ridges = 5, ridgeDepth = 0.06, sections = 56, radialSegments = 40, hammer = null,
 }) {
   const R = length / bend;
+  const finish = hammer ? hammeredFinish({ length, ...hammer }) : null;
   const positions = [], indices = [];
   for (let i = 0; i <= sections; i++) {
     const s = i / sections;
@@ -815,7 +817,9 @@ export function bentGripGeometry(GFX, {
     for (let k = 0; k < radialSegments; k++) {
       const a = (k / radialSegments) * Math.PI * 2;
       // The ridges fade in below the top, so the grip arrives round and flush with the peel.
-      const lobe = body * (1 + ridgeDepth * (1 - 0.6 * s) * smooth01(0, 0.15, s) * Math.cos(ridges * a));
+      let lobe = body * (1 + ridgeDepth * (1 - 0.6 * s) * smooth01(0, 0.15, s) * Math.cos(ridges * a));
+      // Hammered: pressed in along the radius.
+      if (finish) lobe -= finish.depthAt(s, a, body);
       positions.push(cx + lobe * cos * Math.cos(a), cy + lobe * sin * Math.cos(a), lobe * Math.sin(a));
     }
   }
@@ -986,6 +990,8 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMateria
     bend: spec.gripCurve,
     radius: handleRadius * 1.07,
     tipRadius,
+    // Fine enough to resolve each dimple's rim cleanly.
+    ...(spec.gripHammered ? { sections: 340, radialSegments: 192, hammer: {} } : {}),
   });
   const handle = new GFX.Mesh(geometry, hiltMaterial);
   handle.name = 'banana grip';
