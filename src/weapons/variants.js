@@ -3,6 +3,7 @@ import { BROADSWORD_SPEC, createBroadsword } from './broadsword.js';
 import { DAGGER_SPEC, BANANA_DAGGER_SPEC, BANANA_BROADSWORD_SPEC, createDagger } from './dagger.js';
 import { GREATSWORD_SPEC, createGreatsword } from './greatsword.js';
 import { createMorningstar } from './morningstar.js';
+import { GRANITES } from '../heroes/rock-granite.js';
 
 function named(weapon, name) {
   weapon.name = name;
@@ -58,6 +59,23 @@ export function createRegularDagger(GFX, options = {}) {
 
 export function createRegularGreatsword(GFX, options = {}) {
   return swordVariant(GFX, GREATSWORD_SPEC, 'Regular Greatsword', 'metal-ball', 'swept', 'banded', options);
+}
+
+/** Granite-pommel variants use regular profiles and a chipped-rock guard. */
+const GRANITE_DEFAULTS = Object.freeze({ gripColor: '#101010', graniteColour: 'grey' });
+function graniteWeapon(GFX, spec, label, options = {}) {
+  const colour = options.graniteColour ?? options.graniteColor ?? GRANITE_DEFAULTS.graniteColour;
+  if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
+  return swordVariant(GFX, { ...spec, guardThickness: 0.024 }, label, 'granite', 'granite-shards', 'banded', {
+    ...GRANITE_DEFAULTS, ...options,
+    graniteColour: colour,
+  });
+}
+export function createGraniteSword(GFX, options = {}) {
+  return graniteWeapon(GFX, BROADSWORD_SPEC, 'Granite Sword', options);
+}
+export function createGraniteDagger(GFX, options = {}) {
+  return graniteWeapon(GFX, DAGGER_SPEC, 'Granite Dagger', options);
 }
 
 export function createRegularMorningstar(GFX, options = {}) {

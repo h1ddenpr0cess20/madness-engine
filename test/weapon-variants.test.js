@@ -11,6 +11,8 @@ import {
   createRegularDagger,
   createRegularGreatsword,
   createRegularMorningstar,
+  createGraniteSword,
+  createGraniteDagger,
   createMarcsSword,
   createMarcsDagger,
   createMarcsGreatsword,
@@ -23,6 +25,7 @@ import {
   bladeGeometry,
 } from '../src/weapons/index.js';
 import { METALS } from '../src/props/metalglobe.js';
+import { GRANITE_CHOICES } from '../src/heroes/rock-granite.js';
 
 function assertEggBezelOutsideShell(weapon) {
   const sleeve = weapon.bezel.children.find((part) =>
@@ -508,4 +511,101 @@ test("Marc sword, dagger, greatsword and morningstar share gold metal and black 
   assert.equal(overridden.bladeMetal, 'silver');
   assert.equal(overridden.hiltMetal, 'platinum');
   assert.equal(overridden.gripColor, '#303030');
+});
+
+
+test('granite sword and dagger use granite pommels, tapered shard guards and selectable leather wraps', () => {
+  const regular = [createRegularSword(GFX), createRegularDagger(GFX)];
+  const granite = [createGraniteSword(GFX), createGraniteDagger(GFX)];
+  for (let i = 0; i < granite.length; i++) {
+    const weapon = granite[i], base = regular[i];
+    assert.equal(weapon.pommelAsset.kind, 'granite');
+    assert.equal(weapon.graniteColour, 'grey');
+    assert.equal(weapon.pommelAsset.material.name, 'granite');
+    assert.equal(weapon.pommelAsset.mesh.name, 'single carved granite pommel and grip core');
+    assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 1000,
+      'the boulder and handle tang are merged into one stone mesh');
+    assert.equal(weapon.blade.material.name, 'polished granite blade');
+    assert.ok(weapon.pommelAsset.textureTileSize > 0.005 && weapon.pommelAsset.textureTileSize < 0.1,
+      'physical granite tile stays within a plausible scaled stone range');
+    const bladeUv = weapon.blade.geometry.getAttribute('uv');
+    const bladeV = Array.from({ length: bladeUv.count }, (_, i) => bladeUv.getY(i));
+    assert.ok(Math.max(...bladeV) - Math.min(...bladeV) > weapon.dimensions.bladeLength / weapon.pommelAsset.textureTileSize * 0.7,
+      'blade granite uses the same pommel-scale physical tile instead of magnifying a tiny texture patch');
+    assert.equal(weapon.pommelAsset.material.name, 'granite');
+    assert.equal(weapon.bezel, null, 'the granite hilt has no metal ferrule');
+    assert.equal(weapon.bossSeat, null, 'the granite hilt has no metal boss seat');
+    assert.ok(weapon.blade.material.roughness <= 0.18, 'blade is polished like a stone countertop');
+    assert.equal(weapon.pommelAsset.group.parent, weapon.group);
+    assert.equal(weapon.handle.material.color.getHexString(), '101010');
+    const sleevePosition = weapon.handle.geometry.getAttribute('position');
+    const sleeveNormal = weapon.handle.geometry.getAttribute('normal');
+    assert.ok(sleeveNormal && sleeveNormal.count === sleevePosition.count,
+      'leather sleeve has computed surface normals');
+    for (let vertex = 0; vertex < sleevePosition.count; vertex++) {
+      const radialDot = sleevePosition.getX(vertex) * sleeveNormal.getX(vertex)
+        + sleevePosition.getZ(vertex) * sleeveNormal.getZ(vertex);
+      assert.ok(radialDot > 0,
+        'leather sleeve normals face outward so the continuous wrap is visible over the granite');
+    }
+    assert.equal(weapon.guard.name, 'rough-hewn granite shard guard');
+    assert.equal(weapon.guard.children[0].name, 'chipped stone crossguard with tapered blunt shard tips');
+    assert.ok(weapon.guard.children[0].geometry.getAttribute('uv')?.count > 0,
+      'guard uses the same physical-scale granite projection');
+    assert.equal(weapon.pommelAsset.gripCoreProfile,
+      'pommel-shoulder-to-waisted-hilt-to-blade-root-loft');
+    assert.ok(weapon.pommelAsset.bladeRootY > weapon.pommelAsset.guardCenterY,
+      'the carved neck continues through the guard plane into the blade root');
+    assert.ok(weapon.pommelAsset.bladeRootY - weapon.pommelAsset.guardCenterY >= 0.02);
+    assert.ok(Math.abs(weapon.handleBounds.top - (weapon.gripBounds.top - 0.006)) < 1e-6,
+      'the leather sleeve reaches the end of the carved grip loft beneath the guard');
+    const sleeveRadialPosition = weapon.handle.geometry.getAttribute('position');
+    const firstRingRadius = Math.hypot(sleeveRadialPosition.getX(0), sleeveRadialPosition.getZ(0));
+    const topRingStart = 32 * 48;
+    const topRingRadius = Math.hypot(
+      sleeveRadialPosition.getX(topRingStart),
+      sleeveRadialPosition.getZ(topRingStart),
+    );
+    assert.ok(topRingRadius > firstRingRadius * 1.14,
+      'the leather sleeve flares over the granite shoulder to cover its upper exposed edge');
+    assert.ok(weapon.pommelAsset.guardCenterY - weapon.handleBounds.top < 0.01,
+      'the flared leather sleeve meets the underside of the stone guard');
+    assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 10000,
+      'the round grip core morphs into the blade-root section');
+    assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
+      'guard uses the same granite stone as the fused handle');
+    const guardPositions = weapon.guard.children[0].geometry.getAttribute('position');
+    const mirroredVertices = new Set();
+    for (let vertex = 0; vertex < guardPositions.count; vertex++) {
+      const x = guardPositions.getX(vertex), y = guardPositions.getY(vertex), z = guardPositions.getZ(vertex);
+      mirroredVertices.add([x, y, z].map((value) => Math.round(value * 1e5)).join(','));
+    }
+    for (let vertex = 0; vertex < guardPositions.count; vertex++) {
+      const mirrored = [-guardPositions.getX(vertex), guardPositions.getY(vertex), guardPositions.getZ(vertex)]
+        .map((value) => Math.round(value * 1e5)).join(',');
+      assert.ok(mirroredVertices.has(mirrored),
+        'granite shard guard profile is symmetrical across the grip centreline');
+    }
+    assert.equal(weapon.guard.children.length, 1,
+      'the guard has no separate socket: its centre meets the molded grip/blade neck');
+    assert.equal(weapon.dimensions.guardThickness, 0.024);
+    assert.equal(weapon.dimensions.bladeLength, base.dimensions.bladeLength);
+    assert.equal(weapon.dimensions.bladeWidth, base.dimensions.bladeWidth);
+    assert.equal(weapon.dimensions.gripLength, base.dimensions.gripLength);
+    assert.equal(weapon.dimensions.guardSpan, base.dimensions.guardSpan);
+    weapon.setGraniteColour('pink');
+    assert.equal(weapon.graniteColour, 'pink');
+    assert.equal(weapon.pommelAsset.colour, 'pink');
+    assert.equal(weapon.blade.material.name, 'polished granite blade');
+    assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
+      'changing the stone colour updates the entire stone assembly');
+    weapon.setGripColor('#8b4c2e');
+    assert.equal(weapon.handle.material.color.getHexString(), '8b4c2e');
+  }
+  assert.deepEqual(GRANITE_CHOICES, ['grey', 'pink', 'black', 'white', 'green']);
+  for (const colour of GRANITE_CHOICES) {
+    assert.equal(createGraniteSword(GFX, { graniteColour: colour }).graniteColour, colour);
+    assert.equal(createGraniteDagger(GFX, { graniteColour: colour }).graniteColour, colour);
+  }
+  assert.throws(() => createGraniteDagger(GFX, { graniteColour: 'blue' }), /no granite/);
 });

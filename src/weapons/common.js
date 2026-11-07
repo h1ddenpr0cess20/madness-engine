@@ -2,6 +2,7 @@ import { METALS } from '../props/metalglobe.js';
 import { createMarble } from '../heroes/marble.js';
 import { createMetalEgg, createGlassEgg } from '../heroes/debater-egg/index.js';
 import { createBall } from '../heroes/krystal/model.js';
+import { createGraniteBoulder, GRANITES, GRANITE_TILE_SIZE } from '../heroes/rock-granite.js';
 import { createBladeMist, createCurvedBladeMist } from './blade-mist.js';
 import { bladeCentreline } from './blade-curve.js';
 
@@ -177,9 +178,46 @@ function createMagicEggPommel(GFX, radius) {
   };
 }
 
-function createWeaponPommel(GFX, spec, { style = 'marble', metal, material } = {}) {
+function createGranitePommel(GFX, radius, colour = 'grey') {
+  if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
+  const { mesh, geometry } = createGraniteBoulder(GFX, { colour, detail: 3 });
+  const bounds = new GFX.Box3().setFromObject(mesh);
+  const size = new GFX.Vector3();
+  bounds.getSize(size);
+  const maxDimension = Math.max(size.x, size.y, size.z);
+  if (!(maxDimension > 0)) throw new Error('granite pommel geometry has no measurable size');
+  const scale = (radius * 2) / maxDimension;
+  mesh.scale.setScalar(scale);
+  mesh.position.y = -bounds.min.y * scale;
+  const height = size.y * scale;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  const group = new GFX.Group();
+  group.name = 'granite rock pommel';
+  group.add(mesh);
+  let selectedColour = colour;
+  return {
+    group, mesh, geometry, get material() { return mesh.material; }, radius, height,
+    textureTileSize: GRANITE_TILE_SIZE * scale, kind: 'granite',
+    get colour() { return selectedColour; },
+    setColour(name) {
+      if (!Object.hasOwn(GRANITES, name)) throw new Error(`no granite called ${name}; choose ${Object.keys(GRANITES).join(', ')}`);
+      if (name !== selectedColour) {
+        const replacement = createGraniteBoulder(GFX, { colour: name, detail: 3 });
+        mesh.material.dispose?.();
+        replacement.geometry.dispose?.();
+        mesh.material = replacement.material;
+        selectedColour = name;
+      }
+      return this;
+    },
+  };
+}
+
+function createWeaponPommel(GFX, spec, { style = 'marble', metal, material, graniteColour = 'grey' } = {}) {
   if (style === 'marble') return { ...createWeaponPommelMarble(GFX, spec.marbleRadius), kind: 'marble' };
   if (style === 'metal-ball') return createMetalBallPommel(GFX, spec.marbleRadius, material);
+  if (style === 'granite') return createGranitePommel(GFX, spec.marbleRadius, graniteColour);
   if (style === 'metal-egg') return createMetalEggPommel(GFX, spec.marbleRadius, metal);
   if (style === 'krystal') return createKrystalOrbPommel(GFX, spec.marbleRadius);
   if (style === 'magic-egg') return createMagicEggPommel(GFX, spec.marbleRadius);
@@ -354,6 +392,88 @@ export function createDevilHornGuard(GFX, parent, material, {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   guard.add(mesh);
+  parent.add(guard);
+  return guard;
+}
+
+
+/** Thick rough-hewn stone guard with irregular, tapered shard-like blunt points. */
+function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, thickness = 0.024, textureTileSize = 0.0513 } = {}) {
+  const guard = new GFX.Group();
+  guard.name = 'rough-hewn granite shard guard';
+  const half = span / 2;
+  // Keep the rough-hewn silhouette mirrored about the grip centreline.
+  const stations = [
+    [-half, centerY + 0.021, 0], [-half * 0.82, centerY + 0.010, 0],
+    [-half * 0.52, centerY - 0.004, 0], [-half * 0.22, centerY - 0.002, 0],
+    [0, centerY, 0], [half * 0.22, centerY - 0.002, 0],
+    [half * 0.52, centerY - 0.004, 0], [half * 0.82, centerY + 0.010, 0],
+    [half, centerY + 0.021, 0],
+  ];
+  // The tips are narrow and flat-ended, not sharp needles or round metal terminals.
+  const radii = [thickness * 0.18, thickness * 0.39, thickness * 0.5, thickness * 0.46,
+    thickness * 0.61, thickness * 0.46, thickness * 0.5, thickness * 0.39, thickness * 0.18];
+  const points = stations.map((p) => new GFX.Vector3(...p));
+  const radialSegments = 10;
+  const ringStarts = [], positions = [], indices = [];
+  const startCap = positions.length / 3;
+  positions.push(points[0].x, points[0].y, points[0].z);
+  for (let i = 0; i < points.length; i++) {
+    const tangent = (i === 0
+      ? points[1].clone().sub(points[0])
+      : i === points.length - 1
+        ? points[i].clone().sub(points[i - 1])
+        : points[i + 1].clone().sub(points[i - 1])).normalize();
+    const normal = new GFX.Vector3(-tangent.y, tangent.x, 0).normalize();
+    const binormal = new GFX.Vector3(0, 0, 1);
+    ringStarts.push(positions.length / 3);
+    for (let j = 0; j < radialSegments; j++) {
+      const angle = j / radialSegments * Math.PI * 2;
+      const mirroredStation = Math.min(i, points.length - 1 - i);
+      const rough = 1 + 0.11 * Math.sin(j * 2.7 + mirroredStation * 1.3);
+      const vertex = points[i].clone()
+        .addScaledVector(normal, Math.cos(angle) * radii[i] * rough)
+        .addScaledVector(binormal, Math.sin(angle) * radii[i] * rough);
+      positions.push(vertex.x, vertex.y, vertex.z);
+    }
+  }
+  const endCap = positions.length / 3;
+  positions.push(points.at(-1).x, points.at(-1).y, points.at(-1).z);
+
+  // Flat, slightly angled end faces; faceted sides preserve the chipped-stone character.
+  for (let j = 0; j < radialSegments; j++) {
+    const next = (j + 1) % radialSegments;
+    indices.push(startCap, ringStarts[0] + next, ringStarts[0] + j);
+    const last = ringStarts.at(-1);
+    indices.push(endCap, last + j, last + next);
+  }
+  for (let r = 0; r < ringStarts.length - 1; r++) {
+    const a0 = ringStarts[r], b0 = ringStarts[r + 1];
+    for (let j = 0; j < radialSegments; j++) {
+      const next = (j + 1) % radialSegments;
+      const a = a0 + j, b = a0 + next;
+      const c = b0 + j, d = b0 + next;
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+
+  const indexedGeometry = new GFX.BufferGeometry();
+  indexedGeometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  indexedGeometry.setIndex(indices);
+  indexedGeometry.computeVertexNormals();
+  const geometry = indexedGeometry.toNonIndexed();
+  indexedGeometry.dispose?.();
+  const stonePosition = geometry.getAttribute('position');
+  geometry.setAttribute('uv', graniteSurfaceUv(GFX, stonePosition, textureTileSize));
+  geometry.setAttribute('color', whiteStoneVertexColors(GFX, stonePosition.count));
+
+  const mesh = new GFX.Mesh(geometry, material);
+  mesh.name = 'chipped stone crossguard with tapered blunt shard tips';
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  guard.add(mesh);
+
+  // The handle's carved neck is the central guard boss; no separate socket.
   parent.add(guard);
   return guard;
 }
@@ -1057,6 +1177,357 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMateria
   };
 }
 
+
+/** A polished, sealed granite face like a countertop, using the selected stone's actual grain maps. */
+
+/** Same dominant-face projection as rock-granite's laySurface(), in world metres. */
+function graniteSurfaceUv(GFX, position, tileWorldSize) {
+  if (!position || position.count % 3 !== 0) {
+    throw new TypeError('graniteSurfaceUv requires non-indexed triangle positions');
+  }
+  if (!Number.isFinite(tileWorldSize) || tileWorldSize <= 0) {
+    throw new RangeError('granite texture tile size must be positive');
+  }
+  const uv = new Float32Array(position.count * 2);
+  for (let t = 0; t < position.count; t += 3) {
+    const x0 = position.getX(t), y0 = position.getY(t), z0 = position.getZ(t);
+    const ux = position.getX(t + 1) - x0, uy = position.getY(t + 1) - y0, uz = position.getZ(t + 1) - z0;
+    const wx = position.getX(t + 2) - x0, wy = position.getY(t + 2) - y0, wz = position.getZ(t + 2) - z0;
+    const nx = Math.abs(uy * wz - uz * wy);
+    const ny = Math.abs(uz * wx - ux * wz);
+    const nz = Math.abs(ux * wy - uy * wx);
+    const axis = nx >= ny && nx >= nz ? 0 : ny >= nz ? 1 : 2;
+    for (let k = 0; k < 3; k++) {
+      const i = t + k;
+      const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
+      const a = axis === 0 ? y : x;
+      const b = axis === 2 ? y : z;
+      uv[i * 2] = a / tileWorldSize + axis * 0.37;
+      uv[i * 2 + 1] = b / tileWorldSize;
+    }
+  }
+  return new GFX.BufferAttribute(uv, 2);
+}
+
+function whiteStoneVertexColors(GFX, count) {
+  return new GFX.BufferAttribute(new Float32Array(count * 3).fill(1), 3);
+}
+
+/** A carved stone core that grows out of the pommel, waists under the wrap and flares into the guard. */
+function createGraniteGripCoreGeometry(GFX, {
+  pommelHeight, gripBottom, gripTop, bladeRootY, radius, bladeWidth,
+}) {
+  const profile = [
+    [pommelHeight * 0.54, radius * 0.34],
+    [pommelHeight * 0.68, radius * 0.55],
+    [pommelHeight * 0.80, radius * 0.82],
+    [pommelHeight * 0.88, radius * 0.88],
+    [pommelHeight * 0.94, radius * 0.93],
+    [pommelHeight * 0.98, radius * 0.99],
+    [pommelHeight + 0.008, radius * 1.03],
+    [gripBottom + 0.018, radius * 0.99],
+    [gripBottom + (gripTop - gripBottom) * 0.20, radius * 0.96],
+    [gripBottom + (gripTop - gripBottom) * 0.52, radius * 0.94],
+    [gripTop - 0.045, radius * 0.96],
+    [gripTop - 0.038, radius * 1.01],
+    [bladeRootY - 0.032, radius * 1.23],
+  ];
+  const radialSegments = 48, axialSegments = 96;
+  const positions = [], indices = [], ringYs = [], ringSections = [];
+  const firstY = profile[0][0], transitionStartY = profile.at(-1)[0];
+
+  const sampleRadius = (y) => {
+    let segment = 0;
+    while (segment < profile.length - 2 && y > profile[segment + 1][0]) segment++;
+    const [y1, r1] = profile[segment], [y2, r2] = profile[segment + 1];
+    const t = Math.max(0, Math.min(1, (y - y1) / (y2 - y1)));
+    const p0 = profile[Math.max(0, segment - 1)][1];
+    const p3 = profile[Math.min(profile.length - 1, segment + 2)][1];
+    const t2 = t * t, t3 = t2 * t;
+    const smooth = 0.5 * (
+      2 * r1 + (-p0 + r2) * t + (2 * p0 - 5 * r1 + 4 * r2 - p3) * t2
+      + (-p0 + 3 * r1 - 3 * r2 + p3) * t3
+    );
+    return Math.max(radius * 0.12, smooth);
+  };
+
+  for (let row = 0; row <= axialSegments; row++) {
+    const t = row / axialSegments;
+    const y = firstY + (transitionStartY - firstY) * t;
+    const r = sampleRadius(y);
+    const ring = [];
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const angle = Math.PI - segment / radialSegments * Math.PI * 2;
+      const carved = 1 + 0.012 * Math.sin(angle * 5 + t * 3.4);
+      ring.push([Math.cos(angle) * r * carved, Math.sin(angle) * r * carved]);
+    }
+    ringYs.push(y);
+    ringSections.push(ring);
+  }
+
+  const bladeSection = [
+    [-1.00, 0.00], [-0.84, 0.44], [-0.54, 0.78], [-0.34, 0.70],
+    [-0.20, 0.61], [0.00, 0.58], [0.20, 0.61], [0.34, 0.70],
+    [0.54, 0.78], [0.84, 0.44], [1.00, 0.00], [0.84, -0.44],
+    [0.54, -0.78], [0.34, -0.70], [0.20, -0.61], [0.00, -0.58],
+    [-0.20, -0.61], [-0.34, -0.70], [-0.54, -0.78], [-0.84, -0.44],
+  ];
+  const rootLoop = bladeSection.map(([x, z]) => [x * (bladeWidth / 2) * 0.94, z * 0.0032]);
+  const edgeLengths = rootLoop.map((point, i) => {
+    const next = rootLoop[(i + 1) % rootLoop.length];
+    return Math.hypot(next[0] - point[0], next[1] - point[1]);
+  });
+  const perimeter = edgeLengths.reduce((sum, value) => sum + value, 0);
+  const targetLoop = [];
+  for (let i = 0; i < radialSegments; i++) {
+    let distance = perimeter * i / radialSegments;
+    let edge = 0;
+    while (edge < edgeLengths.length - 1 && distance > edgeLengths[edge]) distance -= edgeLengths[edge++];
+    const a = rootLoop[edge], b = rootLoop[(edge + 1) % rootLoop.length];
+    const t = distance / edgeLengths[edge];
+    targetLoop.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+  }
+
+  const transitionRows = 24;
+  for (let row = 1; row <= transitionRows; row++) {
+    const t = row / transitionRows, eased = t * t * (3 - 2 * t);
+    ringYs.push(transitionStartY + (bladeRootY - transitionStartY) * t);
+    const from = ringSections.at(-1);
+    ringSections.push(from.map(([x, z], i) => [
+      x + (targetLoop[i][0] - x) * eased,
+      z + (targetLoop[i][1] - z) * eased,
+    ]));
+  }
+
+  for (let row = 0; row < ringYs.length; row++) {
+    for (const [x, z] of ringSections[row]) positions.push(x, ringYs[row], z);
+  }
+  for (let row = 0; row < ringYs.length - 1; row++) {
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const next = (segment + 1) % radialSegments;
+      const a = row * radialSegments + segment, b = row * radialSegments + next;
+      const c = (row + 1) * radialSegments + segment, d = (row + 1) * radialSegments + next;
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+  const startCenter = positions.length / 3;
+  positions.push(0, ringYs[0], 0);
+  for (let segment = 0; segment < radialSegments; segment++) {
+    const next = (segment + 1) % radialSegments;
+    indices.push(startCenter, next, segment);
+  }
+
+  const indexed = new GFX.BufferGeometry();
+  indexed.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  indexed.setIndex(indices);
+  indexed.computeVertexNormals();
+  const geometry = indexed.toNonIndexed();
+  indexed.dispose?.();
+  return geometry;
+}
+
+/** Slightly waisted leather sleeve, fitted over the continuous stone core. */
+function leatherGripRadiusScale(t, flareStart) {
+  const flareT = Math.max(0, Math.min(1, (t - flareStart) / (1 - flareStart)));
+  const easedFlare = flareT * flareT * (3 - 2 * flareT);
+  return 1.06 + 0.012 * Math.sin(Math.PI * t) + 0.17 * easedFlare;
+}
+
+function createLeatherGripSleeveGeometry(GFX, radius, length, flareStart) {
+  const axialSegments = 32, radialSegments = 48;
+  const positions = [], uvs = [], indices = [];
+  for (let row = 0; row <= axialSegments; row++) {
+    const t = row / axialSegments, y = (t - 0.5) * length;
+    const sectionRadius = radius * leatherGripRadiusScale(t, flareStart);
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const u = segment / radialSegments, angle = u * Math.PI * 2;
+      positions.push(Math.cos(angle) * sectionRadius, y, Math.sin(angle) * sectionRadius);
+      uvs.push(u, t);
+    }
+  }
+  for (let row = 0; row < axialSegments; row++) {
+    for (let segment = 0; segment < radialSegments; segment++) {
+      const next = (segment + 1) % radialSegments;
+      const a = row * radialSegments + segment, b = row * radialSegments + next;
+      const c = (row + 1) * radialSegments + segment, d = (row + 1) * radialSegments + next;
+      // Wind triangles outward so the sleeve surface is visible from outside.
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+  const geometry = new GFX.BufferGeometry();
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setAttribute('uv', new GFX.BufferAttribute(new Float32Array(uvs), 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function polishedGraniteMaterial(GFX, stoneMaterial) {
+  return new GFX.MeshStandardMaterial({
+    name: 'polished granite blade',
+    color: 0xffffff,
+    vertexColors: true,
+    map: stoneMaterial.map,
+    bumpMap: stoneMaterial.bumpMap,
+    bumpScale: 0.00025,
+    roughness: 0.16,
+    metalness: 0,
+    flatShading: false,
+  });
+}
+
+/**
+ * Build the granite pommel and grip tang as one mesh. The rough boulder and
+ * tapered stone shaft overlap before their vertices are merged, leaving no
+ * join, ferrule or metal collar. Leather is a separate sleeve and wrap only.
+ */
+function createGraniteHandleAssembly(GFX, group, spec, {
+  gripColor = '#101010',
+  graniteColour = 'grey',
+  wrapStyle = 'banded',
+  threadColor,
+} = {}) {
+  const pommelAsset = createGranitePommel(GFX, spec.marbleRadius, graniteColour);
+  const stoneMesh = pommelAsset.mesh;
+  const stoneGeometry = stoneMesh.geometry;
+  const stonePosition = stoneGeometry.getAttribute('position');
+  const stoneColor = stoneGeometry.getAttribute('color');
+  const scale = stoneMesh.scale;
+  const offset = stoneMesh.position;
+  const handleRadius = spec.gripDiameter / 2;
+  const gripBottom = pommelAsset.height - 0.003;
+  const gripTop = gripBottom + spec.gripLength;
+  const guardY = gripTop + 0.002;
+  const bladeRootY = guardY + 0.024;
+  const shaftGeometry = createGraniteGripCoreGeometry(GFX, {
+    pommelHeight: pommelAsset.height,
+    gripBottom,
+    gripTop,
+    guardY,
+    bladeRootY,
+    bladeWidth: spec.bladeWidth,
+    radius: handleRadius,
+  });
+  const shaftPosition = shaftGeometry.getAttribute('position');
+
+  // The lower core is buried deeply in the pommel and the upper flare enters
+  // the guard socket. They are one stone mesh and share one material/texture.
+  const positions = new Float32Array((stonePosition.count + shaftPosition.count) * 3);
+  const colors = new Float32Array((stonePosition.count + shaftPosition.count) * 3);
+  for (let i = 0; i < stonePosition.count; i++) {
+    positions.set([
+      stonePosition.getX(i) * scale.x + offset.x,
+      stonePosition.getY(i) * scale.y + offset.y,
+      stonePosition.getZ(i) * scale.z + offset.z,
+    ], i * 3);
+    colors.set([stoneColor.getX(i), stoneColor.getY(i), stoneColor.getZ(i)], i * 3);
+  }
+  for (let i = 0; i < shaftPosition.count; i++) {
+    const vertex = stonePosition.count + i;
+    positions.set([shaftPosition.getX(i), shaftPosition.getY(i), shaftPosition.getZ(i)], vertex * 3);
+    colors.set([1, 1, 1], vertex * 3);
+  }
+
+  const fusedGeometry = new GFX.BufferGeometry();
+  const fusedPosition = new GFX.BufferAttribute(positions, 3);
+  fusedGeometry.setAttribute('position', fusedPosition);
+  fusedGeometry.setAttribute('uv', graniteSurfaceUv(GFX, fusedPosition, pommelAsset.textureTileSize));
+  fusedGeometry.setAttribute('color', new GFX.BufferAttribute(colors, 3));
+  fusedGeometry.computeVertexNormals();
+
+  stoneGeometry.dispose?.();
+  shaftGeometry.dispose?.();
+  stoneMesh.geometry = fusedGeometry;
+  stoneMesh.position.set(0, 0, 0);
+  stoneMesh.scale.set(1, 1, 1);
+  stoneMesh.name = 'single carved granite pommel and grip core';
+  pommelAsset.geometry = fusedGeometry;
+  pommelAsset.gripCoreProfile = 'pommel-shoulder-to-waisted-hilt-to-blade-root-loft';
+  pommelAsset.guardCenterY = guardY;
+  pommelAsset.bladeRootY = bladeRootY;
+  group.add(pommelAsset.group);
+
+  const hilt = new GFX.Group();
+  hilt.name = 'leather-wrapped granite grip';
+  group.add(hilt);
+  const leatherMapsResult = leatherMaps(GFX);
+  const leatherMaterial = new GFX.MeshPhysicalMaterial({
+    name: 'selectable leather wrap',
+    color: new GFX.Color(gripColor),
+    map: leatherMapsResult.map,
+    bumpMap: leatherMapsResult.bump,
+    bumpScale: 0.001,
+    roughness: 0.88,
+    metalness: 0,
+    clearcoat: 0.02,
+    clearcoatRoughness: 0.82,
+  });
+  // End the leather at the top of the carved grip loft, not at an arbitrary
+  // short cylinder. The loft ends 6 mm below gripTop and flares to 1.23x radius.
+  const sleeveBottom = gripBottom + spec.gripLength * 0.025;
+  const sleeveTop = gripTop - 0.006;
+  const sleeveLength = sleeveTop - sleeveBottom;
+  const shaftCenter = (sleeveBottom + sleeveTop) / 2;
+  const flareStart = (gripTop - 0.038 - sleeveBottom) / sleeveLength;
+  const handle = new GFX.Mesh(
+    createLeatherGripSleeveGeometry(GFX, handleRadius, sleeveLength, flareStart),
+    leatherMaterial,
+  );
+  handle.name = 'leather wrap over fused granite handle';
+  handle.position.set(0, shaftCenter, 0);
+  handle.castShadow = true;
+  handle.receiveShadow = true;
+  hilt.add(handle);
+
+  const initialThreadColor = threadColor ?? shadeHex(gripColor, 0.68);
+  const wrapMaterial = new GFX.MeshPhysicalMaterial({
+    name: 'leather wrap ridges',
+    color: new GFX.Color(initialThreadColor),
+    roughness: 0.92,
+    metalness: 0,
+  });
+  if (wrapStyle === 'banded') {
+    const wraps = spec.gripWrapDivisions ?? 13;
+    for (let i = 1; i < wraps; i++) {
+      const t = i / wraps;
+      const y = shaftCenter + (t - 0.5) * sleeveLength;
+      const wrapRadius = handleRadius * leatherGripRadiusScale(t, flareStart) + 0.00055;
+      const ring = new GFX.Mesh(new GFX.TorusGeometry(wrapRadius, 0.00058, 6, 48), wrapMaterial);
+      ring.name = 'leather wrap ridge';
+      ring.position.set(0, y, 0);
+      ring.rotation.x = Math.PI / 2;
+      ring.castShadow = true;
+      hilt.add(ring);
+    }
+  } else {
+    throw new Error(`unknown granite grip wrap style: ${wrapStyle}`);
+  }
+
+  return {
+    marble: null,
+    pommelAsset,
+    hilt,
+    hiltMaterial: pommelAsset.material,
+    handle,
+    bezel: null,
+    gripBottom,
+    gripTop,
+    gripBounds: Object.freeze({ bottom: gripBottom, top: gripTop }),
+    handleBounds: Object.freeze({
+      bottom: sleeveBottom,
+      top: sleeveTop,
+      length: sleeveLength,
+    }),
+    bezelBounds: null,
+    bossSeat: null,
+    bossSeatBounds: Object.freeze({ bottom: gripTop, top: gripTop }),
+    leatherMaterial,
+    wrapMaterial,
+    gripColor,
+    lowestY: 0,
+  };
+}
+
 export function createWeaponHandleAssembly(GFX, group, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
@@ -1064,9 +1535,14 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   pommelStyle = spec.pommelStyle ?? 'marble',
   wrapStyle = spec.wrapStyle ?? 'banded',
   accentMaterial,
+  graniteColour = 'grey',
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('createWeaponHandleAssembly requires the Madness Engine GFX module');
+  }
+  if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (pommelStyle === 'granite') {
+    return createGraniteHandleAssembly(GFX, group, spec, { gripColor, graniteColour, wrapStyle, threadColor });
   }
   if (!METALS[hiltMetal]) throw new Error(`no metal called ${hiltMetal}`);
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
@@ -1080,7 +1556,7 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
   const pommelAsset = createWeaponPommel(GFX, spec, {
-    style: pommelStyle, metal: hiltMetal, material: hiltMaterial,
+    style: pommelStyle, metal: hiltMetal, material: hiltMaterial, graniteColour,
   });
   const marble = pommelAsset.kind === 'marble' ? pommelAsset : null;
   group.add(pommelAsset.group);
@@ -1295,14 +1771,21 @@ export function buildWeapon(GFX, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
   threadColor,
+  graniteColour = 'grey',
   bladeMist: withBladeMist = false,
   bladeMistVisible = true,
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
   }
-  for (const name of [bladeMetal, hiltMetal]) {
-    if (!METALS[name]) throw new Error(`no metal called ${name}`);
+  const graniteWeapon = spec.pommelStyle === 'granite';
+  if (!graniteWeapon) {
+    for (const name of [bladeMetal, hiltMetal]) {
+      if (!METALS[name]) throw new Error(`no metal called ${name}`);
+    }
+  } else {
+    bladeMetal = 'granite';
+    hiltMetal = 'granite';
   }
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
   if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
@@ -1312,23 +1795,24 @@ export function buildWeapon(GFX, spec, {
   const group = new GFX.Group();
   group.name = `${spec.name} display`;
 
-  const bladeMaterial = metalMaterial(GFX, 'blade metal', bladeMetal);
+  let bladeMaterial = graniteWeapon ? null : metalMaterial(GFX, 'blade metal', bladeMetal);
   let threadColorExplicit = threadColor !== undefined;
   const {
     marble, hiltMaterial, hilt, handle, bezel, gripBounds, handleBounds,
     bezelBounds, bossSeat, bossSeatBounds, leatherMaterial, wrapMaterial, pommelAsset,
     accentMaterial, lowestY = 0,
   } = createWeaponHandleAssembly(GFX, group, spec, {
-    hiltMetal, gripColor, threadColor,
+    hiltMetal, gripColor, threadColor, graniteColour,
     // The banana's petal tops and tips are the blade's metal, so they share its material.
     accentMaterial: bladeMaterial,
     pommelStyle: spec.pommelStyle ?? 'marble',
     wrapStyle: spec.wrapStyle ?? 'banded',
   });
+  if (graniteWeapon) bladeMaterial = polishedGraniteMaterial(GFX, pommelAsset.material);
 
   // The boss and guard sit above the shared handle's fitted metal seat.
-  const guardY = gripBounds.top + 0.012;
-  const bladeRootY = guardY - 0.007;
+  const guardY = gripBounds.top + (graniteWeapon ? 0.002 : 0.012);
+  const bladeRootY = graniteWeapon ? guardY + 0.024 : guardY - 0.007;
 
   let guard;
   let guardBoss;
@@ -1354,6 +1838,12 @@ export function buildWeapon(GFX, spec, {
     }
     hilt.add(guard);
     guardBoss = bossSeat;
+  } else if (spec.guardStyle === 'granite-shards') {
+    guard = createGraniteShardGuard(GFX, hilt, pommelAsset.material, {
+      centerY: guardY, span: spec.guardSpan, thickness: guardThickness,
+      textureTileSize: pommelAsset.textureTileSize,
+    });
+    guardBoss = pommelAsset.mesh;
   } else if (spec.guardStyle === 'lightning') {
     const guardDirection = spec.guardInverted ? -1 : 1;
     guardBoss = sphere(GFX, 'lightning guard reinforced central boss', hiltMaterial,
@@ -1400,7 +1890,7 @@ export function buildWeapon(GFX, spec, {
   }
 
   // The tang/blade begins inside the guard boss and overlaps it by 7 mm.
-  const fullBlade = bladeGeometry(GFX, {
+  let fullBlade = bladeGeometry(GFX, {
     rootY: bladeRootY,
     length: spec.bladeLength,
     width: spec.bladeWidth,
@@ -1413,6 +1903,16 @@ export function buildWeapon(GFX, spec, {
       bend: spec.bladeCurve, hook: spec.bladeHook, talon: spec.bladeTalon,
     });
     fullBlade.computeVertexNormals();
+  }
+  if (graniteWeapon) {
+    // Match the physical tile scale and per-face projection of the stone
+    // pommel and shard guard rather than magnifying a tiny part of the image.
+    const indexedBlade = fullBlade;
+    fullBlade = indexedBlade.toNonIndexed();
+    indexedBlade.dispose?.();
+    const bladePosition = fullBlade.getAttribute('position');
+    fullBlade.setAttribute('uv', graniteSurfaceUv(GFX, bladePosition, pommelAsset.textureTileSize));
+    fullBlade.setAttribute('color', whiteStoneVertexColors(GFX, bladePosition.count));
   }
   const blade = new GFX.Mesh(fullBlade, bladeMaterial);
   blade.name = 'solid double-edged blade with 75% fuller';
@@ -1468,6 +1968,7 @@ export function buildWeapon(GFX, spec, {
       marbleDiameter: marble ? marble.radius * 2 : null,
       pommelDiameter: pommelAsset.radius * 2,
       pommelStyle: pommelAsset.kind,
+      graniteColour: pommelAsset.kind === 'granite' ? pommelAsset.colour : null,
       unit: 'm',
     }),
     info: {
@@ -1483,13 +1984,16 @@ export function buildWeapon(GFX, spec, {
         : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball'
           : pommelAsset.kind === 'metal-egg' ? 'Engine metal egg'
           : pommelAsset.kind === 'magic-egg' ? 'Glass egg with white/yellow animated mist'
+            : pommelAsset.kind === 'granite' ? `Granite rock (${pommelAsset.colour})`
             : 'Krystal glass orb with animated mist',
     },
     get bladeMetal() { return bladeMetal; },
     get hiltMetal() { return hiltMetal; },
     get gripColor() { return gripColor; },
+    get graniteColour() { return pommelAsset.kind === 'granite' ? pommelAsset.colour : null; },
     get threadColor() { return `#${wrapMaterial.color.getHexString()}`; },
     setBladeMetal(name) {
+      if (graniteWeapon) throw new Error('the granite blade is stone, not metal');
       const finish = METALS[name];
       if (!finish) throw new Error(`no metal called ${name}`);
       bladeMaterial.color.set(finish.color);
@@ -1498,12 +2002,26 @@ export function buildWeapon(GFX, spec, {
       return api;
     },
     setHiltMetal(name) {
+      if (graniteWeapon) throw new Error('the granite hilt is stone, not metal');
       const finish = METALS[name];
       if (!finish) throw new Error(`no metal called ${name}`);
       hiltMaterial.color.set(finish.color);
       hiltMaterial.roughness = finish.roughness;
       pommelAsset.setMetal?.(name);
       hiltMetal = name;
+      return api;
+    },
+    setGraniteColour(name) {
+      if (pommelAsset.kind !== 'granite') throw new Error('this weapon does not have a granite pommel');
+      pommelAsset.setColour(name);
+      if (graniteWeapon) {
+        bladeMaterial.dispose?.();
+        bladeMaterial = polishedGraniteMaterial(GFX, pommelAsset.material);
+        blade.material = bladeMaterial;
+      }
+      for (const part of guard?.children ?? []) {
+        if (part.material) part.material = pommelAsset.material;
+      }
       return api;
     },
     setGripColor(color) {

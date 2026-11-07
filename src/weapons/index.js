@@ -13,4 +13,5 @@ export {
   createKrystalSword, createKrystalDagger,
   createMagicEggSword, createMagicEggDagger, createMagicEggGreatsword,
   createBananaDagger, createBananaBroadsword,
+  createGraniteSword, createGraniteDagger,
 } from './variants.js';
