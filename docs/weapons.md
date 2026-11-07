@@ -320,3 +320,27 @@ banana.setBladeMist(true);  // on; setBladeMist(false) hides it again
 createBananaDagger(GFX, { bladeMistVisible: true }); // starts on
 createBananaDagger(GFX, { bladeMist: false });       // no mist layer at all
 ```
+
+
+## Banana broadsword
+
+`createBananaBroadsword(GFX, options)` is the broadsword-sized counterpart
+to the banana dagger. It preserves the same curved, hooked blade, ridged
+banana grip, four-flap peel guard, platinum inner peel and brass outer peel.
+The blade and grip use the broadsword's measured dimensions: 786 mm along
+the blade's curve, 52 mm blade width, 140 mm grip along its arc and a
+220 mm nominal guard span. The curved banana silhouette gives it a shorter
+end-to-end envelope than the straight broadsword.
+
+The four existing peel flaps retain their shape and width, with their
+vertical length increased by 15% so they read proportionally on the larger
+weapon. The banana broadsword uses the same platinum/brass material controls
+and hidden-by-default soft white/yellow blade mist as the banana dagger.
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createBananaBroadsword } from 'madness-engine/weapons';
+
+const bananaSword = createBananaBroadsword(GFX);
+scene.add(bananaSword.group);
+```
