@@ -180,7 +180,7 @@ function createMagicEggPommel(GFX, radius) {
 
 function createGranitePommel(GFX, radius, colour = 'grey') {
   if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
-  const { mesh, geometry, material } = createGraniteBoulder(GFX, { colour, detail: 3 });
+  const { mesh, geometry } = createGraniteBoulder(GFX, { colour, detail: 3 });
   const bounds = new GFX.Box3().setFromObject(mesh);
   const size = new GFX.Vector3();
   bounds.getSize(size);
@@ -1293,6 +1293,7 @@ function createGraniteGripCoreGeometry(GFX, {
   indexed.computeVertexNormals();
   const geometry = indexed.toNonIndexed();
   indexed.dispose?.();
+  geometry.userData ??= {};
   geometry.userData.gripCoreProfile = 'pommel-shoulder-to-waisted-hilt-to-guard-flare';
   return geometry;
 }

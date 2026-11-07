@@ -517,9 +517,8 @@ $('colourcopy').onclick = async () => {
     const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
     code = "import * as GFX from 'madness-engine/gfx';\\n"
       + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\\n\\n"
-      + "const " + variable + " = " + factory + "(GFX, { bladeMetal: '"
-      + (options.bladeMetal ?? 'steel') + "', hiltMetal: '" + (options.hiltMetal ?? 'steel')
-      + "', graniteColour: '" + (view.colours.graniteColour ?? view.item.palette.granite ?? 'grey')
+      + "const " + variable + " = " + factory + "(GFX, { graniteColour: '"
+      + (view.colours.graniteColour ?? view.item.palette.granite ?? 'grey')
       + "', gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip ?? '#101010') + "' });";
   } else if (view.item.palette?.kind === 'weapon') {
     const factory = view.item.factory;

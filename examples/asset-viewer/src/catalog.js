@@ -589,7 +589,7 @@ function weaponItems() {
         import('../../../src/props/metalglobe.js'),
       ]);
       const made = paletteKind === 'granite-weapon'
-        ? weapons[factory](GFX, { bladeMetal, hiltMetal, gripColor: colours.gripColor ?? grip ?? '#101010', graniteColour: colours.graniteColour ?? graniteDefault ?? 'grey' })
+        ? weapons[factory](GFX, { gripColor: colours.gripColor ?? grip ?? '#101010', graniteColour: colours.graniteColour ?? graniteDefault ?? 'grey' })
         : paletteKind === 'morningstar'
         ? weapons[factory](GFX, { metal, gripColor: colours.gripColor ?? grip ?? '#633b2c' })
         : weapons[factory](GFX, {
