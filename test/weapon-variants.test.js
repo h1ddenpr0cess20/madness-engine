@@ -538,6 +538,16 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     assert.ok(weapon.blade.material.roughness <= 0.18, 'blade is polished like a stone countertop');
     assert.equal(weapon.pommelAsset.group.parent, weapon.group);
     assert.equal(weapon.handle.material.color.getHexString(), '101010');
+    const sleevePosition = weapon.handle.geometry.getAttribute('position');
+    const sleeveNormal = weapon.handle.geometry.getAttribute('normal');
+    assert.ok(sleeveNormal && sleeveNormal.count === sleevePosition.count,
+      'leather sleeve has computed surface normals');
+    for (let vertex = 0; vertex < sleevePosition.count; vertex++) {
+      const radialDot = sleevePosition.getX(vertex) * sleeveNormal.getX(vertex)
+        + sleevePosition.getZ(vertex) * sleeveNormal.getZ(vertex);
+      assert.ok(radialDot > 0,
+        'leather sleeve normals face outward so the continuous wrap is visible over the granite');
+    }
     assert.equal(weapon.guard.name, 'rough-hewn granite shard guard');
     assert.equal(weapon.guard.children[0].name, 'chipped stone crossguard with tapered blunt shard tips');
     assert.ok(weapon.guard.children[0].geometry.getAttribute('uv')?.count > 0,
