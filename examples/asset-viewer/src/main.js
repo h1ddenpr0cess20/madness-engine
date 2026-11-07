@@ -300,6 +300,7 @@ function animGroup(built) {
 /** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
+  if (pal.kind === 'granite-weapon') return [['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }]];
   if (pal.kind === 'weapon') {
     if (pal.metalGrip) return [];
     const rows = [
@@ -395,9 +396,10 @@ function colourGroup(item) {
   const isBowlingBall = item.palette.kind === 'bowling-ball';
   const isBowlingPin = item.palette.kind === 'bowling-pin';
   const isWeapon = item.palette.kind === 'weapon';
+  const isGraniteWeapon = item.palette.kind === 'granite-weapon';
   const isMorningstar = item.palette.kind === 'morningstar';
-  $('colourdiverse').style.display = isDice || isWeapon || isMorningstar ? 'none' : '';
-  if (isWeapon || isMorningstar) {
+  $('colourdiverse').style.display = isDice || isWeapon || isGraniteWeapon || isMorningstar ? 'none' : '';
+  if (isWeapon || isGraniteWeapon || isMorningstar) {
     const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
     for (const [key, label] of metalOptions) {
       options[key] ??= item.palette[key] ?? 'steel';
@@ -431,7 +433,17 @@ function colourGroup(item) {
     $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : 'marble');
     $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
   }
-  $('colourhint').textContent = isWeapon
+  if (isGraniteWeapon) {
+    const select = el('select', { className: 'weapon-metal-select' }, ...item.palette.graniteChoices.map((name) => el('option', { value: name }, name[0].toUpperCase() + name.slice(1))));
+    select.value = view.draft.graniteColour ?? view.colours.graniteColour ?? item.palette.granite;
+    select.onchange = () => { view.draft.graniteColour = select.value; colourGroup(item); };
+    const row = el('div', { className: 'line' }, el('label', {}, 'Granite pommel'), select);
+    row.style.justifyContent = 'space-between'; row.style.width = '100%';
+    $('weaponmetalrows').append(row); $('weaponmetalrows').style.display = 'grid';
+  }
+  $('colourhint').textContent = isGraniteWeapon
+    ? 'Choose a granite colourway and customise the leather wrap independently. The pommel uses the real granite surface.'
+    : isWeapon
     ? (item.palette.thread
       ? 'Choose blade and hilt metals, then customize the leather and contrasting grip thread independently.'
       : 'Choose blade and hilt metals, then set the leather grip colour here. Metal finishes update immediately; Apply commits the grip colour.')
@@ -500,6 +512,15 @@ $('colourcopy').onclick = async () => {
       + "const " + variable + " = " + factory + "(GFX, { metal: '"
       + (options.metal ?? 'steel') + "', gripColor: '"
       + (view.colours.gripColor ?? '#633b2c') + "' });";
+  } else if (view.item.palette?.kind === 'granite-weapon') {
+    const factory = view.item.factory;
+    const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    code = "import * as GFX from 'madness-engine/gfx';\\n"
+      + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\\n\\n"
+      + "const " + variable + " = " + factory + "(GFX, { bladeMetal: '"
+      + (options.bladeMetal ?? 'steel') + "', hiltMetal: '" + (options.hiltMetal ?? 'steel')
+      + "', graniteColour: '" + (view.colours.graniteColour ?? view.item.palette.granite ?? 'grey')
+      + "', gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip ?? '#101010') + "' });";
   } else if (view.item.palette?.kind === 'weapon') {
     const factory = view.item.factory;
     const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');

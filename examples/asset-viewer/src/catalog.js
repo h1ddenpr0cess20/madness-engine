@@ -546,6 +546,8 @@ const WEAPON_ASSETS = [
   { id: 'weapons/banana-broadsword', factory: 'createBananaBroadsword', name: 'Banana Broadsword', group: 'Banana Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'brass', metalGrip: true },
   { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
+  { id: 'weapons/granite-sword', factory: 'createGraniteSword', name: 'Granite Sword', group: 'Granite Set', paletteKind: 'granite-weapon', grip: '#101010', granite: 'grey' },
+  { id: 'weapons/granite-dagger', factory: 'createGraniteDagger', name: 'Granite Dagger', group: 'Granite Set', paletteKind: 'granite-weapon', grip: '#101010', granite: 'grey' },
   { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-morningstar', factory: 'createRegularMorningstar', name: 'Regular Morningstar', group: 'Regular Set', paletteKind: 'morningstar' },
   { id: 'weapons/marcs-sword', factory: 'createMarcsSword', name: "Marc's Sword", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
@@ -557,7 +559,7 @@ const WEAPON_ASSETS = [
 function weaponItems() {
   return WEAPON_ASSETS.map(({
     id, factory, name, group, paletteKind, grip, thread, metalGrip,
-    bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault,
+    bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault, granite: graniteDefault,
   }) => ({
     id,
     category: 'Weapons',
@@ -574,6 +576,7 @@ function weaponItems() {
       ...(bladeMetalDefault ? { bladeMetal: bladeMetalDefault } : {}),
       ...(hiltMetalDefault ? { hiltMetal: hiltMetalDefault } : {}),
       ...(metalDefault ? { metal: metalDefault } : {}),
+      ...(graniteDefault ? { granite: graniteDefault, graniteChoices: GRANITE_CHOICES } : {}),
     },
     async build({
       bladeMetal = bladeMetalDefault ?? 'steel',
@@ -585,7 +588,9 @@ function weaponItems() {
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
-      const made = paletteKind === 'morningstar'
+      const made = paletteKind === 'granite-weapon'
+        ? weapons[factory](GFX, { bladeMetal, hiltMetal, gripColor: colours.gripColor ?? grip ?? '#101010', graniteColour: colours.graniteColour ?? graniteDefault ?? 'grey' })
+        : paletteKind === 'morningstar'
         ? weapons[factory](GFX, { metal, gripColor: colours.gripColor ?? grip ?? '#633b2c' })
         : weapons[factory](GFX, {
           bladeMetal,

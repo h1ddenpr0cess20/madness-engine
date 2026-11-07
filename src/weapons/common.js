@@ -2,6 +2,7 @@ import { METALS } from '../props/metalglobe.js';
 import { createMarble } from '../heroes/marble.js';
 import { createMetalEgg, createGlassEgg } from '../heroes/debater-egg/index.js';
 import { createBall } from '../heroes/krystal/model.js';
+import { createGraniteBoulder, GRANITES } from '../heroes/rock-granite.js';
 import { createBladeMist, createCurvedBladeMist } from './blade-mist.js';
 import { bladeCentreline } from './blade-curve.js';
 
@@ -177,9 +178,42 @@ function createMagicEggPommel(GFX, radius) {
   };
 }
 
-function createWeaponPommel(GFX, spec, { style = 'marble', metal, material } = {}) {
+function createGranitePommel(GFX, radius, colour = 'grey') {
+  if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
+  const { mesh, geometry, material } = createGraniteBoulder(GFX, { colour });
+  const bounds = new GFX.Box3().setFromObject(mesh);
+  const size = new GFX.Vector3();
+  bounds.getSize(size);
+  const maxDimension = Math.max(size.x, size.y, size.z);
+  if (!(maxDimension > 0)) throw new Error('granite pommel geometry has no measurable size');
+  mesh.scale.setScalar((radius * 2) / maxDimension);
+  mesh.position.y = radius - bounds.min.y * mesh.scale.y;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  const group = new GFX.Group();
+  group.name = 'granite rock pommel';
+  group.add(mesh);
+  let selectedColour = colour;
+  return {
+    group, mesh, geometry, material, radius, height: radius * 2, kind: 'granite',
+    get colour() { return selectedColour; },
+    setColour(name) {
+      if (!Object.hasOwn(GRANITES, name)) throw new Error(`no granite called ${name}; choose ${Object.keys(GRANITES).join(', ')}`);
+      if (name !== selectedColour) {
+        const replacement = createGraniteBoulder(GFX, { colour: name });
+        mesh.material.dispose?.();
+        mesh.material = replacement.material;
+        selectedColour = name;
+      }
+      return this;
+    },
+  };
+}
+
+function createWeaponPommel(GFX, spec, { style = 'marble', metal, material, graniteColour = 'grey' } = {}) {
   if (style === 'marble') return { ...createWeaponPommelMarble(GFX, spec.marbleRadius), kind: 'marble' };
   if (style === 'metal-ball') return createMetalBallPommel(GFX, spec.marbleRadius, material);
+  if (style === 'granite') return createGranitePommel(GFX, spec.marbleRadius, graniteColour);
   if (style === 'metal-egg') return createMetalEggPommel(GFX, spec.marbleRadius, metal);
   if (style === 'krystal') return createKrystalOrbPommel(GFX, spec.marbleRadius);
   if (style === 'magic-egg') return createMagicEggPommel(GFX, spec.marbleRadius);
@@ -354,6 +388,69 @@ export function createDevilHornGuard(GFX, parent, material, {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   guard.add(mesh);
+  parent.add(guard);
+  return guard;
+}
+
+
+/** Thick rough-hewn stone guard with irregular, tapered shard-like blunt points. */
+function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, thickness = 0.024 } = {}) {
+  const guard = new GFX.Group();
+  guard.name = 'rough-hewn granite shard guard';
+  const half = span / 2;
+  const stations = [
+    [-half, centerY + 0.017, 0], [-half * 0.82, centerY + 0.010, 0],
+    [-half * 0.52, centerY - 0.004, 0], [-half * 0.22, centerY - 0.002, 0],
+    [0, centerY, 0], [half * 0.22, centerY - 0.002, 0],
+    [half * 0.55, centerY + 0.005, 0], [half * 0.84, centerY + 0.018, 0],
+    [half, centerY + 0.026, 0],
+  ];
+  const radii = [0.0005, thickness * 0.39, thickness * 0.5, thickness * 0.46,
+    thickness * 0.61, thickness * 0.46, thickness * 0.5, thickness * 0.36, 0.0005];
+  const points = stations.map((p) => new GFX.Vector3(...p));
+  const radialSegments = 12, ringStarts = [], positions = [], indices = [];
+  positions.push(points[0].x, points[0].y, points[0].z);
+  for (let i = 1; i < points.length - 1; i++) {
+    const tangent = points[i + 1].clone().sub(points[i - 1]).normalize();
+    const normal = new GFX.Vector3(-tangent.y, tangent.x, 0).normalize();
+    const binormal = new GFX.Vector3(0, 0, 1);
+    ringStarts.push(positions.length / 3);
+    for (let j = 0; j < radialSegments; j++) {
+      const a = j / radialSegments * Math.PI * 2;
+      const rough = 1 + 0.08 * Math.sin(j * 2.7 + i * 1.3);
+      const vertex = points[i].clone()
+        .addScaledVector(normal, Math.cos(a) * radii[i] * rough)
+        .addScaledVector(binormal, Math.sin(a) * radii[i] * rough);
+      positions.push(vertex.x, vertex.y, vertex.z);
+    }
+  }
+  const tip = positions.length / 3;
+  positions.push(points.at(-1).x, points.at(-1).y, points.at(-1).z);
+  for (let j = 0; j < radialSegments; j++) indices.push(0, ringStarts[0] + j, ringStarts[0] + (j + 1) % radialSegments);
+  for (let r = 0; r < ringStarts.length - 1; r++) {
+    const a0 = ringStarts[r], b0 = ringStarts[r + 1];
+    for (let j = 0; j < radialSegments; j++) {
+      const a = a0 + j, b = a0 + (j + 1) % radialSegments;
+      const cc = b0 + j, d = b0 + (j + 1) % radialSegments;
+      indices.push(a, cc, b, b, cc, d);
+    }
+  }
+  const last = ringStarts.at(-1);
+  for (let j = 0; j < radialSegments; j++) indices.push(last + j, tip, last + (j + 1) % radialSegments);
+  const geometry = new GFX.BufferGeometry();
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const mesh = new GFX.Mesh(geometry, material);
+  mesh.name = 'chipped stone crossguard with tapered shard tips';
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  guard.add(mesh);
+  const socket = new GFX.Mesh(new GFX.DodecahedronGeometry(thickness * 0.72, 0), material);
+  socket.name = 'rough stone guard socket';
+  socket.position.set(0, centerY, 0);
+  socket.scale.set(1.25, 0.85, 1.1);
+  socket.castShadow = true; socket.receiveShadow = true;
+  guard.add(socket);
   parent.add(guard);
   return guard;
 }
@@ -1064,6 +1161,7 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   pommelStyle = spec.pommelStyle ?? 'marble',
   wrapStyle = spec.wrapStyle ?? 'banded',
   accentMaterial,
+  graniteColour = 'grey',
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('createWeaponHandleAssembly requires the Madness Engine GFX module');
@@ -1080,7 +1178,7 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
   const pommelAsset = createWeaponPommel(GFX, spec, {
-    style: pommelStyle, metal: hiltMetal, material: hiltMaterial,
+    style: pommelStyle, metal: hiltMetal, material: hiltMaterial, graniteColour,
   });
   const marble = pommelAsset.kind === 'marble' ? pommelAsset : null;
   group.add(pommelAsset.group);
@@ -1295,6 +1393,7 @@ export function buildWeapon(GFX, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
   threadColor,
+  graniteColour = 'grey',
   bladeMist: withBladeMist = false,
   bladeMistVisible = true,
 } = {}) {
@@ -1319,7 +1418,7 @@ export function buildWeapon(GFX, spec, {
     bezelBounds, bossSeat, bossSeatBounds, leatherMaterial, wrapMaterial, pommelAsset,
     accentMaterial, lowestY = 0,
   } = createWeaponHandleAssembly(GFX, group, spec, {
-    hiltMetal, gripColor, threadColor,
+    hiltMetal, gripColor, threadColor, graniteColour,
     // The banana's petal tops and tips are the blade's metal, so they share its material.
     accentMaterial: bladeMaterial,
     pommelStyle: spec.pommelStyle ?? 'marble',
@@ -1354,6 +1453,9 @@ export function buildWeapon(GFX, spec, {
     }
     hilt.add(guard);
     guardBoss = bossSeat;
+  } else if (spec.guardStyle === 'granite-shards') {
+    guard = createGraniteShardGuard(GFX, hilt, hiltMaterial, { centerY: guardY, span: spec.guardSpan, thickness: guardThickness });
+    guardBoss = guard.children[1];
   } else if (spec.guardStyle === 'lightning') {
     const guardDirection = spec.guardInverted ? -1 : 1;
     guardBoss = sphere(GFX, 'lightning guard reinforced central boss', hiltMaterial,
@@ -1468,6 +1570,7 @@ export function buildWeapon(GFX, spec, {
       marbleDiameter: marble ? marble.radius * 2 : null,
       pommelDiameter: pommelAsset.radius * 2,
       pommelStyle: pommelAsset.kind,
+      graniteColour: pommelAsset.kind === 'granite' ? pommelAsset.colour : null,
       unit: 'm',
     }),
     info: {
@@ -1483,11 +1586,13 @@ export function buildWeapon(GFX, spec, {
         : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball'
           : pommelAsset.kind === 'metal-egg' ? 'Engine metal egg'
           : pommelAsset.kind === 'magic-egg' ? 'Glass egg with white/yellow animated mist'
+            : pommelAsset.kind === 'granite' ? `Granite rock (${pommelAsset.colour})`
             : 'Krystal glass orb with animated mist',
     },
     get bladeMetal() { return bladeMetal; },
     get hiltMetal() { return hiltMetal; },
     get gripColor() { return gripColor; },
+    get graniteColour() { return pommelAsset.kind === 'granite' ? pommelAsset.colour : null; },
     get threadColor() { return `#${wrapMaterial.color.getHexString()}`; },
     setBladeMetal(name) {
       const finish = METALS[name];
@@ -1504,6 +1609,11 @@ export function buildWeapon(GFX, spec, {
       hiltMaterial.roughness = finish.roughness;
       pommelAsset.setMetal?.(name);
       hiltMetal = name;
+      return api;
+    },
+    setGraniteColour(name) {
+      if (pommelAsset.kind !== 'granite') throw new Error('this weapon does not have a granite pommel');
+      pommelAsset.setColour(name);
       return api;
     },
     setGripColor(color) {

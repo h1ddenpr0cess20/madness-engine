@@ -11,6 +11,8 @@ import {
   createRegularDagger,
   createRegularGreatsword,
   createRegularMorningstar,
+  createGraniteSword,
+  createGraniteDagger,
   createMarcsSword,
   createMarcsDagger,
   createMarcsGreatsword,
@@ -23,6 +25,7 @@ import {
   bladeGeometry,
 } from '../src/weapons/index.js';
 import { METALS } from '../src/props/metalglobe.js';
+import { GRANITE_CHOICES } from '../src/heroes/rock-granite.js';
 
 function assertEggBezelOutsideShell(weapon) {
   const sleeve = weapon.bezel.children.find((part) =>
@@ -508,4 +511,38 @@ test("Marc sword, dagger, greatsword and morningstar share gold metal and black 
   assert.equal(overridden.bladeMetal, 'silver');
   assert.equal(overridden.hiltMetal, 'platinum');
   assert.equal(overridden.gripColor, '#303030');
+});
+
+
+test('granite sword and dagger use granite pommels, tapered shard guards and selectable leather wraps', () => {
+  const regular = [createRegularSword(GFX), createRegularDagger(GFX)];
+  const granite = [createGraniteSword(GFX), createGraniteDagger(GFX)];
+  for (let i = 0; i < granite.length; i++) {
+    const weapon = granite[i], base = regular[i];
+    assert.equal(weapon.pommelAsset.kind, 'granite');
+    assert.equal(weapon.graniteColour, 'grey');
+    assert.equal(weapon.pommelAsset.material.name, 'granite');
+    assert.equal(weapon.pommelAsset.mesh.name, 'rock_body');
+    assert.equal(weapon.pommelAsset.group.parent, weapon.group);
+    assert.equal(weapon.handle.material.color.getHexString(), '101010');
+    assert.equal(weapon.guard.name, 'rough-hewn granite shard guard');
+    assert.equal(weapon.guard.children[0].name, 'chipped stone crossguard with tapered shard tips');
+    assert.equal(weapon.guard.children[1].name, 'rough stone guard socket');
+    assert.equal(weapon.dimensions.guardThickness, 0.024);
+    assert.equal(weapon.dimensions.bladeLength, base.dimensions.bladeLength);
+    assert.equal(weapon.dimensions.bladeWidth, base.dimensions.bladeWidth);
+    assert.equal(weapon.dimensions.gripLength, base.dimensions.gripLength);
+    assert.equal(weapon.dimensions.guardSpan, base.dimensions.guardSpan);
+    weapon.setGraniteColour('pink');
+    assert.equal(weapon.graniteColour, 'pink');
+    assert.equal(weapon.pommelAsset.colour, 'pink');
+    weapon.setGripColor('#8b4c2e');
+    assert.equal(weapon.handle.material.color.getHexString(), '8b4c2e');
+  }
+  assert.deepEqual(GRANITE_CHOICES, ['grey', 'pink', 'black', 'white', 'green']);
+  for (const colour of GRANITE_CHOICES) {
+    assert.equal(createGraniteSword(GFX, { graniteColour: colour }).graniteColour, colour);
+    assert.equal(createGraniteDagger(GFX, { graniteColour: colour }).graniteColour, colour);
+  }
+  assert.throws(() => createGraniteDagger(GFX, { graniteColour: 'blue' }), /no granite/);
 });
