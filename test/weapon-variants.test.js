@@ -553,6 +553,18 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
       'the round grip core morphs into the blade-root section');
     assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
       'guard uses the same granite stone as the fused handle');
+    const guardPositions = weapon.guard.children[0].geometry.getAttribute('position');
+    const mirroredVertices = new Set();
+    for (let vertex = 0; vertex < guardPositions.count; vertex++) {
+      const x = guardPositions.getX(vertex), y = guardPositions.getY(vertex), z = guardPositions.getZ(vertex);
+      mirroredVertices.add([x, y, z].map((value) => Math.round(value * 1e5)).join(','));
+    }
+    for (let vertex = 0; vertex < guardPositions.count; vertex++) {
+      const mirrored = [-guardPositions.getX(vertex), guardPositions.getY(vertex), guardPositions.getZ(vertex)]
+        .map((value) => Math.round(value * 1e5)).join(',');
+      assert.ok(mirroredVertices.has(mirrored),
+        'granite shard guard profile is symmetrical across the grip centreline');
+    }
     assert.equal(weapon.guard.children.length, 1,
       'the guard has no separate socket: its centre meets the molded grip/blade neck');
     assert.equal(weapon.dimensions.guardThickness, 0.024);
