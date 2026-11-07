@@ -113,8 +113,15 @@ function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
   geometry.setAttribute('position', new GFX.Float32BufferAttribute(positions, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
-  const bowlMaterial = metal.clone();
-  bowlMaterial.side = GFX.DoubleSide;
+  const bowlMaterial = new GFX.MeshStandardMaterial({
+    name: 'copper basin interior',
+    color: metal.color,
+    metalness: metal.metalness,
+    roughness: metal.roughness,
+    envMap: metal.envMap,
+    envMapIntensity: metal.envMapIntensity,
+    side: GFX.DoubleSide,
+  });
   const bowl = new GFX.Mesh(geometry, bowlMaterial);
   bowl.name = 'formed copper bowl';
   bowl.castShadow = true;
