@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import * as GFX from '../src/gfx/index.js';
 import {
   BROADSWORD_DIMENSIONS,
+  BANANA_DAGGER_SPEC,
   createBroadsword,
   createBananaDagger,
   createBananaBroadsword,
@@ -51,7 +52,7 @@ test('banana broadsword keeps the dagger banana silhouette and extends the peel 
   const daggerPeel = dagger.guard.children[1].geometry;
 
   assert.equal(BANANA_BROADSWORD_SPEC.guardStyle, 'peel');
-  assert.equal(BANANA_BROADSWORD_SPEC.gripCurve, dagger.dimensions.gripCurve ?? 0.7);
+  assert.equal(BANANA_BROADSWORD_SPEC.gripCurve, BANANA_DAGGER_SPEC.gripCurve);
   assert.equal(BANANA_BROADSWORD_SPEC.bladeCurve, 0.4);
   assert.equal(BANANA_BROADSWORD_SPEC.bladeHook, 0.4);
   assert.equal(BANANA_BROADSWORD_SPEC.bladeTalon, 0.5);
