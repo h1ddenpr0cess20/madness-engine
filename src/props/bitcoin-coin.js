@@ -1,4 +1,4 @@
-import { createCoin } from './coin.js';
+import { COIN_METALS, createCoin } from './coin.js';
 
 /**
  * Bitcoin's familiar Bitboy mark, rendered from the published vector path
@@ -55,7 +55,7 @@ export const assetViewer = {
   name: 'bitcoin coin',
   category: 'Animated props',
   group: 'coin',
-  options: { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] },
+  options: { metal: COIN_METALS },
   async build({ GFX, metal = 'gold', renderer = null } = {}) {
     const { studioEnvironment } = await import('./metalglobe.js');
     const coin = createBitcoinCoin(GFX, { radius: 0.3, metal });

@@ -209,12 +209,15 @@ export function createCoin(GFX, { radius = 0.3, logo = null, backLogo = logo, me
   return api.setMetal(metal);
 }
 
+/** The metals a coin is offered in in the asset viewer. */
+export const COIN_METALS = ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'];
+
 export const assetViewer = {
   id: 'coin',
   name: 'coin',
   category: 'Animated props',
   group: 'coin',
-  options: { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] },
+  options: { metal: COIN_METALS },
   async build({ GFX, metal = 'gold', renderer = null } = {}) {
     const [{ studioEnvironment }, texture] = await Promise.all([import('./metalglobe.js'), import('../textures/coin/logo.js')]);
     const coin = createCoin(GFX, { radius: 0.3, logo: await texture.loadCoinLogo(), metal });

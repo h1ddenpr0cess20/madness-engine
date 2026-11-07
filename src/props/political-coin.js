@@ -1,4 +1,4 @@
-import { createCoin } from './coin.js';
+import { COIN_METALS, createCoin } from './coin.js';
 
 // Exact vector trace of the two emblems in the user-provided reference image
 // (1479 × 832). Blue and red regions are combined as the struck-metal field;
@@ -54,7 +54,7 @@ export const assetViewer = {
   name: 'political coin',
   category: 'Animated props',
   group: 'coin',
-  options: { metal: ['steel', 'silver', 'gold', 'copper', 'bronze', 'brass', 'titanium', 'chrome', 'platinum', 'rose gold', 'iron', 'pewter'] },
+  options: { metal: COIN_METALS },
   async build({ GFX, metal = 'gold', renderer = null } = {}) {
     const { studioEnvironment } = await import('./metalglobe.js');
     const coin = createPoliticalCoin(GFX, { radius: 0.3, metal });
