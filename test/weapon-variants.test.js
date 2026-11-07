@@ -532,7 +532,7 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     const bladeV = Array.from({ length: bladeUv.count }, (_, i) => bladeUv.getY(i));
     assert.ok(Math.max(...bladeV) - Math.min(...bladeV) > weapon.dimensions.bladeLength / weapon.pommelAsset.textureTileSize * 0.7,
       'blade granite uses the same pommel-scale physical tile instead of magnifying a tiny texture patch');
-    assert.equal(weapon.hiltMaterial.name, 'granite');
+    assert.equal(weapon.pommelAsset.material.name, 'granite');
     assert.equal(weapon.bezel, null, 'the granite hilt has no metal ferrule');
     assert.equal(weapon.bossSeat, null, 'the granite hilt has no metal boss seat');
     assert.ok(weapon.blade.material.roughness <= 0.18, 'blade is polished like a stone countertop');
@@ -544,6 +544,8 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
       'guard uses the same physical-scale granite projection');
     assert.equal(weapon.pommelAsset.gripCoreProfile,
       'pommel-shoulder-to-waisted-hilt-to-blade-root-loft');
+    assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 10000,
+      'the round grip core morphs into the blade-root section');
     assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
       'guard uses the same granite stone as the fused handle');
     assert.equal(weapon.guard.children.length, 1,

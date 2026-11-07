@@ -1330,7 +1330,7 @@ function createLeatherGripSleeveGeometry(GFX, radius, length) {
   const positions = [], uvs = [], indices = [];
   for (let row = 0; row <= axialSegments; row++) {
     const t = row / axialSegments, y = (t - 0.5) * length;
-    const sectionRadius = radius * (0.94 + 0.06 * Math.sin(Math.PI * t));
+    const sectionRadius = radius * (1.015 + 0.02 * Math.sin(Math.PI * t));
     for (let segment = 0; segment < radialSegments; segment++) {
       const u = segment / radialSegments, angle = u * Math.PI * 2;
       positions.push(Math.cos(angle) * sectionRadius, y, Math.sin(angle) * sectionRadius);
@@ -1432,7 +1432,7 @@ function createGraniteHandleAssembly(GFX, group, spec, {
   stoneMesh.scale.set(1, 1, 1);
   stoneMesh.name = 'single carved granite pommel and grip core';
   pommelAsset.geometry = fusedGeometry;
-  pommelAsset.gripCoreProfile = 'pommel-shoulder-to-waisted-hilt-to-guard-flare';
+  pommelAsset.gripCoreProfile = 'pommel-shoulder-to-waisted-hilt-to-blade-root-loft';
   group.add(pommelAsset.group);
 
   const hilt = new GFX.Group();
@@ -1474,7 +1474,7 @@ function createGraniteHandleAssembly(GFX, group, spec, {
     for (let i = 1; i < wraps; i++) {
       const t = i / wraps;
       const y = shaftCenter + (t - 0.5) * sleeveLength;
-      const wrapRadius = handleRadius * (0.94 + 0.06 * Math.sin(Math.PI * t)) + 0.00055;
+      const wrapRadius = handleRadius * (1.015 + 0.02 * Math.sin(Math.PI * t)) + 0.00055;
       const ring = new GFX.Mesh(new GFX.TorusGeometry(wrapRadius, 0.00058, 6, 48), wrapMaterial);
       ring.name = 'leather wrap ridge';
       ring.position.set(0, y, 0);
