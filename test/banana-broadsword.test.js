@@ -31,7 +31,9 @@ test('banana broadsword uses broadsword proportions while retaining banana const
   assert.ok(banana.dimensions.bladeWidth < sword.dimensions.bladeWidth);
   assert.equal(banana.dimensions.gripLength, sword.dimensions.gripLength);
   assert.equal(banana.dimensions.guardSpan, sword.dimensions.guardSpan);
-  assert.equal(banana.dimensions.bladeWidth, 0.042);
+  assert.equal(banana.dimensions.bladeWidth, 0.034);
+  assert.ok(banana.dimensions.bladeWidth < BANANA_BROADSWORD_SPEC.gripDiameter * 1.07,
+    'the blade fits within the actual grip-top diameter');
   assert.equal(banana.dimensions.gripLength, 0.14);
   assert.ok(Math.abs(banana.dimensions.overallLength - BANANA_BROADSWORD_SPEC.overallLength) < 0.001,
     'the published overall envelope matches the built curved weapon');
