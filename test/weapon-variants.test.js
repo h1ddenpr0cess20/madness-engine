@@ -557,8 +557,19 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     assert.ok(weapon.pommelAsset.bladeRootY > weapon.pommelAsset.guardCenterY,
       'the carved neck continues through the guard plane into the blade root');
     assert.ok(weapon.pommelAsset.bladeRootY - weapon.pommelAsset.guardCenterY >= 0.02);
+    assert.ok(Math.abs(weapon.handleBounds.top - (weapon.gripBounds.top - 0.006)) < 1e-6,
+      'the leather sleeve reaches the end of the carved grip loft beneath the guard');
+    const sleeveRadialPosition = weapon.handle.geometry.getAttribute('position');
+    const firstRingRadius = Math.hypot(sleeveRadialPosition.getX(0), sleeveRadialPosition.getZ(0));
+    const topRingStart = 32 * 48;
+    const topRingRadius = Math.hypot(
+      sleeveRadialPosition.getX(topRingStart),
+      sleeveRadialPosition.getZ(topRingStart),
+    );
+    assert.ok(topRingRadius > firstRingRadius * 1.14,
+      'the leather sleeve flares over the granite shoulder to cover its upper exposed edge');
     assert.ok(weapon.pommelAsset.guardCenterY - weapon.handleBounds.top < 0.01,
-      'the leather sleeve reaches close to the guard, leaving only the carved stone shoulder exposed');
+      'the flared leather sleeve meets the underside of the stone guard');
     assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 10000,
       'the round grip core morphs into the blade-root section');
     assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
