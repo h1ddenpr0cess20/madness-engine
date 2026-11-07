@@ -855,20 +855,21 @@ function sampleCurve(points, steps) {
 }
 
 /**
- * The banana's peel, split from the top of the grip into flaps that open
- * outward and up like petals and curl over at the tips, as a half-peeled
- * banana's do. Each flap is thin and troughed: its upper face is the pale
- * inside of the peel and its lower face the skin. They come back as two
+ * The banana's peel, split from the top of the grip into flaps that arch
+ * out a little and then hang down around the hand like a cup guard, kept
+ * small enough to sheathe. Each flap curls in across its width to hug the
+ * hand. Its outer face is the pale inside of the peel (peeled back, it
+ * faces up and out) and its inner face, toward the hand, the skin. They come back as two
  * geometries, upper faces and lower faces, so each can take its own finish.
  * The flaps sit on the diagonals, clear of the blade's flat.
  */
 export function peelFlapGeometries(GFX, {
   centerY, count = 4, phase = Math.PI / 4, steps = 40, across = 13,
-  thickness = 0.0065, trough = 0.0075, rootWidth = 0.0125, fullWidth = 0.0265,
+  thickness = 0.0050, trough = -0.0065, rootWidth = 0.0125, fullWidth = 0.0245,
 } = {}) {
   const path = sampleCurve([
-    [0.0165, 0.000], [0.032, 0.010], [0.049, 0.027],
-    [0.065, 0.043], [0.077, 0.046], [0.085, 0.036],
+    [0.0165, 0.002], [0.026, 0.008], [0.036, 0.009],
+    [0.043, 0.000], [0.046, -0.014], [0.044, -0.030],
   ], steps);
   const faces = { top: { positions: [], indices: [] }, bottom: { positions: [], indices: [] } };
   for (let f = 0; f < count; f++) {

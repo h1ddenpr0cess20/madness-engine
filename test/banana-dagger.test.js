@@ -135,29 +135,44 @@ test('banana grip is a ridged brass tube bowed back along an arc', () => {
   assert.ok(maxX < 0.03, 'the bow is one way');
 });
 
-test('the guard is four peel flaps: chrome inside facing up, brass skin below', () => {
+test('the guard is four small peel flaps hanging round the hand: chrome outside, brass skin toward the grip', () => {
   const banana = createBananaDagger(GFX);
   const [inside, outside] = banana.guard.children;
+  const base = banana.gripBounds.top;
 
   assert.equal(banana.guard.children.length, 2);
-  assert.equal(inside.material.color.getHexString(), 'fbfbfb', 'the upper faces are chrome');
-  assert.equal(outside.material.color.getHexString(), 'e0b84e', 'the lower faces are brass');
+  assert.equal(inside.material.color.getHexString(), 'fbfbfb', 'the outer faces are chrome');
+  assert.equal(outside.material.color.getHexString(), 'e0b84e', 'the faces toward the hand are brass');
   const perFace = 4 * 41 * 13;
   assert.equal(inside.geometry.attributes.position.count, perFace, 'four flaps');
   assert.equal(outside.geometry.attributes.position.count, perFace);
 
-  const mean = (geometry) => {
-    const normal = geometry.attributes.normal;
-    let sum = 0;
-    for (let i = 0; i < normal.count; i++) sum += normal.getY(i);
-    return sum / normal.count;
+  // Which way the faces look, measured across the whole face: out from the axis, or in toward it.
+  const outwardness = (geometry) => {
+    const position = geometry.attributes.position, normal = geometry.attributes.normal;
+    let sum = 0, n = 0;
+    for (let i = 0; i < position.count; i++) {
+      const r = Math.hypot(position.getX(i), position.getZ(i));
+      if (r < 0.025) continue;
+      sum += (normal.getX(i) * position.getX(i) + normal.getZ(i) * position.getZ(i)) / r;
+      n++;
+    }
+    return sum / n;
   };
-  assert.ok(mean(inside.geometry) > 0.2, 'the chrome faces look up, toward the blade');
-  assert.ok(mean(outside.geometry) < -0.2, 'the brass faces look down, toward the grip');
+  assert.ok(outwardness(inside.geometry) > 0.2, 'the chrome faces look out, away from the hand');
+  assert.ok(outwardness(outside.geometry) < -0.2, 'the brass faces look in, toward the hand');
 
-  const reach = Math.max(...Array.from({ length: inside.geometry.attributes.position.count },
-    (_, i) => Math.hypot(inside.geometry.attributes.position.getX(i), inside.geometry.attributes.position.getZ(i))));
-  assert.ok(reach > 0.07, 'the flaps open wide enough to guard the hand');
+  // Small enough to sheathe, and hanging down round the top of the grip like a cup.
+  const p = inside.geometry.attributes.position;
+  let reach = 0, high = -Infinity, low = Infinity;
+  for (let i = 0; i < p.count; i++) {
+    reach = Math.max(reach, Math.hypot(p.getX(i), p.getZ(i)));
+    high = Math.max(high, p.getY(i));
+    low = Math.min(low, p.getY(i));
+  }
+  assert.ok(reach > 0.04 && reach < 0.055, 'the flaps open to under 11 cm across, not a wide flare');
+  assert.ok(high < base + 0.016, 'they do not rise up the blade');
+  assert.ok(low < base - 0.025, 'they hang down round the hand');
 });
 
 test('banana finishes change independently and the grip is not dyed', () => {
