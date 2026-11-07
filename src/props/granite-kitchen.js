@@ -186,7 +186,7 @@ export function createGraniteKitchen(GFX, {
   if (!Object.hasOwn(GRANITES, granite)) throw new Error(`kitchen: unknown granite "${granite}"`);
   if (!WOOD_TONES[wood]) throw new Error(`kitchen: unknown hardwood "${wood}"`);
   if (!['copper', 'brass', 'bronze'].includes(basinMetal)) throw new Error(`kitchen: invalid basin metal "${basinMetal}"`);
-  if (!['brass', 'gold', 'bronze'].includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"');
+  if (!['brass', 'gold', 'bronze'].includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
   if (![width, height, depth].every(Number.isFinite) || width < 1.8 || width > 4 || height < 0.7 || height > 1.2 || depth < 0.55 || depth > 1.1) {
     throw new Error('kitchen: dimensions outside supported ranges');
   }
