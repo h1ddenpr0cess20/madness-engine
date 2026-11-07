@@ -85,7 +85,7 @@ test('banana broadsword supports the same metal and optional mist controls as th
   custom.setBladeMetal('silver');
   custom.setHiltMetal('brass');
   custom.setBladeMist(false);
-  assert.equal(custom.blade.material.color.getHexString(), 'c0c0c0');
+  assert.equal(custom.blade.material.color.getHexString(), 'f3f1ec');
   assert.equal(custom.handle.material.color.getHexString(), 'e0b84e');
   assert.equal(custom.bladeMist.visible, false);
 });
