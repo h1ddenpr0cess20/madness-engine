@@ -548,7 +548,7 @@ function leatherMaps(GFX) {
   return { map, bump };
 }
 
-function metalMaterial(GFX, name, metal) {
+export function metalMaterial(GFX, name, metal) {
   const finish = METALS[metal];
   if (!finish) throw new Error(`no metal called ${metal}`);
   return new GFX.MeshPhysicalMaterial({
@@ -672,9 +672,9 @@ export function shadeHex(hex, factor) {
  * Sweep a rounded bar along a continuous polyline. This avoids the broken
  * capped-cylinder joints and misaligned protruding strips of the old guard.
  */
-function sweptGuardGeometry(GFX, points, radius, radialSegments = 12) {
+function sweptGuardGeometry(GFX, points, radius, radialSegments = 12, { splitTop = false } = {}) {
   const centres = points.map((p) => new GFX.Vector3(...p));
-  const positions = [], indices = [];
+  const positions = [], indices = [], topIndices = [];
   for (let i = 0; i < centres.length; i++) {
     const tangent = centres[Math.min(i + 1, centres.length - 1)].clone()
       .sub(centres[Math.max(i - 1, 0)]).normalize();
@@ -694,7 +694,9 @@ function sweptGuardGeometry(GFX, points, radius, radialSegments = 12) {
       const b = i * radialSegments + (j + 1) % radialSegments;
       const c = (i + 1) * radialSegments + j;
       const d = (i + 1) * radialSegments + (j + 1) % radialSegments;
-      indices.push(a, b, c, b, d, c);
+      // The upper half of the bar (cos > 0 on the ring) can take its own finish.
+      const quad = splitTop && Math.cos((j / radialSegments) * Math.PI * 2) > 0 ? topIndices : indices;
+      quad.push(a, b, c, b, d, c);
     }
   }
   const start = positions.length / 3;
@@ -710,9 +712,158 @@ function sweptGuardGeometry(GFX, points, radius, radialSegments = 12) {
   }
   const geometry = new GFX.BufferGeometry();
   geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
-  geometry.setIndex(indices);
+  if (splitTop) {
+    geometry.setIndex([...topIndices, ...indices]);
+    geometry.addGroup(0, topIndices.length, 0);
+    geometry.addGroup(topIndices.length, indices.length, 1);
+  } else {
+    geometry.setIndex(indices);
+  }
   geometry.computeVertexNormals();
   return geometry;
+}
+
+/**
+ * The peel guard's arms: the swept crossguard's path with each arm flared
+ * upward through the middle and its tip curled back down, like a banana
+ * skin splayed open.
+ */
+function peelGuardPoints(span, guardY) {
+  return [
+    [-span, guardY - 0.004, 0],
+    [-span * 0.86, guardY + 0.004, 0],
+    [-span * 0.56, guardY + 0.011, 0],
+    [-span * 0.26, guardY + 0.011, 0],
+    [0, guardY + 0.005, 0],
+    [span * 0.26, guardY + 0.011, 0],
+    [span * 0.56, guardY + 0.011, 0],
+    [span * 0.86, guardY + 0.004, 0],
+    [span, guardY - 0.004, 0],
+  ];
+}
+
+/**
+ * A fluted metal grip that bows along a circular arc in the blade's plane.
+ * It starts at `top` with the blade's direction and ends `bend` radians on,
+ * with a five-lobed cross-section like a banana's ridges.
+ */
+export function bentGripGeometry(GFX, {
+  top, length, bend, radius, tipRadius = radius,
+  ridges = 5, ridgeDepth = 0.07, sections = 48, radialSegments = 40,
+}) {
+  const R = length / bend;
+  const positions = [], indices = [];
+  for (let i = 0; i <= sections; i++) {
+    const s = i / sections;
+    const phi = -s * bend;
+    const cos = Math.cos(phi), sin = Math.sin(phi);
+    const cx = top.x - R + R * cos;
+    const cy = top.y + R * sin;
+    const rr = radius + (tipRadius - radius) * s;
+    for (let k = 0; k < radialSegments; k++) {
+      const a = (k / radialSegments) * Math.PI * 2;
+      const lobe = rr * (1 + ridgeDepth * Math.cos(ridges * a));
+      positions.push(
+        cx + lobe * cos * Math.cos(a),
+        cy + lobe * sin * Math.cos(a),
+        lobe * Math.sin(a),
+      );
+    }
+  }
+  for (let i = 0; i < sections; i++) {
+    for (let k = 0; k < radialSegments; k++) {
+      const a = i * radialSegments + k;
+      const b = i * radialSegments + (k + 1) % radialSegments;
+      const c = (i + 1) * radialSegments + k;
+      const d = (i + 1) * radialSegments + (k + 1) % radialSegments;
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+  const geometry = new GFX.BufferGeometry();
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return {
+    geometry,
+    end: Object.freeze({ x: top.x - R + R * Math.cos(bend), y: top.y - R * Math.sin(bend) }),
+  };
+}
+
+/**
+ * The curved-grip handle. It keeps the straight handle's measured top seat,
+ * boss seat and metal-ball pommel, and swaps the leather cylinder for a
+ * fluted metal grip on an arc. The pommel sits on the arc's far end.
+ */
+function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, gripColor, threadColor }) {
+  const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
+  const pommelAsset = createWeaponPommel(GFX, spec, {
+    style: 'metal-ball', metal: hiltMetal, material: hiltMaterial,
+  });
+  group.add(pommelAsset.group);
+
+  const hilt = new GFX.Group();
+  hilt.name = 'curved hilt assembly';
+  group.add(hilt);
+
+  // The top sits where the straight grip's top does, so the guard and blade
+  // keep their measured positions; only the grip's lower end swings back.
+  const gripTop = pommelAsset.height + 0.005 + spec.gripLength;
+  const handleRadius = spec.gripDiameter / 2;
+  const { geometry, end } = bentGripGeometry(GFX, {
+    top: { x: 0, y: gripTop },
+    length: spec.gripLength,
+    bend: spec.gripCurve,
+    radius: handleRadius,
+    tipRadius: handleRadius * 0.74,
+  });
+  const handle = new GFX.Mesh(geometry, hiltMaterial);
+  handle.name = 'curved fluted metal grip';
+  handle.castShadow = true;
+  handle.receiveShadow = true;
+  hilt.add(handle);
+
+  pommelAsset.group.position.set(end.x, end.y - pommelAsset.radius, 0);
+
+  const bossSeatBottom = gripTop - 0.002;
+  const bossSeatTop = gripTop + 0.004;
+  const bossSeat = new GFX.Mesh(
+    new GFX.CylinderGeometry(handleRadius * 1.18, handleRadius * 1.18, bossSeatTop - bossSeatBottom, 48),
+    hiltMaterial,
+  );
+  bossSeat.name = 'guard boss lower cap';
+  bossSeat.position.set(0, (bossSeatBottom + bossSeatTop) / 2, 0);
+  bossSeat.castShadow = true;
+  bossSeat.receiveShadow = true;
+  hilt.add(bossSeat);
+
+  const bezel = new GFX.Group();
+  bezel.name = 'curved grip has no bezel: the pommel closes the lower end';
+  const wrapMaterial = new GFX.MeshPhysicalMaterial({
+    name: 'grip fluting',
+    color: new GFX.Color(threadColor ?? gripColor),
+    roughness: 0.9,
+    metalness: 0,
+  });
+
+  return {
+    marble: null,
+    pommelAsset,
+    hilt,
+    hiltMaterial,
+    handle,
+    bezel,
+    gripBottom: end.y,
+    gripTop,
+    gripBounds: Object.freeze({ bottom: end.y, top: gripTop }),
+    handleBounds: Object.freeze({ bottom: end.y, top: gripTop, length: spec.gripLength }),
+    bezelBounds: Object.freeze({ bottom: end.y, top: end.y, bottomRadius: handleRadius * 0.74, topRadius: handleRadius, outerRadius: handleRadius * 0.74 }),
+    bossSeat,
+    bossSeatBounds: Object.freeze({ bottom: bossSeatBottom, top: bossSeatTop }),
+    leatherMaterial: null,
+    wrapMaterial,
+    gripColor,
+    lowestY: end.y - pommelAsset.radius,
+  };
 }
 
 /**
@@ -801,6 +952,10 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
   if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
     throw new TypeError('threadColor must be a six-digit hex colour');
+  }
+
+  if (spec.gripCurve) {
+    return createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, gripColor, threadColor });
   }
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
@@ -1021,11 +1176,12 @@ export function buildWeapon(GFX, spec, {
   gripColor = '#633b2c',
   threadColor,
   bladeMist: withBladeMist = false,
+  guardTopMetal = 'chrome',
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
   }
-  for (const name of [bladeMetal, hiltMetal]) {
+  for (const name of [bladeMetal, hiltMetal, guardTopMetal]) {
     if (!METALS[name]) throw new Error(`no metal called ${name}`);
   }
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
@@ -1041,6 +1197,7 @@ export function buildWeapon(GFX, spec, {
   const {
     marble, hiltMaterial, hilt, handle, bezel, gripBounds, handleBounds,
     bezelBounds, bossSeat, bossSeatBounds, leatherMaterial, wrapMaterial, pommelAsset,
+    lowestY = 0,
   } = createWeaponHandleAssembly(GFX, group, spec, {
     hiltMetal, gripColor, threadColor,
     pommelStyle: spec.pommelStyle ?? 'marble',
@@ -1051,6 +1208,10 @@ export function buildWeapon(GFX, spec, {
   const guardY = gripBounds.top + 0.012;
   const bladeRootY = guardY - 0.007;
 
+  // The peel guard's upper half takes its own finish; the rest uses the hilt metal.
+  const guardTopMaterial = spec.guardStyle === 'peel'
+    ? metalMaterial(GFX, 'guard top metal', guardTopMetal)
+    : null;
   let guard;
   let guardBoss;
   const guardThickness = spec.guardThickness ?? 0.0136;
@@ -1071,13 +1232,14 @@ export function buildWeapon(GFX, spec, {
       centerY: guardY, span: spec.guardSpan, thickness: guardThickness,
     });
     guardBoss = guard.children[0];
-  } else if (spec.guardStyle === undefined || spec.guardStyle === 'swept') {
+  } else if (spec.guardStyle === undefined || spec.guardStyle === 'swept' || spec.guardStyle === 'peel') {
+    const peel = spec.guardStyle === 'peel';
     guardBoss = sphere(GFX, 'guard central boss', hiltMaterial,
       [0, guardY, 0], [0.026, 0.015, 0.016], [32, 20]);
     hilt.add(guardBoss);
     const guardRadius = guardThickness / 2;
     const guardTerminalRadius = 0.008 * (guardThickness / 0.0136);
-    const guardPoints = [
+    const guardPoints = peel ? peelGuardPoints(span, guardY) : [
       [-span, guardY - 0.011, 0],
       [-span * 0.76, guardY - 0.006, 0],
       [-span * 0.42, guardY + 0.002, 0],
@@ -1086,8 +1248,11 @@ export function buildWeapon(GFX, spec, {
       [span * 0.76, guardY - 0.006, 0],
       [span, guardY - 0.011, 0],
     ];
-    guard = new GFX.Mesh(sweptGuardGeometry(GFX, guardPoints, guardRadius, 14), hiltMaterial);
-    guard.name = 'continuous swept crossguard';
+    guard = new GFX.Mesh(
+      sweptGuardGeometry(GFX, guardPoints, guardRadius, 14, { splitTop: peel }),
+      peel ? [guardTopMaterial, hiltMaterial] : hiltMaterial,
+    );
+    guard.name = peel ? 'peel crossguard, chrome inside and brass outside' : 'continuous swept crossguard';
     guard.castShadow = true;
     guard.receiveShadow = true;
     hilt.add(guard);
@@ -1141,7 +1306,7 @@ export function buildWeapon(GFX, spec, {
     bossSeatBounds,
     guardBoss,
     dimensions: Object.freeze({
-      overallLength: bladeRootY + spec.bladeLength,
+      overallLength: bladeRootY + spec.bladeLength - lowestY,
       bladeLength: spec.bladeLength,
       bladeWidth: spec.bladeWidth,
       gripLength: spec.gripLength,
@@ -1154,7 +1319,7 @@ export function buildWeapon(GFX, spec, {
       unit: 'm',
     }),
     info: {
-      'Weapon length': `${(bladeRootY + spec.bladeLength).toFixed(3)} m`,
+      'Weapon length': `${(bladeRootY + spec.bladeLength - lowestY).toFixed(3)} m`,
       'Blade length': `${spec.bladeLength.toFixed(3)} m`,
       'Blade width': `${(spec.bladeWidth * 1000).toFixed(0)} mm`,
       'Grip length': `${(spec.gripLength * 1000).toFixed(0)} mm`,
@@ -1188,9 +1353,21 @@ export function buildWeapon(GFX, spec, {
       hiltMetal = name;
       return api;
     },
+    setGuardTopMetal(name) {
+      const finish = METALS[name];
+      if (!finish) throw new Error(`no metal called ${name}`);
+      if (guardTopMaterial) {
+        guardTopMaterial.color.set(finish.color);
+        guardTopMaterial.roughness = finish.roughness;
+      }
+      guardTopMetal = name;
+      return api;
+    },
+    get guardTopMetal() { return guardTopMetal; },
     setGripColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
-      leatherMaterial.color.set(color);
+      // A metal grip has no leather to dye: the colour is kept but not drawn.
+      leatherMaterial?.color.set(color);
       if (!threadColorExplicit && spec.wrapStyle !== 'diamond') {
         wrapMaterial.color.set(shadeHex(color, 0.68));
       }

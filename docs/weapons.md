@@ -244,3 +244,41 @@ sword.setBladeMist(false);
 ## Marc's family default finishes
 
 Marc's sword, dagger, greatsword and morningstar default to gold metal with a black leather grip and diagonal black wrap. Caller-provided `bladeMetal`, `hiltMetal`, `metal` and `gripColor` options override these defaults.
+
+
+## Banana dagger
+
+`createBananaDagger(GFX, options)` reuses the dagger's blade geometry, 240 mm
+blade, 47 mm width, 112 mm guard span and metal-ball pommel unchanged. Only
+the grip and guard differ:
+
+- **Grip:** a fluted metal tube, 97 mm long along its arc, that bows back
+  through 0.6 rad (about 34°) in the blade's plane. Its five-lobed section
+  stands in for a banana's ridges. It takes the hilt metal (brass by default),
+  with no leather wrap.
+- **Guard:** the dagger's swept crossguard, flared upward through the middle
+  and curled back down at the tips like a splayed peel. Its upper half is
+  chrome and its lower half is brass, so the chrome reads as the inside of the
+  peel.
+
+Published dimensions: approximately 0.363 m overall (the bow shortens the
+reach along the blade axis, so the overall length is measured from the lowest
+point of the pommel), 240 mm blade, 47 mm width and 112 mm guard span.
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createBananaDagger } from 'madness-engine/weapons';
+
+const banana = createBananaDagger(GFX, {
+  bladeMetal: 'steel',
+  hiltMetal: 'brass',
+  guardTopMetal: 'chrome',
+});
+scene.add(banana.group);
+banana.setHiltMetal('gold');          // grip, boss and lower guard
+banana.setGuardTopMetal('platinum');  // the chrome inside of the peel
+banana.setBladeMetal('chrome');
+```
+
+`setGripColor` is accepted for the shared API but has no effect on this
+weapon, since a metal grip has no leather to dye.

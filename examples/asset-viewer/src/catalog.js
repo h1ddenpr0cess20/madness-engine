@@ -540,6 +540,7 @@ const WEAPON_ASSETS = [
   { id: 'weapons/magic-egg-sword', factory: 'createMagicEggSword', name: 'Magic Egg Sword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
   { id: 'weapons/magic-egg-dagger', factory: 'createMagicEggDagger', name: 'Magic Egg Dagger', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
   { id: 'weapons/magic-egg-greatsword', factory: 'createMagicEggGreatsword', name: 'Magic Egg Greatsword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
+  { id: 'weapons/banana-dagger', factory: 'createBananaDagger', name: 'Banana Dagger', group: 'Banana Set', paletteKind: 'weapon', bladeMetal: 'steel', hiltMetal: 'brass', metalGrip: true },
   { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
   { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
@@ -552,7 +553,7 @@ const WEAPON_ASSETS = [
 
 function weaponItems() {
   return WEAPON_ASSETS.map(({
-    id, factory, name, group, paletteKind, grip, thread,
+    id, factory, name, group, paletteKind, grip, thread, metalGrip,
     bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault,
   }) => ({
     id,
@@ -565,6 +566,7 @@ function weaponItems() {
     palette: {
       kind: paletteKind,
       grip: grip ?? '#633b2c',
+      ...(metalGrip ? { metalGrip: true } : {}),
       ...(thread ? { thread } : {}),
       ...(bladeMetalDefault ? { bladeMetal: bladeMetalDefault } : {}),
       ...(hiltMetalDefault ? { hiltMetal: hiltMetalDefault } : {}),

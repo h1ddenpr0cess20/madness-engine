@@ -1,6 +1,6 @@
 import { buildWeapon } from './common.js';
 import { BROADSWORD_SPEC, createBroadsword } from './broadsword.js';
-import { DAGGER_SPEC, createDagger } from './dagger.js';
+import { DAGGER_SPEC, BANANA_DAGGER_SPEC, createDagger } from './dagger.js';
 import { GREATSWORD_SPEC, createGreatsword } from './greatsword.js';
 import { createMorningstar } from './morningstar.js';
 
@@ -169,4 +169,14 @@ export function createMarcsMorningstar(GFX, options = {}) {
     guardStyle: 'none',
     wrapStyle: 'diagonal',
   }), "Marc's Morningstar");
+}
+
+/** A dagger whose grip is a fluted brass tube bowed back like a banana, under a peel guard. */
+export function createBananaDagger(GFX, options = {}) {
+  return named(buildWeapon(GFX, BANANA_DAGGER_SPEC, {
+    bladeMetal: 'steel',
+    hiltMetal: 'brass',
+    guardTopMetal: 'chrome',
+    ...options,
+  }), 'Banana Dagger');
 }

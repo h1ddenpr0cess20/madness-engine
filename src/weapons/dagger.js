@@ -28,3 +28,17 @@ export const WORLD_UNITS_PER_METRE = WEAPON_WORLD_UNITS_PER_METRE;
 export function createDagger(GFX, options = {}) {
   return buildWeapon(GFX, DAGGER_SPEC, options);
 }
+
+/**
+ * The banana dagger reuses the dagger's blade, pommel and dimensions. Its
+ * grip is a fluted brass tube bowed through 0.6 rad (about 34°) along an arc,
+ * and its guard is the same swept construction, flared and curled like a
+ * splayed peel with a chrome inside and a brass outside.
+ */
+export const BANANA_DAGGER_SPEC = Object.freeze({
+  ...DAGGER_SPEC,
+  name: 'banana-dagger',
+  pommelStyle: 'metal-ball',
+  guardStyle: 'peel',
+  gripCurve: 0.6,
+});
