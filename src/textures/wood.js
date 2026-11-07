@@ -1,9 +1,9 @@
 /**
- * Hardwood material maps: raw lumber and the same wood after fine sanding,
- * stain and a clear protective finish. Shared species keep cabinetry and
- * joinery on one continuous, consistent wood grain.
+ * Hardwood material maps: exposed raw lumber and the same wood after fine
+ * sanding, stain and a clear protective finish. Species share one grain field
+ * so the two finishes remain recognisably the same wood.
  */
-import { fractal, pixels, texture, canvas } from './painters.js';
+import { fractal, pixels, texture } from './painters.js';
 
 export const WOOD_SPECIES = Object.freeze({
   walnut: { base: [116, 68, 43], heart: [62, 33, 24], sap: [178, 122, 77] },
@@ -14,8 +14,8 @@ export const WOOD_SPECIES = Object.freeze({
 const SIZE = 1024;
 const clamp = (x) => Math.max(0, Math.min(255, x));
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const caches = new WeakMap();
 
-/** Grain field is continuous and anisotropic: long, slowly meandering fibres, not repeated knots. */
 function grainFields(species) {
   const seed = { walnut: 709, oak: 719, mahogany: 727 }[species];
   const broad = fractal(seed, 3, 5);
@@ -32,7 +32,10 @@ function grainFields(species) {
   };
 }
 
-function paintSpecies(species, finish) {
+function paintSpecies(GFX, species, finish) {
+  // Browser painters are intentionally inert in Node: like the granite maps,
+  // geometry and material definitions remain testable without a DOM canvas.
+  if (typeof document === 'undefined' || !GFX?.CanvasTexture) return { map: null, bump: null };
   const palette = WOOD_SPECIES[species];
   const field = grainFields(species);
   const polished = finish === 'finished';
@@ -49,30 +52,31 @@ function paintSpecies(species, finish) {
     const f = field(u, v);
     const fibre = (f.fibre - 0.5) * (polished ? 0.18 : 0.34);
     const micro = (f.micro - 0.5) * 0.08;
-    return Math.round(128 + fibre * 255 + micro * 255);
+    const height = Math.round(128 + fibre * 255 + micro * 255);
+    return [height, height, height];
   };
-  const map = texture(null, pixels(SIZE, colour));
-  const bump = texture(null, pixels(SIZE, (u, v) => {
-    const h = relief(u, v);
-    return [h, h, h];
-  }), { srgb: false });
-  return { map, bump };
+  return {
+    map: texture(GFX, pixels(SIZE, colour)),
+    bump: texture(GFX, pixels(SIZE, relief), { srgb: false, wrap: true }),
+  };
 }
 
-const cache = new Map();
+function woodMaps(GFX, species, finish) {
+  if (!WOOD_SPECIES[species]) throw new Error(`wood: unknown species "${species}"`);
+  if (!GFX || (typeof GFX !== 'object' && typeof GFX !== 'function')) throw new TypeError('wood: a graphics namespace is required');
+  let cache = caches.get(GFX);
+  if (!cache) { cache = new Map(); caches.set(GFX, cache); }
+  const key = `${finish}:${species}`;
+  if (!cache.has(key)) cache.set(key, paintSpecies(GFX, species, finish));
+  return cache.get(key);
+}
 
-/** Exposed natural surface: saw marks, porous grain and unfilled end grain. */
+/** Exposed natural surface: sawn fibres, knots and deeper pores. */
 export function rawLumber(GFX, species = 'walnut') {
-  if (!WOOD_SPECIES[species]) throw new Error(`wood: unknown species "${species}"`);
-  const key = `raw:${species}`;
-  if (!cache.has(key)) cache.set(key, paintSpecies(species, 'raw'));
-  return cache.get(key);
+  return woodMaps(GFX, species, 'raw');
 }
 
-/** Same fibres, finely sanded and sealed with a low-satin clear finish. */
+/** The same fibres, finely sanded and sealed with a restrained satin clearcoat. */
 export function finishedWood(GFX, species = 'walnut') {
-  if (!WOOD_SPECIES[species]) throw new Error(`wood: unknown species "${species}"`);
-  const key = `finished:${species}`;
-  if (!cache.has(key)) cache.set(key, paintSpecies(species, 'finished'));
-  return cache.get(key);
+  return woodMaps(GFX, species, 'finished');
 }
