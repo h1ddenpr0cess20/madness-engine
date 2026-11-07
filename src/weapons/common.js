@@ -186,8 +186,10 @@ function createGranitePommel(GFX, radius, colour = 'grey') {
   bounds.getSize(size);
   const maxDimension = Math.max(size.x, size.y, size.z);
   if (!(maxDimension > 0)) throw new Error('granite pommel geometry has no measurable size');
-  mesh.scale.setScalar((radius * 2) / maxDimension);
-  mesh.position.y = radius - bounds.min.y * mesh.scale.y;
+  const scale = (radius * 2) / maxDimension;
+  mesh.scale.setScalar(scale);
+  mesh.position.y = -bounds.min.y * scale;
+  const height = size.y * scale;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   const group = new GFX.Group();
@@ -195,7 +197,7 @@ function createGranitePommel(GFX, radius, colour = 'grey') {
   group.add(mesh);
   let selectedColour = colour;
   return {
-    group, mesh, geometry, material, radius, height: radius * 2, kind: 'granite',
+    group, mesh, geometry, get material() { return mesh.material; }, radius, height, kind: 'granite',
     get colour() { return selectedColour; },
     setColour(name) {
       if (!Object.hasOwn(GRANITES, name)) throw new Error(`no granite called ${name}; choose ${Object.keys(GRANITES).join(', ')}`);
@@ -394,7 +396,7 @@ export function createDevilHornGuard(GFX, parent, material, {
 
 
 /** Thick rough-hewn stone guard with irregular, tapered shard-like blunt points. */
-function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, thickness = 0.024 } = {}) {
+function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, thickness = 0.024, pommelDiameter = 0.054 } = {}) {
   const guard = new GFX.Group();
   guard.name = 'rough-hewn granite shard guard';
   const half = span / 2;
@@ -405,51 +407,82 @@ function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, 
     [half * 0.55, centerY + 0.005, 0], [half * 0.84, centerY + 0.018, 0],
     [half, centerY + 0.026, 0],
   ];
-  const radii = [0.0005, thickness * 0.39, thickness * 0.5, thickness * 0.46,
-    thickness * 0.61, thickness * 0.46, thickness * 0.5, thickness * 0.36, 0.0005];
+  // The tips are narrow and flat-ended, not sharp needles or round metal terminals.
+  const radii = [thickness * 0.18, thickness * 0.39, thickness * 0.5, thickness * 0.46,
+    thickness * 0.61, thickness * 0.46, thickness * 0.5, thickness * 0.36, thickness * 0.18];
   const points = stations.map((p) => new GFX.Vector3(...p));
-  const radialSegments = 12, ringStarts = [], positions = [], indices = [];
+  const radialSegments = 10;
+  const ringStarts = [], positions = [], indices = [], uvs = [];
+  const startCap = positions.length / 3;
   positions.push(points[0].x, points[0].y, points[0].z);
-  for (let i = 1; i < points.length - 1; i++) {
-    const tangent = points[i + 1].clone().sub(points[i - 1]).normalize();
+  for (let i = 0; i < points.length; i++) {
+    const tangent = (i === 0
+      ? points[1].clone().sub(points[0])
+      : i === points.length - 1
+        ? points[i].clone().sub(points[i - 1])
+        : points[i + 1].clone().sub(points[i - 1])).normalize();
     const normal = new GFX.Vector3(-tangent.y, tangent.x, 0).normalize();
     const binormal = new GFX.Vector3(0, 0, 1);
     ringStarts.push(positions.length / 3);
     for (let j = 0; j < radialSegments; j++) {
-      const a = j / radialSegments * Math.PI * 2;
-      const rough = 1 + 0.08 * Math.sin(j * 2.7 + i * 1.3);
+      const angle = j / radialSegments * Math.PI * 2;
+      const rough = 1 + 0.11 * Math.sin(j * 2.7 + i * 1.3);
       const vertex = points[i].clone()
-        .addScaledVector(normal, Math.cos(a) * radii[i] * rough)
-        .addScaledVector(binormal, Math.sin(a) * radii[i] * rough);
+        .addScaledVector(normal, Math.cos(angle) * radii[i] * rough)
+        .addScaledVector(binormal, Math.sin(angle) * radii[i] * rough);
       positions.push(vertex.x, vertex.y, vertex.z);
     }
   }
-  const tip = positions.length / 3;
+  const endCap = positions.length / 3;
   positions.push(points.at(-1).x, points.at(-1).y, points.at(-1).z);
-  for (let j = 0; j < radialSegments; j++) indices.push(0, ringStarts[0] + j, ringStarts[0] + (j + 1) % radialSegments);
+
+  // Flat, slightly angled end faces; faceted sides preserve the chipped-stone character.
+  for (let j = 0; j < radialSegments; j++) {
+    const next = (j + 1) % radialSegments;
+    indices.push(startCap, ringStarts[0] + next, ringStarts[0] + j);
+    const last = ringStarts.at(-1);
+    indices.push(endCap, last + j, last + next);
+  }
   for (let r = 0; r < ringStarts.length - 1; r++) {
     const a0 = ringStarts[r], b0 = ringStarts[r + 1];
     for (let j = 0; j < radialSegments; j++) {
-      const a = a0 + j, b = a0 + (j + 1) % radialSegments;
-      const cc = b0 + j, d = b0 + (j + 1) % radialSegments;
-      indices.push(a, cc, b, b, cc, d);
+      const next = (j + 1) % radialSegments;
+      const a = a0 + j, b = a0 + next;
+      const c = b0 + j, d = b0 + next;
+      indices.push(a, b, c, b, d, c);
     }
   }
-  const last = ringStarts.at(-1);
-  for (let j = 0; j < radialSegments; j++) indices.push(last + j, tip, last + (j + 1) % radialSegments);
+
   const geometry = new GFX.BufferGeometry();
   geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  // Match the pommel's granite grain scale, repeating the stone surface along the longer guard.
+  for (let i = 0; i < positions.length; i += 3) {
+    uvs.push(positions[i] / pommelDiameter + 0.5, positions[i + 1] / pommelDiameter + 0.5);
+  }
+  geometry.setAttribute('uv', new GFX.BufferAttribute(new Float32Array(uvs), 2));
+  geometry.setAttribute('color', new GFX.BufferAttribute(
+    new Float32Array(positions.length).fill(1), 3,
+  ));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
+
   const mesh = new GFX.Mesh(geometry, material);
-  mesh.name = 'chipped stone crossguard with tapered shard tips';
-  mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.name = 'chipped stone crossguard with tapered blunt shard tips';
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   guard.add(mesh);
-  const socket = new GFX.Mesh(new GFX.DodecahedronGeometry(thickness * 0.72, 0), material);
+
+  // Low-detail icosahedron is available in the engine GFX module; no unsupported dodecahedron primitive.
+  const socketGeometry = new GFX.IcosahedronGeometry(thickness * 0.72, 0);
+  socketGeometry.setAttribute('color', new GFX.BufferAttribute(
+    new Float32Array(socketGeometry.attributes.position.count * 3).fill(1), 3,
+  ));
+  const socket = new GFX.Mesh(socketGeometry, material);
   socket.name = 'rough stone guard socket';
   socket.position.set(0, centerY, 0);
   socket.scale.set(1.25, 0.85, 1.1);
-  socket.castShadow = true; socket.receiveShadow = true;
+  socket.castShadow = true;
+  socket.receiveShadow = true;
   guard.add(socket);
   parent.add(guard);
   return guard;
@@ -1454,7 +1487,10 @@ export function buildWeapon(GFX, spec, {
     hilt.add(guard);
     guardBoss = bossSeat;
   } else if (spec.guardStyle === 'granite-shards') {
-    guard = createGraniteShardGuard(GFX, hilt, hiltMaterial, { centerY: guardY, span: spec.guardSpan, thickness: guardThickness });
+    guard = createGraniteShardGuard(GFX, hilt, pommelAsset.material, {
+      centerY: guardY, span: spec.guardSpan, thickness: guardThickness,
+      pommelDiameter: spec.marbleDiameter,
+    });
     guardBoss = guard.children[1];
   } else if (spec.guardStyle === 'lightning') {
     const guardDirection = spec.guardInverted ? -1 : 1;
@@ -1614,6 +1650,9 @@ export function buildWeapon(GFX, spec, {
     setGraniteColour(name) {
       if (pommelAsset.kind !== 'granite') throw new Error('this weapon does not have a granite pommel');
       pommelAsset.setColour(name);
+      for (const part of guard?.children ?? []) {
+        if (part.material) part.material = pommelAsset.material;
+      }
       return api;
     },
     setGripColor(color) {
