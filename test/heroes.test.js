@@ -15,6 +15,7 @@ const HEROES = {
   mace: ['createMace', 'createMetalMace', 'createPlayer', 'createMetalPlayer', 'RADIUS'],
   morningstar: ['createMorningStar', 'createMetalMorningStar', 'METALS'],
   rock: ['createRock', 'createBoulder'],
+  'rock-granite': ['createGraniteRock', 'createGraniteBoulder', 'GRANITE_DETAIL', 'GRANITES', 'GRANITE_CHOICES'],
 };
 
 for (const [file, exports] of Object.entries(HEROES)) {
