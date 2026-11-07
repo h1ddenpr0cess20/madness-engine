@@ -5,7 +5,7 @@
  * Coordinates are metres. The front of the run faces +z.
  */
 import { createGraniteBoulder, GRANITES } from '../heroes/rock-granite.js';
-import { METALS } from './metalglobe.js';
+import { METALS, studioEnvironment } from './metalglobe.js';
 import { rawLumber, finishedWood } from '../textures/wood.js';
 
 const WOOD_TONES = Object.freeze({
@@ -15,7 +15,7 @@ const WOOD_TONES = Object.freeze({
 });
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-function box(GFX, parent, name, size, position, material, { bevel = 0 } = {}) {
+function box(GFX, parent, name, size, position, material) {
   const geometry = new GFX.BoxGeometry(...size);
   const mesh = new GFX.Mesh(geometry, material);
   mesh.name = name;
@@ -96,6 +96,12 @@ function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
   bowl.castShadow = true;
   bowl.receiveShadow = true;
   basin.add(bowl);
+  const floor = new GFX.Mesh(new GFX.BoxGeometry(Math.max(0.08, width - inset * 2), 0.008, Math.max(0.08, depth - inset * 2)), bowlMaterial);
+  floor.name = 'copper basin floor';
+  floor.position.y = floorY - 0.002;
+  floor.castShadow = true;
+  floor.receiveShadow = true;
+  basin.add(floor);
 
   // Rolled copper rim, continuous around the sink opening.
   const outline = [];
@@ -211,8 +217,7 @@ export function createGraniteKitchen(GFX, {
   for (let i = 0; i < bayCount; i++) {
     const x = x0 + bayWidth * (i + 0.5);
     const frontZ = depth / 2 - 0.022;
-    const face = box(GFX, group, `finished hardwood cabinet door ${i + 1}`, [bayWidth - 0.024, cabinetHeight - plinth - 0.035, 0.038], [x, (cabinetHeight + plinth) / 2, frontZ], woodMap);
-    face.material = woodMap;
+      box(GFX, group, `finished hardwood cabinet door ${i + 1}`, [bayWidth - 0.024, cabinetHeight - plinth - 0.035, 0.038], [x, (cabinetHeight + plinth) / 2, frontZ], woodMap);
     // A subtle inset panel, kept flush within a solid hardwood frame.
     box(GFX, group, `raised cabinet centre panel ${i + 1}`, [bayWidth - 0.13, cabinetHeight - plinth - 0.14, 0.012], [x, (cabinetHeight + plinth) / 2, frontZ + 0.024], woodMap);
     const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayWidth * 0.38), 0.018, 0.022), brass);
@@ -226,18 +231,26 @@ export function createGraniteKitchen(GFX, {
     escutcheon.position.set(x - Math.min(0.12, bayWidth * 0.22), cabinetHeight - 0.14, frontZ + 0.047);
     group.add(escutcheon);
     if (i % 2 === 1) {
-      const drawer = box(GFX, group, `finished top drawer ${i + 1}`, [bayWidth - 0.024, 0.09, 0.028], [x, cabinetHeight - 0.065, frontZ + 0.008], woodMap);
-      drawer.material = woodMap;
+      box(GFX, group, `finished top drawer ${i + 1}`, [bayWidth - 0.024, 0.09, 0.028], [x, cabinetHeight - 0.065, frontZ + 0.008], woodMap);
     }
   }
 
-  // Granite slab: exact boulder paint, palette and real granite grain pipeline.
-  const { material: graniteMaterial } = createGraniteBoulder(GFX, { colour: granite, detail: 2 });
-  graniteMaterial.name = 'polished granite countertop';
-  graniteMaterial.roughness = 0.16;
-  graniteMaterial.metalness = 0.02;
-  graniteMaterial.clearcoat = 0.75;
-  graniteMaterial.clearcoatRoughness = 0.12;
+  // Granite slab: use the exact boulder's colour and bump maps, palette and grain scale,
+  // but a slab material without the boulder's per-vertex colour attribute.
+  const graniteSource = createGraniteBoulder(GFX, { colour: granite, detail: 2 });
+  const graniteMaterial = new GFX.MeshPhysicalMaterial({
+    name: 'polished granite countertop',
+    color: graniteSource.material.color,
+    map: graniteSource.material.map,
+    bumpMap: graniteSource.material.bumpMap,
+    bumpScale: graniteSource.material.bumpScale,
+    roughness: 0.16,
+    metalness: 0.02,
+    clearcoat: 0.75,
+    clearcoatRoughness: 0.12,
+  });
+  graniteSource.geometry.dispose();
+  graniteSource.material.dispose();
   const slab = new GFX.Mesh(new GFX.BoxGeometry(width + 0.035, 0.075, depth + 0.035), graniteMaterial);
   slab.name = 'polished solid granite countertop';
   slab.position.set(0, topY - 0.03, z0 + depth / 2);
@@ -259,10 +272,10 @@ export function createGraniteKitchen(GFX, {
   const topPos = topY - 0.03;
   box(GFX, group, 'granite countertop left wing', [leftW, 0.075, depth + 0.035], [x0 + leftW / 2, topPos, z0 + depth / 2], graniteMaterial);
   box(GFX, group, 'granite countertop right wing', [rightW, 0.075, depth + 0.035], [basinX + basinWidth / 2 + rightW / 2, topPos, z0 + depth / 2], graniteMaterial);
-  const frontRailDepth = basinZ + basinDepth * 0.5 - z0;
-  const rearRailDepth = depth - frontRailDepth;
-  box(GFX, group, 'granite countertop front rail', [basinWidth, 0.075, frontRailDepth], [basinX, topPos, z0 + frontRailDepth / 2], graniteMaterial);
-  box(GFX, group, 'granite countertop rear rail', [basinWidth, 0.075, rearRailDepth], [basinX, topPos, z0 + frontRailDepth + rearRailDepth / 2], graniteMaterial);
+  const backRailDepth = basinZ - basinDepth * 0.5 - z0;
+  const frontRailDepth = depth - backRailDepth - basinDepth;
+  box(GFX, group, 'granite countertop rear rail', [basinWidth, 0.075, backRailDepth], [basinX, topPos, z0 + backRailDepth / 2], graniteMaterial);
+  box(GFX, group, 'granite countertop front rail', [basinWidth, 0.075, frontRailDepth], [basinX, topPos, basinZ + basinDepth * 0.5 + frontRailDepth / 2], graniteMaterial);
 
   const basin = makeCopperBasin(GFX, group, copper, basinX, topY - 0.07, basinZ, basinWidth - 0.012, basinDepth - 0.012);
   makeFaucet(GFX, group, brass, basinX, topY + 0.01, basinZ - basinDepth / 2 - 0.07);
@@ -271,7 +284,7 @@ export function createGraniteKitchen(GFX, {
   group.userData.materials = { granite: graniteMaterial, finishedWood: woodMap, rawLumber: rawMap, brass, copper };
   group.userData.dimensions = { width, height, depth };
   group.userData.basin = basin;
-  return { group, granite: graniteMaterial, finishedWood: woodMap, rawLumber: rawMap, brass, copper, basin };
+  return { group, granite: graniteMaterial, finishedWood: woodMap, rawLumber: rawMap, brass, copper, basin, environment };
 }
 
 export const assetViewer = Object.freeze({
@@ -285,7 +298,8 @@ export const assetViewer = Object.freeze({
     basinMetal: ['copper', 'brass', 'bronze'],
     fixtureMetal: ['brass', 'gold', 'bronze'],
   },
-  build({ GFX, ...options }) {
-    return createGraniteKitchen(GFX, options);
+  build({ GFX, renderer = null, ...options }) {
+    const environment = studioEnvironment(GFX, renderer);
+    return createGraniteKitchen(GFX, { ...options, environment });
   },
 });
