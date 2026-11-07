@@ -12,9 +12,26 @@ export { castleScaffold } from './castle.js';
 export { CALIFORNIA_FOOTPRINTS } from './california.js';
 export { createGraniteKitchen } from '../props/granite-kitchen.js';
 
+/**
+ * The buildings of a medieval town, drawn from boxes, beams and rocks: the
+ * homes, the farm and the works, the crofts and workshops, the civic buildings and the castle. Every
+ * model is a function that draws into a `Mesher` in its own frame (front toward
+ * +z, middle at the origin, standing on y = 0) and answers `{ smoke, anim, ... }`:
+ * where its chimneys smoke, and any part that moves by itself.
+ *
+ *     const { modelFor } = createBuildings();
+ *     const { parts, smoke } = modelFor('cottage', { variant: 2 });
+ *     batch.stamp(parts, x, y, z, yaw);   // a Batch from `madness-engine/mesher`
+ *
+ * `modelFor` also draws a building going up (`building: true`, `progress`
+ * from 0 to 1): a footing, walls that rise, scaffolding and stacked materials.
+ */
+
+// The California models, without the footprints that come with them.
 const coast = Object.fromEntries(Object.entries(california).filter(([k]) => k !== 'CALIFORNIA_FOOTPRINTS'));
 export const MODELS = { ...homes, ...farm, ...works, ...industry, ...civic, ...coast, castle: castle.castle };
 
+/** The footprint each model is drawn for: [width along the street, depth] in tiles. */
 export const FOOTPRINTS = Object.freeze({
   cottage: [2, 2], house: [2, 2], townhouse: [2, 3], stall: [2, 1], shop: [2, 2], merchant: [2, 2],
   croft: [2, 2], smallholding: [2, 3], grange: [2, 3], workshop: [2, 2], joinery: [2, 3], guildhall: [2, 3],
@@ -25,6 +42,7 @@ export const FOOTPRINTS = Object.freeze({
   ...california.CALIFORNIA_FOOTPRINTS,
 });
 
+/** A frame of scaffolding round a rectangle: poles, ledgers and a plank platform. */
 function scaffold(m, x0, z0, x1, z1, h) {
   const poles = [];
   const nx = Math.max(1, Math.round((x1 - x0) / 0.7)), nz = Math.max(1, Math.round((z1 - z0) / 0.7));
@@ -41,17 +59,20 @@ function scaffold(m, x0, z0, x1, z1, h) {
   m.box('wood', x0 - 0.06, h * 0.45 - 0.02, z1, x1 + 0.06, h * 0.45 + 0.01, z1 + 0.14, PALETTE.wood[0], { skip: ['bottom'] });
 }
 
+/** A building going up: a stone footing, walls that rise as the work goes, scaffolding, and the materials piled by. */
 function underConstruction(m, v) {
   const { w, d, progress, rnd } = v;
   const big = w * d >= 9;
   const H = big ? 1.5 : 0.95;
   const x0 = -w / 2 + 0.22, x1 = w / 2 - 0.22, z0 = -d / 2 + 0.22, z1 = d / 2 - 0.22;
   m.box('rubble', x0 - 0.05, -0.35, z0 - 0.05, x1 + 0.05, 0.07, z1 + 0.05, PALETTE.stone[1], { skip: ['bottom'] });
+  // The walls: timber frame first, then filled.
   const wallH = Math.max(0.05, Math.min(progress / 0.7, 1) * H * 0.7);
   m.box('wood', x0, 0.07, z0, x1, 0.07 + wallH, z1, '#a98c62', { skip: ['bottom', 'top'], uvScale: 1.2 });
   if (progress > 0.5) {
     const roofH = (progress - 0.5) / 0.5;
     const top = 0.07 + wallH;
+    // Rafters.
     const n = Math.max(3, Math.round((x1 - x0) / 0.3));
     for (let i = 0; i <= n; i++) {
       const x = x0 + ((x1 - x0) * i) / n;
@@ -61,6 +82,7 @@ function underConstruction(m, v) {
     m.beam('wood', [x0, top + 0.38 * roofH, (z0 + z1) / 2], [x1, top + 0.38 * roofH, (z0 + z1) / 2], 0.035, PALETTE.wood[0]);
   }
   scaffold(m, x0 - 0.12, z0 - 0.12, x1 + 0.12, z1 + 0.12, H);
+  // Materials stacked about.
   logPile(m, x1 + 0.28, 0, z0 + 0.1, { len: 0.36, rows: 3, yaw: Math.PI / 2 });
   crate(m, x0 - 0.28, 0, z1 - 0.2, 0.14);
   barrel(m, x0 - 0.3, 0, z0 + 0.2);
@@ -68,6 +90,7 @@ function underConstruction(m, v) {
   return {};
 }
 
+/** A plain block that stands in for a model that has not been drawn: a lodge with a roof. */
 function placeholder(m, v) {
   const { w, d } = v;
   const x0 = -w / 2 + 0.2, x1 = w / 2 - 0.2, z0 = -d / 2 + 0.2, z1 = d / 2 - 0.2;
@@ -77,9 +100,21 @@ function placeholder(m, v) {
   return {};
 }
 
+/**
+ * A library of models. `sizeOf(type)` is the footprint, in tiles, a type is
+ * drawn for (`FOOTPRINTS` by default); a game with its own sizes passes them.
+ * `models` adds to or replaces the types drawn. Models are built the first time
+ * they are asked for, and kept.
+ */
 export function createBuildings({ sizeOf = (type) => FOOTPRINTS[type] ?? [1, 1], models = {} } = {}) {
   const all = { ...MODELS, ...models };
   const cache = new Map();
+
+  /**
+   * The template for a building: `{ parts, smoke, anim, lights, height }` where `parts` is the
+   * material's vertex arrays. `variant` is any integer; a building under
+   * construction has its own look.
+   */
   function modelFor(type, { level = 1, variant = 0, building = false, progress = 0 } = {}) {
     const stage = building ? Math.min(3, Math.floor(progress * 4)) : -1;
     const key = `${type}:${level}:${variant % 8}:${stage}`;
@@ -95,5 +130,6 @@ export function createBuildings({ sizeOf = (type) => FOOTPRINTS[type] ?? [1, 1],
     cache.set(key, out);
     return out;
   }
+
   return { modelFor, sizeOf, clear: () => cache.clear(), types: () => Object.keys(all) };
 }
