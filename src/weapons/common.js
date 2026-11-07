@@ -1344,7 +1344,8 @@ function createLeatherGripSleeveGeometry(GFX, radius, length) {
       const next = (segment + 1) % radialSegments;
       const a = row * radialSegments + segment, b = row * radialSegments + next;
       const c = (row + 1) * radialSegments + segment, d = (row + 1) * radialSegments + next;
-      indices.push(a, b, c, b, d, c);
+      // Wind triangles outward so the sleeve surface is visible from outside.
+      indices.push(a, c, b, b, c, d);
     }
   }
   const geometry = new GFX.BufferGeometry();
