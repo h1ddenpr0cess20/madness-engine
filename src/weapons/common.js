@@ -402,16 +402,17 @@ function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, 
   const guard = new GFX.Group();
   guard.name = 'rough-hewn granite shard guard';
   const half = span / 2;
+  // Keep the rough-hewn silhouette mirrored about the grip centreline.
   const stations = [
-    [-half, centerY + 0.017, 0], [-half * 0.82, centerY + 0.010, 0],
+    [-half, centerY + 0.021, 0], [-half * 0.82, centerY + 0.010, 0],
     [-half * 0.52, centerY - 0.004, 0], [-half * 0.22, centerY - 0.002, 0],
     [0, centerY, 0], [half * 0.22, centerY - 0.002, 0],
-    [half * 0.55, centerY + 0.005, 0], [half * 0.84, centerY + 0.018, 0],
-    [half, centerY + 0.026, 0],
+    [half * 0.52, centerY - 0.004, 0], [half * 0.82, centerY + 0.010, 0],
+    [half, centerY + 0.021, 0],
   ];
   // The tips are narrow and flat-ended, not sharp needles or round metal terminals.
   const radii = [thickness * 0.18, thickness * 0.39, thickness * 0.5, thickness * 0.46,
-    thickness * 0.61, thickness * 0.46, thickness * 0.5, thickness * 0.36, thickness * 0.18];
+    thickness * 0.61, thickness * 0.46, thickness * 0.5, thickness * 0.39, thickness * 0.18];
   const points = stations.map((p) => new GFX.Vector3(...p));
   const radialSegments = 10;
   const ringStarts = [], positions = [], indices = [];
@@ -428,7 +429,8 @@ function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, 
     ringStarts.push(positions.length / 3);
     for (let j = 0; j < radialSegments; j++) {
       const angle = j / radialSegments * Math.PI * 2;
-      const rough = 1 + 0.11 * Math.sin(j * 2.7 + i * 1.3);
+      const mirroredStation = Math.min(i, points.length - 1 - i);
+      const rough = 1 + 0.11 * Math.sin(j * 2.7 + mirroredStation * 1.3);
       const vertex = points[i].clone()
         .addScaledVector(normal, Math.cos(angle) * radii[i] * rough)
         .addScaledVector(binormal, Math.sin(angle) * radii[i] * rough);
