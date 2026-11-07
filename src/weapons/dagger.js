@@ -28,3 +28,23 @@ export const WORLD_UNITS_PER_METRE = WEAPON_WORLD_UNITS_PER_METRE;
 export function createDagger(GFX, options = {}) {
   return buildWeapon(GFX, DAGGER_SPEC, options);
 }
+
+/**
+ * The banana dagger is a half-peeled banana: the dagger's blade, slimmed to
+ * 38 mm, curved off the grip and drawn out into a talon, rising out of four
+ * peel flaps (the blade's metal inside, brass outside) over a curved, ridged
+ * brass grip that ends in a tip of the blade's metal. The grip is 135 mm along
+ * its arc, against the dagger's 97 mm.
+ */
+export const BANANA_DAGGER_SPEC = Object.freeze({
+  ...DAGGER_SPEC,
+  name: 'banana-dagger',
+  guardStyle: 'peel',
+  bladeWidth: 0.038,
+  gripLength: 0.135,
+  gripCurve: 0.7,
+  bladeCurve: 0.4,
+  bladeHook: 0.4,
+  bladeTalon: 0.5,
+  bladeMistPalette: 'egg',
+});

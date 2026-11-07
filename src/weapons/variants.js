@@ -1,6 +1,6 @@
 import { buildWeapon } from './common.js';
 import { BROADSWORD_SPEC, createBroadsword } from './broadsword.js';
-import { DAGGER_SPEC, createDagger } from './dagger.js';
+import { DAGGER_SPEC, BANANA_DAGGER_SPEC, createDagger } from './dagger.js';
 import { GREATSWORD_SPEC, createGreatsword } from './greatsword.js';
 import { createMorningstar } from './morningstar.js';
 
@@ -169,4 +169,23 @@ export function createMarcsMorningstar(GFX, options = {}) {
     guardStyle: 'none',
     wrapStyle: 'diagonal',
   }), "Marc's Morningstar");
+}
+
+/**
+ * A half-peeled banana: the dagger blade out of peel flaps over a curved brass grip.
+ * The blade, the inside of the peel and the tip of the grip are one metal (platinum),
+ * so `bladeMetal` and `setBladeMetal()` change all of them; the brass follows `hiltMetal`.
+ * It can be a magic blade, like the Magic Egg dagger: a white and yellow mist along the
+ * curve of the blade, off to start with. Show it with `setBladeMist(true)` or the option
+ * `bladeMistVisible: true`; `bladeMist: false` leaves the mist out altogether.
+ */
+export function createBananaDagger(GFX, options = {}) {
+  return named(buildWeapon(GFX, BANANA_DAGGER_SPEC, {
+    bladeMetal: 'platinum',
+    hiltMetal: 'brass',
+    // A magic blade when you want one: the mist is built in, and starts off.
+    bladeMist: true,
+    bladeMistVisible: false,
+    ...options,
+  }), 'Banana Dagger');
 }

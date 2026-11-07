@@ -2,7 +2,8 @@ import { METALS } from '../props/metalglobe.js';
 import { createMarble } from '../heroes/marble.js';
 import { createMetalEgg, createGlassEgg } from '../heroes/debater-egg/index.js';
 import { createBall } from '../heroes/krystal/model.js';
-import { createBladeMist } from './blade-mist.js';
+import { createBladeMist, createCurvedBladeMist } from './blade-mist.js';
+import { bladeCentreline } from './blade-curve.js';
 
 /** Weapon geometry is expressed in metres: one engine unit equals one metre. */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
@@ -548,7 +549,7 @@ function leatherMaps(GFX) {
   return { map, bump };
 }
 
-function metalMaterial(GFX, name, metal) {
+export function metalMaterial(GFX, name, metal) {
   const finish = METALS[metal];
   if (!finish) throw new Error(`no metal called ${metal}`);
   return new GFX.MeshPhysicalMaterial({
@@ -787,12 +788,277 @@ function createEggFittedBezelGeometry(GFX, {
   return geometry;
 }
 
+const smooth01 = (a, b, v) => {
+  const t = clamp01((v - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * A banana for a grip: a ridged tube bowed along a circular arc in the blade's
+ * plane. It starts at `top` pointing the way the blade does, is fullest near
+ * the top and tapers to a narrow, blunt end after `bend` radians.
+ */
+export function bentGripGeometry(GFX, {
+  top, length, bend, radius, tipRadius,
+  ridges = 5, ridgeDepth = 0.06, sections = 56, radialSegments = 40,
+}) {
+  const R = length / bend;
+  const positions = [], indices = [];
+  for (let i = 0; i <= sections; i++) {
+    const s = i / sections;
+    const phi = -s * bend;
+    const cos = Math.cos(phi), sin = Math.sin(phi);
+    const cx = top.x - R + R * cos;
+    const cy = top.y + R * sin;
+    const body = tipRadius + (radius - tipRadius) * (1 - smooth01(0.2, 1, s))
+      + 0.0012 * Math.sin(Math.PI * Math.min(1, s * 1.1));
+    for (let k = 0; k < radialSegments; k++) {
+      const a = (k / radialSegments) * Math.PI * 2;
+      // The ridges fade in below the top, so the grip arrives round and flush with the peel.
+      const lobe = body * (1 + ridgeDepth * (1 - 0.6 * s) * smooth01(0, 0.15, s) * Math.cos(ridges * a));
+      positions.push(cx + lobe * cos * Math.cos(a), cy + lobe * sin * Math.cos(a), lobe * Math.sin(a));
+    }
+  }
+  for (let i = 0; i < sections; i++) {
+    for (let k = 0; k < radialSegments; k++) {
+      const a = i * radialSegments + k;
+      const b = i * radialSegments + (k + 1) % radialSegments;
+      const c = (i + 1) * radialSegments + k;
+      const d = (i + 1) * radialSegments + (k + 1) % radialSegments;
+      indices.push(a, b, c, b, d, c);
+    }
+  }
+  const geometry = new GFX.BufferGeometry();
+  geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return {
+    geometry,
+    end: Object.freeze({ x: top.x - R + R * Math.cos(bend), y: top.y - R * Math.sin(bend) }),
+    /** The direction the grip is heading as it ends (unit, in the blade's plane). */
+    heading: Object.freeze({ x: -Math.sin(bend), y: -Math.cos(bend) }),
+  };
+}
+
+/** Catmull-Rom through 2D points, `steps + 1` samples. */
+function sampleCurve(points, steps) {
+  const at = (i) => points[Math.max(0, Math.min(points.length - 1, i))];
+  const out = [];
+  for (let n = 0; n <= steps; n++) {
+    const f = (n / steps) * (points.length - 1);
+    const i = Math.min(points.length - 2, Math.floor(f)), t = f - i;
+    const [p0, p1, p2, p3] = [at(i - 1), at(i), at(i + 1), at(i + 2)];
+    out.push([0, 1].map((k) => 0.5 * (
+      2 * p1[k] + (-p0[k] + p2[k]) * t
+      + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t * t
+      + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t * t * t)));
+  }
+  return out;
+}
+
+/**
+ * The banana's peel: the grip's own skin, split into four flaps. Each flap
+ * starts flush with the top of the grip as a quarter of its surface, rises
+ * around the blade root, then folds back outward over the top and hangs
+ * down around the hand like a cup guard, kept small enough to sheathe. Being
+ * slices of one cup-shaped surface, the flaps curve round the hand and meet
+ * the grip with no step. The skin (brass) is the face toward the hand once
+ * folded; the pale inside of the peel is an inlay of the blade's metal set into the face
+ * looking out, with a thin rim of the brass left showing all round it.
+ *
+ * Returns `top`, the inlay, and `bottom`, the brass body of the flaps
+ * (both faces, so the rim shows). The seams between flaps sit on the blade's
+ * flat and edge directions, so the blade comes out through them.
+ */
+export function peelFlapGeometries(GFX, {
+  centerY, count = 4, phase = Math.PI / 4, steps = 56, across = 13, inlaySteps = 40,
+  thickness = 0.0045, baseHalfAngle = 0.59,
+  rim = 0.002, inlayFrom = 0.2, inlayTo = 0.94, lift = 0.0005,
+} = {}) {
+  // The mid-surface of the cup in (radius, height) from the grip top; it starts inside the grip
+  // and the brass skin, half a thickness outside it, comes out just proud of the neck.
+  const path = sampleCurve([
+    [0.0165, -0.010], [0.0165, -0.004], [0.0166, 0.004], [0.0168, 0.012], [0.0225, 0.0195],
+    [0.031, 0.0215], [0.039, 0.0155], [0.0435, 0.004], [0.0460, -0.010],
+    [0.0480, -0.024], [0.0525, -0.034],
+  ], steps);
+  // N is the flap's inside-up normal: toward the axis as it rises, out as it hangs.
+  const frames = path.map(([r, y], i) => {
+    const prev = path[Math.max(0, i - 1)], next = path[Math.min(steps, i + 1)];
+    const dr = next[0] - prev[0], dy = next[1] - prev[1], len = Math.hypot(dr, dy);
+    return { r, y, nr: -dy / len, ny: dr / len };
+  });
+  const at = (t, key) => {
+    const f = t * steps, k = Math.min(steps - 1, Math.floor(f)), w = f - k;
+    return frames[k][key] + (frames[k + 1][key] - frames[k][key]) * w;
+  };
+  // A slice of the cup: wide at the grip, narrowing to a rounded tip.
+  const half = (t) => baseHalfAngle * (1 - 0.45 * smooth01(0.15, 0.8, t)) * Math.sqrt(Math.max(0, 1 - t ** 5));
+  // Thin where it starts inside the grip, so the skin grows out of the grip surface with no edge.
+  const thick = (t) => thickness * smooth01(0, 0.12, t) * (1 - t ** 6);
+
+  const brass = { positions: [], indices: [] }, chrome = { positions: [], indices: [] };
+  const grid = (face, rows, columns, point, flip) => {
+    const base = face.positions.length / 3;
+    for (let i = 0; i <= rows; i++) for (let j = 0; j < columns; j++) face.positions.push(...point(i / rows, (j / (columns - 1)) * 2 - 1));
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < columns - 1; j++) {
+        const a = base + i * columns + j, b = a + 1, c = a + columns, d = c + 1;
+        if (flip) face.indices.push(a, c, b, b, c, d);
+        else face.indices.push(a, b, c, b, d, c);
+      }
+    }
+  };
+  const place = (theta, t, angle, off) => {
+    const r = at(t, 'r') + at(t, 'nr') * off;
+    return [r * Math.cos(theta + angle), centerY + at(t, 'y') + at(t, 'ny') * off, r * Math.sin(theta + angle)];
+  };
+  for (let f = 0; f < count; f++) {
+    const theta = phase + (f / count) * Math.PI * 2;
+    // The whole flap, both faces, in brass: the outline the rim belongs to.
+    for (const sign of [1, -1]) {
+      grid(brass, steps, across, (t, u) => place(theta, t, u * half(t), sign * 0.5 * thick(t) * (1 - u ** 4)), sign < 0);
+    }
+    // The chrome inlay: inset from the edge all round, rounded at both ends, a hair proud.
+    grid(chrome, inlaySteps, across, (s, u) => {
+      const t = inlayFrom + s * (inlayTo - inlayFrom);
+      const close = Math.sqrt(Math.max(0, 1 - (2 * s - 1) ** 6));
+      const inner = Math.max(0, half(t) - rim / at(t, 'r')) * close;
+      const along = half(t) > 0 ? (u * inner) / half(t) : 0;
+      return place(theta, t, u * inner, 0.5 * thick(t) * (1 - along ** 4) + lift);
+    }, false);
+  }
+  const make = ({ positions, indices }) => {
+    const geometry = new GFX.BufferGeometry();
+    geometry.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return geometry;
+  };
+  return { top: make(chrome), bottom: make(brass) };
+}
+
+/**
+ * Curve a blade in its own plane, toward -x as it rises, so it carries on the
+ * grip's banana curve and ends in a talon. The root stays upright, so the
+ * blade leaves the grip tangent to it. Its heading turns by `bend` radians
+ * evenly along the length, and by `hook` more that is saved for the last of
+ * it, so the curve tightens into the point like a claw. Past 40% of the
+ * length the blade also narrows by `talon`, drawing the point out.
+ *
+ * Each vertex keeps its distance across the blade, measured along the normal to
+ * the curve, so the cutting edges, the fuller and the thickness all follow the
+ * curve instead of being sheared. Returns how far the point stands above the root.
+ */
+function curveBlade(geometry, { rootY, length, bend, hook = 0, talon = 0 }) {
+  const line = bladeCentreline({ length, bend, hook, talon });
+  const position = geometry.attributes.position;
+  for (let i = 0; i < position.count; i++) {
+    const u = clamp01((position.getY(i) - rootY) / length);
+    const { x, y, phi } = line.at(u);
+    const across = position.getX(i) * line.taper(u);
+    position.setXYZ(i, x + across * Math.cos(phi), rootY + y + across * Math.sin(phi), position.getZ(i));
+  }
+  position.needsUpdate = true;
+  return line.reach;
+}
+
+/**
+ * The banana handle: the bottom of a half-peeled banana. A brass, ridged,
+ * curved grip ends in a small tip of the blade's metal (no pommel ball), and under the
+ * boss seat the peel splits into flaps (see `peelFlapGeometries`).
+ */
+function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMaterial, gripColor, threadColor }) {
+  const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
+  // The tip of the grip is the blade's metal, not the hilt's: it is handed in, so it is the same material.
+  if (!accentMaterial) throw new TypeError('a curved handle needs the blade material for its tip');
+
+  const hilt = new GFX.Group();
+  hilt.name = 'banana hilt assembly';
+  group.add(hilt);
+
+  const gripTop = spec.gripLength + 0.045;
+  const handleRadius = spec.gripDiameter / 2;
+  const tipRadius = handleRadius * 0.5;
+  const { geometry, end, heading } = bentGripGeometry(GFX, {
+    top: { x: 0, y: gripTop },
+    length: spec.gripLength,
+    bend: spec.gripCurve,
+    radius: handleRadius * 1.07,
+    tipRadius,
+  });
+  const handle = new GFX.Mesh(geometry, hiltMaterial);
+  handle.name = 'banana grip';
+  handle.castShadow = true;
+  handle.receiveShadow = true;
+  hilt.add(handle);
+
+  // The dark end of the banana, in the blade's metal, continues the grip's heading.
+  const tipLength = 0.0125;
+  const tipCentre = { x: end.x + heading.x * 0.004, y: end.y + heading.y * 0.004 };
+  const tip = sphere(GFX, 'banana tip', accentMaterial,
+    [tipCentre.x, tipCentre.y, 0], [tipRadius * 1.02, tipLength, tipRadius * 1.02], [32, 20]);
+  tip.rotation.z = -spec.gripCurve;
+  hilt.add(tip);
+  const tipDrop = Math.hypot(tipLength * Math.cos(spec.gripCurve), tipRadius * Math.sin(spec.gripCurve));
+
+  // The grip carries on up as a short round neck, which the blade comes out of and the peel
+  // folds away from: one brass surface from the grip to the fold, with no collar or ledge.
+  const neckRadius = handleRadius * 1.07 - 0.0001;
+  const bossSeatBottom = gripTop - 0.004;
+  const bossSeatTop = gripTop + 0.012;
+  const bossSeat = new GFX.Mesh(
+    new GFX.CylinderGeometry(neckRadius, neckRadius, bossSeatTop - bossSeatBottom, 48),
+    hiltMaterial,
+  );
+  bossSeat.name = 'banana neck';
+  bossSeat.position.set(0, (bossSeatBottom + bossSeatTop) / 2, 0);
+  bossSeat.castShadow = true;
+  bossSeat.receiveShadow = true;
+  hilt.add(bossSeat);
+
+  const bezel = new GFX.Group();
+  bezel.name = 'banana grip has no bezel';
+  const wrapMaterial = new GFX.MeshPhysicalMaterial({
+    name: 'grip fluting',
+    color: new GFX.Color(threadColor ?? gripColor),
+    roughness: 0.9,
+    metalness: 0,
+  });
+  const pommelAsset = {
+    group: tip, radius: tipRadius, height: tipLength * 2, kind: 'banana-tip',
+    setMetal() {},
+  };
+
+  return {
+    marble: null,
+    pommelAsset,
+    hilt,
+    hiltMaterial,
+    accentMaterial,
+    handle,
+    bezel,
+    gripBottom: end.y,
+    gripTop,
+    gripBounds: Object.freeze({ bottom: end.y, top: gripTop }),
+    handleBounds: Object.freeze({ bottom: end.y, top: gripTop, length: spec.gripLength }),
+    bezelBounds: Object.freeze({ bottom: end.y, top: end.y, bottomRadius: tipRadius, topRadius: handleRadius, outerRadius: tipRadius }),
+    bossSeat,
+    bossSeatBounds: Object.freeze({ bottom: bossSeatBottom, top: bossSeatTop }),
+    leatherMaterial: null,
+    wrapMaterial,
+    gripColor,
+    lowestY: Math.min(end.y - tipRadius, tipCentre.y - tipDrop),
+  };
+}
+
 export function createWeaponHandleAssembly(GFX, group, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
   threadColor,
   pommelStyle = spec.pommelStyle ?? 'marble',
   wrapStyle = spec.wrapStyle ?? 'banded',
+  accentMaterial,
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('createWeaponHandleAssembly requires the Madness Engine GFX module');
@@ -801,6 +1067,10 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
   if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
     throw new TypeError('threadColor must be a six-digit hex colour');
+  }
+
+  if (spec.gripCurve) {
+    return createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMaterial, gripColor, threadColor });
   }
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
@@ -1021,6 +1291,7 @@ export function buildWeapon(GFX, spec, {
   gripColor = '#633b2c',
   threadColor,
   bladeMist: withBladeMist = false,
+  bladeMistVisible = true,
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
@@ -1041,8 +1312,11 @@ export function buildWeapon(GFX, spec, {
   const {
     marble, hiltMaterial, hilt, handle, bezel, gripBounds, handleBounds,
     bezelBounds, bossSeat, bossSeatBounds, leatherMaterial, wrapMaterial, pommelAsset,
+    accentMaterial, lowestY = 0,
   } = createWeaponHandleAssembly(GFX, group, spec, {
     hiltMetal, gripColor, threadColor,
+    // The banana's petal tops and tips are the blade's metal, so they share its material.
+    accentMaterial: bladeMaterial,
     pommelStyle: spec.pommelStyle ?? 'marble',
     wrapStyle: spec.wrapStyle ?? 'banded',
   });
@@ -1055,7 +1329,24 @@ export function buildWeapon(GFX, spec, {
   let guardBoss;
   const guardThickness = spec.guardThickness ?? 0.0136;
   const span = spec.guardSpan / 2;
-  if (spec.guardStyle === 'lightning') {
+  if (spec.guardStyle === 'peel') {
+    // No bar and no bobbles: the guard is the peel, split into flaps below the blade.
+    const flaps = peelFlapGeometries(GFX, { centerY: gripBounds.top });
+    guard = new GFX.Group();
+    guard.name = 'peel flaps, blade metal inside and brass outside';
+    for (const [name, geometry, material] of [
+      ['peel flaps inside', flaps.top, accentMaterial],
+      ['peel flaps outside', flaps.bottom, hiltMaterial],
+    ]) {
+      const mesh = new GFX.Mesh(geometry, material);
+      mesh.name = name;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      guard.add(mesh);
+    }
+    hilt.add(guard);
+    guardBoss = bossSeat;
+  } else if (spec.guardStyle === 'lightning') {
     const guardDirection = spec.guardInverted ? -1 : 1;
     guardBoss = sphere(GFX, 'lightning guard reinforced central boss', hiltMaterial,
       [0, guardY + guardDirection * 0.003, 0], [0.028, 0.017, 0.018], [40, 24]);
@@ -1101,11 +1392,21 @@ export function buildWeapon(GFX, spec, {
   }
 
   // The tang/blade begins inside the guard boss and overlaps it by 7 mm.
-  const blade = new GFX.Mesh(bladeGeometry(GFX, {
+  const fullBlade = bladeGeometry(GFX, {
     rootY: bladeRootY,
     length: spec.bladeLength,
     width: spec.bladeWidth,
-  }), bladeMaterial);
+  });
+  // How far the point stands above the root: less than the length when the blade curves.
+  let bladeReach = spec.bladeLength;
+  if (spec.bladeCurve) {
+    bladeReach = curveBlade(fullBlade, {
+      rootY: bladeRootY, length: spec.bladeLength,
+      bend: spec.bladeCurve, hook: spec.bladeHook, talon: spec.bladeTalon,
+    });
+    fullBlade.computeVertexNormals();
+  }
+  const blade = new GFX.Mesh(fullBlade, bladeMaterial);
   blade.name = 'solid double-edged blade with 75% fuller';
   blade.castShadow = true;
   blade.receiveShadow = true;
@@ -1113,14 +1414,22 @@ export function buildWeapon(GFX, spec, {
 
   // Krystal's variants add a separate, hidden-by-default mist volume that
   // follows the exact blade dimensions without changing the steel geometry.
-  const bladeMistLayer = withBladeMist
-    ? createBladeMist(GFX, group, {
-      rootY: bladeRootY,
-      length: spec.bladeLength,
-      width: spec.bladeWidth,
-      palette: spec.bladeMistPalette ?? 'krystal',
-    })
-    : null;
+  // A curved blade carries its mist along its curve in a chain of short pieces.
+  const mistOptions = {
+    rootY: bladeRootY,
+    length: spec.bladeLength,
+    width: spec.bladeWidth,
+    palette: spec.bladeMistPalette ?? 'krystal',
+    visible: bladeMistVisible,
+  };
+  let bladeMistLayer = null;
+  if (withBladeMist) {
+    bladeMistLayer = spec.bladeCurve
+      ? createCurvedBladeMist(GFX, group, {
+        ...mistOptions, bend: spec.bladeCurve, hook: spec.bladeHook, talon: spec.bladeTalon,
+      })
+      : createBladeMist(GFX, group, mistOptions);
+  }
 
   const api = {
     group,
@@ -1141,7 +1450,7 @@ export function buildWeapon(GFX, spec, {
     bossSeatBounds,
     guardBoss,
     dimensions: Object.freeze({
-      overallLength: bladeRootY + spec.bladeLength,
+      overallLength: bladeRootY + bladeReach - lowestY,
       bladeLength: spec.bladeLength,
       bladeWidth: spec.bladeWidth,
       gripLength: spec.gripLength,
@@ -1154,14 +1463,15 @@ export function buildWeapon(GFX, spec, {
       unit: 'm',
     }),
     info: {
-      'Weapon length': `${(bladeRootY + spec.bladeLength).toFixed(3)} m`,
+      'Weapon length': `${(bladeRootY + bladeReach - lowestY).toFixed(3)} m`,
       'Blade length': `${spec.bladeLength.toFixed(3)} m`,
       'Blade width': `${(spec.bladeWidth * 1000).toFixed(0)} mm`,
       'Grip length': `${(spec.gripLength * 1000).toFixed(0)} mm`,
       'Guard span': `${(spec.guardSpan * 1000).toFixed(0)} mm`,
       'Fuller length': `${(spec.bladeLength * 750).toFixed(0)} mm (75%)`,
       'Scale': '1 world unit = 1 metre',
-      'Pommel': pommelAsset.kind === 'marble' ? 'Glass marble with 3D spark'
+      'Pommel': pommelAsset.kind === 'banana-tip' ? 'Chrome banana tip on the grip'
+        : pommelAsset.kind === 'marble' ? 'Glass marble with 3D spark'
         : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball'
           : pommelAsset.kind === 'metal-egg' ? 'Engine metal egg'
           : pommelAsset.kind === 'magic-egg' ? 'Glass egg with white/yellow animated mist'
@@ -1190,7 +1500,8 @@ export function buildWeapon(GFX, spec, {
     },
     setGripColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
-      leatherMaterial.color.set(color);
+      // A metal grip has no leather to dye: the colour is kept but not drawn.
+      leatherMaterial?.color.set(color);
       if (!threadColorExplicit && spec.wrapStyle !== 'diamond') {
         wrapMaterial.color.set(shadeHex(color, 0.68));
       }

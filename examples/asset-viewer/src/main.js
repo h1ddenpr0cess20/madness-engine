@@ -301,6 +301,7 @@ function animGroup(built) {
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
   if (pal.kind === 'weapon') {
+    if (pal.metalGrip) return [];
     const rows = [
       ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
     ];
@@ -506,7 +507,7 @@ $('colourcopy').onclick = async () => {
       + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
       + "const " + variable + " = " + factory + "(GFX, { bladeMetal: '"
       + (options.bladeMetal ?? 'steel') + "', hiltMetal: '" + (options.hiltMetal ?? 'steel')
-      + "', gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip ?? '#633b2c') + "'"
+      + (view.item.palette.metalGrip ? "'" : "', gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip ?? '#633b2c') + "'")
       + (view.item.palette.thread
         ? ", threadColor: '" + (view.colours.threadColor ?? view.item.palette.thread) + "'"
         : '') + " });";
