@@ -68,7 +68,7 @@ It is `onEngine` in `scripts/drop-in/games.mjs` and in `ON_ENGINE` in
 The three Rock 'n' Roller games went the same way, each depending on the
 engine and keeping no copies. Their renderer, physics, input (with
 `boost: { pad: [0, 2, 7, 6] }`, the rev) and arcade view are the engine's;
-Rock is `heroes/rock`, the rig `scenery/lightshow.<game>`, the band
+Rock is `heroes/rock.<game>` (black, grey and white granite, in `heroes/rock-granite`), the rig `scenery/lightshow.<game>`, the band
 `music/band.<game>`, the textures `textures/venue.<game>`, and the cast and
 props the library's, which the rosters (`models/cast/index.js`,
 `models/props/index.js`) list. What is left of each is the game: the venues,

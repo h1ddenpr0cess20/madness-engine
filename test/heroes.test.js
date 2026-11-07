@@ -16,6 +16,9 @@ const HEROES = {
   morningstar: ['createMorningStar', 'createMetalMorningStar', 'METALS'],
   rock: ['createRock', 'createBoulder'],
   'rock-granite': ['createGraniteRock', 'createGraniteBoulder', 'GRANITE_DETAIL', 'GRANITES', 'GRANITE_CHOICES'],
+  'rock.rocknroller': ['createRock', 'createBoulder'],
+  'rock.rocknroller-ii': ['createRock', 'createBoulder'],
+  'rock.rocknroller-iii': ['createRock', 'createBoulder'],
 };
 
 for (const [file, exports] of Object.entries(HEROES)) {
