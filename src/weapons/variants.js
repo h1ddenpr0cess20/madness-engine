@@ -66,9 +66,9 @@ const GRANITE_DEFAULTS = Object.freeze({ gripColor: '#101010', graniteColour: 'g
 function graniteWeapon(GFX, spec, label, options = {}) {
   const colour = options.graniteColour ?? options.graniteColor ?? GRANITE_DEFAULTS.graniteColour;
   if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
-  return swordVariant(GFX, spec, label, 'granite', 'granite-shards', 'banded', {
+  return swordVariant(GFX, { ...spec, guardThickness: 0.024 }, label, 'granite', 'granite-shards', 'banded', {
     ...GRANITE_DEFAULTS, ...options,
-    graniteColour: colour, guardThickness: 0.024,
+    graniteColour: colour,
   });
 }
 export function createGraniteSword(GFX, options = {}) {
