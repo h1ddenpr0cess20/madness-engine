@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import * as GFX from '../src/gfx/index.js';
 import {
-  createBananaDagger, createMagicBananaDagger, createDagger, BANANA_DAGGER_SPEC, DAGGER_SPEC,
+  createBananaDagger, createDagger, BANANA_DAGGER_SPEC, DAGGER_SPEC,
 } from '../src/weapons/index.js';
 
 const names = (weapon) => {
@@ -236,43 +236,43 @@ test('one blade metal changes every part that shares it; the brass follows the h
   assert.throws(() => banana.setBladeMetal('unobtainium'), /no metal called/);
 });
 
-test('the magic banana dagger lays a white and yellow mist along the curve of its blade', () => {
-  const plain = createBananaDagger(GFX);
-  const magic = createMagicBananaDagger(GFX);
+test('the banana dagger carries a gentle white and yellow mist along its blade, off until switched on', () => {
+  const banana = createBananaDagger(GFX);
+  const bare = createBananaDagger(GFX, { bladeMist: false });
+  const mist = banana.bladeMist;
 
-  assert.equal(plain.bladeMist, null, 'the plain banana dagger has no mist');
-  assert.doesNotThrow(() => plain.setBladeMist(true), 'and toggling it does nothing');
-  assert.equal(createBananaDagger(GFX, { bladeMist: true }).bladeMist.name, 'Magic Banana blade mist',
-    'the mist can be asked for on the plain factory too');
-
-  assert.equal(magic.name, 'Magic Banana Dagger');
-  const mist = magic.bladeMist;
+  assert.equal(banana.name, 'Banana Dagger', 'one model: the mist is a layer of it, not a variant');
   assert.equal(mist.name, 'Magic Banana blade mist');
-  assert.equal(mist.visible, true, 'the mist starts on');
+  assert.equal(mist.visible, false, 'the mist starts off');
   assert.equal(mist.children.length, 6, 'a chain of short stretches, not one upright cloud');
   for (const stretch of mist.children) {
     const { uniforms } = stretch.material;
     assert.equal(uniforms.uDuo.value, 1, 'the Magic Egg white and yellow palette');
-    assert.ok(uniforms.uGlow.value < 1.05, 'dimmed a little so the overlaps do not glare');
+    assert.ok(uniforms.uGlow.value < 0.4, 'a soft glow, well under the Magic Egg dagger\'s');
+    assert.ok(uniforms.uCore.value < 0.5, 'and a soft core');
   }
 
   // Each stretch sits on the blade's own line, so the mist follows the curve.
   mist.children.forEach((stretch, i) => {
-    const [x, y] = middle(magic, Math.round(((i + 0.5) / 6) * 64));
+    const [x, y] = middle(banana, Math.round(((i + 0.5) / 6) * 64));
     assert.ok(Math.abs(stretch.position.x - x) < 0.006, `stretch ${i + 1} is on the blade in x`);
     assert.ok(Math.abs(stretch.position.y - y) < 0.008, `stretch ${i + 1} is on the blade in y`);
   });
   assert.ok(mist.children.at(-1).position.x < -0.03, 'the last stretch follows the talon round');
   assert.ok(mist.children[0].position.x > mist.children.at(-1).position.x, 'and the first is at the root');
 
-  // It is the same blade, with the mist as the only addition.
-  assert.deepEqual(
-    Array.from(magic.blade.geometry.attributes.position.array),
-    Array.from(plain.blade.geometry.attributes.position.array),
-  );
-
-  magic.setBladeMist(false);
-  assert.equal(mist.visible, false, 'one switch hides the whole mist');
-  magic.setBladeMist(true);
+  // One switch shows and hides the whole mist.
+  banana.setBladeMist(true);
   assert.equal(mist.visible, true);
+  banana.setBladeMist(false);
+  assert.equal(mist.visible, false);
+
+  // It can start on, or be left out altogether, and it never changes the blade.
+  assert.equal(createBananaDagger(GFX, { bladeMistVisible: true }).bladeMist.visible, true);
+  assert.equal(bare.bladeMist, null);
+  assert.doesNotThrow(() => bare.setBladeMist(true), 'toggling a banana dagger built without mist does nothing');
+  assert.deepEqual(
+    Array.from(banana.blade.geometry.attributes.position.array),
+    Array.from(bare.blade.geometry.attributes.position.array),
+  );
 });

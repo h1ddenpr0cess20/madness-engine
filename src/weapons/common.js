@@ -1291,6 +1291,7 @@ export function buildWeapon(GFX, spec, {
   gripColor = '#633b2c',
   threadColor,
   bladeMist: withBladeMist = false,
+  bladeMistVisible = true,
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
@@ -1419,6 +1420,7 @@ export function buildWeapon(GFX, spec, {
     length: spec.bladeLength,
     width: spec.bladeWidth,
     palette: spec.bladeMistPalette ?? 'krystal',
+    visible: bladeMistVisible,
   };
   let bladeMistLayer = null;
   if (withBladeMist) {

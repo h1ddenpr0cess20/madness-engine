@@ -111,7 +111,7 @@ export function createBladeMist(GFX, parent, {
  */
 export function createCurvedBladeMist(GFX, parent, {
   rootY, length, width, bend, hook = 0, talon = 0,
-  segments = 6, visible = true, palette = 'egg', glow = 0.85,
+  segments = 6, visible = true, palette = 'egg', glow = 0.2, core = 0.3,
 } = {}) {
   if (!GFX?.SphereGeometry || !GFX?.Mesh || !GFX?.Group || !GFX?.Timer) {
     throw new TypeError('createCurvedBladeMist requires the Madness Engine GFX module');
@@ -138,6 +138,7 @@ export function createCurvedBladeMist(GFX, parent, {
     };
     const material = mistMaterial(GFX, palette);
     material.uniforms.uGlow.value *= glow;
+    material.uniforms.uCore.value *= core;
     // Each stretch drifts from its own point in the flow, so the seams between them don't line up.
     material.uniforms.uFlow.value = i * 1.7;
     meshes.push(mistMesh(GFX, group, material, {

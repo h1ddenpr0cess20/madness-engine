@@ -175,19 +175,17 @@ export function createMarcsMorningstar(GFX, options = {}) {
  * A half-peeled banana: the dagger blade out of peel flaps over a curved brass grip.
  * The blade, the inside of the peel and the tip of the grip are one metal (platinum),
  * so `bladeMetal` and `setBladeMetal()` change all of them; the brass follows `hiltMetal`.
+ * It can be a magic blade, like the Magic Egg dagger: a white and yellow mist along the
+ * curve of the blade, off to start with. Show it with `setBladeMist(true)` or the option
+ * `bladeMistVisible: true`; `bladeMist: false` leaves the mist out altogether.
  */
 export function createBananaDagger(GFX, options = {}) {
   return named(buildWeapon(GFX, BANANA_DAGGER_SPEC, {
     bladeMetal: 'platinum',
     hiltMetal: 'brass',
+    // A magic blade when you want one: the mist is built in, and starts off.
+    bladeMist: true,
+    bladeMistVisible: false,
     ...options,
   }), 'Banana Dagger');
-}
-
-/**
- * The banana dagger as a magic blade, like the Magic Egg dagger: a white and
- * yellow mist drawn along the curve of the blade. Toggle it with `setBladeMist()`.
- */
-export function createMagicBananaDagger(GFX, options = {}) {
-  return named(createBananaDagger(GFX, { ...options, bladeMist: true }), 'Magic Banana Dagger');
 }

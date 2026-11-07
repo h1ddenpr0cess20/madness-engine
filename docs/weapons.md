@@ -300,22 +300,23 @@ banana.setHiltMetal('gold');    // grip, neck and the brass body of the peel
 `setGripColor` is accepted for the shared API but has no effect on this
 weapon, since a metal grip has no leather to dye.
 
-### Magic banana dagger
+### Magic blade
 
-`createMagicBananaDagger(GFX, options)` is the same dagger as a magic blade,
-like the Magic Egg dagger: a white and yellow mist, in the Magic Egg palette,
-drawn along the blade. The shader ray-marches an upright ellipsoid, so on this
-curved blade the mist is a chain of six short stretches laid along the blade's
-line, each sized to hold its own tilted part of the blade, and the mist follows
-the curve into the talon. They share one group, so the mist shows and hides as
-one. `createBananaDagger(GFX, { bladeMist: true })` gives the same mist.
+The banana dagger can be a magic blade, like the Magic Egg dagger: a soft
+white and yellow mist, in the Magic Egg palette, along the blade. It is a
+layer of the one weapon, built in and **off to start with**, and it is
+dimmer than the Magic Egg dagger's so the platinum still shows through.
+
+The shader ray-marches an upright ellipsoid, so on this curved blade the mist
+is a chain of six short stretches laid along the blade's line, each sized to
+hold its own tilted part of the blade, and it follows the curve into the
+talon. They share one group, so one switch shows and hides all of it. The
+asset viewer's mist checkbox drives it.
 
 ```js
-import { createMagicBananaDagger } from 'madness-engine/weapons';
+const banana = createBananaDagger(GFX);
+banana.setBladeMist(true);  // on; setBladeMist(false) hides it again
 
-const magic = createMagicBananaDagger(GFX);
-magic.setBladeMist(false); // hide the mist; setBladeMist(true) brings it back
+createBananaDagger(GFX, { bladeMistVisible: true }); // starts on
+createBananaDagger(GFX, { bladeMist: false });       // no mist layer at all
 ```
-
-The plain `createBananaDagger` has no mist, and `setBladeMist()` does nothing
-on it.
