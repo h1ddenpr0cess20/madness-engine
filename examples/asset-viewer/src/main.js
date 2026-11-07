@@ -399,7 +399,7 @@ function colourGroup(item) {
   const isGraniteWeapon = item.palette.kind === 'granite-weapon';
   const isMorningstar = item.palette.kind === 'morningstar';
   $('colourdiverse').style.display = isDice || isWeapon || isGraniteWeapon || isMorningstar ? 'none' : '';
-  if (isWeapon || isGraniteWeapon || isMorningstar) {
+  if (isWeapon || isMorningstar) {
     const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
     for (const [key, label] of metalOptions) {
       options[key] ??= item.palette[key] ?? 'steel';
@@ -437,12 +437,12 @@ function colourGroup(item) {
     const select = el('select', { className: 'weapon-metal-select' }, ...item.palette.graniteChoices.map((name) => el('option', { value: name }, name[0].toUpperCase() + name.slice(1))));
     select.value = view.draft.graniteColour ?? view.colours.graniteColour ?? item.palette.granite;
     select.onchange = () => { view.draft.graniteColour = select.value; colourGroup(item); };
-    const row = el('div', { className: 'line' }, el('label', {}, 'Granite pommel'), select);
+    const row = el('div', { className: 'line' }, el('label', {}, 'All stone parts'), select);
     row.style.justifyContent = 'space-between'; row.style.width = '100%';
     $('weaponmetalrows').append(row); $('weaponmetalrows').style.display = 'grid';
   }
   $('colourhint').textContent = isGraniteWeapon
-    ? 'Choose a granite colourway and customise the leather wrap independently. The pommel uses the real granite surface.'
+    ? 'The blade, guard and fused handle are granite; choose its granite colourway and the leather wrap colour.'
     : isWeapon
     ? (item.palette.thread
       ? 'Choose blade and hilt metals, then customize the leather and contrasting grip thread independently.'

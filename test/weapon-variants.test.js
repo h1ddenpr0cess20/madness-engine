@@ -522,11 +522,20 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     assert.equal(weapon.pommelAsset.kind, 'granite');
     assert.equal(weapon.graniteColour, 'grey');
     assert.equal(weapon.pommelAsset.material.name, 'granite');
-    assert.equal(weapon.pommelAsset.mesh.name, 'rock_body');
+    assert.equal(weapon.pommelAsset.mesh.name, 'single fused granite pommel and grip tang');
+    assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 1000,
+      'the boulder and handle tang are merged into one stone mesh');
+    assert.equal(weapon.blade.material.name, 'polished granite blade');
+    assert.equal(weapon.hiltMaterial.name, 'granite');
+    assert.equal(weapon.bezel, null, 'the granite hilt has no metal ferrule');
+    assert.equal(weapon.bossSeat, null, 'the granite hilt has no metal boss seat');
+    assert.ok(weapon.blade.material.roughness <= 0.15, 'blade is polished like a stone countertop');
     assert.equal(weapon.pommelAsset.group.parent, weapon.group);
     assert.equal(weapon.handle.material.color.getHexString(), '101010');
     assert.equal(weapon.guard.name, 'rough-hewn granite shard guard');
     assert.equal(weapon.guard.children[0].name, 'chipped stone crossguard with tapered shard tips');
+    assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
+      'guard uses the same granite stone as the fused handle');
     assert.equal(weapon.guard.children[1].name, 'rough stone guard socket');
     assert.equal(weapon.dimensions.guardThickness, 0.024);
     assert.equal(weapon.dimensions.bladeLength, base.dimensions.bladeLength);
@@ -536,6 +545,9 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
     weapon.setGraniteColour('pink');
     assert.equal(weapon.graniteColour, 'pink');
     assert.equal(weapon.pommelAsset.colour, 'pink');
+    assert.equal(weapon.blade.material.name, 'polished granite blade');
+    assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
+      'changing the stone colour updates the entire stone assembly');
     weapon.setGripColor('#8b4c2e');
     assert.equal(weapon.handle.material.color.getHexString(), '8b4c2e');
   }

@@ -180,7 +180,7 @@ function createMagicEggPommel(GFX, radius) {
 
 function createGranitePommel(GFX, radius, colour = 'grey') {
   if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
-  const { mesh, geometry, material } = createGraniteBoulder(GFX, { colour });
+  const { mesh, geometry, material } = createGraniteBoulder(GFX, { colour, detail: 3 });
   const bounds = new GFX.Box3().setFromObject(mesh);
   const size = new GFX.Vector3();
   bounds.getSize(size);
@@ -1187,6 +1187,166 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMateria
   };
 }
 
+
+/** A polished, sealed granite face like a countertop, using the selected stone's actual grain maps. */
+function polishedGraniteMaterial(GFX, stoneMaterial, colour) {
+  return new GFX.MeshStandardMaterial({
+    name: 'polished granite blade',
+    color: new GFX.Color(...GRANITES[colour].ground),
+    map: stoneMaterial.map,
+    bumpMap: stoneMaterial.bumpMap,
+    bumpScale: 0.00012,
+    roughness: 0.13,
+    metalness: 0.025,
+    flatShading: false,
+  });
+}
+
+/**
+ * Build the granite pommel and grip tang as one mesh. The rough boulder and
+ * tapered stone shaft overlap before their vertices are merged, leaving no
+ * join, ferrule or metal collar. Leather is a separate sleeve and wrap only.
+ */
+function createGraniteHandleAssembly(GFX, group, spec, {
+  gripColor = '#101010',
+  graniteColour = 'grey',
+  wrapStyle = 'banded',
+  threadColor,
+} = {}) {
+  const pommelAsset = createGranitePommel(GFX, spec.marbleRadius, graniteColour);
+  const stoneMesh = pommelAsset.mesh;
+  const stoneGeometry = stoneMesh.geometry;
+  const stonePosition = stoneGeometry.getAttribute('position');
+  const stoneUv = stoneGeometry.getAttribute('uv');
+  const stoneColor = stoneGeometry.getAttribute('color');
+  const scale = stoneMesh.scale;
+  const offset = stoneMesh.position;
+  const handleRadius = spec.gripDiameter / 2;
+  const gripBottom = pommelAsset.height - 0.003;
+  const gripTop = gripBottom + spec.gripLength;
+  const shaftHeight = spec.gripLength + 0.014;
+  const shaftCenter = (gripBottom + gripTop) / 2;
+  const shaftGeometry = new GFX.CylinderGeometry(
+    handleRadius * 0.96,
+    handleRadius * 0.94,
+    shaftHeight,
+    32,
+    8,
+  ).toNonIndexed();
+  const shaftPosition = shaftGeometry.getAttribute('position');
+
+  const positions = new Float32Array(stonePosition.count * 3 + shaftPosition.count * 3);
+  const uvs = new Float32Array(stonePosition.count * 2 + shaftPosition.count * 2);
+  const colors = new Float32Array(stonePosition.count * 3 + shaftPosition.count * 3);
+  for (let i = 0; i < stonePosition.count; i++) {
+    const x = stonePosition.getX(i) * scale.x + offset.x;
+    const y = stonePosition.getY(i) * scale.y + offset.y;
+    const z = stonePosition.getZ(i) * scale.z + offset.z;
+    positions.set([x, y, z], i * 3);
+    uvs.set([stoneUv.getX(i), stoneUv.getY(i)], i * 2);
+    colors.set([
+      stoneColor.getX(i), stoneColor.getY(i), stoneColor.getZ(i),
+    ], i * 3);
+  }
+  for (let i = 0; i < shaftPosition.count; i++) {
+    const x = shaftPosition.getX(i);
+    const y = shaftPosition.getY(i) + shaftCenter;
+    const z = shaftPosition.getZ(i);
+    const vertex = stonePosition.count + i;
+    positions.set([x, y, z], vertex * 3);
+    // The granite texture uses physical-scale UVs, not a stretched full-tile wrap.
+    uvs.set([x / 1.9 + 0.5, y / 1.9], vertex * 2);
+    colors.set([1, 1, 1], vertex * 3);
+  }
+  const fusedGeometry = new GFX.BufferGeometry();
+  fusedGeometry.setAttribute('position', new GFX.BufferAttribute(positions, 3));
+  fusedGeometry.setAttribute('uv', new GFX.BufferAttribute(uvs, 2));
+  fusedGeometry.setAttribute('color', new GFX.BufferAttribute(colors, 3));
+  fusedGeometry.computeVertexNormals();
+
+  stoneGeometry.dispose?.();
+  shaftGeometry.dispose?.();
+  stoneMesh.geometry = fusedGeometry;
+  stoneMesh.position.set(0, 0, 0);
+  stoneMesh.scale.set(1, 1, 1);
+  stoneMesh.name = 'single fused granite pommel and grip tang';
+  pommelAsset.geometry = fusedGeometry;
+  pommelAsset.height = pommelAsset.height;
+  group.add(pommelAsset.group);
+
+  const hilt = new GFX.Group();
+  hilt.name = 'leather-wrapped granite grip';
+  group.add(hilt);
+  const leatherMapsResult = leatherMaps(GFX);
+  const leatherMaterial = new GFX.MeshPhysicalMaterial({
+    name: 'selectable leather wrap',
+    color: new GFX.Color(gripColor),
+    map: leatherMapsResult.map,
+    bumpMap: leatherMapsResult.bump,
+    bumpScale: 0.001,
+    roughness: 0.88,
+    metalness: 0,
+    clearcoat: 0.02,
+    clearcoatRoughness: 0.82,
+  });
+  const handle = new GFX.Mesh(
+    new GFX.CylinderGeometry(handleRadius * 1.035, handleRadius * 1.035, spec.gripLength * 0.88, 48, 1),
+    leatherMaterial,
+  );
+  handle.name = 'leather wrap over fused granite handle';
+  handle.position.set(0, shaftCenter, 0);
+  handle.castShadow = true;
+  handle.receiveShadow = true;
+  hilt.add(handle);
+
+  const initialThreadColor = threadColor ?? shadeHex(gripColor, 0.68);
+  const wrapMaterial = new GFX.MeshPhysicalMaterial({
+    name: 'leather wrap ridges',
+    color: new GFX.Color(initialThreadColor),
+    roughness: 0.92,
+    metalness: 0,
+  });
+  if (wrapStyle === 'banded') {
+    const wraps = spec.gripWrapDivisions ?? 13;
+    const wrapRadius = handleRadius * 1.04;
+    for (let i = 1; i < wraps; i++) {
+      const y = gripBottom + spec.gripLength * i / wraps;
+      const ring = new GFX.Mesh(new GFX.TorusGeometry(wrapRadius, 0.00072, 6, 40), wrapMaterial);
+      ring.name = 'leather wrap ridge';
+      ring.position.set(0, y, 0);
+      ring.rotation.x = Math.PI / 2;
+      ring.castShadow = true;
+      hilt.add(ring);
+    }
+  } else {
+    throw new Error(`unknown granite grip wrap style: ${wrapStyle}`);
+  }
+
+  return {
+    marble: null,
+    pommelAsset,
+    hilt,
+    hiltMaterial: pommelAsset.material,
+    handle,
+    bezel: null,
+    gripBottom,
+    gripTop,
+    gripBounds: Object.freeze({ bottom: gripBottom, top: gripTop }),
+    handleBounds: Object.freeze({
+      bottom: handle.position.y - spec.gripLength * 0.44,
+      top: handle.position.y + spec.gripLength * 0.44,
+      length: spec.gripLength * 0.88,
+    }),
+    bezelBounds: null,
+    bossSeat: null,
+    bossSeatBounds: Object.freeze({ bottom: gripTop, top: gripTop }),
+    leatherMaterial,
+    wrapMaterial,
+    gripColor,
+    lowestY: 0,
+  };
+}
+
 export function createWeaponHandleAssembly(GFX, group, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
@@ -1198,6 +1358,10 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('createWeaponHandleAssembly requires the Madness Engine GFX module');
+  }
+  if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (pommelStyle === 'granite') {
+    return createGraniteHandleAssembly(GFX, group, spec, { gripColor, graniteColour, wrapStyle, threadColor });
   }
   if (!METALS[hiltMetal]) throw new Error(`no metal called ${hiltMetal}`);
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
@@ -1433,8 +1597,14 @@ export function buildWeapon(GFX, spec, {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
   }
-  for (const name of [bladeMetal, hiltMetal]) {
-    if (!METALS[name]) throw new Error(`no metal called ${name}`);
+  const graniteWeapon = spec.pommelStyle === 'granite';
+  if (!graniteWeapon) {
+    for (const name of [bladeMetal, hiltMetal]) {
+      if (!METALS[name]) throw new Error(`no metal called ${name}`);
+    }
+  } else {
+    bladeMetal = 'granite';
+    hiltMetal = 'granite';
   }
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
   if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
@@ -1444,7 +1614,7 @@ export function buildWeapon(GFX, spec, {
   const group = new GFX.Group();
   group.name = `${spec.name} display`;
 
-  const bladeMaterial = metalMaterial(GFX, 'blade metal', bladeMetal);
+  let bladeMaterial = graniteWeapon ? null : metalMaterial(GFX, 'blade metal', bladeMetal);
   let threadColorExplicit = threadColor !== undefined;
   const {
     marble, hiltMaterial, hilt, handle, bezel, gripBounds, handleBounds,
@@ -1457,6 +1627,7 @@ export function buildWeapon(GFX, spec, {
     pommelStyle: spec.pommelStyle ?? 'marble',
     wrapStyle: spec.wrapStyle ?? 'banded',
   });
+  if (graniteWeapon) bladeMaterial = polishedGraniteMaterial(GFX, pommelAsset.material, graniteColour);
 
   // The boss and guard sit above the shared handle's fitted metal seat.
   const guardY = gripBounds.top + 0.012;
@@ -1552,6 +1723,15 @@ export function buildWeapon(GFX, spec, {
     });
     fullBlade.computeVertexNormals();
   }
+  if (graniteWeapon) {
+    const positions = fullBlade.getAttribute('position');
+    const uv = new Float32Array(positions.count * 2);
+    for (let i = 0; i < positions.count; i++) {
+      uv[i * 2] = positions.getX(i) / 1.9 + 0.5;
+      uv[i * 2 + 1] = positions.getY(i) / 1.9;
+    }
+    fullBlade.setAttribute('uv', new GFX.BufferAttribute(uv, 2));
+  }
   const blade = new GFX.Mesh(fullBlade, bladeMaterial);
   blade.name = 'solid double-edged blade with 75% fuller';
   blade.castShadow = true;
@@ -1631,6 +1811,7 @@ export function buildWeapon(GFX, spec, {
     get graniteColour() { return pommelAsset.kind === 'granite' ? pommelAsset.colour : null; },
     get threadColor() { return `#${wrapMaterial.color.getHexString()}`; },
     setBladeMetal(name) {
+      if (graniteWeapon) throw new Error('the granite blade is stone, not metal');
       const finish = METALS[name];
       if (!finish) throw new Error(`no metal called ${name}`);
       bladeMaterial.color.set(finish.color);
@@ -1639,6 +1820,7 @@ export function buildWeapon(GFX, spec, {
       return api;
     },
     setHiltMetal(name) {
+      if (graniteWeapon) throw new Error('the granite hilt is stone, not metal');
       const finish = METALS[name];
       if (!finish) throw new Error(`no metal called ${name}`);
       hiltMaterial.color.set(finish.color);
@@ -1650,6 +1832,11 @@ export function buildWeapon(GFX, spec, {
     setGraniteColour(name) {
       if (pommelAsset.kind !== 'granite') throw new Error('this weapon does not have a granite pommel');
       pommelAsset.setColour(name);
+      if (graniteWeapon) {
+        bladeMaterial.dispose?.();
+        bladeMaterial = polishedGraniteMaterial(GFX, pommelAsset.material, name);
+        blade.material = bladeMaterial;
+      }
       for (const part of guard?.children ?? []) {
         if (part.material) part.material = pommelAsset.material;
       }

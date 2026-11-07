@@ -67,7 +67,7 @@ function graniteWeapon(GFX, spec, label, options = {}) {
   const colour = options.graniteColour ?? options.graniteColor ?? GRANITE_DEFAULTS.graniteColour;
   if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
   return swordVariant(GFX, spec, label, 'granite', 'granite-shards', 'banded', {
-    bladeMetal: 'steel', hiltMetal: 'steel', ...GRANITE_DEFAULTS, ...options,
+    ...GRANITE_DEFAULTS, ...options,
     graniteColour: colour, guardThickness: 0.024,
   });
 }
