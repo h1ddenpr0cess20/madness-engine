@@ -544,12 +544,17 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
       'guard uses the same physical-scale granite projection');
     assert.equal(weapon.pommelAsset.gripCoreProfile,
       'pommel-shoulder-to-waisted-hilt-to-blade-root-loft');
+    assert.ok(weapon.pommelAsset.bladeRootY > weapon.pommelAsset.guardCenterY,
+      'the carved neck continues through the guard plane into the blade root');
+    assert.ok(weapon.pommelAsset.bladeRootY - weapon.pommelAsset.guardCenterY >= 0.02);
+    assert.ok(weapon.pommelAsset.guardCenterY - weapon.handleBounds.top < 0.01,
+      'the leather sleeve reaches close to the guard, leaving only the carved stone shoulder exposed');
     assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 10000,
       'the round grip core morphs into the blade-root section');
     assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
       'guard uses the same granite stone as the fused handle');
     assert.equal(weapon.guard.children.length, 1,
-      'the guard has no separate socket: its centre is molded into the grip/blade neck');
+      'the guard has no separate socket: its centre meets the molded grip/blade neck');
     assert.equal(weapon.dimensions.guardThickness, 0.024);
     assert.equal(weapon.dimensions.bladeLength, base.dimensions.bladeLength);
     assert.equal(weapon.dimensions.bladeWidth, base.dimensions.bladeWidth);
