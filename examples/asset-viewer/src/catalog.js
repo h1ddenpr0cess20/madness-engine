@@ -646,10 +646,6 @@ export async function loadCatalog(onProgress = () => {}) {
       }
     }
   }
-  // Procedural granite kitchen: countertop, copper basin and finished hardwood cabinet run.
-  const kitchenModule = await import('../../../src/props/granite-kitchen.js');
-  items.push(proceduralPropItem(kitchenModule.assetViewer, '../../../src/props/granite-kitchen.js'));
-
   // Root and nested factory props self-register separately from sculpted definitions.
   for (const [path, load] of Object.entries(proceduralProps)) {
     onProgress(++n / total);
