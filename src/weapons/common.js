@@ -872,9 +872,13 @@ function sampleCurve(points, steps) {
  */
 export function peelFlapGeometries(GFX, {
   centerY, count = 4, phase = Math.PI / 4, steps = 56, across = 13, inlaySteps = 40,
+  lengthScale = 1,
   thickness = 0.0045, baseHalfAngle = 0.59,
   rim = 0.002, inlayFrom = 0.2, inlayTo = 0.94, lift = 0.0005,
 } = {}) {
+  if (!Number.isFinite(lengthScale) || lengthScale <= 0) {
+    throw new TypeError('peel lengthScale must be a positive finite number');
+  }
   // The mid-surface of the cup in (radius, height) from the grip top; it starts inside the grip
   // and the brass skin, half a thickness outside it, comes out just proud of the neck.
   const path = sampleCurve([
@@ -886,7 +890,7 @@ export function peelFlapGeometries(GFX, {
   const frames = path.map(([r, y], i) => {
     const prev = path[Math.max(0, i - 1)], next = path[Math.min(steps, i + 1)];
     const dr = next[0] - prev[0], dy = next[1] - prev[1], len = Math.hypot(dr, dy);
-    return { r, y, nr: -dy / len, ny: dr / len };
+    return { r, y: y * lengthScale, nr: -dy / len, ny: dr / len };
   });
   const at = (t, key) => {
     const f = t * steps, k = Math.min(steps - 1, Math.floor(f)), w = f - k;
@@ -1331,7 +1335,10 @@ export function buildWeapon(GFX, spec, {
   const span = spec.guardSpan / 2;
   if (spec.guardStyle === 'peel') {
     // No bar and no bobbles: the guard is the peel, split into flaps below the blade.
-    const flaps = peelFlapGeometries(GFX, { centerY: gripBounds.top });
+    const flaps = peelFlapGeometries(GFX, {
+      centerY: gripBounds.top,
+      lengthScale: spec.peelLengthScale ?? 1,
+    });
     guard = new GFX.Group();
     guard.name = 'peel flaps, blade metal inside and brass outside';
     for (const [name, geometry, material] of [
