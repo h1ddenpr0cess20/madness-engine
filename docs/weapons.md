@@ -328,7 +328,7 @@ createBananaDagger(GFX, { bladeMist: false });       // no mist layer at all
 to the banana dagger. It preserves the same curved, hooked blade, ridged
 banana grip, four-flap peel guard, platinum inner peel and brass outer peel.
 The blade and grip use the broadsword's measured dimensions: 786 mm along
-the blade's curve, 52 mm blade width, 140 mm grip along its arc and a
+the blade's curve, 42 mm blade width, 140 mm grip along its arc and a
 220 mm nominal guard span. The curved banana silhouette gives it a shorter
 end-to-end envelope than the straight broadsword.
 
