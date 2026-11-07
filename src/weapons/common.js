@@ -1226,8 +1226,8 @@ function createGraniteGripCoreGeometry(GFX, {
     [gripBottom + 0.018, radius * 1.00],
     [gripBottom + (gripTop - gripBottom) * 0.20, radius * 1.01],
     [gripBottom + (gripTop - gripBottom) * 0.52, radius * 0.98],
-    [gripBottom + (gripTop - gripBottom) * 0.82, radius * 1.01],
-    [gripTop + 0.002, radius * 1.06],
+    [gripTop - 0.045, radius * 1.01],
+    [gripTop - 0.038, radius * 1.07],
     [bladeRootY - 0.032, radius * 1.23],
   ];
   const radialSegments = 48, axialSegments = 96;
