@@ -263,11 +263,7 @@ slimmed from 47 mm to 38 mm wide, and changes the hilt and the blade's line:
 - **Grip:** a ridged brass tube (five ridges), 135 mm along its arc against
   the dagger's 97 mm, that bows back through 0.7 rad (about 40°) in the
   blade's plane. It is fullest at the top and tapers to a small tip, the dark
-  end of the banana. There is no pommel ball and no leather. The grip is
-  hammered all over for purchase, as if struck with a small round-faced tool:
-  regular, shallow dimples about 7 mm across and half a millimetre deep, with
-  crisp rims, left smooth at the top and at the tip. The pattern is seeded,
-  so it is the same every time.
+  end of the banana. There is no pommel ball and no leather.
 - **Guard:** no crossguard bar. The peel is the grip's own skin. The grip
   runs up into a short round neck, which the blade comes out of, and four
   flaps of brass skin grow out of the neck's surface (no collar and no

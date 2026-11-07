@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import * as GFX from '../src/gfx/index.js';
-import { bentGripGeometry } from '../src/weapons/common.js';
 import {
   createBananaDagger, createDagger, BANANA_DAGGER_SPEC, DAGGER_SPEC,
 } from '../src/weapons/index.js';
@@ -276,28 +275,4 @@ test('the banana dagger carries a gentle white and yellow mist along its blade, 
     Array.from(banana.blade.geometry.attributes.position.array),
     Array.from(bare.blade.geometry.attributes.position.array),
   );
-});
-
-test('the grip is hammered all over, and smooth at both ends', () => {
-  const spec = { top: { x: 0, y: 0.18 }, length: 0.135, bend: 0.7, radius: 0.0182, tipRadius: 0.0085, sections: 200, radialSegments: 144 };
-  const plain = bentGripGeometry(GFX, spec).geometry.attributes.position;
-  const worked = bentGripGeometry(GFX, { ...spec, hammer: {} }).geometry.attributes.position;
-  const ring = 144;
-
-  let deepest = 0, pressed = 0, middle = 0;
-  for (let i = 0; i < worked.count; i++) {
-    const row = Math.floor(i / ring);
-    const moved = Math.hypot(worked.getX(i) - plain.getX(i), worked.getY(i) - plain.getY(i), worked.getZ(i) - plain.getZ(i));
-    deepest = Math.max(deepest, moved);
-    if (row > 70 && row < 130) { middle++; if (moved > 0.0002) pressed++; }
-    if (row < 4 || row > 196) assert.ok(moved < 1e-6, 'both ends are left smooth so the grip joins cleanly');
-  }
-  assert.ok(deepest > 0.0004 && deepest < 0.0007, 'dimples are about half a millimetre deep');
-  assert.ok(pressed / middle > 0.3, 'dimples cover the grip all over, not in patches');
-
-  const again = bentGripGeometry(GFX, { ...spec, hammer: {} }).geometry.attributes.position;
-  assert.deepEqual(Array.from(again.array), Array.from(worked.array), 'hammered the same way every time');
-
-  const banana = createBananaDagger(GFX);
-  assert.ok(banana.handle.geometry.attributes.position.count > 60000, 'a mesh fine enough to resolve the dimples');
 });

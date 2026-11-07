@@ -43,7 +43,6 @@ export const BANANA_DAGGER_SPEC = Object.freeze({
   bladeWidth: 0.038,
   gripLength: 0.135,
   gripCurve: 0.7,
-  gripHammered: true,
   bladeCurve: 0.4,
   bladeHook: 0.4,
   bladeTalon: 0.5,
