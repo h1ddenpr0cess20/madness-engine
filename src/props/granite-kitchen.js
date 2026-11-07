@@ -55,18 +55,44 @@ function makeMetalMaterial(GFX, name, envMap = null) {
   });
 }
 
+function addPipe(GFX, parent, name, start, end, radius, material) {
+  const a = new GFX.Vector3(...start);
+  const b = new GFX.Vector3(...end);
+  const axis = b.clone().sub(a);
+  const length = axis.length();
+  if (length <= 1e-6) throw new Error(`kitchen: zero-length pipe "${name}"`);
+  const mesh = new GFX.Mesh(new GFX.CylinderGeometry(radius, radius, length, 24, 1), material);
+  mesh.name = name;
+  mesh.position.copy(a).add(b).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new GFX.Vector3(0, 1, 0), axis.normalize());
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+function addJoint(GFX, parent, name, position, radius, material) {
+  const mesh = new GFX.Mesh(new GFX.SphereGeometry(radius, 20, 12), material);
+  mesh.name = name;
+  mesh.position.set(...position);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
 function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
   const basin = new GFX.Group();
   basin.name = 'inset copper basin';
   basin.position.set(x, y, z);
   parent.add(basin);
 
-  // A deep, open vessel, built from a rounded rectangular bowl profile.
+  // The bowl is a smooth series of nested rounded-rectangle rings, drawn inward
+  // and down so the visible normals face the water cavity.
   const hx = width / 2, hz = depth / 2;
-  const rimY = 0, floorY = -0.17;
-  const inset = 0.055;
+  const rimY = 0, floorY = -0.17, inset = 0.055;
   const positions = [], indices = [];
-  const nx = 48, nz = 32;
+  const nx = 64, nz = 32, power = 0.34;
   for (let j = 0; j <= nz; j++) {
     const t = j / nz;
     const ease = t * t * (3 - 2 * t);
@@ -75,9 +101,8 @@ function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
     const yy = rimY + (floorY - rimY) * ease;
     for (let i = 0; i <= nx; i++) {
       const a = (i / nx) * Math.PI * 2;
-      // Superellipse keeps the lip rectangular with softened corners.
-      const c = Math.cos(a), s = Math.sin(a), power = 0.34;
-      positions.push(sx * Math.sign(c) * Math.pow(Math.abs(c), power), yy, sz * Math.sign(s) * Math.pow(Math.abs(s), power));
+      const c = Math.cos(a), sn = Math.sin(a);
+      positions.push(sx * Math.sign(c) * Math.pow(Math.abs(c), power), yy, sz * Math.sign(sn) * Math.pow(Math.abs(sn), power));
       if (j < nz && i < nx) {
         const p = j * (nx + 1) + i;
         indices.push(p, p + nx + 1, p + 1, p + 1, p + nx + 1, p + nx + 2);
@@ -88,36 +113,39 @@ function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
   geometry.setAttribute('position', new GFX.Float32BufferAttribute(positions, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
-  const bowl = new GFX.Mesh(geometry, metal);
-  // The first strip is the lip; reverse the inside surface so its normals face the basin cavity.
-  bowl.material = metal;
-  bowl.material.side = GFX.DoubleSide;
+  const bowlMaterial = metal.clone();
+  bowlMaterial.side = GFX.DoubleSide;
+  const bowl = new GFX.Mesh(geometry, bowlMaterial);
   bowl.name = 'formed copper bowl';
   bowl.castShadow = true;
   bowl.receiveShadow = true;
   basin.add(bowl);
-  const floor = new GFX.Mesh(new GFX.BoxGeometry(Math.max(0.08, width - inset * 2), 0.008, Math.max(0.08, depth - inset * 2)), bowlMaterial);
+
+  const floor = new GFX.Mesh(
+    new GFX.BoxGeometry(Math.max(0.08, width - inset * 2), 0.008, Math.max(0.08, depth - inset * 2)),
+    bowlMaterial,
+  );
   floor.name = 'copper basin floor';
   floor.position.y = floorY - 0.002;
   floor.castShadow = true;
   floor.receiveShadow = true;
   basin.add(floor);
 
-  // Rolled copper rim, continuous around the sink opening.
-  const outline = [];
-  const segments = 128;
-  for (let i = 0; i <= segments; i++) {
-    const a = (i / segments) * Math.PI * 2;
-    const c = Math.cos(a), s = Math.sin(a), power = 0.34;
-    outline.push(new GFX.Vector3(hx * Math.sign(c) * Math.pow(Math.abs(c), power), 0.004, hz * Math.sign(s) * Math.pow(Math.abs(s), power)));
+  // Beaded rolled edge around the rounded rectangular opening. Short straight
+  // lengths and polished joints avoid a dependency on a curve/tube extension.
+  const r = Math.min(0.055, hx * 0.22, hz * 0.28);
+  const rimPoints = [
+    [-hx + r, 0.004, -hz], [hx - r, 0.004, -hz],
+    [hx, 0.004, -hz + r], [hx, 0.004, hz - r],
+    [hx - r, 0.004, hz], [-hx + r, 0.004, hz],
+    [-hx, 0.004, hz - r], [-hx, 0.004, -hz + r],
+  ];
+  for (let i = 0; i < rimPoints.length; i++) {
+    const a = rimPoints[i], b = rimPoints[(i + 1) % rimPoints.length];
+    addPipe(GFX, basin, `rolled copper sink rim segment ${i + 1}`, a, b, 0.012, metal);
+    addJoint(GFX, basin, `rolled copper sink rim corner ${i + 1}`, a, 0.012, metal);
   }
-  const rimCurve = new GFX.CatmullRomCurve3(outline, true, 'centripetal');
-  const rim = new GFX.Mesh(new GFX.TubeGeometry(rimCurve, 256, 0.012, 10, true), metal);
-  rim.name = 'rolled copper sink rim';
-  rim.castShadow = true;
-  basin.add(rim);
 
-  // A copper drain flange and perforated strainer.
   const drain = new GFX.Mesh(new GFX.CylinderGeometry(0.045, 0.045, 0.009, 48), metal);
   drain.name = 'copper drain flange';
   drain.position.set(0, floorY + 0.006, 0);
@@ -126,9 +154,10 @@ function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
   strainer.name = 'copper drain strainer';
   strainer.position.set(0, floorY + 0.013, 0);
   basin.add(strainer);
+  const dark = new GFX.MeshBasicMaterial({ color: '#4b211a' });
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2;
-    const hole = new GFX.Mesh(new GFX.SphereGeometry(0.0022, 8, 6), new GFX.MeshBasicMaterial({ color: '#4b211a' }));
+    const hole = new GFX.Mesh(new GFX.SphereGeometry(0.0022, 8, 6), dark);
     hole.position.set(Math.cos(a) * 0.019, floorY + 0.016, Math.sin(a) * 0.019);
     basin.add(hole);
   }
@@ -142,17 +171,13 @@ function makeFaucet(GFX, parent, brass, x, y, z, scale = 1) {
   tap.scale.setScalar(scale);
   parent.add(tap);
 
-  const tube = (name, points, radius) => {
-    const curve = new GFX.CatmullRomCurve3(points.map((p) => new GFX.Vector3(...p)));
-    const mesh = new GFX.Mesh(new GFX.TubeGeometry(curve, 48, radius, 16, false), brass);
-    mesh.name = name;
-    mesh.castShadow = true;
-    tap.add(mesh);
-    return mesh;
-  };
-  tube('gooseneck brass spout', [
-    [0, 0, 0], [0, 0.22, 0], [0, 0.37, 0], [0, 0.42, 0.11], [0, 0.42, 0.2], [0, 0.32, 0.24],
-  ], 0.018);
+  const riserHeight = 0.37;
+  addPipe(GFX, tap, 'brass faucet riser', [0, 0.02, 0], [0, riserHeight, 0], 0.018, brass);
+  addJoint(GFX, tap, 'brass faucet elbow', [0, riserHeight, 0], 0.018, brass);
+  addPipe(GFX, tap, 'brass faucet reach', [0, riserHeight, 0], [0, riserHeight, 0.19], 0.018, brass);
+  addJoint(GFX, tap, 'brass faucet spout turn', [0, riserHeight, 0.19], 0.018, brass);
+  addPipe(GFX, tap, 'brass faucet downturned nozzle', [0, riserHeight, 0.19], [0, riserHeight - 0.075, 0.19], 0.013, brass);
+
   const foot = new GFX.Mesh(new GFX.CylinderGeometry(0.042, 0.049, 0.025, 32), brass);
   foot.name = 'brass faucet escutcheon';
   foot.position.y = 0.012;
