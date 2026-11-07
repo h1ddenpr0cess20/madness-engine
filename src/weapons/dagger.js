@@ -61,7 +61,7 @@ export const BANANA_BROADSWORD_SPEC = Object.freeze({
   name: 'banana-broadsword',
   overallLength: 0.886,
   bladeLength: 0.786,
-  bladeWidth: 0.042,
+  bladeWidth: 0.034,
   gripLength: 0.14,
   gripDiameter: 0.034,
   marbleRadius: 0.027,
