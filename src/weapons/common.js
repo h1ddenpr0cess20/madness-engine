@@ -865,11 +865,11 @@ function sampleCurve(points, steps) {
  */
 export function peelFlapGeometries(GFX, {
   centerY, count = 4, phase = Math.PI / 4, steps = 40, across = 13,
-  thickness = 0.0050, trough = -0.0065, rootWidth = 0.0125, fullWidth = 0.0245,
+  thickness = 0.0045, trough = -0.0035, rootWidth = 0.0105, fullWidth = 0.0150,
 } = {}) {
   const path = sampleCurve([
-    [0.0165, 0.002], [0.026, 0.008], [0.036, 0.009],
-    [0.043, 0.000], [0.046, -0.014], [0.044, -0.030],
+    [0.0165, 0.002], [0.025, 0.010], [0.034, 0.012],
+    [0.040, 0.004], [0.043, -0.010], [0.046, -0.026], [0.052, -0.036],
   ], steps);
   const faces = { top: { positions: [], indices: [] }, bottom: { positions: [], indices: [] } };
   for (let f = 0; f < count; f++) {

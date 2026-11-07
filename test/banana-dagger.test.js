@@ -114,7 +114,8 @@ test('the dark ends of the banana are chrome: the grip tip and the blade tip', (
 
   assert.equal(banana.pommel.material.color.getHexString(), 'fbfbfb', 'the grip tip is chrome');
   assert.equal(banana.bladeTip.material.color.getHexString(), 'fbfbfb', 'the blade tip is chrome');
-  assert.equal(banana.blade.material.color.getHexString(), 'f3f1ec', 'the rest of the blade is silver');
+  assert.equal(banana.blade.material.color.getHexString(), 'fbfbfb', 'the rest of the blade is chrome too');
+  assert.equal(banana.bladeMetal, 'chrome');
   assert.ok(banana.pommel.position.x < -0.02, 'the grip tip sits at the bowed end of the grip');
 
   const body = banana.blade.geometry.index.count, end = banana.bladeTip.geometry.index.count;

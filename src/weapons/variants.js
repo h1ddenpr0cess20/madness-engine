@@ -174,7 +174,7 @@ export function createMarcsMorningstar(GFX, options = {}) {
 /** A half-peeled banana: the dagger blade out of chrome-and-brass peel flaps over a curved brass grip. */
 export function createBananaDagger(GFX, options = {}) {
   return named(buildWeapon(GFX, BANANA_DAGGER_SPEC, {
-    bladeMetal: 'silver',
+    bladeMetal: 'chrome',
     hiltMetal: 'brass',
     accentMetal: 'chrome',
     ...options,
