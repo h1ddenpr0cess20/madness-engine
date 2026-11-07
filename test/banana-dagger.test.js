@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import * as GFX from '../src/gfx/index.js';
-import { createBananaDagger, createDagger, BANANA_DAGGER_SPEC, DAGGER_SPEC } from '../src/weapons/index.js';
+import {
+  createBananaDagger, createMagicBananaDagger, createDagger, BANANA_DAGGER_SPEC, DAGGER_SPEC,
+} from '../src/weapons/index.js';
 
 const names = (weapon) => {
   const found = [];
@@ -58,7 +60,7 @@ test('the blade leaves the grip tangent to it, on the same side and in the same 
   // Both bow toward -x, so the grip and blade make one crescent.
   let gripMin = Infinity, tipX = 0, tipY = -Infinity;
   for (let i = 0; i < grip.count; i++) gripMin = Math.min(gripMin, grip.getX(i));
-  const tip = banana.bladeTip.geometry.attributes.position;
+  const tip = blade;
   for (let i = 0; i < tip.count; i++) if (tip.getY(i) > tipY) { tipY = tip.getY(i); tipX = tip.getX(i); }
   assert.ok(gripMin < -0.03 && tipX < -0.05, 'grip and blade lean the same way');
 
@@ -109,17 +111,17 @@ test('banana dagger has no metal ball and none of the old crossguard parts', () 
   assert.ok(all.includes('banana tip'));
 });
 
-test('the dark ends of the banana are chrome: the grip tip and the blade tip', () => {
+test('the blade, the tops of the petals and both tips are one platinum material', () => {
   const banana = createBananaDagger(GFX);
+  const [inlay] = banana.guard.children;
 
-  assert.equal(banana.pommel.material.color.getHexString(), 'fbfbfb', 'the grip tip is chrome');
-  assert.equal(banana.bladeTip.material.color.getHexString(), 'fbfbfb', 'the blade tip is chrome');
-  assert.equal(banana.blade.material.color.getHexString(), 'fbfbfb', 'the rest of the blade is chrome too');
-  assert.equal(banana.bladeMetal, 'chrome');
+  assert.equal(banana.bladeMetal, 'platinum', 'platinum, not chrome, by default');
+  for (const [name, part] of [['blade', banana.blade], ['grip tip', banana.pommel], ['petal tops', inlay]]) {
+    assert.equal(part.material.color.getHexString(), 'e6e5e1', `the ${name} is platinum`);
+    assert.equal(part.material, banana.blade.material, `the ${name} shares the blade's material`);
+  }
+  assert.equal(banana.bladeTip, undefined, 'there is no separate blade-tip part');
   assert.ok(banana.pommel.position.x < -0.02, 'the grip tip sits at the bowed end of the grip');
-
-  const body = banana.blade.geometry.index.count, end = banana.bladeTip.geometry.index.count;
-  assert.ok(end > 0 && end < body * 0.25, 'only the last part of the blade is chrome');
 });
 
 test('banana grip is a ridged brass tube bowed back along an arc', () => {
@@ -136,13 +138,13 @@ test('banana grip is a ridged brass tube bowed back along an arc', () => {
   assert.ok(maxX < 0.03, 'the bow is one way');
 });
 
-test('the guard is four small peel flaps hanging round the hand: a chrome inlay set in a brass body', () => {
+test('the guard is four small peel flaps hanging round the hand: a platinum inlay set in a brass body', () => {
   const banana = createBananaDagger(GFX);
   const [inlay, body] = banana.guard.children;
   const base = banana.gripBounds.top;
 
   assert.equal(banana.guard.children.length, 2);
-  assert.equal(inlay.material.color.getHexString(), 'fbfbfb', 'the inlay is chrome');
+  assert.equal(inlay.material.color.getHexString(), 'e6e5e1', 'the inlay is the blade\'s platinum');
   assert.equal(body.material.color.getHexString(), 'e0b84e', 'the body of the flaps is brass');
   assert.equal(inlay.geometry.attributes.position.count, 4 * 41 * 13, 'four inlays');
   assert.equal(body.geometry.attributes.position.count, 4 * 2 * 57 * 13, 'four flaps, a face each side');
@@ -177,7 +179,7 @@ test('the guard is four small peel flaps hanging round the hand: a chrome inlay 
     sum += (normal.getX(i) * p.getX(i) + normal.getZ(i) * p.getZ(i)) / r;
     n++;
   }
-  assert.ok(sum / n > 0.2, 'the chrome inlay looks out, away from the hand');
+  assert.ok(sum / n > 0.2, 'the inlay looks out, away from the hand');
 });
 
 test('the peel is the grip\'s own skin: no collar, the grip runs up into a neck the peel folds from', () => {
@@ -205,25 +207,72 @@ test('the peel is the grip\'s own skin: no collar, the grip runs up into a neck 
   assert.ok(banana.bossSeatBounds.top - base > 0.01, 'the neck carries on above the grip');
 });
 
-test('banana finishes change independently and the grip is not dyed', () => {
+test('one blade metal changes every part that shares it; the brass follows the hilt metal', () => {
   const banana = createBananaDagger(GFX);
+  const [inlay, body] = banana.guard.children;
+  const hex = (part) => part.material.color.getHexString();
 
+  // The hilt metal moves the brass: grip, neck, and the brass body of the petals.
   banana.setHiltMetal('gold');
-  assert.equal(banana.handle.material.color.getHexString(), 'ffd264',
-    'the grip, collar and peel skin follow the hilt metal');
-  assert.equal(banana.guard.children[1].material.color.getHexString(), 'ffd264');
-  assert.equal(banana.guard.children[0].material.color.getHexString(), 'fbfbfb',
-    'the chrome parts are not changed by the hilt metal');
-
-  banana.setAccentMetal('platinum');
-  assert.equal(banana.accentMetal, 'platinum');
-  for (const part of [banana.guard.children[0], banana.pommel, banana.bladeTip]) {
-    assert.equal(part.material.color.getHexString(), 'e6e5e1', 'inside of the peel and both tips take the accent');
+  for (const [name, part] of [['grip', banana.handle], ['neck', banana.bossSeat], ['petal bodies', body]]) {
+    assert.equal(hex(part), 'ffd264', `the ${name} follows the hilt metal`);
+  }
+  for (const part of [banana.blade, banana.pommel, inlay]) {
+    assert.equal(hex(part), 'e6e5e1', 'and leaves the blade-metal parts alone');
   }
 
+  // The blade metal moves the blade, the petal tops and the grip tip together.
   banana.setBladeMetal('chrome');
   assert.equal(banana.bladeMetal, 'chrome');
+  for (const [name, part] of [['blade', banana.blade], ['grip tip', banana.pommel], ['petal tops', inlay]]) {
+    assert.equal(hex(part), 'fbfbfb', `the ${name} follows the blade metal`);
+  }
+  for (const part of [banana.handle, banana.bossSeat, body]) {
+    assert.equal(hex(part), 'ffd264', 'and leaves the brass alone');
+  }
+
   assert.doesNotThrow(() => banana.setGripColor('#ff0000'),
     'a grip colour is accepted by the shared API but has no leather to dye');
-  assert.throws(() => banana.setAccentMetal('unobtainium'), /no metal called/);
+  assert.throws(() => banana.setBladeMetal('unobtainium'), /no metal called/);
+});
+
+test('the magic banana dagger lays a white and yellow mist along the curve of its blade', () => {
+  const plain = createBananaDagger(GFX);
+  const magic = createMagicBananaDagger(GFX);
+
+  assert.equal(plain.bladeMist, null, 'the plain banana dagger has no mist');
+  assert.doesNotThrow(() => plain.setBladeMist(true), 'and toggling it does nothing');
+  assert.equal(createBananaDagger(GFX, { bladeMist: true }).bladeMist.name, 'Magic Banana blade mist',
+    'the mist can be asked for on the plain factory too');
+
+  assert.equal(magic.name, 'Magic Banana Dagger');
+  const mist = magic.bladeMist;
+  assert.equal(mist.name, 'Magic Banana blade mist');
+  assert.equal(mist.visible, true, 'the mist starts on');
+  assert.equal(mist.children.length, 6, 'a chain of short stretches, not one upright cloud');
+  for (const stretch of mist.children) {
+    const { uniforms } = stretch.material;
+    assert.equal(uniforms.uDuo.value, 1, 'the Magic Egg white and yellow palette');
+    assert.ok(uniforms.uGlow.value < 1.05, 'dimmed a little so the overlaps do not glare');
+  }
+
+  // Each stretch sits on the blade's own line, so the mist follows the curve.
+  mist.children.forEach((stretch, i) => {
+    const [x, y] = middle(magic, Math.round(((i + 0.5) / 6) * 64));
+    assert.ok(Math.abs(stretch.position.x - x) < 0.006, `stretch ${i + 1} is on the blade in x`);
+    assert.ok(Math.abs(stretch.position.y - y) < 0.008, `stretch ${i + 1} is on the blade in y`);
+  });
+  assert.ok(mist.children.at(-1).position.x < -0.03, 'the last stretch follows the talon round');
+  assert.ok(mist.children[0].position.x > mist.children.at(-1).position.x, 'and the first is at the root');
+
+  // It is the same blade, with the mist as the only addition.
+  assert.deepEqual(
+    Array.from(magic.blade.geometry.attributes.position.array),
+    Array.from(plain.blade.geometry.attributes.position.array),
+  );
+
+  magic.setBladeMist(false);
+  assert.equal(mist.visible, false, 'one switch hides the whole mist');
+  magic.setBladeMist(true);
+  assert.equal(mist.visible, true);
 });

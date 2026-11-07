@@ -259,40 +259,63 @@ slimmed from 47 mm to 38 mm wide, and changes the hilt and the blade's line:
   it, so the curve tightens into a hooked point, and it narrows early to draw
   that point out. The cutting edges, fuller and thickness all follow the
   curve (every section stays square to the blade line). It keeps its length
-  along the curve. The blade is chrome, and its last 14% always takes the accent
-  metal, like the fruit's dark stem end.
+  along the curve.
 - **Grip:** a ridged brass tube (five ridges), 135 mm along its arc against
   the dagger's 97 mm, that bows back through 0.7 rad (about 40°) in the
-  blade's plane. It is fullest at the top and tapers to a small chrome tip.
-  There is no pommel ball and no leather.
+  blade's plane. It is fullest at the top and tapers to a small tip, the dark
+  end of the banana. There is no pommel ball and no leather.
 - **Guard:** no crossguard bar. The peel is the grip's own skin. The grip
   runs up into a short round neck, which the blade comes out of, and four
   flaps of brass skin grow out of the neck's surface (no collar and no
   ledge), fold back over its rim and hang down around the hand like a cup
   guard, curling in across their width to hug it. They are kept to about
   10 cm across so the weapon can be sheathed and worn. The face of each flap
-  looking out is the pale inside of the peel: a chrome inlay set into the
-  brass, with a thin rim of the brass showing all round it.
+  looking out is the pale inside of the peel: an inlay set into the brass,
+  with a thin rim of the brass showing all round it.
+
+Two metals, two toggles. The **blade metal** (platinum by default) is the
+blade, the inlay on top of every petal, and the tip of the grip: they are one
+material, so `bladeMetal` and `setBladeMetal()` change all of them together.
+The **hilt metal** (brass by default) is the grip, the neck and the brass body
+of the petals, and is changed by `hiltMetal` and `setHiltMetal()`.
 
 Published dimensions: approximately 0.369 m overall (the bows shorten the
 reach along the vertical, so length is measured from the lowest point of the
-chrome grip tip to the point), 240 mm blade along its curve, 38 mm width,
-135 mm grip along its arc and about 105 mm across the flaps.
+grip tip to the point), 240 mm blade along its curve, 38 mm width, 135 mm grip
+along its arc and about 105 mm across the flaps.
 
 ```js
 import * as GFX from 'madness-engine/gfx';
 import { createBananaDagger } from 'madness-engine/weapons';
 
 const banana = createBananaDagger(GFX, {
-  bladeMetal: 'chrome',
+  bladeMetal: 'platinum',
   hiltMetal: 'brass',
-  accentMetal: 'chrome',
 });
 scene.add(banana.group);
-banana.setHiltMetal('gold');       // grip, neck and the brass body of the peel
-banana.setAccentMetal('platinum'); // inside of the peel, grip tip and blade tip
-banana.setBladeMetal('chrome');
+banana.setBladeMetal('chrome'); // blade, petal tops and grip tip
+banana.setHiltMetal('gold');    // grip, neck and the brass body of the peel
 ```
 
 `setGripColor` is accepted for the shared API but has no effect on this
 weapon, since a metal grip has no leather to dye.
+
+### Magic banana dagger
+
+`createMagicBananaDagger(GFX, options)` is the same dagger as a magic blade,
+like the Magic Egg dagger: a white and yellow mist, in the Magic Egg palette,
+drawn along the blade. The shader ray-marches an upright ellipsoid, so on this
+curved blade the mist is a chain of six short stretches laid along the blade's
+line, each sized to hold its own tilted part of the blade, and the mist follows
+the curve into the talon. They share one group, so the mist shows and hides as
+one. `createBananaDagger(GFX, { bladeMist: true })` gives the same mist.
+
+```js
+import { createMagicBananaDagger } from 'madness-engine/weapons';
+
+const magic = createMagicBananaDagger(GFX);
+magic.setBladeMist(false); // hide the mist; setBladeMist(true) brings it back
+```
+
+The plain `createBananaDagger` has no mist, and `setBladeMist()` does nothing
+on it.

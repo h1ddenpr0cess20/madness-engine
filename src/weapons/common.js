@@ -2,7 +2,8 @@ import { METALS } from '../props/metalglobe.js';
 import { createMarble } from '../heroes/marble.js';
 import { createMetalEgg, createGlassEgg } from '../heroes/debater-egg/index.js';
 import { createBall } from '../heroes/krystal/model.js';
-import { createBladeMist } from './blade-mist.js';
+import { createBladeMist, createCurvedBladeMist } from './blade-mist.js';
+import { bladeCentreline } from './blade-curve.js';
 
 /** Weapon geometry is expressed in metres: one engine unit equals one metre. */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
@@ -862,10 +863,10 @@ function sampleCurve(points, steps) {
  * down around the hand like a cup guard, kept small enough to sheathe. Being
  * slices of one cup-shaped surface, the flaps curve round the hand and meet
  * the grip with no step. The skin (brass) is the face toward the hand once
- * folded; the pale inside of the peel is a chrome inlay set into the face
+ * folded; the pale inside of the peel is an inlay of the blade's metal set into the face
  * looking out, with a thin rim of the brass left showing all round it.
  *
- * Returns `top`, the chrome inlay, and `bottom`, the brass body of the flaps
+ * Returns `top`, the inlay, and `bottom`, the brass body of the flaps
  * (both faces, so the rim shows). The seams between flaps sit on the blade's
  * flat and edge directions, so the blade comes out through them.
  */
@@ -937,26 +938,6 @@ export function peelFlapGeometries(GFX, {
   return { top: make(chrome), bottom: make(brass) };
 }
 
-/** Split a blade's triangles at height `fromY`: the body, and the end beyond it. */
-function splitBladeTip(GFX, geometry, fromY) {
-  const position = geometry.attributes.position, index = geometry.index.array;
-  const body = [], tip = [];
-  for (let i = 0; i < index.length; i += 3) {
-    const [a, b, c] = [index[i], index[i + 1], index[i + 2]];
-    const beyond = [a, b, c].every((v) => position.getY(v) >= fromY);
-    (beyond ? tip : body).push(a, b, c);
-  }
-  const make = (triangles) => {
-    const part = new GFX.BufferGeometry();
-    part.setAttribute('position', geometry.attributes.position);
-    part.setAttribute('uv', geometry.attributes.uv);
-    part.setIndex(triangles);
-    part.pointProfile = geometry.pointProfile;
-    return part;
-  };
-  return { body: make(body), tip: make(tip) };
-}
-
 /**
  * Curve a blade in its own plane, toward -x as it rises, so it carries on the
  * grip's banana curve and ends in a talon. The root stays upright, so the
@@ -970,36 +951,27 @@ function splitBladeTip(GFX, geometry, fromY) {
  * curve instead of being sheared. Returns how far the point stands above the root.
  */
 function curveBlade(geometry, { rootY, length, bend, hook = 0, talon = 0 }) {
-  const heading = (u) => bend * u + hook * u ** 4;
-  const samples = 512;
-  const centre = [[0, 0]];
-  for (let i = 1; i <= samples; i++) {
-    const phi = heading(((i - 0.5) / samples));
-    const [x, y] = centre[i - 1];
-    centre.push([x - Math.sin(phi) * (length / samples), y + Math.cos(phi) * (length / samples)]);
-  }
+  const line = bladeCentreline({ length, bend, hook, talon });
   const position = geometry.attributes.position;
   for (let i = 0; i < position.count; i++) {
     const u = clamp01((position.getY(i) - rootY) / length);
-    const f = u * samples, k = Math.min(samples - 1, Math.floor(f)), t = f - k;
-    const cx = centre[k][0] + (centre[k + 1][0] - centre[k][0]) * t;
-    const cy = centre[k][1] + (centre[k + 1][1] - centre[k][1]) * t;
-    const phi = heading(u);
-    const across = position.getX(i) * (1 - talon * smooth01(0.4, 0.95, u));
-    position.setXYZ(i, cx + across * Math.cos(phi), rootY + cy + across * Math.sin(phi), position.getZ(i));
+    const { x, y, phi } = line.at(u);
+    const across = position.getX(i) * line.taper(u);
+    position.setXYZ(i, x + across * Math.cos(phi), rootY + y + across * Math.sin(phi), position.getZ(i));
   }
   position.needsUpdate = true;
-  return centre[samples][1];
+  return line.reach;
 }
 
 /**
  * The banana handle: the bottom of a half-peeled banana. A brass, ridged,
- * curved grip ends in a small chrome tip (no pommel ball), and under the
+ * curved grip ends in a small tip of the blade's metal (no pommel ball), and under the
  * boss seat the peel splits into flaps (see `peelFlapGeometries`).
  */
-function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMetal, gripColor, threadColor }) {
+function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMaterial, gripColor, threadColor }) {
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
-  const accentMaterial = metalMaterial(GFX, 'accent metal', accentMetal);
+  // The tip of the grip is the blade's metal, not the hilt's: it is handed in, so it is the same material.
+  if (!accentMaterial) throw new TypeError('a curved handle needs the blade material for its tip');
 
   const hilt = new GFX.Group();
   hilt.name = 'banana hilt assembly';
@@ -1021,7 +993,7 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMetal, 
   handle.receiveShadow = true;
   hilt.add(handle);
 
-  // The dark end of the banana, in chrome, continues the grip's heading.
+  // The dark end of the banana, in the blade's metal, continues the grip's heading.
   const tipLength = 0.0125;
   const tipCentre = { x: end.x + heading.x * 0.004, y: end.y + heading.y * 0.004 };
   const tip = sphere(GFX, 'banana tip', accentMaterial,
@@ -1086,7 +1058,7 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   threadColor,
   pommelStyle = spec.pommelStyle ?? 'marble',
   wrapStyle = spec.wrapStyle ?? 'banded',
-  accentMetal = 'chrome',
+  accentMaterial,
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('createWeaponHandleAssembly requires the Madness Engine GFX module');
@@ -1098,7 +1070,7 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   }
 
   if (spec.gripCurve) {
-    return createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMetal, gripColor, threadColor });
+    return createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMaterial, gripColor, threadColor });
   }
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
@@ -1319,12 +1291,11 @@ export function buildWeapon(GFX, spec, {
   gripColor = '#633b2c',
   threadColor,
   bladeMist: withBladeMist = false,
-  accentMetal = 'chrome',
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
   }
-  for (const name of [bladeMetal, hiltMetal, accentMetal]) {
+  for (const name of [bladeMetal, hiltMetal]) {
     if (!METALS[name]) throw new Error(`no metal called ${name}`);
   }
   if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
@@ -1342,7 +1313,9 @@ export function buildWeapon(GFX, spec, {
     bezelBounds, bossSeat, bossSeatBounds, leatherMaterial, wrapMaterial, pommelAsset,
     accentMaterial, lowestY = 0,
   } = createWeaponHandleAssembly(GFX, group, spec, {
-    hiltMetal, gripColor, threadColor, accentMetal,
+    hiltMetal, gripColor, threadColor,
+    // The banana's petal tops and tips are the blade's metal, so they share its material.
+    accentMaterial: bladeMaterial,
     pommelStyle: spec.pommelStyle ?? 'marble',
     wrapStyle: spec.wrapStyle ?? 'banded',
   });
@@ -1359,7 +1332,7 @@ export function buildWeapon(GFX, spec, {
     // No bar and no bobbles: the guard is the peel, split into flaps below the blade.
     const flaps = peelFlapGeometries(GFX, { centerY: gripBounds.top });
     guard = new GFX.Group();
-    guard.name = 'peel flaps, chrome inside and brass outside';
+    guard.name = 'peel flaps, blade metal inside and brass outside';
     for (const [name, geometry, material] of [
       ['peel flaps inside', flaps.top, accentMaterial],
       ['peel flaps outside', flaps.bottom, hiltMaterial],
@@ -1423,8 +1396,6 @@ export function buildWeapon(GFX, spec, {
     length: spec.bladeLength,
     width: spec.bladeWidth,
   });
-  // The banana's dark stem end is chrome: the last of the blade has its own finish.
-  const bladeEnds = spec.bladeTip ? splitBladeTip(GFX, fullBlade, bladeRootY + 0.86 * spec.bladeLength) : null;
   // How far the point stands above the root: less than the length when the blade curves.
   let bladeReach = spec.bladeLength;
   if (spec.bladeCurve) {
@@ -1432,40 +1403,35 @@ export function buildWeapon(GFX, spec, {
       rootY: bladeRootY, length: spec.bladeLength,
       bend: spec.bladeCurve, hook: spec.bladeHook, talon: spec.bladeTalon,
     });
-    for (const part of bladeEnds ? [bladeEnds.body, bladeEnds.tip] : [fullBlade]) part.computeVertexNormals();
-  } else if (bladeEnds) {
-    bladeEnds.body.computeVertexNormals();
-    bladeEnds.tip.computeVertexNormals();
+    fullBlade.computeVertexNormals();
   }
-  const blade = new GFX.Mesh(bladeEnds ? bladeEnds.body : fullBlade, bladeMaterial);
+  const blade = new GFX.Mesh(fullBlade, bladeMaterial);
   blade.name = 'solid double-edged blade with 75% fuller';
   blade.castShadow = true;
   blade.receiveShadow = true;
   group.add(blade);
-  let bladeTip = null;
-  if (bladeEnds) {
-    bladeTip = new GFX.Mesh(bladeEnds.tip, accentMaterial);
-    bladeTip.name = 'chrome blade tip';
-    bladeTip.castShadow = true;
-    bladeTip.receiveShadow = true;
-    group.add(bladeTip);
-  }
 
   // Krystal's variants add a separate, hidden-by-default mist volume that
   // follows the exact blade dimensions without changing the steel geometry.
-  const bladeMistLayer = withBladeMist
-    ? createBladeMist(GFX, group, {
-      rootY: bladeRootY,
-      length: spec.bladeLength,
-      width: spec.bladeWidth,
-      palette: spec.bladeMistPalette ?? 'krystal',
-    })
-    : null;
+  // A curved blade carries its mist along its curve in a chain of short pieces.
+  const mistOptions = {
+    rootY: bladeRootY,
+    length: spec.bladeLength,
+    width: spec.bladeWidth,
+    palette: spec.bladeMistPalette ?? 'krystal',
+  };
+  let bladeMistLayer = null;
+  if (withBladeMist) {
+    bladeMistLayer = spec.bladeCurve
+      ? createCurvedBladeMist(GFX, group, {
+        ...mistOptions, bend: spec.bladeCurve, hook: spec.bladeHook, talon: spec.bladeTalon,
+      })
+      : createBladeMist(GFX, group, mistOptions);
+  }
 
   const api = {
     group,
     blade,
-    bladeTip,
     bladeMist: bladeMistLayer?.mesh ?? null,
     hilt,
     handle,
@@ -1530,17 +1496,6 @@ export function buildWeapon(GFX, spec, {
       hiltMetal = name;
       return api;
     },
-    setAccentMetal(name) {
-      const finish = METALS[name];
-      if (!finish) throw new Error(`no metal called ${name}`);
-      if (accentMaterial) {
-        accentMaterial.color.set(finish.color);
-        accentMaterial.roughness = finish.roughness;
-      }
-      accentMetal = name;
-      return api;
-    },
-    get accentMetal() { return accentMetal; },
     setGripColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
       // A metal grip has no leather to dye: the colour is kept but not drawn.

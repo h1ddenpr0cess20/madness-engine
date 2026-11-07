@@ -171,12 +171,23 @@ export function createMarcsMorningstar(GFX, options = {}) {
   }), "Marc's Morningstar");
 }
 
-/** A half-peeled banana: the dagger blade out of chrome-and-brass peel flaps over a curved brass grip. */
+/**
+ * A half-peeled banana: the dagger blade out of peel flaps over a curved brass grip.
+ * The blade, the inside of the peel and the tip of the grip are one metal (platinum),
+ * so `bladeMetal` and `setBladeMetal()` change all of them; the brass follows `hiltMetal`.
+ */
 export function createBananaDagger(GFX, options = {}) {
   return named(buildWeapon(GFX, BANANA_DAGGER_SPEC, {
-    bladeMetal: 'chrome',
+    bladeMetal: 'platinum',
     hiltMetal: 'brass',
-    accentMetal: 'chrome',
     ...options,
   }), 'Banana Dagger');
+}
+
+/**
+ * The banana dagger as a magic blade, like the Magic Egg dagger: a white and
+ * yellow mist drawn along the curve of the blade. Toggle it with `setBladeMist()`.
+ */
+export function createMagicBananaDagger(GFX, options = {}) {
+  return named(createBananaDagger(GFX, { ...options, bladeMist: true }), 'Magic Banana Dagger');
 }
