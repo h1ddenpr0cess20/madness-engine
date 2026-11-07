@@ -265,18 +265,19 @@ slimmed from 47 mm to 38 mm wide, and changes the hilt and the blade's line:
   the dagger's 97 mm, that bows back through 0.7 rad (about 40°) in the
   blade's plane. It is fullest at the top and tapers to a small chrome tip.
   There is no pommel ball and no leather.
-- **Guard:** no crossguard bar. Four narrow peel flaps split from the top of
-  the grip, arch out a little, and hang down around the hand like a cup
-  guard, curling in across their width to hug it, with their tips flaring
-  out as a peeled banana's do. They are kept to about 10 cm across so the
-  weapon can be sheathed and worn. The outer face of each is chrome (the
-  inside of the peeled-back peel) and the face toward the hand is brass (the
-  skin).
+- **Guard:** no crossguard bar. The peel is the grip's own skin. The grip
+  runs up into a short round neck, which the blade comes out of, and four
+  flaps of brass skin grow out of the neck's surface (no collar and no
+  ledge), fold back over its rim and hang down around the hand like a cup
+  guard, curling in across their width to hug it. They are kept to about
+  10 cm across so the weapon can be sheathed and worn. The face of each flap
+  looking out is the pale inside of the peel: a chrome inlay set into the
+  brass, with a thin rim of the brass showing all round it.
 
 Published dimensions: approximately 0.369 m overall (the bows shorten the
 reach along the vertical, so length is measured from the lowest point of the
 chrome grip tip to the point), 240 mm blade along its curve, 38 mm width,
-135 mm grip along its arc and about 176 mm across the open flaps.
+135 mm grip along its arc and about 105 mm across the flaps.
 
 ```js
 import * as GFX from 'madness-engine/gfx';
@@ -288,7 +289,7 @@ const banana = createBananaDagger(GFX, {
   accentMetal: 'chrome',
 });
 scene.add(banana.group);
-banana.setHiltMetal('gold');       // grip, collar and the outside of the peel
+banana.setHiltMetal('gold');       // grip, neck and the brass body of the peel
 banana.setAccentMetal('platinum'); // inside of the peel, grip tip and blade tip
 banana.setBladeMetal('chrome');
 ```

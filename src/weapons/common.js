@@ -813,7 +813,8 @@ export function bentGripGeometry(GFX, {
       + 0.0012 * Math.sin(Math.PI * Math.min(1, s * 1.1));
     for (let k = 0; k < radialSegments; k++) {
       const a = (k / radialSegments) * Math.PI * 2;
-      const lobe = body * (1 + ridgeDepth * (1 - 0.6 * s) * Math.cos(ridges * a));
+      // The ridges fade in below the top, so the grip arrives round and flush with the peel.
+      const lobe = body * (1 + ridgeDepth * (1 - 0.6 * s) * smooth01(0, 0.15, s) * Math.cos(ridges * a));
       positions.push(cx + lobe * cos * Math.cos(a), cy + lobe * sin * Math.cos(a), lobe * Math.sin(a));
     }
   }
@@ -855,58 +856,76 @@ function sampleCurve(points, steps) {
 }
 
 /**
- * The banana's peel, split from the top of the grip into flaps that arch
- * out a little and then hang down around the hand like a cup guard, kept
- * small enough to sheathe. Each flap curls in across its width to hug the
- * hand. Its outer face is the pale inside of the peel (peeled back, it
- * faces up and out) and its inner face, toward the hand, the skin. They come back as two
- * geometries, upper faces and lower faces, so each can take its own finish.
- * The flaps sit on the diagonals, clear of the blade's flat.
+ * The banana's peel: the grip's own skin, split into four flaps. Each flap
+ * starts flush with the top of the grip as a quarter of its surface, rises
+ * around the blade root, then folds back outward over the top and hangs
+ * down around the hand like a cup guard, kept small enough to sheathe. Being
+ * slices of one cup-shaped surface, the flaps curve round the hand and meet
+ * the grip with no step. The skin (brass) is the face toward the hand once
+ * folded; the pale inside of the peel is a chrome inlay set into the face
+ * looking out, with a thin rim of the brass left showing all round it.
+ *
+ * Returns `top`, the chrome inlay, and `bottom`, the brass body of the flaps
+ * (both faces, so the rim shows). The seams between flaps sit on the blade's
+ * flat and edge directions, so the blade comes out through them.
  */
 export function peelFlapGeometries(GFX, {
-  centerY, count = 4, phase = Math.PI / 4, steps = 40, across = 13,
-  thickness = 0.0045, trough = -0.0035, rootWidth = 0.0105, fullWidth = 0.0150,
+  centerY, count = 4, phase = Math.PI / 4, steps = 56, across = 13, inlaySteps = 40,
+  thickness = 0.0045, baseHalfAngle = 0.59,
+  rim = 0.002, inlayFrom = 0.2, inlayTo = 0.94, lift = 0.0005,
 } = {}) {
+  // The mid-surface of the cup in (radius, height) from the grip top; it starts inside the grip
+  // and the brass skin, half a thickness outside it, comes out just proud of the neck.
   const path = sampleCurve([
-    [0.0165, 0.002], [0.025, 0.010], [0.034, 0.012],
-    [0.040, 0.004], [0.043, -0.010], [0.046, -0.026], [0.052, -0.036],
+    [0.0165, -0.010], [0.0165, -0.004], [0.0166, 0.004], [0.0168, 0.012], [0.0225, 0.0195],
+    [0.031, 0.0215], [0.039, 0.0155], [0.0435, 0.004], [0.0460, -0.010],
+    [0.0480, -0.024], [0.0525, -0.034],
   ], steps);
-  const faces = { top: { positions: [], indices: [] }, bottom: { positions: [], indices: [] } };
-  for (let f = 0; f < count; f++) {
-    const theta = phase + (f / count) * Math.PI * 2;
-    const radial = [Math.cos(theta), Math.sin(theta)];
-    // S runs across the flap, N is its inside-up normal.
-    const S = [-radial[1], 0, radial[0]];
-    for (const [name, sign] of [['top', 1], ['bottom', -1]]) {
-      const face = faces[name];
-      const base = face.positions.length / 3;
-      for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        const prev = path[Math.max(0, i - 1)], next = path[Math.min(steps, i + 1)];
-        const dr = next[0] - prev[0], dy = next[1] - prev[1], len = Math.hypot(dr, dy);
-        const nr = -dy / len, ny = dr / len;
-        // Rounded at the tip: the width and the thickness both close to nothing.
-        const w = (rootWidth + (fullWidth - rootWidth) * smooth01(0, 0.45, t)) * Math.sqrt(Math.max(0, 1 - t ** 5));
-        const h = thickness * (1 - t ** 6);
-        for (let j = 0; j < across; j++) {
-          const u = (j / (across - 1)) * 2 - 1;
-          const off = trough * (w / fullWidth) * u * u + sign * 0.5 * h * (1 - u ** 4);
-          const r = path[i][0] + nr * off;
-          face.positions.push(
-            radial[0] * r + S[0] * u * w,
-            centerY + path[i][1] + ny * off,
-            radial[1] * r + S[2] * u * w,
-          );
-        }
-      }
-      for (let i = 0; i < steps; i++) {
-        for (let j = 0; j < across - 1; j++) {
-          const a = base + i * across + j, b = a + 1, c = a + across, d = c + 1;
-          if (sign > 0) face.indices.push(a, b, c, b, d, c);
-          else face.indices.push(a, c, b, b, c, d);
-        }
+  // N is the flap's inside-up normal: toward the axis as it rises, out as it hangs.
+  const frames = path.map(([r, y], i) => {
+    const prev = path[Math.max(0, i - 1)], next = path[Math.min(steps, i + 1)];
+    const dr = next[0] - prev[0], dy = next[1] - prev[1], len = Math.hypot(dr, dy);
+    return { r, y, nr: -dy / len, ny: dr / len };
+  });
+  const at = (t, key) => {
+    const f = t * steps, k = Math.min(steps - 1, Math.floor(f)), w = f - k;
+    return frames[k][key] + (frames[k + 1][key] - frames[k][key]) * w;
+  };
+  // A slice of the cup: wide at the grip, narrowing to a rounded tip.
+  const half = (t) => baseHalfAngle * (1 - 0.45 * smooth01(0.15, 0.8, t)) * Math.sqrt(Math.max(0, 1 - t ** 5));
+  // Thin where it starts inside the grip, so the skin grows out of the grip surface with no edge.
+  const thick = (t) => thickness * smooth01(0, 0.12, t) * (1 - t ** 6);
+
+  const brass = { positions: [], indices: [] }, chrome = { positions: [], indices: [] };
+  const grid = (face, rows, columns, point, flip) => {
+    const base = face.positions.length / 3;
+    for (let i = 0; i <= rows; i++) for (let j = 0; j < columns; j++) face.positions.push(...point(i / rows, (j / (columns - 1)) * 2 - 1));
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < columns - 1; j++) {
+        const a = base + i * columns + j, b = a + 1, c = a + columns, d = c + 1;
+        if (flip) face.indices.push(a, c, b, b, c, d);
+        else face.indices.push(a, b, c, b, d, c);
       }
     }
+  };
+  const place = (theta, t, angle, off) => {
+    const r = at(t, 'r') + at(t, 'nr') * off;
+    return [r * Math.cos(theta + angle), centerY + at(t, 'y') + at(t, 'ny') * off, r * Math.sin(theta + angle)];
+  };
+  for (let f = 0; f < count; f++) {
+    const theta = phase + (f / count) * Math.PI * 2;
+    // The whole flap, both faces, in brass: the outline the rim belongs to.
+    for (const sign of [1, -1]) {
+      grid(brass, steps, across, (t, u) => place(theta, t, u * half(t), sign * 0.5 * thick(t) * (1 - u ** 4)), sign < 0);
+    }
+    // The chrome inlay: inset from the edge all round, rounded at both ends, a hair proud.
+    grid(chrome, inlaySteps, across, (s, u) => {
+      const t = inlayFrom + s * (inlayTo - inlayFrom);
+      const close = Math.sqrt(Math.max(0, 1 - (2 * s - 1) ** 6));
+      const inner = Math.max(0, half(t) - rim / at(t, 'r')) * close;
+      const along = half(t) > 0 ? (u * inner) / half(t) : 0;
+      return place(theta, t, u * inner, 0.5 * thick(t) * (1 - along ** 4) + lift);
+    }, false);
   }
   const make = ({ positions, indices }) => {
     const geometry = new GFX.BufferGeometry();
@@ -915,7 +934,7 @@ export function peelFlapGeometries(GFX, {
     geometry.computeVertexNormals();
     return geometry;
   };
-  return { top: make(faces.top), bottom: make(faces.bottom) };
+  return { top: make(chrome), bottom: make(brass) };
 }
 
 /** Split a blade's triangles at height `fromY`: the body, and the end beyond it. */
@@ -993,7 +1012,7 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMetal, 
     top: { x: 0, y: gripTop },
     length: spec.gripLength,
     bend: spec.gripCurve,
-    radius: handleRadius,
+    radius: handleRadius * 1.07,
     tipRadius,
   });
   const handle = new GFX.Mesh(geometry, hiltMaterial);
@@ -1011,13 +1030,16 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMetal, 
   hilt.add(tip);
   const tipDrop = Math.hypot(tipLength * Math.cos(spec.gripCurve), tipRadius * Math.sin(spec.gripCurve));
 
-  const bossSeatBottom = gripTop - 0.002;
-  const bossSeatTop = gripTop + 0.004;
+  // The grip carries on up as a short round neck, which the blade comes out of and the peel
+  // folds away from: one brass surface from the grip to the fold, with no collar or ledge.
+  const neckRadius = handleRadius * 1.07 - 0.0001;
+  const bossSeatBottom = gripTop - 0.004;
+  const bossSeatTop = gripTop + 0.012;
   const bossSeat = new GFX.Mesh(
-    new GFX.CylinderGeometry(handleRadius * 1.18, handleRadius * 1.18, bossSeatTop - bossSeatBottom, 48),
+    new GFX.CylinderGeometry(neckRadius, neckRadius, bossSeatTop - bossSeatBottom, 48),
     hiltMaterial,
   );
-  bossSeat.name = 'guard boss lower cap';
+  bossSeat.name = 'banana neck';
   bossSeat.position.set(0, (bossSeatBottom + bossSeatTop) / 2, 0);
   bossSeat.castShadow = true;
   bossSeat.receiveShadow = true;

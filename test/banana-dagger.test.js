@@ -102,7 +102,7 @@ test('banana dagger has no metal ball and none of the old crossguard parts', () 
   assert.equal(banana.pommelAsset.kind, 'banana-tip');
   assert.equal(banana.dimensions.pommelStyle, 'banana-tip');
   for (const old of ['metal ball pommel', 'continuous swept crossguard', 'quillon rounded terminal',
-    'guard central boss', 'leather wrap ridge', 'leather grip']) {
+    'guard central boss', 'leather wrap ridge', 'leather grip', 'guard boss lower cap']) {
     assert.ok(!all.some((name) => name.includes(old)), `no part called "${old}"`);
   }
   assert.ok(all.includes('banana grip'));
@@ -136,44 +136,73 @@ test('banana grip is a ridged brass tube bowed back along an arc', () => {
   assert.ok(maxX < 0.03, 'the bow is one way');
 });
 
-test('the guard is four small peel flaps hanging round the hand: chrome outside, brass skin toward the grip', () => {
+test('the guard is four small peel flaps hanging round the hand: a chrome inlay set in a brass body', () => {
   const banana = createBananaDagger(GFX);
-  const [inside, outside] = banana.guard.children;
+  const [inlay, body] = banana.guard.children;
   const base = banana.gripBounds.top;
 
   assert.equal(banana.guard.children.length, 2);
-  assert.equal(inside.material.color.getHexString(), 'fbfbfb', 'the outer faces are chrome');
-  assert.equal(outside.material.color.getHexString(), 'e0b84e', 'the faces toward the hand are brass');
-  const perFace = 4 * 41 * 13;
-  assert.equal(inside.geometry.attributes.position.count, perFace, 'four flaps');
-  assert.equal(outside.geometry.attributes.position.count, perFace);
+  assert.equal(inlay.material.color.getHexString(), 'fbfbfb', 'the inlay is chrome');
+  assert.equal(body.material.color.getHexString(), 'e0b84e', 'the body of the flaps is brass');
+  assert.equal(inlay.geometry.attributes.position.count, 4 * 41 * 13, 'four inlays');
+  assert.equal(body.geometry.attributes.position.count, 4 * 2 * 57 * 13, 'four flaps, a face each side');
 
-  // Which way the faces look, measured across the whole face: out from the axis, or in toward it.
-  const outwardness = (geometry) => {
-    const position = geometry.attributes.position, normal = geometry.attributes.normal;
-    let sum = 0, n = 0;
-    for (let i = 0; i < position.count; i++) {
-      const r = Math.hypot(position.getX(i), position.getZ(i));
-      if (r < 0.025) continue;
-      sum += (normal.getX(i) * position.getX(i) + normal.getZ(i) * position.getZ(i)) / r;
-      n++;
+  const extent = (geometry) => {
+    const p = geometry.attributes.position;
+    let reach = 0, high = -Infinity, low = Infinity;
+    for (let i = 0; i < p.count; i++) {
+      reach = Math.max(reach, Math.hypot(p.getX(i), p.getZ(i)));
+      high = Math.max(high, p.getY(i));
+      low = Math.min(low, p.getY(i));
     }
-    return sum / n;
+    return { reach, high, low };
   };
-  assert.ok(outwardness(inside.geometry) > 0.2, 'the chrome faces look out, away from the hand');
-  assert.ok(outwardness(outside.geometry) < -0.2, 'the brass faces look in, toward the hand');
+  const chrome = extent(inlay.geometry), brass = extent(body.geometry);
 
-  // Small enough to sheathe, and hanging down round the top of the grip like a cup.
-  const p = inside.geometry.attributes.position;
-  let reach = 0, high = -Infinity, low = Infinity;
+  // Small enough to sheathe, and hanging down round the hand like a cup.
+  assert.ok(brass.reach > 0.04 && brass.reach < 0.058, 'the flaps open to under 12 cm across, not a wide flare');
+  assert.ok(brass.high < base + 0.027, 'they do not rise up the blade');
+  assert.ok(brass.low < base - 0.025, 'they hang down round the hand');
+
+  // The inlay is set inside the brass: it stops short of the tip and the edge, leaving a rim.
+  assert.ok(chrome.low > brass.low + 0.004, 'brass rims the tip of each flap');
+  assert.ok(chrome.reach < brass.reach, 'and the outer edge');
+
+  // It faces out, away from the hand, where it is visible.
+  const normal = inlay.geometry.attributes.normal, p = inlay.geometry.attributes.position;
+  let sum = 0, n = 0;
   for (let i = 0; i < p.count; i++) {
-    reach = Math.max(reach, Math.hypot(p.getX(i), p.getZ(i)));
-    high = Math.max(high, p.getY(i));
-    low = Math.min(low, p.getY(i));
+    const r = Math.hypot(p.getX(i), p.getZ(i));
+    if (r < 0.025) continue;
+    sum += (normal.getX(i) * p.getX(i) + normal.getZ(i) * p.getZ(i)) / r;
+    n++;
   }
-  assert.ok(reach > 0.04 && reach < 0.055, 'the flaps open to under 11 cm across, not a wide flare');
-  assert.ok(high < base + 0.016, 'they do not rise up the blade');
-  assert.ok(low < base - 0.025, 'they hang down round the hand');
+  assert.ok(sum / n > 0.2, 'the chrome inlay looks out, away from the hand');
+});
+
+test('the peel is the grip\'s own skin: no collar, the grip runs up into a neck the peel folds from', () => {
+  const banana = createBananaDagger(GFX);
+  const all = names(banana);
+  const base = banana.gripBounds.top;
+
+  assert.ok(!all.includes('guard boss lower cap'), 'no collar disc');
+  assert.ok(all.includes('banana neck'));
+  const grip = banana.handle.geometry.attributes.position;
+  let top = 0;
+  for (let i = 0; i < 40; i++) top = Math.max(top, Math.hypot(grip.getX(i), grip.getZ(i)));
+  const neck = banana.bossSeat.geometry.parameters.radiusTop;
+  assert.ok(Math.abs(neck - top) < 0.0006, 'the neck is as wide as the top of the grip, so there is no ledge');
+
+  // Where the peel leaves the neck it sits within a millimetre of it, not out on a flange.
+  const brass = banana.guard.children[1].geometry.attributes.position;
+  let widest = 0;
+  for (let i = 0; i < brass.count; i++) {
+    // Only the part rising off the neck, not the hanging part further out at the same heights.
+    const r = Math.hypot(brass.getX(i), brass.getZ(i));
+    if (brass.getY(i) > base - 0.003 && brass.getY(i) < base + 0.010 && r < 0.03) widest = Math.max(widest, r);
+  }
+  assert.ok(widest < neck + 0.0016, 'the peel skin hugs the neck where it starts');
+  assert.ok(banana.bossSeatBounds.top - base > 0.01, 'the neck carries on above the grip');
 });
 
 test('banana finishes change independently and the grip is not dyed', () => {
