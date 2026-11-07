@@ -362,7 +362,7 @@ export function createDevilHornGuard(GFX, parent, material, {
  * bends and sweeps upward at a shallow angle. The root is reinforced and the
  * outer terminals taper continuously into sharp points.
  */
-export function createLightningGuard(GFX, parent, material, {
+function createLightningGuard(GFX, parent, material, {
   centerY, span = 0.22, thickness = 0.016, invert = false,
 } = {}) {
   if (!GFX?.Vector3 || !GFX?.BufferGeometry || !GFX?.BufferAttribute) {

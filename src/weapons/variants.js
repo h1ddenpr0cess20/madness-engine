@@ -77,10 +77,10 @@ export function createRegularMorningstar(GFX, options = {}) {
 const KRYSTAL_GRIP_COLOR = '#25364a';
 const KRYSTAL_THREAD_COLOR = '#a7e6ff';
 
-export function createKrystalSword(GFX, options = {}) {
+function createKrystalVariant(GFX, spec, slug, label, options) {
   return named(buildWeapon(GFX, {
-    ...BROADSWORD_SPEC,
-    name: 'krystal-sword',
+    ...spec,
+    name: slug,
     pommelStyle: 'krystal',
     guardStyle: 'lightning',
     guardThickness: 0.016,
@@ -92,25 +92,15 @@ export function createKrystalSword(GFX, options = {}) {
     threadColor: KRYSTAL_THREAD_COLOR,
     ...options,
     bladeMist: true,
-  }), 'Krystal Sword');
+  }), label);
+}
+
+export function createKrystalSword(GFX, options = {}) {
+  return createKrystalVariant(GFX, BROADSWORD_SPEC, 'krystal-sword', 'Krystal Sword', options);
 }
 
 export function createKrystalDagger(GFX, options = {}) {
-  return named(buildWeapon(GFX, {
-    ...DAGGER_SPEC,
-    name: 'krystal-dagger',
-    pommelStyle: 'krystal',
-    guardStyle: 'lightning',
-    guardThickness: 0.016,
-    wrapStyle: 'diamond',
-  }, {
-    bladeMetal: 'platinum',
-    hiltMetal: 'platinum',
-    gripColor: KRYSTAL_GRIP_COLOR,
-    threadColor: KRYSTAL_THREAD_COLOR,
-    ...options,
-    bladeMist: true,
-  }), 'Krystal Dagger');
+  return createKrystalVariant(GFX, DAGGER_SPEC, 'krystal-dagger', 'Krystal Dagger', options);
 }
 
 /** The inverted lightning-guard Magic Egg Sword with glass egg and white/yellow mist. */
@@ -147,32 +137,27 @@ export function createMagicEggGreatsword(GFX, options = {}) {
   return createMagicEggVariant(GFX, GREATSWORD_SPEC, 'magic-egg-greatsword', 'Magic Egg Greatsword', options);
 }
 
+const MARC_DEFAULTS = Object.freeze({
+  bladeMetal: 'gold',
+  hiltMetal: 'gold',
+  gripColor: '#101010',
+});
+
 /** Marc's family uses the engine metal egg, upward horn guard and diagonal grip wrap. */
+function marcsVariant(GFX, spec, label, options) {
+  return swordVariant(GFX, spec, label, 'metal-egg', 'horns', 'diagonal', { ...MARC_DEFAULTS, ...options });
+}
+
 export function createMarcsSword(GFX, options = {}) {
-  return swordVariant(GFX, BROADSWORD_SPEC, "Marc's Sword", 'metal-egg', 'horns', 'diagonal', {
-    bladeMetal: 'gold',
-    hiltMetal: 'gold',
-    gripColor: '#101010',
-    ...options,
-  });
+  return marcsVariant(GFX, BROADSWORD_SPEC, "Marc's Sword", options);
 }
 
 export function createMarcsDagger(GFX, options = {}) {
-  return swordVariant(GFX, DAGGER_SPEC, "Marc's Dagger", 'metal-egg', 'horns', 'diagonal', {
-    bladeMetal: 'gold',
-    hiltMetal: 'gold',
-    gripColor: '#101010',
-    ...options,
-  });
+  return marcsVariant(GFX, DAGGER_SPEC, "Marc's Dagger", options);
 }
 
 export function createMarcsGreatsword(GFX, options = {}) {
-  return swordVariant(GFX, GREATSWORD_SPEC, "Marc's Greatsword", 'metal-egg', 'horns', 'diagonal', {
-    bladeMetal: 'gold',
-    hiltMetal: 'gold',
-    gripColor: '#101010',
-    ...options,
-  });
+  return marcsVariant(GFX, GREATSWORD_SPEC, "Marc's Greatsword", options);
 }
 
 export function createMarcsMorningstar(GFX, options = {}) {

@@ -37,6 +37,23 @@ it in that set's mood. Start a new game by copying it:
 cd examples/starter && npm install && npm run dev
 ```
 
+## Bowling ball
+
+The engine includes a high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs: classic marble, spiral ribbons, flame ribbons, a two-tone split and a blotchy marble. Its palette and surface design can be changed at runtime without rebuilding the sphere:
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createBowlingBall } from 'madness-engine/props/bowling-ball';
+
+const bowlingBall = createBowlingBall(GFX, {
+  colors: { base: '#192d59', swirl: '#d83b7c', accent: '#f2ba64' },
+  design: 'marble', // 'spiral', 'flame', 'split' or 'blotch'
+});
+scene.add(bowlingBall.group);
+
+bowlingBall.setColors({ base: '#153a31', swirl: '#78d6ad', accent: '#f4e28b' });
+```
+
 ## The engine
 
 | Import | What it is |

@@ -29,7 +29,7 @@ export const STEPS = 36;
  * already scaled by the mood's speed — integrated on the CPU, so a change of
  * pace never makes the mist jump.
  */
-export function visionUniforms(GFX) {
+function visionUniforms(GFX) {
   return {
     uFlow: { value: 0 },
     uSwirl: { value: 1.4 },
