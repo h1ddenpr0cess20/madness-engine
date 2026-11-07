@@ -19,8 +19,8 @@ const spring = (s, k, c, dt, to = 0) => {
   s.p += s.v * dt;
 };
 
-export function createRock(GFX, { radius = 0.45 } = {}) {
-  const asset = createBoulder(GFX);
+export function createRock(GFX, { radius = 0.45, boulder = createBoulder } = {}) {
+  const asset = boulder(GFX);
   const group = new GFX.Group();
   group.name = 'rock';
   const body = new GFX.Group();
@@ -64,7 +64,7 @@ const hash = (x, y, z) => {
   return s - Math.floor(s);
 };
 
-const noise = (x, y, z) => {
+export const noise = (x, y, z) => {
   const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
   const xf = x - xi, yf = y - yi, zf = z - zi;
   const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
@@ -75,7 +75,7 @@ const noise = (x, y, z) => {
     w) * 2 - 1;
 };
 
-function cuttingPlanes(GFX) {
+export function cuttingPlanes(GFX) {
   const planes = [];
   for (let i = 0; i < 13; i++) {
     const a = i * 2.399963;

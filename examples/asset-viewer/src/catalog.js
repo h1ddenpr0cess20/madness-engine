@@ -17,6 +17,7 @@ import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
 import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
+import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
 import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
@@ -154,6 +155,7 @@ const HEROES = [
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   )), null, { metal: METAL_CHOICES }],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
+  ['rock (granite)', ({ colour = 'grey' } = {}) => import('../../../src/heroes/rock-granite.js').then((m) => m.createGraniteRock(GFX, { colour })), null, { colour: GRANITE_CHOICES }],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
   ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],
