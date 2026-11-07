@@ -59,7 +59,7 @@ export const BANANA_DAGGER_SPEC = Object.freeze({
 export const BANANA_BROADSWORD_SPEC = Object.freeze({
   ...BANANA_DAGGER_SPEC,
   name: 'banana-broadsword',
-  overallLength: 0.99,
+  overallLength: 0.886,
   bladeLength: 0.786,
   bladeWidth: 0.052,
   gripLength: 0.14,
