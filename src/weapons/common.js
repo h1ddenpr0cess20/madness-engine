@@ -1327,12 +1327,18 @@ function createGraniteGripCoreGeometry(GFX, {
 }
 
 /** Slightly waisted leather sleeve, fitted over the continuous stone core. */
-function createLeatherGripSleeveGeometry(GFX, radius, length) {
-  const axialSegments = 24, radialSegments = 48;
+function leatherGripRadiusScale(t, flareStart) {
+  const flareT = Math.max(0, Math.min(1, (t - flareStart) / (1 - flareStart)));
+  const easedFlare = flareT * flareT * (3 - 2 * flareT);
+  return 1.06 + 0.012 * Math.sin(Math.PI * t) + 0.17 * easedFlare;
+}
+
+function createLeatherGripSleeveGeometry(GFX, radius, length, flareStart) {
+  const axialSegments = 32, radialSegments = 48;
   const positions = [], uvs = [], indices = [];
   for (let row = 0; row <= axialSegments; row++) {
     const t = row / axialSegments, y = (t - 0.5) * length;
-    const sectionRadius = radius * (1.06 + 0.012 * Math.sin(Math.PI * t));
+    const sectionRadius = radius * leatherGripRadiusScale(t, flareStart);
     for (let segment = 0; segment < radialSegments; segment++) {
       const u = segment / radialSegments, angle = u * Math.PI * 2;
       positions.push(Math.cos(angle) * sectionRadius, y, Math.sin(angle) * sectionRadius);
@@ -1456,13 +1462,18 @@ function createGraniteHandleAssembly(GFX, group, spec, {
     clearcoat: 0.02,
     clearcoatRoughness: 0.82,
   });
-  const sleeveLength = spec.gripLength * 0.95;
+  // End the leather at the top of the carved grip loft, not at an arbitrary
+  // short cylinder. The loft ends 6 mm below gripTop and flares to 1.23x radius.
+  const sleeveBottom = gripBottom + spec.gripLength * 0.025;
+  const sleeveTop = gripTop - 0.006;
+  const sleeveLength = sleeveTop - sleeveBottom;
+  const shaftCenter = (sleeveBottom + sleeveTop) / 2;
+  const flareStart = (gripTop - 0.038 - sleeveBottom) / sleeveLength;
   const handle = new GFX.Mesh(
-    createLeatherGripSleeveGeometry(GFX, handleRadius, sleeveLength),
+    createLeatherGripSleeveGeometry(GFX, handleRadius, sleeveLength, flareStart),
     leatherMaterial,
   );
   handle.name = 'leather wrap over fused granite handle';
-  const shaftCenter = (gripBottom + gripTop) / 2;
   handle.position.set(0, shaftCenter, 0);
   handle.castShadow = true;
   handle.receiveShadow = true;
@@ -1480,7 +1491,7 @@ function createGraniteHandleAssembly(GFX, group, spec, {
     for (let i = 1; i < wraps; i++) {
       const t = i / wraps;
       const y = shaftCenter + (t - 0.5) * sleeveLength;
-      const wrapRadius = handleRadius * (1.06 + 0.012 * Math.sin(Math.PI * t)) + 0.00055;
+      const wrapRadius = handleRadius * leatherGripRadiusScale(t, flareStart) + 0.00055;
       const ring = new GFX.Mesh(new GFX.TorusGeometry(wrapRadius, 0.00058, 6, 48), wrapMaterial);
       ring.name = 'leather wrap ridge';
       ring.position.set(0, y, 0);
@@ -1503,8 +1514,8 @@ function createGraniteHandleAssembly(GFX, group, spec, {
     gripTop,
     gripBounds: Object.freeze({ bottom: gripBottom, top: gripTop }),
     handleBounds: Object.freeze({
-      bottom: shaftCenter - sleeveLength / 2,
-      top: shaftCenter + sleeveLength / 2,
+      bottom: sleeveBottom,
+      top: sleeveTop,
       length: sleeveLength,
     }),
     bezelBounds: null,
