@@ -57,6 +57,22 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build
+
+  # Keep the repository's interactive asset viewer buildable on pull requests.
+  asset-viewer:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/asset-viewer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: examples/asset-viewer/package-lock.json
+      - run: npm ci
+      - run: npm run build
       - name: Install Chromium for model preview
         run: |
           npm install --no-save --package-lock=false playwright@1.56.1
@@ -101,19 +117,3 @@ jobs:
           name: turkey-asset-viewer
           path: examples/asset-viewer/artifacts/turkey.png
           if-no-files-found: warn
-
-  # Keep the repository's interactive asset viewer buildable on pull requests.
-  asset-viewer:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: examples/asset-viewer
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: examples/asset-viewer/package-lock.json
-      - run: npm ci
-      - run: npm run build
