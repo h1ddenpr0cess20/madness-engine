@@ -58,8 +58,8 @@ function figure(species) {
   const p = WOOD_SPECIES[species];
   const bend = fractal(p.seed, 3, 4);
   const width = fractal(p.seed + 3, 6, 3);
-  const fine = fractal(p.seed + 5, 160, 2);
-  const finer = fractal(p.seed + 17, 420, 1);
+  const fine = fractal(p.seed + 5, 40, 2);
+  const finer = fractal(p.seed + 17, 90, 1);
   const pores = fractal(p.seed + 9, 240, 1);
   return (u, v) => {
     // The cathedral: the rings bend toward the centre of the cut, and drift along the board.
@@ -68,12 +68,13 @@ function figure(species) {
     // Two harmonics and a little drift in each band's spacing: the rings are not evenly laid.
     const wave = 0.5 + 0.35 * Math.sin(phase) + 0.15 * Math.sin(phase * 2.3 + 1.7 * width(u * 0.5, v));
     // Narrower and darker where the latewood is heavy; the band's width varies along the board.
-    const sharp = 1.5 + p.late * 4 + (width(u, v) - 0.5) * 2;
+    const sharp = 1 + p.late * 2 + (width(u, v) - 0.5) * 1.2;
     const late = p.late * Math.pow(wave, sharp);
     return {
       late,
       sap: ramp(0.6, 0.85, width(u * 0.6, v * 0.5)),
-      fibre: fine(u * 0.02, v) * 0.7 + finer(u * 0.01, v) * 0.3,
+      // The fibres follow the rings' bend and break up along the board: long, irregular, not scanlines.
+      fibre: fine(u * 0.06, v + warp * 0.15) * 0.7 + finer(u * 0.04, v + warp * 0.1) * 0.3,
       pore: pores(u * 0.012, v),
     };
   };
@@ -93,15 +94,15 @@ function paint(GFX, species, finish) {
     // Heartwood to the typical board colour, the latewood darker, and the sapwood's pale flush in the figure.
     let c = mix(p.heart, p.base, 0.7 + 0.3 * (1 - f.late));
     c = mix(c, p.sap, f.sap * 0.3);
-    c = c.map((x) => x * (1 - f.late * 0.18));
-    const streak = (f.fibre - 0.5) * 34 * fibreDepth;
-    const pore = ramp(0.7, 0.8, f.pore) * 40 * porosity;
+    c = c.map((x) => x * (1 - f.late * 0.08));
+    const streak = (f.fibre - 0.5) * 16 * fibreDepth;
+    const pore = ramp(0.72, 0.82, f.pore) * 22 * porosity;
     const tone = c.map((x) => x + streak - pore);
     return tone.map(clamp255);
   };
   const relief = (u, v) => {
     const f = field(u, v);
-    const h = 0.5 + f.late * 0.14 + (f.fibre - 0.5) * 0.45 * fibreDepth - ramp(0.7, 0.8, f.pore) * 0.3 * porosity;
+    const h = 0.5 + f.late * 0.1 + (f.fibre - 0.5) * 0.25 * fibreDepth - ramp(0.72, 0.82, f.pore) * 0.2 * porosity;
     const x = clamp255(128 + (h - 0.5) * 255);
     return [x, x, x];
   };
