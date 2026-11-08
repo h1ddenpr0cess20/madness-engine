@@ -66,7 +66,7 @@ function smoothLongitudeSeam(geometry) {
 export function createDeformer(GFX) {
   const v = new GFX.Vector3();
 
-  return function deform(geometry, base, lobes, { wobble, phase, scale, ampScale, freqScale, phaseScale }) {
+  return function deform(geometry, base, lobes, { wobble, phase, scale, ampScale, freqScale, phaseScale, bubbling = 0 }) {
     const attribute = geometry.attributes.position;
     const arr = attribute.array;
 
@@ -74,7 +74,17 @@ export function createDeformer(GFX) {
       v.set(base[i], base[i + 1], base[i + 2]);
       let d = 0;
       for (const l of lobes) {
-        d += l.amp * ampScale * Math.sin(l.freq * v.dot(l.dir) * freqScale + phase * l.speed * phaseScale + l.phase);
+        const alignment = v.dot(l.dir);
+        d += l.amp * ampScale * Math.sin(l.freq * alignment * freqScale + phase * l.speed * phaseScale + l.phase);
+
+        if (bubbling > 0) {
+          // Localized, slowly inflating swells mimic bubbles of gas rising
+          // beneath the molten crust. They pulse independently per lobe.
+          const pulse = 0.5 + 0.5 * Math.sin(phase * (0.62 + l.speed * 0.18) + l.phase * 1.7);
+          const radius = 1 - alignment;
+          const envelope = Math.exp(-radius * radius * 72);
+          d += bubbling * pulse * envelope;
+        }
       }
       const s = (1 + d * wobble) * scale;
       arr[i] = v.x * s; arr[i + 1] = v.y * s; arr[i + 2] = v.z * s;

@@ -1,8 +1,8 @@
-import { createLavaMaterial } from '../textures/lava.js';
+import { createLavaPitMaterial } from '../textures/lavapit.js';
 
 /**
  * The dungeon as it is drawn: flagstone floors, brick walls falling away into
- * the dark, the lava (lava.js), torches with live flames, and the stairs down — a
+ * the dark, the lava (lavapit.js), torches with live flames, and the stairs down — a
  * ring of runes on the floor under a stone arch. Every texture is painted on
  * a canvas at startup; under node (the tests) there is no canvas and the
  * meshes go without.
@@ -222,14 +222,14 @@ export function createDungeonMeshes(GFX, built) {
   }
   let lavaMaterial = null;
   if (built.lava.position.length) {
-    lavaMaterial = createLavaMaterial(GFX);
+    lavaMaterial = createLavaPitMaterial(GFX);
     const lava = new GFX.Mesh(geometry(built.lava), lavaMaterial);
     lava.frustumCulled = false;
     group.add(lava);
   }
   return {
     group,
-    /** The lava moving: its plates drifting, its pools welling, its bubbles bursting. */
+    /** The lava pit shader (lavapit.js) moves its crust, melt, glints, sparks and bubbles. */
     update(time) {
       if (!lavaMaterial) return;
       lavaMaterial.uniforms.uTime.value = time;

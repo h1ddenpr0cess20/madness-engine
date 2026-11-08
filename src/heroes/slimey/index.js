@@ -6,10 +6,13 @@ import { createPalette } from './palette.js';
 import { createBubbles, createCore, createGlow, createShell } from './parts.js';
 import { applyMolten, moltenColor } from './molten.js';
 import { METALS } from '../../props/metalglobe.js';
+import { createLavaMaterial } from '../../textures/lava.js';
 
 export { METALS };
 
-export function createSlimeOrb({ stage, GFX, metal = null, molten = false }) {
+export function createSlimeOrb({ stage, GFX, metal = null, molten = false, lava = false }) {
+  if (lava && metal !== null) throw new Error('Slimey cannot be both lava and metal');
+  if (lava && molten) throw new Error('Slimey cannot be both lava and molten glass');
   buildEnvironment({ stage, GFX });
 
   const paletteAt = createPalette(GFX);
@@ -21,13 +24,23 @@ export function createSlimeOrb({ stage, GFX, metal = null, molten = false }) {
   const core = createCore(GFX);
   const glow = createGlow(GFX, shell.geometry);
   const bubbles = createBubbles(GFX);
+  const lavaMaterial = lava ? createLavaMaterial(GFX, { mapping: 'local', scale: 4.35 }) : null;
+  const lavaGlowMesh = lava ? new GFX.Mesh(shell.geometry, lavaMaterial.hotMaterial) : null;
+  if (lava) {
+    shell.mesh.material = lavaMaterial;
+    lavaGlowMesh.name = 'lava-glow';
+    lavaGlowMesh.scale.setScalar(1.0015);
+    core.mesh.visible = false;
+    glow.mesh.visible = false;
+    for (const bubble of bubbles.meshes) bubble.visible = false;
+  }
 
   const moltenAt = molten ? moltenColor(GFX) : null;
   if (molten) applyMolten(GFX, { shell, glow });
 
   const orb = new GFX.Group();
   orb.name = 'slime_orb';
-  orb.add(shell.mesh, glow.mesh);
+  orb.add(shell.mesh, ...(lavaGlowMesh ? [lavaGlowMesh] : []), glow.mesh);
   if (!molten) orb.add(core.mesh, ...bubbles.meshes);
 
   let mode = MODES.idle;
@@ -91,6 +104,7 @@ export function createSlimeOrb({ stage, GFX, metal = null, molten = false }) {
       ampScale: 1,
       freqScale: 2.35,
       phaseScale: 2.2,
+      bubbling: lava ? 0.075 + 0.018 * Math.sin(phase * 0.72) : 0,
     });
 
     deform(core.geometry, core.base, coreLobes, {
@@ -102,7 +116,10 @@ export function createSlimeOrb({ stage, GFX, metal = null, molten = false }) {
       phaseScale: -3,
     });
 
-    if (molten) {
+    if (lava) {
+      lavaMaterial.uniforms.uTime.value = phase;
+      lavaMaterial.uniforms.uBright.value = 0.96 + 0.04 * Math.sin(phase * 1.7);
+    } else if (molten) {
       // Heat drifts slowly, and rises with energy as if the gather were being reheated.
       const heat = Math.min(1, 0.45 + Math.sin(hue * 5) * 0.18 + energy * 0.35);
       moltenAt(heat, tmpColor);
@@ -118,8 +135,8 @@ export function createSlimeOrb({ stage, GFX, metal = null, molten = false }) {
       core.material.emissive.copy(tmpColor);
       core.material.emissiveIntensity = selectedMetal ? 0 : m.glow + energy * ENERGY_GAIN.glow;
     }
-    if (!molten) glow.material.uniforms.uColor.value.copy(tmpColor);
-    glow.material.uniforms.uStrength.value = halo * 6.0 * (0.85 + Math.sin(phase * 2.1) * 0.15);
+    if (!molten && !lava) glow.material.uniforms.uColor.value.copy(tmpColor);
+    if (!lava) glow.material.uniforms.uStrength.value = halo * 6.0 * (0.85 + Math.sin(phase * 2.1) * 0.15);
 
     core.mesh.position.set(
       Math.sin(phase * 0.7) * 0.06,
@@ -129,19 +146,24 @@ export function createSlimeOrb({ stage, GFX, metal = null, molten = false }) {
     core.mesh.rotation.y = phase * 0.3;
     orb.rotation.y += dt * m.spin;
 
-    for (const b of bubbles.meshes) {
-      const o = b.userData.orbit;
-      const a = o.a + phase * o.sp * bub;
-      b.position.set(Math.cos(a) * o.rr, o.y + Math.sin(phase * 0.8 + o.a) * 0.12, Math.sin(a) * o.rr);
+    if (!lava) {
+      for (const b of bubbles.meshes) {
+        const o = b.userData.orbit;
+        const a = o.a + phase * o.sp * bub;
+        b.position.set(Math.cos(a) * o.rr, o.y + Math.sin(phase * 0.8 + o.a) * 0.12, Math.sin(a) * o.rr);
+      }
     }
   };
 
   stage.setObject(orb);
 
   glow.mesh.castShadow = glow.mesh.receiveShadow = false;
+  if (lavaGlowMesh) lavaGlowMesh.castShadow = lavaGlowMesh.receiveShadow = false;
   for (const b of bubbles.meshes) b.castShadow = b.receiveShadow = false;
 
   const api = {
+    appearance: lava ? 'lava' : molten ? 'molten' : metal !== null ? 'metal' : 'slime',
+    lavaMaterial,
     get state() { return state; },
     setState(next) {
       if (!Object.hasOwn(MODES, next) || next === state) return;
@@ -167,4 +189,8 @@ export function createMetalSlimeOrb({ stage, GFX, metal = 'steel' }) {
 /** Slimey as molten glass: the same orb, lobes and moods, in hot orange glass with a procedural swirl painted on the shell. */
 export function createMoltenSlimeOrb({ stage, GFX }) {
   return createSlimeOrb({ stage, GFX, molten: true });
+}
+
+export function createLavaSlimeOrb({ stage, GFX }) {
+  return createSlimeOrb({ stage, GFX, lava: true });
 }
