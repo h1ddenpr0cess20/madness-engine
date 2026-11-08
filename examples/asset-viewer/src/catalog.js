@@ -154,6 +154,7 @@ const HEROES = [
     h.createMetalMorningStar(GFX, { metal }),
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   )), null, { metal: METAL_CHOICES }],
+  ['book', () => import('../../../src/heroes/book.js').then((m) => { const b = m.createBook(GFX, { autoplay: true }); return Object.assign(b, { frame: { center: [0, 0.04, 0], radius: 0.4 } }); })],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['rock (granite)', ({ colour = 'grey' } = {}) => import('../../../src/heroes/rock-granite.js').then((m) => m.createGraniteRock(GFX, { colour })), null, { colour: GRANITE_CHOICES }],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],

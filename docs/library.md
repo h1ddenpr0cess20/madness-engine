@@ -261,6 +261,7 @@ The balls the games are played as, each with what it is made of.
 
 | Path | Versions (games) | What it is |
 |---|---|---|
+| `heroes/book` | (engine) | A hardcover book: the cover is one welded piece (back board, hinge groove, spine, hinge groove, front board) bent every frame from its rest shape by a curvature field, the way Slimey's orb is deformed from its `base`; leaves of paper are rooted in the spine and curl through the gutter as they turn. `createBook(GFX, { leaves, size, autoplay })` gives `pose({ open, turn })`, `open()`, `close()`, `turnTo(n)`, `next()`, `prev()` and `update(dt)`. |
 | `heroes/tater` | `tater` (debater) | The Tater: a potato with a debater's opinions, rough-skinned, stepping about the pan (`createPotato({ GFX })`). |
 | `heroes/debater-egg` | `debater-egg` (debater) | The Egg: Marc, smooth and speckled, rocking and rolling (`createEgg({ GFX })`). The metal version (`createMetalEgg({ GFX, metal })`) uses all 12 shared finishes and supports `setMetal(name)`. The clear-glass version (`createGlassEgg({ GFX, mist })`) uses the engine's transmissive glass and optionally carries animated white mist with a restrained warm-yellow centre; `setMist(show)` toggles it. Both reuse the same Egg shape and movement. |
 | `heroes/alan` | `alan` (alan) | Alan's eye: a sphere of clear glass with an iris painted deep inside it, the marble's original (`createEye(GFX)`), its attention, hung in its sky (`textures/skies/cloudsea`). |
