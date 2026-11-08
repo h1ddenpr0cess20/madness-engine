@@ -60,7 +60,7 @@ const onBody = (p) => unit([
 ]);
 
 /**
- * A feather's colour from its root a to its tip b (width r1 at the root,
+ * A feather's color from its root a to its tip b (width r1 at the root,
  * r2 at the tip): `paint(p, n, t, edge)`, with t 0 at the root to 1 at the tip
  * and edge 0 on the shaft to 1 at the rim.
  */
@@ -84,12 +84,12 @@ const bodyPlumage = (p, n) => {
   const upper = smooth(-0.2, 0.8, n[1]);
   const shimmer = 0.5 + 0.5 * Math.sin(p[0] * 40 + p[2] * 25 + tile.id * 6);
   const base = mix(INK, BLUE_BLACK, 0.2 + upper * 0.2);
-  const colour = mix(base, GREEN_SHEEN, upper * (0.1 + 0.25 * shimmer));
-  return colour.map((v) => v * mottling * fine * (0.82 + tile.height * 0.26));
+  const color = mix(base, GREEN_SHEEN, upper * (0.1 + 0.25 * shimmer));
+  return color.map((v) => v * mottling * fine * (0.82 + tile.height * 0.26));
 };
 
-// The feathers' own colours are cheap constants with a rim picked out: each vertex asks every feather near it for
-// its colour, so the textured torso colour is kept for the torso itself.
+// The feathers' own colors are cheap constants with a rim picked out: each vertex asks every feather near it for
+// its color, so the textured torso color is kept for the torso itself.
 const FEATHER = mix(INK, BLUE_BLACK, 0.3);
 const COVERT_BASE = mix(WING_BROWN, COVERT, 0.6);
 
@@ -100,7 +100,7 @@ const bodyFeather = (a, b, r1, r2) => plumage(a, b, r1, r2, (p, n, t, edge) => {
 });
 
 /** The rust-brown wing coverts over the shoulder: scalloped, a pale edge to each. */
-const covertColour = (p) => {
+const covertColor = (p) => {
   const cell = { height: 0, id: 0, edge: 0 };
   shingles(p, 0.014, 2, 1.6, cell);
   const c = mix(WING_BROWN, COVERT, 0.35 + cell.id * 0.5);
@@ -114,7 +114,7 @@ const covert = (a, b, r1, r2) => plumage(a, b, r1, r2, (p, n, t, edge) => {
 });
 
 /** A primary: dark brown with cream bars across it, as the tom's wing is barred. */
-const primaryColour = (i) => (p, n, t, edge) => {
+const primaryColor = (i) => (p, n, t, edge) => {
   const bar = (a, b) => smooth(a, a + 0.02, t) * (1 - smooth(b, b + 0.02, t));
   const barred = Math.max(bar(0.22, 0.29), bar(0.4, 0.46), bar(0.58, 0.64), bar(0.76, 0.82));
   const c = mix(WING_BROWN, WING_CREAM, barred * 0.85);
@@ -123,7 +123,7 @@ const primaryColour = (i) => (p, n, t, edge) => {
 };
 
 /** Each tail feather: dark crossbars, then a broad cream band, a dark sub-tip and a cream rim, as on a tom's fan. */
-const fanColour = (i) => {
+const fanColor = (i) => {
   const variation = 0.5 + 0.5 * Math.sin(i * 8.13 + 0.8);
   const ground = mix(TAIL_BROWN, TAIL_RUST, 0.2 + variation * 0.35);
   return (p, n, t, edge) => {
@@ -178,7 +178,7 @@ export default {
   ],
 
   materials: {
-    // Dull feathers: little specular, so the black body reads black and not grey under a bright sky.
+    // Dull feathers: little specular, so the black body reads black and not gray under a bright sky.
     feather: { roughness: 0.7, specularIntensity: 0.3, sheen: 0.05, sheenColor: '#2e444b', sheenRoughness: 0.5 },
     flight: { roughness: 0.66, specularIntensity: 0.35, sheen: 0.12, sheenColor: '#6b5a4c', sheenRoughness: 0.5 },
     skin: { roughness: 0.6, sheen: 0.2, sheenColor: '#6b8c99' },
@@ -213,7 +213,7 @@ export default {
     for (const m of [1, -1]) {
       const bone = 'wing' + side(m);
       s.ellipsoid([m * 0.125, 0.27, -0.035], [0.045, 0.08, 0.14], {
-        ...coat, bone, k: 0.018, rot: [0.1, 0, m * 0.1], color: covertColour,
+        ...coat, bone, k: 0.018, rot: [0.1, 0, m * 0.1], color: covertColor,
       });
 
       for (let row = 0; row < 3; row++) {
@@ -231,7 +231,7 @@ export default {
         const f = i / 7;
         const a = [m * (0.135 + 0.004 * f), 0.285 - 0.022 * f, 0.045 - 0.028 * f];
         const b = [m * (0.158 + 0.003 * f), 0.1 - 0.01 * f, -0.1 - 0.03 * f];
-        s.flake(a, b, [m, 0, 0], 0.0115, 0.0175, 0.24, { color: plumage(a, b, 0.0115, 0.0175, primaryColour(i)), mat: 'flight', bone, k: 0.0015 });
+        s.flake(a, b, [m, 0, 0], 0.0115, 0.0175, 0.24, { color: plumage(a, b, 0.0115, 0.0175, primaryColor(i)), mat: 'flight', bone, k: 0.0015 });
       }
     }
 
@@ -248,7 +248,7 @@ export default {
         const L = length * (1 - 0.16 * f * f);
         const a = add(pivot, scale(dir, 0.01));
         const b = add(pivot, scale(dir, L));
-        s.flake(a, b, face, 0.011, 0.034, 0.26, { color: plumage(a, b, 0.011, 0.034, fanColour(i)), mat: 'flight', bone: 'fan', k: 0.0016 });
+        s.flake(a, b, face, 0.011, 0.034, 0.26, { color: plumage(a, b, 0.011, 0.034, fanColor(i)), mat: 'flight', bone: 'fan', k: 0.0016 });
       }
 
       // Short coverts hide the roots of the feathers where they meet the rump.
@@ -256,7 +256,7 @@ export default {
         const f = (i / 10) * 2 - 1;
         const a = [f * 0.085, 0.29, -0.12];
         const b = [f * 0.1, 0.335, -0.15];
-        s.flake(a, b, [0, 0, 1], 0.012, 0.007, 0.3, { color: covertColour, mat: 'feather', bone: 'fan', k: 0.0013 });
+        s.flake(a, b, [0, 0, 1], 0.012, 0.007, 0.3, { color: covertColor, mat: 'feather', bone: 'fan', k: 0.0013 });
       }
     });
 
