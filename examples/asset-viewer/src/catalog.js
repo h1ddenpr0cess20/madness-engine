@@ -142,6 +142,65 @@ function sculptedItem(def, category, group, name, source, job = null) {
   };
 }
 
+
+/** What was last written into the book, kept across rebuilds (a different page count makes a new book). */
+let bookText = '';
+const PAGE_CHOICES = Object.assign([20, 40, 80, 120, 200], { default: 80 });
+
+/**
+ * The Book of Madness, with what to try it with: open and turn it by buttons, by sliders (to see a hinge or a
+ * leaf at any point of its travel), by clicking it or with the arrow keys; and its cloth, foil, emblem, trim,
+ * paper, title and words to change. Everything it calls is the book's own API (heroes/book.js).
+ */
+async function bookItem(pages) {
+  const m = await import('../../../src/heroes/book.js');
+  const book = m.createBook(GFX, { pageCount: pages });
+  let seed = 0;
+  if (bookText.trim()) book.setText(bookText);
+  const turned = () => book.leaves.reduce((n, l) => n + l.turn, 0);
+  const named = (table) => Object.entries(table).map(([name, hex]) => [hex, name]);
+  const style = (key) => ({ get: () => book.style[key], set: (v) => book.setStyle({ [key]: v }) });
+  const ui = [
+    { type: 'buttons', items: [
+      { label: 'Open', onClick: () => book.open() }, { label: 'Close', onClick: () => book.close() },
+      { label: '◀ Page', title: 'Turn back (←)', onClick: () => book.prev() }, { label: 'Page ▶', title: 'Turn on (→)', onClick: () => book.next() },
+    ] },
+    { type: 'range', label: 'Cover', min: 0, max: 1, step: 0.005, get: () => book.openness, set: (v) => book.pose({ open: v }) },
+    { type: 'range', label: 'Leaf', min: 0, max: book.dimensions.leaves, step: 0.01, get: turned, set: (v) => book.pose({ open: 1, turn: v }) },
+    { type: 'check', label: 'Autoplay', get: () => book.autoplay, set: (on) => { book.autoplay = on; } },
+    { type: 'text', label: 'Title', ...style('title') },
+    { type: 'text', label: 'Subtitle', ...style('subtitle') },
+    { type: 'select', label: 'Cloth', options: named(m.CLOTHS), ...style('cloth') },
+    { type: 'color', label: 'Any cloth', ...style('cloth') },
+    { type: 'select', label: 'Foil', options: named(m.FOILS), ...style('foil') },
+    { type: 'select', label: 'Emblem', options: m.EMBLEMS, ...style('emblem') },
+    { type: 'select', label: 'Trim', options: m.TRIMS, ...style('trim') },
+    { type: 'select', label: 'Paper', options: named(m.PAPERS), ...style('paper') },
+    { type: 'check', label: 'Blood drips', ...style('drips') },
+    { type: 'buttons', items: [
+      { label: 'New ramblings', onClick: () => book.setPages(null, ++seed) },
+      { label: 'Blank pages', onClick: () => book.setPages(() => '') },
+    ] },
+    { type: 'select', label: 'Writing', options: [['hand', "madman's hand"], ['print', 'plain print']], get: () => (book.style.print ? 'print' : 'hand'), set: (v) => book.setStyle({ print: v === 'print' }) },
+    { type: 'textarea', label: 'Your own text: it is cut into pages as it is measured. A line is a paragraph, a blank line a gap; *stress*, ~strike~, #Heading.', apply: 'Write it in', value: bookText,
+      onApply: (text) => {
+        bookText = text;
+        if (!text.trim()) { book.setStyle({ print: false }); book.setPages(null); return 'The madman is writing again.'; }
+        const { pages: needed, fits } = book.setText(text);
+        return fits ? `${needed} of ${book.pageCount} pages written.` : `That is ${needed} pages and this book has ${book.pageCount}: choose a larger Pages option (your text is kept).`;
+      } },
+  ];
+  return {
+    group: book.group,
+    update: (dt) => book.update(dt),
+    frame: { center: [0, 0.04, 0], radius: 0.42 },
+    ui,
+    click: (hit) => book.touch(book.group.worldToLocal(hit.point.clone()).x),
+    key: (k) => (k === 'ArrowRight' ? (book.next(), true) : k === 'ArrowLeft' ? (book.prev(), true) : false),
+    book,
+  };
+}
+
 /** Heroes are made by functions; each returns something with the group to draw somewhere inside it. */
 const objectOf = (r) => (r?.isObject3D ? r : r?.group ?? r?.player ?? r?.marble ?? r?.hamster ?? r?.root ?? r?.mesh ?? r);
 const HEROES = [
@@ -154,7 +213,7 @@ const HEROES = [
     h.createMetalMorningStar(GFX, { metal }),
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   )), null, { metal: METAL_CHOICES }],
-  ['book', () => import('../../../src/heroes/book.js').then((m) => { const b = m.createBook(GFX, { autoplay: true }); return Object.assign(b, { frame: { center: [0, 0.04, 0], radius: 0.4 } }); })],
+  ['book', ({ pages = 80 } = {}) => bookItem(pages), null, { pages: PAGE_CHOICES }],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['rock (granite)', ({ colour = 'grey' } = {}) => import('../../../src/heroes/rock-granite.js').then((m) => m.createGraniteRock(GFX, { colour })), null, { colour: GRANITE_CHOICES }],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
@@ -343,7 +402,7 @@ function heroItem([name, make, palette = null, options = null]) {
       const mist = made?.mist && typeof made.setMist === 'function'
         ? { get: () => made.mist.visible, set: (on) => made.setMist(on) }
         : made?.mist;
-      return { object, pose, frame: made?.frame, mist, ...dressOf(made), info: { Source: 'heroes', ...countOf(object) } };
+      return { object, pose, frame: made?.frame, mist, ui: made?.ui, click: made?.click, key: made?.key, made, ...dressOf(made), info: { Source: 'heroes', ...countOf(object) } };
     },
   };
 }

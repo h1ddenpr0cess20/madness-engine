@@ -52,7 +52,7 @@ test('the cover is one closed, welded piece, in every pose', () => {
 });
 
 test('each leaf is a closed slab, turned or not', () => {
-  for (const turn of [0, 3.4, 20]) {
+  for (const turn of [0, 3.4, 40]) {
     book.pose({ open: 1, turn });
     for (const leaf of book.leaves) {
       closed(leaf.geometry);
@@ -98,7 +98,7 @@ test('the pages stay on the spine at every stage of opening and turning', () => 
     const l = bounds(leaf.geometry), c = bounds(cover.geometry);
     assert.ok(l.lo[2] >= c.lo[2] && l.hi[2] <= c.hi[2]);
   };
-  for (const pose of [{ open: 0 }, { open: 0.6 }, { open: 0.9 }, { open: 1, turn: 0 }, { open: 1, turn: 7.5 }, { open: 1, turn: 20 }]) {
+  for (const pose of [{ open: 0 }, { open: 0.6 }, { open: 0.9 }, { open: 1, turn: 0 }, { open: 1, turn: 7.5 }, { open: 1, turn: 40 }]) {
     book.pose(pose);
     for (const leaf of book.leaves) near(leaf, book.cover);
   }
@@ -110,24 +110,31 @@ test('turned leaves lie over on the other side in order, each higher than the la
   for (let k = 1; k < 6; k++) assert.ok(top[k].hi[1] > top[k - 1].hi[1] - 1e-9, `leaf ${k + 1} is under leaf ${k}`);
   const left = bounds(book.leaves[0].geometry);
   assert.ok(left.lo[0] < -0.2, 'a turned leaf lies on the left');
-  const right = bounds(book.leaves[19].geometry);
+  const right = bounds(book.leaves[book.leaves.length - 1].geometry);
   assert.ok(right.hi[0] > 0.2, 'an unturned leaf lies on the right');
 });
 
 test('leaves do not pass through each other when stacked or fanned', () => {
-  // On the spread cross-section a leaf's middle line must keep a clear gap from the next one's.
-  for (const pose of [{ open: 0 }, { open: 0.85 }, { open: 1, turn: 0 }, { open: 1, turn: 4 }, { open: 1, turn: 20 }]) {
-    book.pose(pose);
-    const rows = book.leaves.map((l) => {
-      const P = l.geometry.attributes.position.array;
-      const out = new Map();
-      for (let v = 0; v < P.length; v += 3) if (Math.abs(P[v + 2] - P[2]) < 1e-9) out.set(Math.round(P[v] * 2000), P[v + 1]);
-      return out;
-    });
-    for (let k = 0; k < rows.length - 1; k++) {
-      for (const [x, y] of rows[k]) {
-        const other = rows[k + 1].get(x);
-        if (other !== undefined) assert.ok(Math.abs(y - other) > 0.0004, `leaves ${k + 1} and ${k + 2} meet at ${x} in ${JSON.stringify(pose)}`);
+  const segment = (px, py, ax, ay, bx, by) => {
+    const dx = bx - ax, dy = by - ay;
+    const t = clamp01(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1));
+    return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+  };
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  for (const leaves of [8, 40]) {
+    const b = createBook(GFX, { leaves });
+    const pitch = Math.min(0.0024, 0.075 / leaves);
+    for (const pose of [{ open: 0 }, { open: 0.6 }, { open: 0.85 }, { open: 1, turn: 0 }, { open: 1, turn: leaves / 4 }, { open: 1, turn: leaves }]) {
+      b.pose(pose);
+      const lines = b.leaves.map((l) => l.centerline);
+      for (let k = 0; k < lines.length - 1; k++) {
+        const A = lines[k], B = lines[k + 1];
+        for (let i = 4; i < A.length; i += 2) {
+          for (let j = 0; j < B.length - 2; j += 2) {
+            // Middle lines of neighbours stay clear by a good part of a leaf's pitch, however the spine is rolled.
+            assert.ok(segment(A[i], A[i + 1], B[j], B[j + 1], B[j + 2], B[j + 3]) > pitch * 0.25, `leaves ${k + 1} and ${k + 2} meet in ${JSON.stringify(pose)} (${leaves} leaves)`);
+          }
+        }
       }
     }
   }
@@ -151,4 +158,24 @@ test('it plays: open, turn, turn back and shut, and the leaf in flight curls', (
   assert.ok(b.openness < 1e-9);
   assert.ok(curl > 0.2, `the free edge trailed by ${curl}`);
   assert.ok(Math.abs(b.leaves[0].curl) < 1e-3, 'and it settles flat');
+});
+
+test('the words are the caller\'s: a list, a function, or one long text', () => {
+  const b = createBook(GFX, { leaves: 4, pages: ['one', 'two'] });
+  assert.equal(b.pageCount, 8);
+  b.setPages((n) => `page ${n}`).setPages(null, 3).setPages(['a']);
+  // With no canvas (here) a long text is counted by its length; a short one fits, a long one says it does not.
+  assert.deepEqual(b.setText('word '.repeat(300)), { pages: 1, fits: true });
+  const long = b.setText('x'.repeat(1900 * 9));
+  assert.equal(long.pages, 9);
+  assert.equal(long.fits, false);
+});
+
+test('how many pages is the caller\'s too, and the title, cloth and emblem', () => {
+  for (const pageCount of [2, 20, 120]) assert.equal(createBook(GFX, { pageCount }).pageCount, Math.ceil(pageCount / 2) * 2);
+  const b = createBook(GFX, { pageCount: 10, title: 'Another Book', cloth: '#223344', emblem: 'eye', trim: 'runes' });
+  assert.equal(b.style.title, 'Another Book');
+  b.setStyle({ emblem: 'skull', paper: '#eeeeee', print: true });
+  assert.equal(b.style.emblem, 'skull');
+  assert.equal(b.style.print, true);
 });

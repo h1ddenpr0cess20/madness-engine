@@ -137,6 +137,7 @@ function sizeCamera() {
 function clearStage() {
   for (const l of stage.fixtureLights) l.intensity = 0;
   if (view.built) scene.remove(view.built.object);
+  renderItemUi(null);
   plate.visible = false;
   markGroup.clear();
 }
@@ -168,6 +169,7 @@ async function show(item) {
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
+    renderItemUi(built.ui);
     // What an item can switch on and off (the glass globe's mist).
     $('togglegroup').style.display = built.mist ? '' : 'none';
     if (built.mist) $('mistbox').checked = built.mist.get();
@@ -219,6 +221,65 @@ async function show(item) {
   renderFlag();
   drawMarks();
   markSelected();
+}
+
+
+// ———————————————————————————————————————————————— what an item offers
+
+let uiTimer = null;
+
+/**
+ * An item can hand over `ui`, a list of controls for itself: { type: 'buttons', items: [{ label, onClick }] },
+ * { type: 'range', label, min, max, step, get, set }, { type: 'select', label, options, get, set },
+ * { type: 'color' | 'text', label, get, set }, { type: 'check', label, get, set } and { type: 'textarea', label, apply, onApply }.
+ * Those with a `get` follow the item while it moves on its own.
+ */
+function renderItemUi(specs) {
+  clearInterval(uiTimer);
+  const rows = $('itemuirows');
+  rows.replaceChildren();
+  $('itemui').style.display = specs?.length ? '' : 'none';
+  if (!specs?.length) return;
+  const syncs = [];
+  for (const sp of specs) {
+    if (sp.type === 'buttons') {
+      rows.append(el('div', { className: 'line' }, ...sp.items.map((b) => el('button', { title: b.title ?? '', onclick: () => b.onClick() }, b.label))));
+    } else if (sp.type === 'textarea') {
+      const area = el('textarea', { placeholder: sp.placeholder ?? '' });
+      const status = el('div', { style: 'color:var(--dim)' });
+      area.value = sp.value ?? '';
+      rows.append(el('div', { className: 'group' }, el('label', { style: 'color:var(--dim)' }, sp.label), area, el('div', { className: 'line' }, el('button', { onclick: () => { status.textContent = sp.onApply(area.value) ?? ''; } }, sp.apply ?? 'Apply')), status));
+    } else {
+      let input;
+      const readout = el('span', { style: 'min-width:34px;text-align:right;color:var(--dim)' });
+      if (sp.type === 'range') {
+        input = el('input', { type: 'range', min: sp.min, max: sp.max, step: sp.step });
+        input.oninput = () => { sp.set(Number(input.value)); readout.textContent = Number(input.value).toFixed(2); };
+        syncs.push(() => { if (document.activeElement !== input || !sp.get) { if (sp.get) { input.value = sp.get(); readout.textContent = Number(input.value).toFixed(2); } } });
+      } else if (sp.type === 'select') {
+        input = el('select', {}, ...sp.options.map((o) => (Array.isArray(o) ? el('option', { value: o[0] }, o[1]) : el('option', { value: o }, o))));
+        input.onchange = () => sp.set(input.value);
+        syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
+      } else if (sp.type === 'color') {
+        input = el('input', { type: 'color', style: 'padding:0;width:34px;height:22px' });
+        input.oninput = () => sp.set(input.value);
+        syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
+      } else if (sp.type === 'text') {
+        input = el('input', { type: 'text' });
+        input.onchange = () => sp.set(input.value);
+        syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
+      } else if (sp.type === 'check') {
+        input = el('input', { type: 'checkbox' });
+        input.onchange = () => sp.set(input.checked);
+        syncs.push(() => { if (sp.get) input.checked = !!sp.get(); });
+      }
+      if (!input) continue;
+      rows.append(el('div', { className: 'line' }, el('label', {}, sp.label), input, sp.type === 'range' ? readout : ''));
+    }
+  }
+  const sync = () => { for (const f of syncs) f(); };
+  sync();
+  uiTimer = setInterval(sync, 200);
 }
 
 /** The stage back to its plain light, sky and room, before an item dresses it. */
@@ -287,7 +348,7 @@ function animGroup(built) {
     const select = el('select', { className: 'opt' }, ...values.map((v) => el('option', { value: v }, String(v))));
     // Named choices (a metal) are kept as names; numbers (a building's level) as numbers.
     const numeric = values.every((v) => typeof v === 'number');
-    if (!values.includes(options[name])) options[name] = values[0];
+    if (!values.includes(options[name])) options[name] = values.default ?? values[0];
     select.value = options[name];
     select.onchange = () => { options[name] = numeric ? Number(select.value) : select.value; show(view.item); };
     const label = ({ bladeMetal: 'Blade metal', hiltMetal: 'Hilt metal' })[name] ?? name.replace(/([A-Z])/g, ' $1');
@@ -619,10 +680,23 @@ function addMark(event) {
   applyFilter();
 }
 
+/** A click on an item that answers to one (a book: open it, turn its page) is handed the point it hit. */
+function touchItem(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  const at = new GFX.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+  camera.updateMatrixWorld();
+  raycaster.setFromCamera(at, camera);
+  const hit = raycaster.intersectObject(view.built.object, true).find((h) => h.object.visible);
+  if (hit) view.built.click(hit);
+}
+
 let downAt = null;
 renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', (e) => {
-  if (downAt && e.button === 0 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 4) addMark(e);
+  if (downAt && e.button === 0 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 4) {
+    if (marking) addMark(e);
+    else if (view.built?.click) touchItem(e);
+  }
   downAt = null;
 });
 
@@ -852,6 +926,7 @@ $('dlflags').onclick = () => {
 addEventListener('keydown', (e) => {
   if (e.target.matches?.('input, textarea, select') && e.key !== 'Escape') return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (view.built?.key?.(e.key)) { e.preventDefault(); return; }
   const k = e.key.toLowerCase();
   if (k === 'escape') { closeSheet(); document.activeElement?.blur?.(); }
   else if (k === 'j' || k === 'arrowdown') { e.preventDefault(); step(1); }

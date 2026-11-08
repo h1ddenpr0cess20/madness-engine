@@ -27,13 +27,20 @@
  *    what makes the leaves fan out of a rolled-flat spine without crossing.
  *    While it turns the free end lags the root, so the page curls.
  *
- * Lying flat, spine along z, up is +y, the back board on y = 0; centered on
+ * Its cover, endpapers and pages are painted pictures (book-art.js): leather,
+ * foil, emblem and title, and a madman's hand on every page, which the
+ * caller can replace. Lying flat, spine along z, up is +y, the back board on y = 0; centered on
  * its spine when open. `createBook(GFX, options)` gives
  * { group, cover, leaves, pose(), open(), close(), turnTo(), next(), prev(),
  *   update(dt), ... }.
  */
 
-import { linearRGB } from '../color.js';
+import {
+  CLOTHS, DEFAULT_SUBTITLE, DEFAULT_TITLE, EMBLEMS, FOILS, PAGE_H, PAGE_W, PAPERS, TRIMS,
+  flowPages, madnessPage, openingPages, paintCover, paintLeaf,
+} from './book-art.js';
+
+export { CLOTHS, DEFAULT_SUBTITLE, DEFAULT_TITLE, EMBLEMS, FOILS, PAPERS, TRIMS, flowPages, madnessPage };
 
 const PI = Math.PI;
 const HALF_PI = PI / 2;
@@ -42,26 +49,29 @@ const TAU = PI * 2;
 const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const smooth = (t) => { t = clamp(t); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
-const rgb = (hex, k = 1) => linearRGB(hex).map((v) => v * k);
-const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 
 export const DEFAULTS = {
+  title: DEFAULT_TITLE,
+  subtitle: DEFAULT_SUBTITLE,
+  pageCount: 80,        // pages (two to a leaf); `leaves` says it in sheets instead
+  pages: null,          // the words: a list of strings (page 1 first) or (n) => string; null is the madman's own
+  seed: 0,              // which ramblings
+  cloth: CLOTHS.oxblood,
+  foil: FOILS['aged gold'],
+  emblem: 'pentagram',  // EMBLEMS
+  trim: 'ornate',       // TRIMS
+  drips: true,          // blood from the title
+  print: false,         // pages in a steady print for real text, not the madman's hand
+  paper: PAPERS.aged,
+  ink: '#2a1d14',
+  endpaper: '#e4d6b6',
+  font: undefined,
   width: 0.30,          // a page's width, spine to fore-edge
   height: 0.42,         // a page's height
   boardThickness: 0.0075,
   overhang: 0.009,      // how far the boards stand past the pages (the squares)
   hinge: 0.0095,        // the length of a hinge groove
-  leaves: 20,           // sheets; each has two pages
-  leafPitch: 0.0032,
-  leafThickness: 0.0022,
   embed: 0.004,         // how far a leaf runs into the spine
-  gap: 0.0006,
-  cloth: '#6c1f2d',
-  gold: '#d8b258',
-  plate: '#efe3c4',
-  endpaper: '#e8dcc0',
-  paper: '#f0e8d4',
-  ink: '#3a3a44',
   size: 1,
   autoplay: false,
 };
@@ -143,11 +153,11 @@ function gridOf(breaks, lo, hi, step) {
  * `inn` from the strip's middle (so a groove is a thinner place). A vertex
  * is kept as its rest position: `S` along, `Z` across, `N` through.
  */
-function buildSlab({ sg, zg, thick, steps, outer, inner, edge }) {
+function buildSlab({ sg, zg, thick, steps, outer, inner, edge, uvOuter, uvInner, uvEdge }) {
   const ni = sg.length, nj = zg.length;
-  const S = [], Z = [], N = [], C = [], NB = [], idx = [];
-  const add = (s, z, n, c, nb) => {
-    S.push(s); Z.push(z); N.push(n);
+  const S = [], Z = [], N = [], C = [], NB = [], UV = [], idx = [];
+  const add = (s, z, n, c, nb, uv) => {
+    S.push(s); Z.push(z); N.push(n); UV.push(uv[0], uv[1]);
     C.push(c[0], c[1], c[2]);
     NB.push(nb[0], nb[1], nb[2]);
     return S.length - 1;
@@ -156,8 +166,8 @@ function buildSlab({ sg, zg, thick, steps, outer, inner, edge }) {
   for (let i = 0; i < ni; i++) {
     const t = thick(sg[i]);
     for (let j = 0; j < nj; j++) {
-      top[i * nj + j] = add(sg[i], zg[j], t.out, outer(sg[i], zg[j]), [1, 0, 0]);
-      bot[i * nj + j] = add(sg[i], zg[j], t.inn, inner(sg[i], zg[j]), [-1, 0, 0]);
+      top[i * nj + j] = add(sg[i], zg[j], t.out, outer(sg[i], zg[j]), [1, 0, 0], uvOuter(sg[i], zg[j]));
+      bot[i * nj + j] = add(sg[i], zg[j], t.inn, inner(sg[i], zg[j]), [-1, 0, 0], uvInner(sg[i], zg[j]));
     }
   }
   const tri = (a, b, c) => { if (a !== b && b !== c && a !== c) idx.push(a, b, c); };
@@ -197,7 +207,7 @@ function buildSlab({ sg, zg, thick, steps, outer, inner, edge }) {
       const t = thick(qs);
       const w = (t.out - t.inn) / 2, nq = (t.out + t.inn) / 2;
       const s = qs + l.d[0] * w * sb, z = qz + l.d[1] * w * sb;
-      return add(s, z, nq + w * cb, edge(s, z, k / steps), [cb, l.d[0] * sb, l.d[1] * sb]);
+      return add(s, z, nq + w * cb, edge(s, z, k / steps), [cb, l.d[0] * sb, l.d[1] * sb], uvEdge(s, z));
     }));
   }
   rings.push(loop.map((l) => bot[l.i * nj + l.j]));
@@ -215,7 +225,7 @@ function buildSlab({ sg, zg, thick, steps, outer, inner, edge }) {
   const uOf = Int32Array.from(S, (v) => at.get(v));
   return {
     count: S.length, S: Float64Array.from(S), Z: Float64Array.from(Z), N: Float64Array.from(N),
-    color: Float32Array.from(C), nb: Float32Array.from(NB), index: idx, U: Float64Array.from(U), uOf,
+    color: Float32Array.from(C), nb: Float32Array.from(NB), uv: Float32Array.from(UV), index: idx, U: Float64Array.from(U), uOf,
   };
 }
 
@@ -224,6 +234,7 @@ function slabGeometry(GFX, slab) {
   geometry.setAttribute('position', new GFX.Float32BufferAttribute(new Float32Array(slab.count * 3), 3));
   geometry.setAttribute('normal', new GFX.Float32BufferAttribute(new Float32Array(slab.count * 3), 3));
   geometry.setAttribute('color', new GFX.Float32BufferAttribute(slab.color, 3));
+  geometry.setAttribute('uv', new GFX.Float32BufferAttribute(slab.uv, 2));
   geometry.setIndex(slab.index);
   return geometry;
 }
@@ -271,8 +282,11 @@ function gutterLength(psiN, rest, dy) {
 
 export function createBook(GFX, options = {}) {
   const o = { ...DEFAULTS, ...options };
-  const N = Math.max(1, Math.floor(o.leaves));
-  const { boardThickness: tc, hinge: hz, leafPitch: pitch, leafThickness: th, embed } = o;
+  const N = Math.max(1, Math.min(160, Math.floor(o.leaves ?? Math.ceil(o.pageCount / 2))));
+  // However many leaves, the block is not much thicker than a hand: more pages are thinner paper.
+  const pitch = o.leafPitch ?? Math.min(0.0024, 0.075 / N);
+  const th = o.leafThickness ?? pitch * 0.9;
+  const { boardThickness: tc, hinge: hz, embed } = o;
   const rh = (2 * hz) / PI;                          // a hinge groove's radius when it is bent a quarter turn
   const spine = N * pitch;
   const boardLength = o.width + o.overhang - rh + tc / 2;
@@ -287,10 +301,24 @@ export function createBook(GFX, options = {}) {
   const frontStart = spineStart + spine + hz;
   const stackBase = plan.y0 + rh;                    // where the lowest leaf's middle would lie, shut
 
-  const cloth = rgb(o.cloth), gold = rgb(o.gold), plateC = rgb(o.plate), endpaper = rgb(o.endpaper), paper = rgb(o.paper), inkC = rgb(o.ink);
+  const canPaint = typeof document !== 'undefined';
+  const style = {
+    title: o.title, subtitle: o.subtitle, cloth: o.cloth, foil: o.foil, emblem: o.emblem, trim: o.trim,
+    drips: o.drips, paper: o.paper, ink: o.ink, font: o.font, print: o.print,
+  };
+  let pagesSource = o.pages;
+  let seed = o.seed;
+
   const group = new GFX.Group();
   group.name = 'book';
   group.scale.setScalar(o.size);
+
+  const texture = (canvas, srgb) => {
+    const t = new GFX.CanvasTexture(canvas);
+    if (srgb) t.colorSpace = GFX.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  };
 
   /* ---------------------------- the cover ---------------------------- */
 
@@ -308,116 +336,111 @@ export function createBook(GFX, options = {}) {
     return { out: (tc / 2) * (1 - 0.8 * b), inn: -(tc / 2) * (1 - 0.15 * b) };
   };
 
-  // What is painted on the cloth, as rectangles in (s, z) laid one over another: gold lines, plates, text.
-  const decoration = [];
-  const rect = (s0, s1, z0, z1, c) => decoration.push({ s0, s1, z0, z1, c });
-  const frameLine = (sa, sb, m, w, c) => {
-    const Hc = coverHeight;
-    rect(sa + m, sb - m, m, m + w, c); rect(sa + m, sb - m, Hc - m - w, Hc - m, c);
-    rect(sa + m, sa + m + w, m, Hc - m, c); rect(sb - m - w, sb - m, m, Hc - m, c);
-  };
-  for (const [sa, sb] of [[0, boardLength], [frontStart, coverLength]]) {
-    frameLine(sa, sb, 0.014, 0.0013, gold);
-    frameLine(sa, sb, 0.0195, 0.0008, gold);
-  }
-  // The front: a title plate.
-  const bar = [rgb(o.cloth, 0.9)];
-  rect(frontStart + 0.085, coverLength - 0.085, 0.11, 0.21, plateC);
-  rect(frontStart + 0.105, coverLength - 0.105, 0.138, 0.147, bar[0]);
-  rect(frontStart + 0.125, coverLength - 0.125, 0.158, 0.162, bar[0]);
-  // The spine: gold bands across it at head and tail, and a label with its lines running up the book.
-  const spineMid = spineStart + spine / 2;
-  for (const [z0, z1] of [[0.045, 0.051], [0.056, 0.0585], [coverHeight - 0.051, coverHeight - 0.045], [coverHeight - 0.0585, coverHeight - 0.056]]) {
-    rect(spineStart + 0.002, spineStart + spine - 0.002, z0, z1, gold);
-  }
-  rect(spineStart + 0.008, spineStart + spine - 0.008, 0.13, 0.29, plateC);
-  rect(spineMid - 0.012, spineMid - 0.006, 0.15, 0.27, bar[0]);
-  rect(spineMid + 0.006, spineMid + 0.009, 0.17, 0.25, bar[0]);
-
-  const lining = [];
-  const border = 0.014;
-  for (const [sa, sb, fore] of [[0, boardLength, 0], [frontStart, coverLength, coverLength]]) {
-    lining.push({ s0: Math.min(fore, fore ? fore - border : border), s1: Math.max(fore, fore ? fore - border : border), z0: 0, z1: coverHeight });
-    lining.push({ s0: sa, s1: sb, z0: 0, z1: border });
-    lining.push({ s0: sa, s1: sb, z0: coverHeight - border, z1: coverHeight });
-  }
-
-  const EDGE = 0.0006;
-  const coverBreaks = (key, list) => list.flatMap((r) => (key === 's' ? [r.s0 - EDGE, r.s0, r.s1, r.s1 + EDGE] : [r.z0 - EDGE, r.z0, r.z1, r.z1 + EDGE]));
   const R = tc / 2;
   const sCover = gridOf(
-    [...coverBreaks('s', decoration), ...coverBreaks('s', lining), ...grooveRuns.flat(), spineStart, frontStart],
-    R, coverLength - R,
+    [...grooveRuns.flat(), spineStart, frontStart], R, coverLength - R,
     (s) => (s > boardLength - 1e-9 && s < spineStart + 1e-9) || (s > spineStart + spine - 1e-9 && s < frontStart + 1e-9) ? 0.0012 : s > spineStart && s < spineStart + spine ? 0.006 : 0.011,
   );
-  const zCover = gridOf([...coverBreaks('z', decoration), ...coverBreaks('z', lining)], R, coverHeight - R, () => 0.012);
-  const inside = (r, s, z) => s >= r.s0 - 1e-6 && s <= r.s1 + 1e-6 && z >= r.z0 - 1e-6 && z <= r.z1 + 1e-6;
-  const outerPaint = (s, z) => {
-    let c = cloth;
-    for (const r of decoration) if (inside(r, s, z)) c = r.c;
-    return c === cloth ? c.map((v) => v * (1 - 0.35 * groove(s))) : c;
-  };
-  const innerPaint = (s, z) => {
-    for (const r of lining) if (inside(r, s, z)) return cloth;
-    return endpaper.map((v) => v * (1 - 0.3 * groove(s)));
-  };
+  const zCover = gridOf([], R, coverHeight - R, () => 0.012);
+  // The cover's picture is one canvas, the outside above and the inside below.
+  const uvCover = (s, z, inside) => [clamp(s / coverLength), 1 - (clamp(z / coverHeight) * 0.5 + (inside ? 0.5 : 0))];
+  const shadeOf = (k) => [k, k, k];
   const clothSlab = buildSlab({
     sg: sCover, zg: zCover, thick: thickCover, steps: 6,
-    outer: outerPaint, inner: innerPaint, edge: () => cloth.map((v) => v * 0.85),
+    outer: (s) => shadeOf(1 - 0.35 * groove(s)), inner: (s) => shadeOf(1 - 0.3 * groove(s)), edge: () => shadeOf(0.85),
+    uvOuter: (s, z) => uvCover(s, z, false), uvInner: (s, z) => uvCover(s, z, true), uvEdge: (s, z) => uvCover(s, z, false),
   });
   const coverGeometry = slabGeometry(GFX, clothSlab);
-  const clothMaterial = new GFX.MeshStandardMaterial({ name: 'book_cloth', vertexColors: true, roughness: 0.82, metalness: 0 });
+  const clothMaterial = new GFX.MeshStandardMaterial({ name: 'book_cloth', vertexColors: true, roughness: 0.78, metalness: 0, bumpScale: 1.5 });
   const coverMesh = new GFX.Mesh(coverGeometry, clothMaterial);
   coverMesh.name = 'book_cover';
   coverMesh.castShadow = coverMesh.receiveShadow = true;
   coverMesh.frustumCulled = false;
   group.add(coverMesh);
 
+  /** The cover's leather, foil, emblem and title: painted again whenever the style changes. */
+  const paintCoverTextures = () => {
+    if (!canPaint) { clothMaterial.color.set(style.cloth); return; }
+    const spec = { L: coverLength, Hc: coverHeight, boardLength, frontStart, spineStart, spine, ...style, endpaper: o.endpaper, seed: 7 };
+    clothMaterial.map?.dispose(); clothMaterial.bumpMap?.dispose();
+    clothMaterial.map = texture(paintCover(spec, 'color'), true);
+    clothMaterial.bumpMap = texture(paintCover(spec, 'bump'), false);
+    clothMaterial.color.set('#ffffff');
+    clothMaterial.needsUpdate = true;
+  };
+
   /* ----------------------------- the leaves -------------------------- */
 
-  const pageMaterial = new GFX.MeshStandardMaterial({ name: 'book_paper', vertexColors: true, roughness: 0.92, metalness: 0 });
-  const lineCount = 12;
   const leaves = [];
   for (let k = 0; k < N; k++) {
     const len = o.width;
-    const inkLines = [];
-    const top = 0.035, lineStep = (o.height - 0.075) / lineCount;
-    const x0 = 0.032, x1 = len - 0.022;
-    for (let i = 0; i < lineCount; i++) {
-      const z0 = top + i * lineStep + 0.004;
-      const kind = (i + k) % 5;
-      inkLines.push({ z0, z1: z0 + 0.0028, x0: x0 + (kind === 0 ? 0.02 : 0), x1: x1 - (kind === 4 ? 0.085 : 0) });
-    }
-    const tint = 1 + ((((k * 7919) % 13) / 13) - 0.5) * 0.05;
-    const leafPaint = (s, z) => {
-      let c = paper;
-      for (const l of inkLines) {
-        if (z >= l.z0 - 1e-6 && z <= l.z1 + 1e-6 && s >= l.x0 - 1e-6 && s <= l.x1 + 1e-6) { c = mix(paper, inkC, 0.5); break; }
-      }
-      const shade = (0.66 + 0.34 * smooth(s / 0.08)) * tint;
-      return c.map((v) => v * shade);
-    };
+    const tint = 1 + ((((k * 7919) % 13) / 13) - 0.5) * 0.04;
+    const gutterShade = (s) => shadeOf((0.66 + 0.34 * smooth(s / 0.08)) * tint);
     const lr = th / 2;
-    const sg = gridOf(inkLines.flatMap((l) => [l.x0 - EDGE, l.x0, l.x1, l.x1 + EDGE]), -embed + lr, len - lr, (s) => (s < 0.03 ? 0.003 : s < 0.14 ? 0.006 : 0.014));
-    const zg = gridOf(inkLines.flatMap((l) => [l.z0 - EDGE, l.z0, l.z1, l.z1 + EDGE]), lr, o.height - lr, () => Infinity);
+    const sg = gridOf([], -embed + lr, len - lr, (s) => (s < 0.03 ? 0.003 : s < 0.14 ? 0.006 : 0.016));
+    const zg = [lr, o.height - lr];
+    const across = (s) => clamp(s / len);
     const slab = buildSlab({
-      sg, zg, thick: () => ({ out: th / 2, inn: -th / 2 }), steps: 2,
-      outer: leafPaint, inner: leafPaint, edge: (s, z) => leafPaint(s, z).map((v) => v * 0.88),
+      sg, zg, thick: (s) => { const t = (th / 2) * (0.5 + 0.5 * smooth((s - 0.01) / 0.1)); return { out: t, inn: -t }; }, steps: 2,
+      outer: gutterShade, inner: gutterShade, edge: (s) => gutterShade(s).map((v) => v * 0.94),
+      // The front on the left half of the leaf's picture; the back on the right, turned about so it reads from the other side.
+      uvOuter: (s, z) => [across(s) * 0.5, 1 - clamp(z / o.height)],
+      uvInner: (s, z) => [0.5 + (1 - across(s)) * 0.5, 1 - clamp(z / o.height)],
+      uvEdge: (s, z) => [across(s) * 0.5, 1 - clamp(z / o.height)],
     });
     const geometry = slabGeometry(GFX, slab);
-    const mesh = new GFX.Mesh(geometry, pageMaterial);
+    const material = new GFX.MeshStandardMaterial({ name: `book_paper_${k + 1}`, vertexColors: true, roughness: 0.92, metalness: 0, color: style.paper });
+    const mesh = new GFX.Mesh(geometry, material);
     mesh.name = `book_leaf_${k + 1}`;
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.frustumCulled = false;
     group.add(mesh);
     const nU = slab.U.length;
     leaves.push({
-      k, mesh, geometry, slab, len,
+      k, mesh, geometry, material, slab, len, tex: null,
       p: 0, theta: 0, lag: 0, omega: 0, gR: 0.012, gL: 0.012,
       cx: new Float64Array(nU), cy: new Float64Array(nU), sn: new Float64Array(nU), cs: new Float64Array(nU),
       dirty: true,
     });
   }
+
+  /* ---------------------------- the words ---------------------------- */
+
+  const textOf = (n) => {
+    if (typeof pagesSource === 'function') return pagesSource(n);
+    if (Array.isArray(pagesSource)) return pagesSource[n - 1];
+    if (n <= 2) return openingPages(style.title, style.subtitle)[n - 1];
+    return madnessPage(n, seed);
+  };
+  const paintLeafTexture = (L) => {
+    if (!canPaint || L.tex) return;
+    const canvas = paintLeaf({
+      pages: [textOf(2 * L.k + 1), textOf(2 * L.k + 2)], numbers: [2 * L.k + 1, 2 * L.k + 2],
+      ink: style.ink, font: style.font, print: style.print, seed: L.k + 1 + seed * 131,
+    });
+    L.tex = texture(canvas, true);
+    L.material.map = L.tex;
+    L.material.needsUpdate = true;
+  };
+  const dropLeafTexture = (L) => {
+    if (!L.tex) return;
+    L.tex.dispose();
+    L.tex = null; L.material.map = null;
+    L.material.needsUpdate = true;
+  };
+  /** Only the pages that can be seen are written: the two of the spread, and the leaf in the air. */
+  const writeVisible = () => {
+    if (!canPaint) return;
+    const turned = leaves.reduce((n, L) => n + (L.p > 0.5 ? 1 : 0), 0);
+    const need = new Set();
+    for (let k = turned - 2; k <= turned + 1; k++) if (k >= 0 && k < N) need.add(k);
+    for (const L of leaves) if (L.p > 0.001 && L.p < 0.999) need.add(L.k);
+    for (const k of need) paintLeafTexture(leaves[k]);
+    const held = leaves.filter((L) => L.tex);
+    if (held.length > 10) {
+      held.filter((L) => !need.has(L.k)).sort((a, b) => Math.abs(b.k - turned) - Math.abs(a.k - turned)).slice(0, held.length - 10).forEach(dropLeafTexture);
+    }
+  };
 
   /* ------------------------------ the field -------------------------- */
 
@@ -506,12 +529,15 @@ export function createBook(GFX, options = {}) {
     bendCover();
     solveGutters();
     for (const L of leaves) bendLeaf(L);
+    writeVisible();
   };
 
   /* ------------------------------ the story -------------------------- */
 
   let wantOpen = false;
   let spread = 0;
+  let held = false;                                  // posed by hand: left exactly where it was put
+  let auto = !!o.autoplay;
   const leafAngle = (p) => PI * smooth(p);
 
   const setLeaf = (L, p) => {
@@ -519,48 +545,104 @@ export function createBook(GFX, options = {}) {
     L.theta = leafAngle(p);
     L.lag = 0; L.omega = 0;
   };
+  const go = () => { held = false; };
 
   const api = {
     group,
     cover: { mesh: coverMesh, geometry: coverGeometry, material: clothMaterial },
     /** Each leaf's mesh, how far it has turned (0..1) and how far its free edge trails its root (radians) while it moves. */
-    leaves: leaves.map((L) => ({ mesh: L.mesh, geometry: L.geometry, get turn() { return L.p; }, get curl() { return L.lag; } })),
-    pageMaterial,
+    leaves: leaves.map((L) => ({ mesh: L.mesh, geometry: L.geometry, material: L.material, get turn() { return L.p; }, get curl() { return L.lag; },
+      /** The leaf's middle line across the spine as it is now: [x0, y0, x1, y1, ...]. */
+      get centerline() { const out = []; for (let u = 0; u < L.cx.length; u++) out.push(L.cx[u], L.cy[u]); return out; } })),
     clothMaterial,
-    dimensions: { width: o.width, height: o.height, coverWidth: coverLength, coverHeight, thickness: rh * 2 + spine, leaves: N },
+    dimensions: { width: o.width, height: o.height, coverWidth: coverLength, coverHeight, thickness: rh * 2 + spine, leaves: N, pages: N * 2 },
     /** Where the camera should look. */
     frame: { center: [0, 0.03, 0], radius: 0.4 * o.size },
+    /** The style now: what `setStyle` takes. */
+    get style() { return { ...style }; },
 
     /** How far the cover is open, 0 shut to 1 lying flat. */
     get openness() { return a; },
     /** How many leaves lie turned over, to the left. */
     get turned() { return leaves.reduce((n, L) => n + (L.p > 0.5 ? 1 : 0), 0); },
+    get pageCount() { return N * 2; },
+    /** Open, leaf through and shut, over and over, until something else is asked of it. */
+    get autoplay() { return auto; },
+    set autoplay(on) { auto = !!on; if (auto) held = false; },
+    /** The pages showing on the left and on the right (0 where there is none). */
+    get spread() {
+      const t = api.turned;
+      return { left: t * 2, right: t < N ? t * 2 + 1 : 0 };
+    },
 
-    /** Put it somewhere at once: `open` 0..1, and `turn` leaves turned (3.4 has three over and a fourth 0.4 of the way). */
+    /**
+     * Put it somewhere at once and leave it there: `open` 0..1, and `turn`
+     * leaves turned (3.4 has three over and a fourth 0.4 of the way).
+     */
     pose({ open = 0, turn = 0 } = {}) {
       a = turn > 0 ? 1 : clamp(open);
       wantOpen = a > 0.5;
-      spread = clamp(turn, 0, N);
+      spread = clamp(Math.round(turn), 0, N);
+      held = true;
       for (const L of leaves) setLeaf(L, clamp(turn - L.k));
       refresh();
       return api;
     },
-    open() { wantOpen = true; return api; },
-    close() { wantOpen = false; spread = 0; return api; },
-    turnTo(n) { spread = clamp(Math.round(n), 0, N); if (spread > 0) wantOpen = true; return api; },
-    next() { return api.turnTo(spread + 1); },
-    prev() { return api.turnTo(spread - 1); },
+    open() { go(); wantOpen = true; return api; },
+    close() { go(); wantOpen = false; spread = 0; return api; },
+    turnTo(n) { go(); spread = clamp(Math.round(n), 0, N); if (spread > 0) wantOpen = true; return api; },
+    next() { return api.turnTo((held ? api.turned : spread) + 1); },
+    prev() { return api.turnTo((held ? api.turned : spread) - 1); },
+    /** Open the cover if it is shut; else turn on from the side of the spine that was touched (x < 0 turns back). */
+    touch(x) {
+      if (a < 0.999 && !leaves.some((L) => L.p > 0.001)) return api.open();
+      return x < 0 ? api.prev() : api.next();
+    },
+
+    /** Change how it looks: any of title, subtitle, cloth, foil, emblem, trim, drips, paper, ink, font, print. */
+    setStyle(patch = {}) {
+      const before = { ...style };
+      Object.assign(style, patch);
+      const coverChanged = ['title', 'subtitle', 'cloth', 'foil', 'emblem', 'trim', 'drips'].some((k) => style[k] !== before[k]);
+      if (coverChanged) paintCoverTextures();
+      if (style.paper !== before.paper) for (const L of leaves) L.material.color.set(style.paper);
+      if (['ink', 'font', 'print', 'title', 'subtitle'].some((k) => style[k] !== before[k])) { for (const L of leaves) dropLeafTexture(L); writeVisible(); }
+      return api;
+    },
+    /** Replace the words: a list of strings (page 1 first), a function from a page number to a string, or null for the madman's own. */
+    setPages(source, newSeed) {
+      pagesSource = source ?? null;
+      if (newSeed !== undefined) seed = newSeed;
+      for (const L of leaves) dropLeafTexture(L);
+      writeVisible();
+      return api;
+    },
+
+    /**
+     * Fill the book with real text: a long string, cut into pages as it is measured (a line is a paragraph, a
+     * blank line a gap; `*stress*`, `~strike~` and `#Heading` are marks), written in print unless `print: false`.
+     * Gives { pages, fits }: the pages the text takes, and whether this book has that many. A book has the pages
+     * it was made with, so text past the last is left out: make one with a larger `pageCount`.
+     */
+    setText(text, { print = true } = {}) {
+      style.print = print;
+      const pages = canPaint ? flowPages(text, { print, font: style.font }) : String(text).match(/[\s\S]{1,1900}/g) ?? [];
+      pagesSource = (n) => pages[n - 1];
+      for (const L of leaves) dropLeafTexture(L);
+      writeVisible();
+      return { pages: pages.length, fits: pages.length <= N * 2 };
+    },
 
     /** Once a frame. */
-    update(dtIn = 0) {
-      const dt = clamp(dtIn, 0, 0.05);
-      if (o.autoplay) autoplay(dt);
+    update(dt) {
+      dt = clamp(dt ?? 0, 0, 0.05);
+      if (auto && !held) autoplay(dt);
+      if (held) return;
       const anyTurned = leaves.some((L) => L.p > 1e-3);
       const aGoal = wantOpen || anyTurned ? 1 : 0;
       const a0 = a;
       a += clamp(aGoal - a, -dt * 0.8, dt * 0.8);
       const flat = a >= 0.999;
-      let moved = a !== a0;
       for (const L of leaves) {
         const goal = flat && L.k < spread ? 1 : 0;
         let p = L.p;
@@ -576,14 +658,15 @@ export function createBook(GFX, options = {}) {
         if (p !== L.p || Math.abs(lag - L.lag) > 1e-5) L.dirty = true;
         L.p = p; L.theta = theta; L.omega = omega; L.lag = lag;
       }
-      if (moved) {
+      if (a !== a0) {
         layoutAt(plan, a, layout);
         bendCover();
         solveGutters();
         for (const L of leaves) L.dirty = true;
-        moved = false;
       }
-      for (const L of leaves) if (L.dirty) bendLeaf(L);
+      let any = false;
+      for (const L of leaves) if (L.dirty) { bendLeaf(L); any = true; }
+      if (any) writeVisible();
     },
   };
 
@@ -604,6 +687,7 @@ export function createBook(GFX, options = {}) {
     step++;
   };
 
+  paintCoverTextures();
   api.pose({ open: 0, turn: 0 });
   return api;
 }
