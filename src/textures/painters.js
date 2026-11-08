@@ -162,37 +162,34 @@ export const K = DETAIL / 256;
 const GRAIN = { seed: 881 };
 
 /**
- * The grain fields for one texture: a soft haze at 256 cells a tile, and a
- * hard-edged speckle at 320 cells, thresholded across a narrow ramp, so the
- * speckle reads as crisp mineral grains the way the granite's do.
+ * The grain field for one texture: a soft haze at 256 cells a tile, the same on
+ * the map and the bump. It is faint on purpose: the look of each surface comes
+ * from its own painter, and the grain only takes the flatness off it. (The
+ * granite's mineral speckle is its own, in `heroes/rock-granite`.)
  */
 export function grainFields(seed) {
-  return { haze: fractal(seed, 256, 2), speck: fractal(seed + 5, 150, 2) };
+  return { haze: fractal(seed, 256, 2) };
 }
 
-const ramp01 = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-
 /**
- * Lays a fine grain over a painted canvas, in place: on a map, a speck darker
- * or lighter and a haze over the colour; on a bump (`bump`), the same specks
- * raised and sunk. Without it a painted surface reads soft at close range.
+ * Lays the haze over a painted canvas, in place: a little lighter and darker on
+ * a map, a little raised and sunk on a bump.
  */
 export function laidGrain(c, grains, strength, bump) {
   const ctx = c.getContext('2d');
   const img = ctx.getImageData(0, 0, c.width, c.height);
   const { data } = img;
   const W = c.width, H = c.height;
-  const { haze, speck } = grains;
+  const { haze } = grains;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const h = haze(x / W, y / H) - 0.5;
-      const sp = ramp01(0.56, 0.6, speck(x / W, y / H));
       const k = (y * W + x) * 4;
       if (bump) {
-        const v = data[k] + (h * 0.6 + (sp - 0.5) * 0.9) * strength * 255;
+        const v = data[k] + h * strength * 255;
         data[k] = data[k + 1] = data[k + 2] = Math.max(0, Math.min(255, v));
       } else {
-        const m = (1 + h * strength * 1.4) * (1 - sp * strength * 1.6);
+        const m = 1 + h * strength * 1.4;
         data[k] = Math.max(0, Math.min(255, data[k] * m));
         data[k + 1] = Math.max(0, Math.min(255, data[k + 1] * m));
         data[k + 2] = Math.max(0, Math.min(255, data[k + 2] * m));
@@ -210,8 +207,8 @@ export function laidGrain(c, grains, strength, bump) {
 export function pair(GFX, size, color, height, opts = {}) {
   GRAIN.seed += 17;
   const grains = grainFields(GRAIN.seed);
-  const map = laidGrain(color(size), grains, 0.12, false);
-  const bump = laidGrain(height(size), grains, 0.11, true);
+  const map = laidGrain(color(size), grains, 0.06, false);
+  const bump = laidGrain(height(size), grains, 0.05, true);
   return { map: texture(GFX, map, opts), bump: texture(GFX, bump, { srgb: false, ...opts }) };
 }
 
