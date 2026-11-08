@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import * as GFX from '../src/gfx/index.js';
 import { GRANITES } from '../src/heroes/rock-granite.js';
 import { METALS } from '../src/props/metalglobe.js';
-import { createGraniteKitchen, createGraniteCounter, createKitchenSink, MAX_LENGTH, MIN_LENGTH } from '../src/props/granite-kitchen.js';
+import { createGraniteKitchen, createGraniteCounter, createKitchenSink, MAX_LENGTH, MIN_LENGTH, radialOnRect, sdRoundRect } from '../src/props/granite-kitchen.js';
 import { rawLumber, finishedWood, WOOD_SPECIES } from '../src/textures/wood.js';
 import { FINISHES } from '../src/props/granite-kitchen.js';
 import { METALS as ALL_METALS } from '../src/props/metalglobe.js';
@@ -100,4 +100,16 @@ test('cabinet hardware and the faucet take separate finishes', () => {
   assert.equal(kitchen.counter.getObjectByName('brass cabinet pull 1').material.name, 'chrome');
   assert.equal(kitchen.sink.getObjectByName('solid brass kitchen faucet').children.find((c) => c.name === 'brass faucet escutcheon').material.name, 'gold');
   assert.throws(() => createGraniteKitchen(GFX, { hardwareMetal: 'tin' }), /invalid hardware metal/);
+});
+
+test('the bowl outline reaches the rim at every angle: no pinch at the sink corners', () => {
+  const hx = 0.3, hz = 0.2, rr = 0.015;
+  for (let k = 0; k < 64; k++) {
+    const a = (k / 64) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+    const d = radialOnRect(c, s, hx, hz, rr);
+    assert.ok(Math.abs(sdRoundRect(d * c, d * s, hx - rr, hz - rr, rr)) < 1e-6, `angle ${a}`);
+  }
+  // Along the sides and into the corner the outline is the rim, not inside it.
+  assert.ok(Math.abs(radialOnRect(1, 0, hx, hz, rr) - hx) < 1e-6);
+  assert.ok(Math.abs(radialOnRect(0, 1, hx, hz, rr) - hz) < 1e-6);
 });

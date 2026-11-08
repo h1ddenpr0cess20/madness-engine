@@ -137,6 +137,23 @@ function addJoint(GFX, parent, name, position, radius, material) {
   return mesh;
 }
 
+/** Signed distance from (px, pz) to a rounded rectangle of half sizes (bx + rr, bz + rr) with corner radius rr; negative inside. */
+export function sdRoundRect(px, pz, bx, bz, rr) {
+  const qx = Math.abs(px) - bx, qz = Math.abs(pz) - bz;
+  return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - rr;
+}
+
+/** The distance from the middle of a rounded rectangle (half sizes sx, sz; corner radius rr) to its edge, along the direction (c, s). */
+export function radialOnRect(c, s, sx, sz, rr) {
+  const bx = sx - rr, bz = sz - rr;
+  let lo = 0, hi = Math.hypot(sx, sz) + 1e-6;
+  for (let k = 0; k < 48; k++) {
+    const m = (lo + hi) / 2;
+    if (sdRoundRect(m * c, m * s, bx, bz, rr) < 0) lo = m; else hi = m;
+  }
+  return (lo + hi) / 2;
+}
+
 /**
  * The formed basin: a smooth bowl of nested rounded-rectangle rings, drawn in
  * and down so its visible faces look into the water. Its rim is at y = 0.
@@ -148,18 +165,22 @@ function makeCopperBasin(GFX, parent, metal, width, depth) {
 
   const hx = width / 2, hz = depth / 2;
   const rimY = 0, floorY = -0.17, inset = 0.055;
+  // The corner radius of the rim: the bowl's outline runs out to the same rounded rectangle.
+  const rimR = Math.min(0.015, hx * 0.22, hz * 0.28);
   const positions = [], indices = [];
-  const nx = 64, nz = 32, power = 0.34;
+  const nx = 64, nz = 32;
   for (let j = 0; j <= nz; j++) {
     const t = j / nz;
     const ease = t * t * (3 - 2 * t);
     const sx = hx - inset * ease;
     const sz = hz - inset * ease;
+    const rr = Math.max(0.004, rimR - inset * ease);
     const yy = rimY + (floorY - rimY) * ease;
     for (let i = 0; i <= nx; i++) {
       const a = (i / nx) * Math.PI * 2;
       const c = Math.cos(a), sn = Math.sin(a);
-      positions.push(sx * Math.sign(c) * Math.pow(Math.abs(c), power), yy, sz * Math.sign(sn) * Math.pow(Math.abs(sn), power));
+      const d = radialOnRect(c, sn, sx, sz, rr);
+      positions.push(d * c, yy, d * sn);
       if (j < nz && i < nx) {
         const p = j * (nx + 1) + i;
         indices.push(p, p + nx + 1, p + 1, p + 1, p + nx + 1, p + nx + 2);
