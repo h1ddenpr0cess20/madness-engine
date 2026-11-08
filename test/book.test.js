@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import * as GFX from '../src/gfx/index.js';
-import { createBook } from '../src/heroes/book.js';
+import { createBook } from '../src/props/book.js';
 
 const book = createBook(GFX);
 
@@ -123,7 +123,7 @@ test('leaves do not pass through each other when stacked or fanned', () => {
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
   for (const leaves of [8, 40]) {
     const b = createBook(GFX, { leaves });
-    const pitch = Math.min(0.0024, 0.075 / leaves);
+    const pitch = Math.min(0.0024, 0.045 / leaves);
     for (const pose of [{ open: 0 }, { open: 0.6 }, { open: 0.85 }, { open: 1, turn: 0 }, { open: 1, turn: leaves / 4 }, { open: 1, turn: leaves }]) {
       b.pose(pose);
       const lines = b.leaves.map((l) => l.centerline);
@@ -178,4 +178,21 @@ test('how many pages is the caller\'s too, and the title, cloth and emblem', () 
   b.setStyle({ emblem: 'skull', paper: '#eeeeee', print: true });
   assert.equal(b.style.emblem, 'skull');
   assert.equal(b.style.print, true);
+});
+
+test('the gutter is finely sampled, so a turned leaf rests above the board and never cuts through it', () => {
+  const b = createBook(GFX, { pageCount: 80 });
+  for (const turn of [1, 20, 39, 40]) {
+    b.pose({ open: 1, turn });
+    for (const k of [0, 1, 38, 39]) {
+      const line = b.leaves[k].centerline;
+      const points = [];
+      for (let i = 0; i < line.length; i += 2) points.push([line[i], line[i + 1]]);
+      // A column in the first 3 cm, where the bend is, or the leaf cuts the corner.
+      assert.ok(points.filter((p) => Math.hypot(p[0] - points[0][0], p[1] - points[0][1]) < 0.03).length >= 8, `leaf ${k + 1} is coarse at its gutter`);
+      // Past the gutter the leaf lies on its stack, which is above the 7.5 mm board, not inside it.
+      const far = points.filter((p) => Math.abs(p[0]) > 0.15);
+      for (const p of far) assert.ok(p[1] > 0.0075 + 0.0002, `leaf ${k + 1} lies at ${p[1]} in the board (turn ${turn})`);
+    }
+  }
 });

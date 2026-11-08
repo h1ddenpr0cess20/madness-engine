@@ -1,5 +1,5 @@
 /**
- * What is written and painted on Book (heroes/book.js): the cover's leather,
+ * What is written and painted on Book (props/book.js): the cover's leather,
  * foil, emblem and title, the endpapers, and the pages in a madman's hand.
  *
  * Everything here is painted on a canvas, so it only runs where there is a
@@ -500,7 +500,7 @@ const faceOf = (g, size, bold) => (g.print ? `${bold ? 'bold ' : ''}${size}px ${
  */
 function layoutText(ctx, g, text) {
   const W = PAGE_W, ppm = W / 300;
-  const inner = 40 * ppm, outer = 22 * ppm;
+  const inner = 50 * ppm, outer = 22 * ppm;
   const width = W - inner - outer;
   const base = (g.print ? 6.2 : 6.8) * ppm;
   const lines = [];
@@ -571,7 +571,7 @@ export function flowPages(text, g = {}) {
 /** Lay words in lines (with `*` `~` and `#` marks) and write each one a little off true. */
 function writePage(ctx, g, side, text, number, rand) {
   const W = PAGE_W, H = PAGE_H, ppm = W / 300;
-  const inner = 40 * ppm, outer = 22 * ppm, top = 32 * ppm, bottom = 38 * ppm;
+  const inner = 50 * ppm, outer = 22 * ppm, top = 32 * ppm, bottom = 38 * ppm;
   const left = side === 0 ? inner : outer, right = W - (side === 0 ? outer : inner);
   const hand = !g.print;
   ctx.fillStyle = g.ink;

@@ -150,10 +150,10 @@ const PAGE_CHOICES = Object.assign([20, 40, 80, 120, 200], { default: 80 });
 /**
  * The Book of Madness, with what to try it with: open and turn it by buttons, by sliders (to see a hinge or a
  * leaf at any point of its travel), by clicking it or with the arrow keys; and its cloth, foil, emblem, trim,
- * paper, title and words to change. Everything it calls is the book's own API (heroes/book.js).
+ * paper, title and words to change. Everything it calls is the book's own API (props/book.js).
  */
 async function bookItem(pages) {
-  const m = await import('../../../src/heroes/book.js');
+  const m = await import('../../../src/props/book.js');
   const book = m.createBook(GFX, { pageCount: pages });
   let seed = 0;
   if (bookText.trim()) book.setText(bookText);
@@ -213,7 +213,6 @@ const HEROES = [
     h.createMetalMorningStar(GFX, { metal }),
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   )), null, { metal: METAL_CHOICES }],
-  ['book', ({ pages = 80 } = {}) => bookItem(pages), null, { pages: PAGE_CHOICES }],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['rock (granite)', ({ colour = 'grey' } = {}) => import('../../../src/heroes/rock-granite.js').then((m) => m.createGraniteRock(GFX, { colour })), null, { colour: GRANITE_CHOICES }],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
@@ -261,6 +260,7 @@ const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.
  * And the debate's frying pan, which is a prop but not a sculpt.
  */
 const MOVING = [
+  ['book', 'Animated props', 'book of madness', ({ pages = 80 } = {}) => bookItem(pages), 'props/book', { pages: PAGE_CHOICES }],
   ['krystal', 'Animated props', 'crystal ball', () => avatar('../../../src/heroes/krystal/index.js', 'createKrystal')],
   ['glass globe', 'Animated props', 'Earth', () => import('../../../src/props/glassglobe.js').then((m) => {
     const globe = m.createGlassGlobe(GFX, { radius: 0.6, mist: true, animate: true });
@@ -381,7 +381,7 @@ function movingItem([name, category, group, make, from = null, options = null]) 
       const made = await make(opts);
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
-      return { object, frame: made?.frame, mist: made?.mist, ...dressOf(made), info: { Source: source, ...countOf(object) } };
+      return { object, frame: made?.frame, mist: made?.mist, ui: made?.ui, click: made?.click, key: made?.key, made, ...dressOf(made), info: { Source: source, ...countOf(object) } };
     },
   };
 }

@@ -283,8 +283,8 @@ function gutterLength(psiN, rest, dy) {
 export function createBook(GFX, options = {}) {
   const o = { ...DEFAULTS, ...options };
   const N = Math.max(1, Math.min(160, Math.floor(o.leaves ?? Math.ceil(o.pageCount / 2))));
-  // However many leaves, the block is not much thicker than a hand: more pages are thinner paper.
-  const pitch = o.leafPitch ?? Math.min(0.0024, 0.075 / N);
+  // However many leaves, the block is no thicker than a few fingers: more pages are thinner paper.
+  const pitch = o.leafPitch ?? Math.min(0.0024, 0.045 / N);
   const th = o.leafThickness ?? pitch * 0.9;
   const { boardThickness: tc, hinge: hz, embed } = o;
   const rh = (2 * hz) / PI;                          // a hinge groove's radius when it is bent a quarter turn
@@ -377,7 +377,8 @@ export function createBook(GFX, options = {}) {
     const tint = 1 + ((((k * 7919) % 13) / 13) - 0.5) * 0.04;
     const gutterShade = (s) => shadeOf((0.66 + 0.34 * smooth(s / 0.08)) * tint);
     const lr = th / 2;
-    const sg = gridOf([], -embed + lr, len - lr, (s) => (s < 0.03 ? 0.003 : s < 0.14 ? 0.006 : 0.016));
+    // Fine where the leaf bends through the gutter (the bend can be a few millimetres long, and a column must fall in it).
+    const sg = gridOf([0, 0.03, 0.2], -embed + lr, len - lr, (s) => (s < 0.03 ? 0.0015 : s < 0.2 ? 0.006 : 0.02));
     const zg = [lr, o.height - lr];
     const across = (s) => clamp(s / len);
     const slab = buildSlab({

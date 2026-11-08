@@ -6,7 +6,6 @@ import * as GFX from '../src/gfx/index.js';
 /** The main characters, by name, and what each gives. */
 const HEROES = {
   marble: ['createMarble', 'RADIUS'],
-  book: ['createBook', 'DEFAULTS'],
   'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
   'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'METALS'],
   'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'METALS', 'ROLL_REACH'],
