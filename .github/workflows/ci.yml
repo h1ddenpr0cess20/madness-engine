@@ -60,7 +60,7 @@ jobs:
 
   # Keep the repository's interactive asset viewer buildable on pull requests.
   asset-viewer:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: examples/asset-viewer
