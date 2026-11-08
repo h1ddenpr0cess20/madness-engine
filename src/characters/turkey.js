@@ -2,6 +2,7 @@ import { fbm, noise, rgb, shingles } from '../models/sdf.js';
 import { mix, smooth } from '../models/skins.js';
 
 const side = (m) => (m > 0 ? 'L' : 'R');
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const GOLD = rgb('#d8a34b');
 const OCHRE = rgb('#ad7736');
 const CHESTNUT = rgb('#65402d');
