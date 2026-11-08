@@ -1,7 +1,9 @@
 /**
  * A bookcase: a carcass of boards (sides, top, bottom, shelves, back, and a
- * plinth), shelves of books, and, lying on the top, the Book of Madness
- * (props/book.js), which opens and turns its pages.
+ * plinth) and nothing on it. The shelves are for models: `compartments` says
+ * where each one's space is, and `place`, `standBook` and `shelve` put things
+ * in it, among them real Book models (props/book.js) stood spine out, which
+ * show the spine they were painted with.
  *
  * The wood is the library's (`textures/wood.js`: `woodTexture`, one repeat of
  * a map a metre of board, the grain running along each board) when that file
@@ -10,16 +12,17 @@
  * library gains the grain here with no change: `WOOD_SOURCE` says which it
  * has, 'library' or 'plain'.
  *
- * The books are one mesh of vertex-coloured boxes, spines out, gilt bands on
- * the spines, a few leaning; `reshelve({ seed, fill })` sets them out again.
  * Coordinates are metres: the middle of the footprint on the floor, the front
- * of the case facing +z, the books standing at its front a little way in.
+ * of the case facing +z.
  *
- *   const { group, book, compartments, reshelve, update } = createBookcase(GFX, { species: 'walnut' });
+ *   const case_ = createBookcase(GFX, { species: 'walnut', shelves: 5 });
+ *   case_.shelve(stockBooks(12).map((o) => createBook(GFX, o)));   // real books, spine out, row after row
+ *   case_.place(someModel, { compartment: 2, x: 0.1 });            // anything else, where you say
+ *   // or, to be given some: createBookcase(GFX, { books: 12 })
  */
 
-import { linearRGB } from '../color.js';
 import { createBook } from './book.js';
+import { CLOTHS, EMBLEMS, FOILS, TRIMS } from './book-art.js';
 
 // The wood library, if this tree has it (the path is held in a variable so that nothing needs it to be there).
 const WOOD_LIBRARY = '../textures/wood.js';
@@ -50,17 +53,14 @@ export const DEFAULTS = Object.freeze({
   height: 1.9,
   depth: 0.34,
   shelves: 5,           // compartments, counting the top one and the bottom one
-  fill: 0.9,            // how full the shelves are, 0 to 1
-  seed: 3,
-  featured: true,       // the Book of Madness on top
-  book: {},             // createBook options for it
+  books: 0,             // real books to stand on it to begin with (stockBooks); 0 is an empty case
+  seed: 1,              // which books
 });
 
 const BOARD = 0.022;    // a board's thickness
 const CROWN = 0.03;     // the top board's
 const PLINTH = 0.09;
 const BACK = 0.008;
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function mulberry(seed) {
   let a = seed | 0;
@@ -108,63 +108,34 @@ function woodUV(GFX, geometry, offset, grain) {
 }
 
 /* ------------------------------------------------------------------ */
-/* the books                                                           */
+/* books to put on it                                                  */
 /* ------------------------------------------------------------------ */
 
-const SPINES = ['#3a0d14', '#131114', '#10192e', '#18271d', '#2b1741', '#3b3b41', '#5b2b15', '#7a5a3a', '#6a2b2b', '#2f3a2f', '#8a6d3b', '#c8baa0', '#4a2a3a', '#23313f'];
-const GILT = linearRGB('#c4a050');
-const LABEL = linearRGB('#e6d6b4');
+const TITLES = ['Book of Madness', 'The Whispering Walls', 'Concerning Teeth', 'A Grammar of Knots', 'The Drowned Almanac', 'Lesser Hours', 'On Candles', 'The Tenant of the Left Ear', 'Index of Things Not Said', 'Vigil', 'The Salt Codex', 'Notes Toward a Door', 'Of Stairs', 'The Long Table'];
 
-/** One geometry for every book: boxes of vertex colour, spines to +z. */
-function bookGeometry(GFX, { compartments, front, depth, seed, fill }) {
-  const rand = mulberry(seed);
-  const pos = [], nor = [], col = [], idx = [];
-  const box = (size, at, colour, lean = 0) => {
-    const g = new GFX.BoxGeometry(...size);
-    if (lean) g.rotateZ(lean);
-    g.translate(...at);
-    const base = pos.length / 3;
-    const P = g.attributes.position.array, N = g.attributes.normal.array, I = g.index.array;
-    for (let i = 0; i < P.length; i += 3) { pos.push(P[i], P[i + 1], P[i + 2]); nor.push(N[i], N[i + 1], N[i + 2]); col.push(colour[0], colour[1], colour[2]); }
-    for (let i = 0; i < I.length; i++) idx.push(I[i] + base);
-  };
-  for (const c of compartments) {
-    const room = c.y1 - c.y0;
-    let x = c.x0 + rand() * 0.012;
-    let last = null;
-    while (x < c.x1 - 0.02) {
-      if (rand() > fill) { x += 0.025 + rand() * 0.05; continue; }
-      const w = 0.022 + rand() * 0.04;
-      if (x + w > c.x1) break;
-      const h = Math.min(room - 0.025, room * (0.6 + rand() * 0.32));
-      const d = Math.min(0.3, depth) * (0.72 + rand() * 0.28);
-      const z = front - rand() * 0.014;
-      const colour = linearRGB(SPINES[(rand() * SPINES.length) | 0]);
-      box([w, h, d], [x + w / 2, c.y0 + h / 2, z - d / 2], colour);
-      // Gilt bands on the spine, and on a stout one a label.
-      const bands = 2 + ((rand() * 3) | 0);
-      for (let b = 0; b < bands; b++) {
-        const at = b < bands / 2 ? 0.1 + b * 0.06 : 0.9 - (bands - 1 - b) * 0.06;
-        box([w + 0.002, 0.004, 0.003], [x + w / 2, c.y0 + h * at, z + 0.0008], GILT);
-      }
-      if (w > 0.034) box([w * 0.62, Math.min(0.06, h * 0.22), 0.003], [x + w / 2, c.y0 + h * 0.62, z + 0.0008], LABEL);
-      last = { x: x + w, h };
-      x += w + 0.001 + rand() * 0.003;
-    }
-    // A book left leaning on the last of them, where there is room.
-    if (last && c.x1 - last.x > 0.07 && rand() < 0.7) {
-      const w = 0.03 + rand() * 0.02, h = room * (0.6 + rand() * 0.25), lean = -0.2 - rand() * 0.12;
-      const d = Math.min(0.3, depth) * 0.8;
-      const cx = last.x + 0.012 + (h / 2) * Math.sin(-lean) + w / 2 * Math.cos(lean);
-      if (cx + w < c.x1) box([w, h, d], [cx, c.y0 + (h / 2) * Math.cos(lean) + (w / 2) * Math.sin(-lean), front - d / 2 - 0.01], linearRGB(SPINES[(rand() * SPINES.length) | 0]), lean);
-    }
-  }
-  const geometry = new GFX.BufferGeometry();
-  geometry.setAttribute('position', new GFX.Float32BufferAttribute(pos, 3));
-  geometry.setAttribute('normal', new GFX.Float32BufferAttribute(nor, 3));
-  geometry.setAttribute('color', new GFX.Float32BufferAttribute(col, 3));
-  geometry.setIndex(idx);
-  return geometry;
+/**
+ * Options for `n` different books to stand on a shelf (give each to `createBook`): titles, cloths, foils and
+ * emblems, in a spread of thicknesses and heights, made light for a shelf (a small picture, pages written
+ * only when one is opened). The first is always the Book of Madness.
+ */
+export function stockBooks(n, seed = 1) {
+  const rand = mulberry(seed * 31 + 7);
+  const pick = (list) => list[(rand() * list.length) | 0];
+  const cloths = Object.values(CLOTHS), foils = Object.values(FOILS);
+  return Array.from({ length: n }, (_, i) => ({
+    title: i === 0 ? TITLES[0] : TITLES[(1 + ((rand() * (TITLES.length - 1)) | 0)) % TITLES.length],
+    subtitle: '',
+    cloth: i === 0 ? CLOTHS.oxblood : pick(cloths),
+    foil: i === 0 ? FOILS['aged gold'] : pick(foils),
+    emblem: pick(EMBLEMS),
+    trim: pick(TRIMS),
+    drips: rand() < 0.25,
+    pageCount: pick([8, 12, 16, 24, 32, 40]),
+    size: 0.52 + rand() * 0.1,
+    textureSize: 1024,
+    bump: false,
+    deferPages: true,
+  }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -218,48 +189,112 @@ export function createBookcase(GFX, options = {}) {
     if (i < shelves - 1) board(`shelf ${i + 1}`, [inner, BOARD, shelfDepth], [0, y0 + space + BOARD / 2, shelfZ], 'x');
   }
 
-  // The books.
-  const booksMaterial = new GFX.MeshStandardMaterial({ name: 'book spines', vertexColors: true, roughness: 0.78, metalness: 0 });
-  const booksMesh = new GFX.Mesh(new GFX.BufferGeometry(), booksMaterial);
-  booksMesh.name = 'books';
-  booksMesh.castShadow = booksMesh.receiveShadow = true;
-  group.add(booksMesh);
-  const shelve = ({ seed = o.seed, fill = o.fill } = {}) => {
-    booksMesh.geometry.dispose?.();
-    booksMesh.geometry = bookGeometry(GFX, { compartments, front: depth / 2 - 0.022, depth: depth - BACK - 0.05, seed, fill: clamp(fill, 0, 1) });
+  /* ------------------------- what stands on it ------------------------- */
+
+  const placed = [];
+  const cursor = compartments.map((c) => c.x0 + 0.006);
+  const front = depth / 2 - 0.012 - 0.015;             // where a spine stands: just inside the front of the shelf
+  // A book stands spine to the front, its front cover to the right, its head up: the book's own x (spine to
+  // fore-edge) runs to -z, its z (head to tail) to -y, and its y (back cover to front) to +x.
+  const STAND = new GFX.Matrix4().set(0, 1, 0, 0, 0, 0, -1, 0, -1, 0, 0, 0, 0, 0, 0, 1);
+
+  /** Why a book will not stand at x in this compartment (or null if it will), with the place it would stand. */
+  const fit = (book, i, x) => {
+    const c = compartments[i];
+    const s = book.group.scale.x;
+    const { min, max } = book.dimensions.closed;
+    const thick = (max[1] - min[1]) * s, tall = (max[2] - min[2]) * s, deep = (max[0] - min[0]) * s;
+    if (tall > c.y1 - c.y0 - 0.01) return { reason: 'height' };
+    if (deep > front - c.z0 - 0.005) return { reason: 'depth' };
+    if (x + thick > c.x1) return { reason: 'width' };
+    return { position: [x - min[1] * s, c.y0 + max[2] * s, front + min[0] * s], x0: x, x1: x + thick };
   };
-  shelve();
 
-  // The Book of Madness, lying on top.
-  let book = null;
-  if (o.featured) {
-    book = createBook(GFX, { pageCount: 40, size: 0.5, ...o.book });
-    book.group.position.set(-width * 0.12, height, 0.01);
-    book.group.rotation.y = 0.35;
-    group.add(book.group);
-  }
-
-  return {
+  const api = {
     group,
-    book,
     compartments,
     material: wood,
-    booksMaterial,
     wood: { species: o.species, finish: o.finish, source: WOOD_SOURCE },
     dimensions: { width, height, depth, shelves, shelfSpace: space },
-    /** Set the books out again: `seed` for which, `fill` (0 to 1) for how many. */
-    reshelve: shelve,
-    /** Once a frame: the Book of Madness. */
-    update(dt) { book?.update(dt); },
     frame: { center: [0, height / 2, 0], radius: Math.hypot(width, height, depth) / 2 * 1.05 },
+    /** Everything put on the shelves: [{ object, model, compartment }]. */
+    get placed() { return placed.slice(); },
+
+    /**
+     * Put a model on a shelf: `compartment` (0 the lowest), `x` and `z` where its origin stands (x from the middle
+     * of the case; z from the middle, default the middle of the shelf), turned `turn` radians about the vertical.
+     * The origin is taken to be the model's base; the model is anything with a `group` or an Object3D.
+     */
+    place(model, { compartment = 0, x = 0, z = null, turn = 0 } = {}) {
+      const c = compartments[compartment];
+      if (!c) throw new Error(`bookcase: no compartment ${compartment}`);
+      const object = model.group ?? model;
+      object.position.set(x, c.y0, z ?? (c.z0 + c.z1) / 2);
+      object.rotation.y = turn;
+      group.add(object);
+      placed.push({ object, model, compartment });
+      return object;
+    },
+
+    /**
+     * Stand a Book model on a shelf, spine out: at `x` (its left edge) or after the last book put there. Gives
+     * { object, x0, x1 } where it stands, or null where it does not fit (too tall, too deep, or the shelf is full).
+     */
+    standBook(book, { compartment = 0, x = null } = {}) {
+      if (!compartments[compartment]) throw new Error(`bookcase: no compartment ${compartment}`);
+      const at = fit(book, compartment, x ?? cursor[compartment]);
+      if (!at.position) return null;
+      const object = book.group;
+      object.quaternion.setFromRotationMatrix(STAND);
+      object.position.set(...at.position);
+      group.add(object);
+      placed.push({ object, model: book, compartment });
+      cursor[compartment] = Math.max(cursor[compartment], at.x1 + 0.002);
+      return { object, x0: at.x0, x1: at.x1 };
+    },
+
+    /**
+     * Stand books on the shelves one after another, from `compartment` up: along a shelf until it is full, then
+     * the next; or with `spread`, the same number on each shelf from there up. Gives { placed, left }: those
+     * that stood, and those there was no room for.
+     */
+    shelve(books, { compartment = 0, spread = false } = {}) {
+      const done = [], left = [];
+      const per = spread ? Math.ceil(books.length / (compartments.length - compartment)) : Infinity;
+      let on = 0;
+      for (const book of books) {
+        if (on >= per && compartment < compartments.length - 1) { compartment++; on = 0; }
+        let i = compartment, put = null;
+        for (; i < compartments.length && !put; i++) {
+          const at = fit(book, i, cursor[i]);
+          if (at.position) put = api.standBook(book, { compartment: i });
+        }
+        if (put) { done.push(book); if (i - 1 !== compartment) { compartment = i - 1; on = 0; } on++; } else left.push(book);
+      }
+      return { placed: done, left };
+    },
+
+    /** Take everything off the shelves. */
+    clear() {
+      for (const { object } of placed) group.remove(object);
+      placed.length = 0;
+      cursor.forEach((_, i) => { cursor[i] = compartments[i].x0 + 0.006; });
+      return api;
+    },
+
+    /** Once a frame: whatever stands on it that moves (a Book that is opened). */
+    update(dt) { for (const { model } of placed) model.update?.(dt); },
   };
+
+  if (o.books > 0) api.shelve(stockBooks(o.books, o.seed).map((b) => createBook(GFX, b)), { spread: true });
+  return api;
 }
 
 const choices = (list, def) => Object.assign([...list], { default: def });
 
 export const assetViewer = Object.freeze({
   id: 'bookcase',
-  name: 'Bookcase (wood, books, the Book of Madness)',
+  name: 'Bookcase (wood shelves for books)',
   category: 'Props',
   group: 'furniture',
   options: {
@@ -267,24 +302,28 @@ export const assetViewer = Object.freeze({
     finish: choices(FINISHES, 'lacquered'),
     shelves: choices([3, 4, 5, 6, 7], 5),
     width: choices([0.7, 1.0, 1.4, 1.8], 1.0),
+    books: choices([0, 6, 12, 24], 12),
   },
-  build({ GFX, species = 'walnut', finish = 'lacquered', shelves = 5, width = 1.0 }) {
-    const made = createBookcase(GFX, { species, finish, shelves, width });
-    let seed = 3;
-    let fill = DEFAULTS.fill;
-    const b = made.book;
+  build({ GFX, species = 'walnut', finish = 'lacquered', shelves = 5, width = 1.0, books = 12 }) {
+    const made = createBookcase(GFX, { species, finish, shelves, width, books });
+    let seed = 1;
+    let title = 'The Hours of the Left Ear';
+    const stock = (n) => made.shelve(stockBooks(n, ++seed).map((b) => createBook(GFX, b)), { spread: true });
     return Object.assign(made, {
       ui: [
         { type: 'buttons', items: [
-          { label: 'Open book', onClick: () => b.open() }, { label: 'Close', onClick: () => b.close() },
-          { label: '◀ Page', onClick: () => b.prev() }, { label: 'Page ▶', onClick: () => b.next() },
+          { label: 'Restock', title: 'Clear the shelves and stand new books on them', onClick: () => { made.clear(); stock(books || 12); } },
+          { label: 'Empty', onClick: () => made.clear() },
         ] },
-        { type: 'range', label: 'Shelves full', min: 0, max: 1, step: 0.05, get: () => fill, set: (v) => { fill = v; made.reshelve({ seed, fill }); } },
-        { type: 'buttons', items: [{ label: 'Reshelve', onClick: () => made.reshelve({ seed: ++seed, fill }) }] },
-        { type: 'text', label: 'Book title', get: () => b.style.title, set: (v) => b.setStyle({ title: v }) },
+        { type: 'text', label: 'New book', get: () => title, set: (v) => { title = v; } },
+        { type: 'buttons', items: [
+          { label: 'Add this book', onClick: () => {
+            const o = { ...stockBooks(1, ++seed)[0], title };
+            const book = createBook(GFX, o);
+            for (let i = 0; i < made.compartments.length; i++) if (made.standBook(book, { compartment: i })) return;
+          } },
+        ] },
       ],
-      click: (hit) => { if (hit.object.parent === b.group || hit.object.parent?.parent === b.group) b.touch(b.group.worldToLocal(hit.point.clone()).x); },
-      key: (k) => (k === 'ArrowRight' ? (b.next(), true) : k === 'ArrowLeft' ? (b.prev(), true) : false),
     });
   },
 });

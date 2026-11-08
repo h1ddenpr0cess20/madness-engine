@@ -74,6 +74,9 @@ export const DEFAULTS = {
   embed: 0.004,         // how far a leaf runs into the spine
   size: 1,
   autoplay: false,
+  textureSize: 2048,    // the cover's picture, square: 1024 is plenty for a book on a shelf
+  bump: true,           // the cover's relief (the foil and grain standing proud)
+  deferPages: false,    // write the pages only once the book is opened (a book on a shelf, shut)
 };
 
 /* ------------------------------------------------------------------ */
@@ -361,10 +364,10 @@ export function createBook(GFX, options = {}) {
   /** The cover's leather, foil, emblem and title: painted again whenever the style changes. */
   const paintCoverTextures = () => {
     if (!canPaint) { clothMaterial.color.set(style.cloth); return; }
-    const spec = { L: coverLength, Hc: coverHeight, boardLength, frontStart, spineStart, spine, ...style, endpaper: o.endpaper, seed: 7 };
+    const spec = { L: coverLength, Hc: coverHeight, boardLength, frontStart, spineStart, spine, ...style, endpaper: o.endpaper, seed: 7, textureSize: o.textureSize };
     clothMaterial.map?.dispose(); clothMaterial.bumpMap?.dispose();
     clothMaterial.map = texture(paintCover(spec, 'color'), true);
-    clothMaterial.bumpMap = texture(paintCover(spec, 'bump'), false);
+    clothMaterial.bumpMap = o.bump ? texture(paintCover(spec, 'bump'), false) : null;
     clothMaterial.color.set('#ffffff');
     clothMaterial.needsUpdate = true;
   };
@@ -432,6 +435,7 @@ export function createBook(GFX, options = {}) {
   /** Only the pages that can be seen are written: the two of the spread, and the leaf in the air. */
   const writeVisible = () => {
     if (!canPaint) return;
+    if (o.deferPages && a < 0.001) return;
     const turned = leaves.reduce((n, L) => n + (L.p > 0.5 ? 1 : 0), 0);
     const need = new Set();
     for (let k = turned - 2; k <= turned + 1; k++) if (k >= 0 && k < N) need.add(k);
@@ -690,5 +694,12 @@ export function createBook(GFX, options = {}) {
 
   paintCoverTextures();
   api.pose({ open: 0, turn: 0 });
+  // How much room it takes shut, in its own units (before `size`): for standing it on a shelf.
+  {
+    const P = coverGeometry.attributes.position.array;
+    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < P.length; i += 3) for (let k = 0; k < 3; k++) { min[k] = Math.min(min[k], P[i + k]); max[k] = Math.max(max[k], P[i + k]); }
+    api.dimensions.closed = { min, max };
+  }
   return api;
 }

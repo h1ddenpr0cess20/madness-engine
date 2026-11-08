@@ -299,7 +299,6 @@ function fitSize(ctx, text, size, track, family, maxW, weight = 'bold') {
 }
 
 const TITLE_FONT = '"Cinzel","Trajan Pro","Palatino Linotype","Book Antiqua",Georgia,"DejaVu Serif",serif';
-const SIZE = 2048;
 
 /**
  * The cover as one picture, outer face above and inner face below, in
@@ -307,6 +306,7 @@ const SIZE = 2048;
  * 'color' or 'bump' (what stands proud). Returns a canvas.
  */
 export function paintCover(g, mode) {
+  const SIZE = g.textureSize ?? 2048;
   const canvas = canvasOf(SIZE, SIZE);
   const ctx = canvas.getContext('2d');
   const L = g.L * 1000, H = g.Hc * 1000;
@@ -320,13 +320,14 @@ export function paintCover(g, mode) {
   ctx.fillStyle = bump ? '#808080' : g.endpaper; ctx.fillRect(0, H, L, H);
 
   // Leather: fine grain and a pebble.
-  for (let i = 0; i < 70000; i++) {
+  const density = (SIZE / 2048) ** 2;
+  for (let i = 0; i < 70000 * density; i++) {
     const x = rand() * L, y = rand() * H, s = 0.3 + rand() * 0.7;
     ctx.fillStyle = bump ? `rgba(${rand() < 0.5 ? '255,255,255' : '0,0,0'},0.4)` : `rgba(${rand() < 0.5 ? '0,0,0' : '255,255,255'},${0.05 + rand() * 0.05})`;
     ctx.fillRect(x, y, s, s);
   }
   ctx.lineWidth = 0.35;
-  for (let i = 0; i < 7000; i++) {
+  for (let i = 0; i < 7000 * density; i++) {
     ctx.strokeStyle = bump ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)';
     ctx.beginPath(); ctx.arc(rand() * L, rand() * H, 1 + rand() * 1.6, rand() * TAU, rand() * TAU + 2.2); ctx.stroke();
   }
