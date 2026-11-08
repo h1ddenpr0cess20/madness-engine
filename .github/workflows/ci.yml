@@ -93,7 +93,7 @@ jobs:
             const errors = [];
             page.on('pageerror', (error) => errors.push(error.message));
             const response = await page.goto(
-              'http://127.0.0.1:4173/#characters%2Fturkey',
+              'http://127.0.0.1:4173/#characters%2Fturkey.js',
               { waitUntil: 'domcontentloaded', timeout: 60000 },
             );
             if (!response?.ok()) throw new Error(`Asset viewer returned HTTP ${response?.status()}`);
