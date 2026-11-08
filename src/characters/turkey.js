@@ -217,7 +217,6 @@ export default {
           -0.215 - Math.abs(f) * 0.012,
         ];
         const axis = sub(tip, root);
-        const tangent = unit([-axis[1], axis[0], 0]);
         const total = Math.hypot(axis[0], axis[1], axis[2]);
         s.flake(root, tip, [0, 0, 1], 0.0135, 0.019, 0.19, {
           color: (p) => tailColour(i, clamp(Math.hypot(p[0] - root[0], p[1] - root[1], p[2] - root[2]) / total)),
