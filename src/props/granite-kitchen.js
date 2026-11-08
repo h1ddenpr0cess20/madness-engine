@@ -1,22 +1,63 @@
 /**
- * A fitted kitchen counter and cabinet run: polished engine granite, finished
- * hardwood fronts, exposed raw-lumber carcass edges, and a copper inset basin.
+ * A kitchen, in three parts that fit together:
  *
- * Coordinates are metres. The front of the run faces +z.
+ * - `createGraniteCounter`: a run of cabinetry under a polished granite top, any
+ *   length between `MIN_LENGTH` and `MAX_LENGTH`, with the doors, drawers and
+ *   pulls counted out to fit. Given a `cutout`, the top is cut round an aperture
+ *   and the carcass below is open to receive a sink; without one it is a solid
+ *   slab, ready for a hob or a plain run.
+ * - `createKitchenSink`: a separate part, the copper basin and its brass
+ *   faucet, built to sit in a cutout of the same size. Its rim is at the top
+ *   of the counter, origin at the middle of the rim.
+ * - `createGraniteKitchen`: the two of them, together, with the cutout cut to
+ *   the sink. The asset viewer's entry.
+ *
+ * Coordinates are metres, from the middle of the counter on the floor. The front
+ * of the run faces +z. A counter's length is its width along x, so two runs
+ * laid end to end are a longer run: each keeps its own top and its own ends.
  */
-import { createGraniteBoulder, GRANITES } from '../heroes/rock-granite.js';
+import { createGraniteBoulder, GRANITES, GRANITE_TILE_SIZE } from '../heroes/rock-granite.js';
 import { METALS, studioEnvironment } from './metalglobe.js';
 import { rawLumber, finishedWood } from '../textures/wood.js';
 
-const WOOD_TONES = Object.freeze({
-  walnut: { base: '#74452d', heart: '#3d2118', sap: '#b27a4d' },
-  oak: { base: '#a8753d', heart: '#614023', sap: '#d5ad70' },
-  mahogany: { base: '#713b2d', heart: '#391b18', sap: '#a96346' },
-});
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+export const MIN_LENGTH = 1.2;
+export const MAX_LENGTH = 4.8;
+/** The granite top, its thickness; the top of the counter is at `height`. */
+export const SLAB = 0.075;
+/** The toe kick, under the cabinets. */
+const PLINTH = 0.08;
+/** How far below the top the carcass is open beneath a sink. */
+const BOWL_DEPTH = 0.2;
 
+const WOOD_TONES = Object.freeze({ walnut: true, oak: true, mahogany: true });
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const inRange = (v, a, b) => Number.isFinite(v) && v >= a && v <= b;
+
+/**
+ * Texture coordinates for a box, from where its surface is in the world: a
+ * face that looks up or down takes x and z, one that looks along x takes z and
+ * y, one that looks along z takes x and y. The grain runs on across the whole
+ * counter, piece to piece, `scale` repeats a metre, rather than being stretched
+ * once over each box.
+ */
+function worldUV(GFX, geometry, offset, scale) {
+  const p = geometry.attributes.position, nrm = geometry.attributes.normal;
+  const uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i) + offset[0], y = p.getY(i) + offset[1], z = p.getZ(i) + offset[2];
+    const ax = Math.abs(nrm.getX(i)), ay = Math.abs(nrm.getY(i)), az = Math.abs(nrm.getZ(i));
+    let u, v;
+    if (ay >= ax && ay >= az) { u = x; v = z; } else if (ax >= az) { u = z; v = y; } else { u = x; v = y; }
+    uv[2 * i] = u * scale;
+    uv[2 * i + 1] = v * scale;
+  }
+  geometry.setAttribute('uv', new GFX.BufferAttribute(uv, 2));
+}
+
+/** A box at `position` in `parent`, textured in the world by its material's `uvScale`. */
 function box(GFX, parent, name, size, position, material) {
   const geometry = new GFX.BoxGeometry(...size);
+  if (material.userData.uvScale) worldUV(GFX, geometry, position, material.userData.uvScale);
   const mesh = new GFX.Mesh(geometry, material);
   mesh.name = name;
   mesh.position.set(...position);
@@ -26,27 +67,35 @@ function box(GFX, parent, name, size, position, material) {
   return mesh;
 }
 
-function makeWoodMaterial(GFX, tone, finish) {
-  const painted = finish === 'finished';
-  const maps = painted ? finishedWood(GFX, tone) : rawLumber(GFX, tone);
-  return new GFX.MeshPhysicalMaterial({
-    name: painted ? `finished ${tone} hardwood` : `raw ${tone} lumber`,
+/**
+ * Hardwood. Raw lumber is the carcass, bare. The finished boards are lacquered:
+ * a sealed, satin-gloss clearcoat over the sanded wood, the way a kitchen's
+ * doors are finished, so the grain shows through a clear surface.
+ */
+function makeWoodMaterial(GFX, species, finish) {
+  const lacquered = finish === 'finished';
+  const maps = lacquered ? finishedWood(GFX, species) : rawLumber(GFX, species);
+  const material = new GFX.MeshPhysicalMaterial({
+    name: lacquered ? `finished ${species} hardwood` : `raw ${species} lumber`,
     color: '#ffffff',
     map: maps.map,
     bumpMap: maps.bump,
-    bumpScale: painted ? 0.018 : 0.035,
-    roughness: painted ? 0.28 : 0.82,
+    bumpScale: lacquered ? 0.012 : 0.035,
+    roughness: lacquered ? 0.34 : 0.82,
     metalness: 0,
-    clearcoat: painted ? 0.72 : 0,
-    clearcoatRoughness: painted ? 0.2 : 1,
+    clearcoat: lacquered ? 1 : 0,
+    clearcoatRoughness: lacquered ? 0.06 : 1,
   });
+  // One repeat of the wood's map is a metre of board.
+  material.userData.uvScale = 1;
+  return material;
 }
 
 function makeMetalMaterial(GFX, name, envMap = null) {
   const spec = METALS[name];
   if (!spec) throw new Error(`kitchen: unknown metal "${name}"`);
   return new GFX.MeshStandardMaterial({
-    name: name,
+    name,
     color: spec.color,
     metalness: 1,
     roughness: spec.roughness,
@@ -81,14 +130,15 @@ function addJoint(GFX, parent, name, position, radius, material) {
   return mesh;
 }
 
-function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
+/**
+ * The formed basin: a smooth bowl of nested rounded-rectangle rings, drawn in
+ * and down so its visible faces look into the water. Its rim is at y = 0.
+ */
+function makeCopperBasin(GFX, parent, metal, width, depth) {
   const basin = new GFX.Group();
   basin.name = 'inset copper basin';
-  basin.position.set(x, y, z);
   parent.add(basin);
 
-  // The bowl is a smooth series of nested rounded-rectangle rings, drawn inward
-  // and down so the visible normals face the water cavity.
   const hx = width / 2, hz = depth / 2;
   const rimY = 0, floorY = -0.17, inset = 0.055;
   const positions = [], indices = [];
@@ -128,18 +178,14 @@ function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
   bowl.receiveShadow = true;
   basin.add(bowl);
 
-  const floor = new GFX.Mesh(
-    new GFX.BoxGeometry(Math.max(0.08, width - inset * 2), 0.008, Math.max(0.08, depth - inset * 2)),
-    bowlMaterial,
-  );
+  const floor = new GFX.Mesh(new GFX.BoxGeometry(Math.max(0.08, width - inset * 2), 0.008, Math.max(0.08, depth - inset * 2)), bowlMaterial);
   floor.name = 'copper basin floor';
   floor.position.y = floorY - 0.002;
   floor.castShadow = true;
   floor.receiveShadow = true;
   basin.add(floor);
 
-  // Beaded rolled edge around the rounded rectangular opening. Short straight
-  // lengths and polished joints avoid a dependency on a curve/tube extension.
+  // The beaded, rolled rim round the opening, in straight lengths with polished joints.
   const r = Math.min(0.055, hx * 0.22, hz * 0.28);
   const rimPoints = [
     [-hx + r, 0.004, -hz], [hx - r, 0.004, -hz],
@@ -171,6 +217,7 @@ function makeCopperBasin(GFX, parent, metal, x, y, z, width, depth) {
   return basin;
 }
 
+/** A solid brass kitchen faucet, standing on its escutcheon at (x, y, z), its spout reaching toward +z. */
 function makeFaucet(GFX, parent, brass, x, y, z, scale = 1) {
   const tap = new GFX.Group();
   tap.name = 'solid brass kitchen faucet';
@@ -197,131 +244,211 @@ function makeFaucet(GFX, parent, brass, x, y, z, scale = 1) {
 }
 
 /**
- * Build the kitchen asset.
- * @param {object} GFX Three-compatible graphics namespace.
- * @param {object} options Asset options.
- * @param {'grey'|'pink'|'black'|'white'|'green'} options.granite Granite colour.
- * @param {'walnut'|'oak'|'mahogany'} options.wood Hardwood species.
- * @param {'copper'|'brass'|'bronze'} options.basinMetal Basin metal finish.
- * @param {'brass'|'gold'|'bronze'} options.fixtureMetal Fixture finish.
+ * The counter: cabinetry and a granite top, `length` long, `depth` deep and
+ * `height` to the top of the stone. `cutout` = { x, z, width, depth } is an
+ * aperture for a sink, its middle at (x, z) from the middle of the counter; the
+ * top is cut round it, and the carcass below is open to `BOWL_DEPTH` under the
+ * top, so the sink's bowl sits in it.
+ */
+export function createGraniteCounter(GFX, {
+  length = 2.8,
+  depth = 0.72,
+  height = 0.92,
+  granite = 'grey',
+  wood = 'walnut',
+  fixtureMetal = 'brass',
+  environment = null,
+  cutout = null,
+} = {}) {
+  if (!Object.hasOwn(GRANITES, granite)) throw new Error(`kitchen: unknown granite "${granite}"`);
+  if (!Object.hasOwn(WOOD_TONES, wood)) throw new Error(`kitchen: unknown hardwood "${wood}"`);
+  if (!['brass', 'gold', 'bronze'].includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
+  if (!inRange(length, MIN_LENGTH, MAX_LENGTH) || !inRange(depth, 0.55, 1.1) || !inRange(height, 0.7, 1.2)) {
+    throw new Error('kitchen: dimensions outside supported ranges');
+  }
+  const x0 = -length / 2, x1 = length / 2, z0 = -depth / 2, z1 = depth / 2;
+  if (cutout) {
+    const { x, z, width: cw, depth: cd } = cutout;
+    if (![x, z, cw, cd].every(Number.isFinite) || cw <= 0 || cd <= 0
+      || x - cw / 2 < x0 + 0.1 || x + cw / 2 > x1 - 0.1 || z - cd / 2 < z0 + 0.06 || z + cd / 2 > z1 - 0.06) {
+      throw new Error('kitchen: cutout does not fit the counter');
+    }
+  }
+
+  const counter = new GFX.Group();
+  counter.name = 'granite kitchen counter';
+
+  const finishedMat = makeWoodMaterial(GFX, wood, 'finished');
+  const rawMat = makeWoodMaterial(GFX, wood, 'raw');
+  const brass = makeMetalMaterial(GFX, fixtureMetal, environment);
+
+  // The granite: the boulder's own colour and bump maps, at the boulder's grain scale.
+  const source = createGraniteBoulder(GFX, { colour: granite, detail: 2 });
+  const graniteMat = new GFX.MeshPhysicalMaterial({
+    name: 'polished granite countertop',
+    color: source.material.color,
+    map: source.material.map,
+    bumpMap: source.material.bumpMap,
+    bumpScale: source.material.bumpScale,
+    roughness: 0.16,
+    metalness: 0.02,
+    clearcoat: 0.75,
+    clearcoatRoughness: 0.12,
+  });
+  graniteMat.userData.uvScale = 1 / GRANITE_TILE_SIZE;
+  source.geometry.dispose();
+  source.material.dispose();
+
+  const cabinetTop = height - SLAB;
+  const topY = height;
+  const cabinetDepth = depth - 0.08;
+  const back = z0, front = z0 + cabinetDepth;
+
+  // The carcass: raw lumber, cut round the aperture when there is one, so the sink's bowl has room.
+  const carcass = (name, xa, xb, ya, yb, za, zb) => {
+    if (xb - xa < 1e-4 || zb - za < 1e-4 || yb - ya < 1e-4) return;
+    box(GFX, counter, name, [xb - xa, yb - ya, zb - za], [(xa + xb) / 2, (ya + yb) / 2, (za + zb) / 2], rawMat);
+  };
+  if (cutout) {
+    const cx0 = cutout.x - cutout.width / 2, cx1 = cutout.x + cutout.width / 2;
+    const cz0 = cutout.z - cutout.depth / 2, cz1 = cutout.z + cutout.depth / 2;
+    const floorY = topY - BOWL_DEPTH;
+    carcass('raw lumber carcass, left', x0, cx0, PLINTH, cabinetTop, back, front);
+    carcass('raw lumber carcass, right', cx1, x1, PLINTH, cabinetTop, back, front);
+    carcass('raw lumber carcass, behind the sink', cx0, cx1, PLINTH, cabinetTop, back, cz0);
+    carcass('raw lumber carcass, in front of the sink', cx0, cx1, PLINTH, cabinetTop, cz1, front);
+    carcass('raw lumber carcass, under the sink', cx0, cx1, PLINTH, floorY, cz0, cz1);
+  } else {
+    carcass('raw lumber cabinet carcass', x0, x1, PLINTH, cabinetTop, back, front);
+  }
+  box(GFX, counter, 'finished hardwood toe kick', [length, PLINTH, cabinetDepth], [0, PLINTH / 2, (back + front) / 2], finishedMat);
+
+  // Doors and drawers: about one to every 0.62 m of run, counted to the length; every other bay has a drawer on top.
+  const bays = Math.max(2, Math.round(length / 0.62));
+  const bayW = length / bays;
+  const frontZ = depth / 2 - 0.022;
+  for (let i = 0; i < bays; i++) {
+    const x = x0 + bayW * (i + 0.5);
+    const doorH = cabinetTop - PLINTH - 0.035;
+    box(GFX, counter, `finished hardwood cabinet door ${i + 1}`, [bayW - 0.024, doorH, 0.038], [x, (cabinetTop + PLINTH) / 2, frontZ], finishedMat);
+    box(GFX, counter, `raised cabinet centre panel ${i + 1}`, [bayW - 0.13, cabinetTop - PLINTH - 0.14, 0.012], [x, (cabinetTop + PLINTH) / 2, frontZ + 0.024], finishedMat);
+    const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayW * 0.38), 0.018, 0.022), brass);
+    pull.name = `brass cabinet pull ${i + 1}`;
+    pull.position.set(x, cabinetTop - 0.14, frontZ + 0.047);
+    pull.castShadow = true;
+    counter.add(pull);
+    const mount = new GFX.Mesh(new GFX.CylinderGeometry(0.022, 0.022, 0.008, 24), brass);
+    mount.name = `brass pull mounts ${i + 1}`;
+    mount.rotation.x = Math.PI / 2;
+    mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.047);
+    counter.add(mount);
+    if (i % 2 === 1) {
+      box(GFX, counter, `finished top drawer ${i + 1}`, [bayW - 0.024, 0.09, 0.028], [x, cabinetTop - 0.065, frontZ + 0.008], finishedMat);
+    }
+  }
+
+  // The granite top: one slab, or, with an aperture, four pieces meeting at its edges so the stone runs on across every cut.
+  const topPos = topY - SLAB / 2;
+  const overhang = 0.035;
+  if (cutout) {
+    const cx0 = cutout.x - cutout.width / 2, cx1 = cutout.x + cutout.width / 2;
+    const cz0 = cutout.z - cutout.depth / 2, cz1 = cutout.z + cutout.depth / 2;
+    const wingL = [x0 - overhang / 2, cx0], wingR = [cx1, x1 + overhang / 2];
+    box(GFX, counter, 'granite countertop left wing', [wingL[1] - wingL[0], SLAB, depth + overhang], [(wingL[0] + wingL[1]) / 2, topPos, 0], graniteMat);
+    box(GFX, counter, 'granite countertop right wing', [wingR[1] - wingR[0], SLAB, depth + overhang], [(wingR[0] + wingR[1]) / 2, topPos, 0], graniteMat);
+    const rearA = z0 - overhang / 2;
+    box(GFX, counter, 'granite countertop rear rail', [cutout.width, SLAB, cz0 - rearA], [cutout.x, topPos, (rearA + cz0) / 2], graniteMat);
+    box(GFX, counter, 'granite countertop front rail', [cutout.width, SLAB, z1 + overhang / 2 - cz1], [cutout.x, topPos, (cz1 + z1 + overhang / 2) / 2], graniteMat);
+  } else {
+    box(GFX, counter, 'polished solid granite countertop', [length + overhang, SLAB, depth + overhang], [0, topPos, 0], graniteMat);
+  }
+
+  counter.userData.materials = { granite: graniteMat, finishedWood: finishedMat, rawLumber: rawMat, brass };
+  counter.userData.dimensions = { length, height, depth };
+  counter.userData.cutout = cutout ? { ...cutout } : null;
+  return { group: counter, granite: graniteMat, finishedWood: finishedMat, rawLumber: rawMat, brass, environment };
+}
+
+/**
+ * The sink: a copper basin and its brass faucet, as one part. It is built for a
+ * cutout of `width` by `depth`, and its origin is at the middle of the rim, which
+ * sits flush with the counter. Place it at its cutout's (x, height, z).
+ */
+export function createKitchenSink(GFX, {
+  width = 0.6,
+  depth = 0.42,
+  basinMetal = 'copper',
+  fixtureMetal = 'brass',
+  environment = null,
+} = {}) {
+  if (!['copper', 'brass', 'bronze'].includes(basinMetal)) throw new Error(`kitchen: invalid basin metal "${basinMetal}"`);
+  if (!['brass', 'gold', 'bronze'].includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
+  if (!inRange(width, 0.4, 0.9) || !inRange(depth, 0.3, 0.6)) throw new Error('kitchen: sink dimensions outside supported ranges');
+
+  const sink = new GFX.Group();
+  sink.name = 'copper kitchen sink';
+  const copper = makeMetalMaterial(GFX, basinMetal, environment);
+  const brass = makeMetalMaterial(GFX, fixtureMetal, environment);
+
+  // The bowl sits inside the rim; the faucet stands on the counter behind it.
+  const basin = makeCopperBasin(GFX, sink, copper, width - 0.012, depth - 0.012);
+  basin.position.set(0, -0.002, 0);
+  makeFaucet(GFX, sink, brass, 0, 0, -depth / 2 - 0.07);
+
+  sink.userData.materials = { brass, copper };
+  sink.userData.dimensions = { width, depth };
+  return { group: sink, basin, brass, copper, environment };
+}
+
+/**
+ * The asset: a counter with a sink in it, both as the parts above. `length`
+ * sets the run; the sink sits a little left of centre, toward the back, as is
+ * usual. Returns the counter and sink groups, and the group with both in it.
  */
 export function createGraniteKitchen(GFX, {
   granite = 'grey',
   wood = 'walnut',
   basinMetal = 'copper',
   fixtureMetal = 'brass',
-  width = 2.8,
+  length = 2.8,
   height = 0.92,
   depth = 0.72,
   environment = null,
 } = {}) {
   if (!Object.hasOwn(GRANITES, granite)) throw new Error(`kitchen: unknown granite "${granite}"`);
-  if (!WOOD_TONES[wood]) throw new Error(`kitchen: unknown hardwood "${wood}"`);
-  if (!['copper', 'brass', 'bronze'].includes(basinMetal)) throw new Error(`kitchen: invalid basin metal "${basinMetal}"`);
-  if (!['brass', 'gold', 'bronze'].includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
-  if (![width, height, depth].every(Number.isFinite) || width < 1.8 || width > 4 || height < 0.7 || height > 1.2 || depth < 0.55 || depth > 1.1) {
-    throw new Error('kitchen: dimensions outside supported ranges');
-  }
+  if (!Object.hasOwn(WOOD_TONES, wood)) throw new Error(`kitchen: unknown hardwood "${wood}"`);
+  const sinkWidth = clamp(length * 0.27, 0.5, 0.72);
+  const sinkDepth = clamp(depth * 0.58, 0.36, 0.48);
+  const cutout = { x: -length * 0.22, z: -depth * 0.02, width: sinkWidth, depth: sinkDepth };
+
+  const counter = createGraniteCounter(GFX, { length, depth, height, granite, wood, fixtureMetal, environment, cutout });
+  const sink = createKitchenSink(GFX, { width: sinkWidth, depth: sinkDepth, basinMetal, fixtureMetal, environment });
+  sink.group.position.set(cutout.x, height, cutout.z);
 
   const group = new GFX.Group();
-  group.name = 'granite countertop and finished hardwood cabinetry';
-  const [woodMap, rawMap] = [
-    makeWoodMaterial(GFX, wood, 'finished'),
-    makeWoodMaterial(GFX, wood, 'raw'),
-  ];
-  const brass = makeMetalMaterial(GFX, fixtureMetal, environment);
-  const copper = makeMetalMaterial(GFX, basinMetal, environment);
-
-  const cabinetHeight = height - 0.11;
-  const plinth = 0.08;
-  const topY = height;
-  const cabinetDepth = depth - 0.08;
-  const x0 = -width / 2;
-  const z0 = -depth / 2;
-
-  // Raw lumber is the actual substrate; finished faces are laminated over it.
-  box(GFX, group, 'raw lumber cabinet carcass', [width, cabinetHeight - plinth, cabinetDepth], [0, plinth + (cabinetHeight - plinth) / 2, z0 + cabinetDepth / 2], rawMap);
-  box(GFX, group, 'finished hardwood toe kick', [width, plinth, cabinetDepth], [0, plinth / 2, z0 + cabinetDepth / 2], woodMap);
-
-  // Four finished framed doors/drawer fronts with a recessed centre panel and fine reveals.
-  const bayCount = Math.max(3, Math.round(width / 0.62));
-  const bayWidth = width / bayCount;
-  for (let i = 0; i < bayCount; i++) {
-    const x = x0 + bayWidth * (i + 0.5);
-    const frontZ = depth / 2 - 0.022;
-      box(GFX, group, `finished hardwood cabinet door ${i + 1}`, [bayWidth - 0.024, cabinetHeight - plinth - 0.035, 0.038], [x, (cabinetHeight + plinth) / 2, frontZ], woodMap);
-    // A subtle inset panel, kept flush within a solid hardwood frame.
-    box(GFX, group, `raised cabinet centre panel ${i + 1}`, [bayWidth - 0.13, cabinetHeight - plinth - 0.14, 0.012], [x, (cabinetHeight + plinth) / 2, frontZ + 0.024], woodMap);
-    const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayWidth * 0.38), 0.018, 0.022), brass);
-    pull.name = `brass cabinet pull ${i + 1}`;
-    pull.position.set(x, cabinetHeight - 0.14, frontZ + 0.047);
-    pull.castShadow = true;
-    group.add(pull);
-    const escutcheon = new GFX.Mesh(new GFX.CylinderGeometry(0.022, 0.022, 0.008, 24), brass);
-    escutcheon.name = `brass pull mounts ${i + 1}`;
-    escutcheon.rotation.x = Math.PI / 2;
-    escutcheon.position.set(x - Math.min(0.12, bayWidth * 0.22), cabinetHeight - 0.14, frontZ + 0.047);
-    group.add(escutcheon);
-    if (i % 2 === 1) {
-      box(GFX, group, `finished top drawer ${i + 1}`, [bayWidth - 0.024, 0.09, 0.028], [x, cabinetHeight - 0.065, frontZ + 0.008], woodMap);
-    }
-  }
-
-  // Granite slab: use the exact boulder's colour and bump maps, palette and grain scale,
-  // but a slab material without the boulder's per-vertex colour attribute.
-  const graniteSource = createGraniteBoulder(GFX, { colour: granite, detail: 2 });
-  const graniteMaterial = new GFX.MeshPhysicalMaterial({
-    name: 'polished granite countertop',
-    color: graniteSource.material.color,
-    map: graniteSource.material.map,
-    bumpMap: graniteSource.material.bumpMap,
-    bumpScale: graniteSource.material.bumpScale,
-    roughness: 0.16,
-    metalness: 0.02,
-    clearcoat: 0.75,
-    clearcoatRoughness: 0.12,
-  });
-  graniteSource.geometry.dispose();
-  graniteSource.material.dispose();
-  const slab = new GFX.Mesh(new GFX.BoxGeometry(width + 0.035, 0.075, depth + 0.035), graniteMaterial);
-  slab.name = 'polished solid granite countertop';
-  slab.position.set(0, topY - 0.03, z0 + depth / 2);
-  slab.castShadow = true;
-  slab.receiveShadow = true;
-  group.add(slab);
-
-  // Cut a true aperture with a segmented rim; the copper vessel sits in the cabinet top.
-  const basinWidth = clamp(width * 0.27, 0.5, 0.72);
-  const basinDepth = clamp(depth * 0.58, 0.36, 0.48);
-  const basinX = -width * 0.22;
-  const basinZ = z0 + depth * 0.48;
-  // Boolean operations are intentionally not required by the engine. The slab is split into three stone pieces
-  // around the aperture, preserving the continuous stone material on every exposed cut edge.
-  group.remove(slab);
-  slab.geometry.dispose();
-  const leftW = width * 0.5 + basinX - basinWidth * 0.5;
-  const rightW = width * 0.5 - (basinX + basinWidth * 0.5);
-  const topPos = topY - 0.03;
-  box(GFX, group, 'granite countertop left wing', [leftW, 0.075, depth + 0.035], [x0 + leftW / 2, topPos, z0 + depth / 2], graniteMaterial);
-  box(GFX, group, 'granite countertop right wing', [rightW, 0.075, depth + 0.035], [basinX + basinWidth / 2 + rightW / 2, topPos, z0 + depth / 2], graniteMaterial);
-  const backRailDepth = basinZ - basinDepth * 0.5 - z0;
-  const frontRailDepth = depth - backRailDepth - basinDepth;
-  box(GFX, group, 'granite countertop rear rail', [basinWidth, 0.075, backRailDepth], [basinX, topPos, z0 + backRailDepth / 2], graniteMaterial);
-  box(GFX, group, 'granite countertop front rail', [basinWidth, 0.075, frontRailDepth], [basinX, topPos, basinZ + basinDepth * 0.5 + frontRailDepth / 2], graniteMaterial);
-
-  const basin = makeCopperBasin(GFX, group, copper, basinX, topY - 0.07, basinZ, basinWidth - 0.012, basinDepth - 0.012);
-  makeFaucet(GFX, group, brass, basinX, topY + 0.01, basinZ - basinDepth / 2 - 0.07);
-
-  // Return the substrate maps as well as the meshes so other props can use the same lumber species.
-  group.userData.materials = { granite: graniteMaterial, finishedWood: woodMap, rawLumber: rawMap, brass, copper };
-  group.userData.dimensions = { width, height, depth };
-  group.userData.basin = basin;
-  return { group, granite: graniteMaterial, finishedWood: woodMap, rawLumber: rawMap, brass, copper, basin, environment };
+  group.name = 'granite kitchen counter with a copper sink';
+  group.add(counter.group, sink.group);
+  group.userData.counter = counter.group;
+  group.userData.sink = sink.group;
+  group.userData.materials = { ...counter.group.userData.materials, ...sink.group.userData.materials };
+  group.userData.dimensions = { length, height, depth };
+  return {
+    group,
+    counter: counter.group,
+    sink: sink.group,
+    granite: counter.granite,
+    finishedWood: counter.finishedWood,
+    rawLumber: counter.rawLumber,
+    brass: counter.brass,
+    copper: sink.copper,
+    basin: sink.basin,
+    environment,
+  };
 }
 
 export const assetViewer = Object.freeze({
   id: 'granite-kitchen',
-  name: 'Granite kitchen counter & cabinets',
+  name: 'Granite kitchen counter & sink',
   category: 'Props',
   group: 'kitchen',
   options: {

@@ -3,8 +3,10 @@ import { test } from 'node:test';
 import * as GFX from '../src/gfx/index.js';
 import { GRANITES } from '../src/heroes/rock-granite.js';
 import { METALS } from '../src/props/metalglobe.js';
-import { createGraniteKitchen } from '../src/props/granite-kitchen.js';
+import { createGraniteKitchen, createGraniteCounter, createKitchenSink, MAX_LENGTH, MIN_LENGTH } from '../src/props/granite-kitchen.js';
 import { rawLumber, finishedWood, WOOD_SPECIES } from '../src/textures/wood.js';
+
+const doors = (group) => group.children.filter((c) => /^finished hardwood cabinet door/.test(c.name)).length;
 
 test('hardwood texture exposes raw and finished variants over the same species palette', () => {
   for (const species of Object.keys(WOOD_SPECIES)) {
@@ -14,25 +16,65 @@ test('hardwood texture exposes raw and finished variants over the same species p
   }
 });
 
-test('granite kitchen reuses the engine granite and metal palettes', () => {
+test('the kitchen reuses the engine granite and metal palettes, and is a counter with a sink in it', () => {
   assert.deepEqual(Object.keys(GRANITES), ['grey', 'pink', 'black', 'white', 'green']);
   assert.equal(METALS.copper.color, '#f08a68');
   assert.equal(METALS.brass.color, '#e0b84e');
   const kitchen = createGraniteKitchen(GFX);
-  assert.equal(kitchen.group.name, 'granite countertop and finished hardwood cabinetry');
+  assert.equal(kitchen.group.name, 'granite kitchen counter with a copper sink');
+  assert.equal(kitchen.counter.name, 'granite kitchen counter');
+  assert.equal(kitchen.sink.name, 'copper kitchen sink');
   assert.equal(kitchen.group.userData.materials.granite.name, 'polished granite countertop');
   assert.equal(kitchen.group.userData.materials.finishedWood.name, 'finished walnut hardwood');
   assert.equal(kitchen.group.userData.materials.rawLumber.name, 'raw walnut lumber');
   assert.equal(kitchen.group.userData.materials.brass.color.getHexString(), 'e0b84e');
   assert.equal(kitchen.group.userData.materials.copper.color.getHexString(), 'f08a68');
-  assert.ok(kitchen.group.getObjectByName('formed copper bowl'));
-  assert.ok(kitchen.group.getObjectByName('solid brass kitchen faucet'));
-  assert.ok(kitchen.group.getObjectByName('granite countertop left wing'));
+  assert.ok(kitchen.sink.getObjectByName('formed copper bowl'));
+  assert.ok(kitchen.sink.getObjectByName('solid brass kitchen faucet'));
+  assert.ok(kitchen.counter.getObjectByName('granite countertop left wing'));
 });
 
-test('granite kitchen validates material selectors and dimensions', () => {
+test('the sink is a part of its own: it builds without a counter, and its rim is at the origin', () => {
+  const sink = createKitchenSink(GFX, { width: 0.6, depth: 0.42 });
+  assert.equal(sink.group.name, 'copper kitchen sink');
+  assert.ok(sink.group.getObjectByName('inset copper basin'));
+  assert.ok(sink.group.getObjectByName('solid brass kitchen faucet'));
+  assert.equal(sink.group.userData.dimensions.width, 0.6);
+  assert.throws(() => createKitchenSink(GFX, { width: 2 }), /sink dimensions/);
+});
+
+test('the counter is extendable: any length in range is built, with doors counted to the run', () => {
+  const short = createGraniteCounter(GFX, { length: MIN_LENGTH });
+  const long = createGraniteCounter(GFX, { length: MAX_LENGTH });
+  const mid = createGraniteCounter(GFX, { length: 4.2 });
+  assert.ok(doors(short.group) >= 2);
+  assert.ok(doors(long.group) > doors(short.group));
+  assert.equal(doors(mid.group), Math.round(4.2 / 0.62));
+  assert.equal(long.group.userData.dimensions.length, MAX_LENGTH);
+  assert.throws(() => createGraniteCounter(GFX, { length: MAX_LENGTH + 0.1 }), /dimensions/);
+  assert.throws(() => createGraniteCounter(GFX, { length: MIN_LENGTH - 0.1 }), /dimensions/);
+});
+
+test('a counter with no cutout is one solid top, and one with a cutout has four pieces round the aperture', () => {
+  const solid = createGraniteCounter(GFX, { length: 2.4 });
+  assert.ok(solid.group.getObjectByName('polished solid granite countertop'));
+  assert.equal(solid.group.getObjectByName('granite countertop left wing'), undefined);
+  const cut = createGraniteCounter(GFX, { length: 2.4, cutout: { x: -0.4, z: 0, width: 0.6, depth: 0.4 } });
+  for (const name of ['left wing', 'right wing', 'rear rail', 'front rail']) assert.ok(cut.group.getObjectByName(`granite countertop ${name}`), name);
+  assert.ok(cut.group.getObjectByName('raw lumber carcass, under the sink'));
+  assert.throws(() => createGraniteCounter(GFX, { length: 2.4, cutout: { x: 1.3, z: 0, width: 0.6, depth: 0.4 } }), /does not fit/);
+});
+
+test('the finished boards are lacquered, the raw lumber is not', () => {
+  const kitchen = createGraniteKitchen(GFX);
+  assert.equal(kitchen.finishedWood.clearcoat, 1);
+  assert.ok(kitchen.finishedWood.clearcoatRoughness <= 0.1);
+  assert.equal(kitchen.rawLumber.clearcoat, 0);
+});
+
+test('the kitchen validates material selectors and dimensions', () => {
   assert.throws(() => createGraniteKitchen(GFX, { granite: 'blue' }), /unknown granite/);
   assert.throws(() => createGraniteKitchen(GFX, { wood: 'pine' }), /unknown hardwood/);
   assert.throws(() => createGraniteKitchen(GFX, { basinMetal: 'steel' }), /invalid basin metal/);
-  assert.throws(() => createGraniteKitchen(GFX, { width: 5 }), /dimensions/);
+  assert.throws(() => createGraniteKitchen(GFX, { length: 9 }), /dimensions/);
 });
