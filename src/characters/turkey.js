@@ -4,7 +4,6 @@ import { mix, smooth } from '../models/skins.js';
 const side = (m) => (m > 0 ? 'L' : 'R');
 const GOLD = rgb('#d8a34b');
 const OCHRE = rgb('#ad7736');
-const DARK_GOLD = rgb('#68452c');
 const CHESTNUT = rgb('#65402d');
 const RUST = rgb('#985332');
 const COPPER = rgb('#a9663c');
@@ -20,8 +19,7 @@ const BEAK = rgb('#d1a04b');
 const BEAK_DARK = rgb('#76502d');
 
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
-const lerp3 = (a, b, t) => mix(a, b, clamp(t));
-const smoothBand = (a, b, x) => smooth(a, b, x);
+const scale3 = (v, k) => [v[0] * k, v[1] * k, v[2] * k];
 
 /**
  * A directional, layered coat. The low-frequency variation gives the body
@@ -54,7 +52,7 @@ const wingPlumage = (p, n) => {
 };
 
 /** Turkey tail feathers: rust/brown bars, a broad pale terminal band and dark rounded tips. */
-const tailColour = (index, p, n, t) => {
+const tailColour = (index, t) => {
   const variation = 0.5 + 0.5 * Math.sin(index * 7.73 + 1.3);
   const ground = mix(RUST, mix(CHESTNUT, COPPER, variation * 0.7), 0.6);
   const narrowBar = smooth(0.43, 0.48, t) * (1 - smooth(0.54, 0.59, t));
@@ -198,11 +196,11 @@ export default {
           -0.205 - Math.abs(f) * 0.016,
         ];
         const width = 0.0175 * (1 - 0.15 * Math.abs(f));
-        const shaftEnd = add(root, scale([tip[0] - root[0], tip[1] - root[1], tip[2] - root[2]], 0.93));
+        const shaftEnd = add(root, scale3([tip[0] - root[0], tip[1] - root[1], tip[2] - root[2]], 0.93));
         const axis = [tip[0] - root[0], tip[1] - root[1], tip[2] - root[2]];
         const total = Math.hypot(...axis);
         s.flake(root, tip, [0, -0.12, 1], width * 0.73, width, 0.16, {
-          color: (p, n) => tailColour(i, p, n, clamp(Math.hypot(p[0] - root[0], p[1] - root[1], p[2] - root[2]) / total)),
+          color: (p, n) => tailColour(i, clamp(Math.hypot(p[0] - root[0], p[1] - root[1], p[2] - root[2]) / total)),
           mat: 'flight', bone: 'fan', k: 0.0021,
         });
         // Fine rachis along each feather's centerline.
@@ -365,7 +363,7 @@ export default {
       });
 
       // Three long toes splay forward, with flexible joints and dark keratin claws.
-      for (const [i, a] of [-0.66, 0, 0.66].entries()) {
+      for (const a of [-0.66, 0, 0.66]) {
         const spread = a * 0.023;
         const start = [m * 0.053 + a * 0.012, 0.028, 0.02];
         const joint = [m * 0.053 + spread * 0.55, 0.015, 0.047];
