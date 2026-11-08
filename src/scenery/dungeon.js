@@ -1,4 +1,4 @@
-import { createLavaPitMaterial } from '../textures/lavapit.js';
+import { createLavaSurface } from '../textures/lavapit.js';
 
 /**
  * The dungeon as it is drawn: flagstone floors, brick walls falling away into
@@ -220,20 +220,16 @@ export function createDungeonMeshes(GFX, built) {
     m.frustumCulled = false;
     group.add(m);
   }
-  let lavaMaterial = null;
+  let lavaSurface = null;
   if (built.lava.position.length) {
-    lavaMaterial = createLavaPitMaterial(GFX);
-    const lava = new GFX.Mesh(geometry(built.lava), lavaMaterial);
-    lava.frustumCulled = false;
-    group.add(lava);
+    lavaSurface = createLavaSurface(GFX, geometry(built.lava));
+    group.add(lavaSurface.mesh);
   }
   return {
     group,
-    /** The lava pit shader (lavapit.js) moves its crust, melt, glints, sparks and bubbles. */
+    /** Slimey's lava (lavapit.js): its melt moves and glints. */
     update(time) {
-      if (!lavaMaterial) return;
-      lavaMaterial.uniforms.uTime.value = time;
-      lavaMaterial.uniforms.uBright.value = 0.94 + 0.06 * Math.sin(time * 1.7);
+      if (lavaSurface) lavaSurface.update(time);
     },
   };
 }

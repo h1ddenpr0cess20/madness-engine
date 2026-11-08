@@ -110,32 +110,31 @@ test('lava bubbling adds smooth, localized surface inflation without changing ot
 });
 
 
-test('the lava pit material is one program per backend with the same controls as the old floor lava', async () => {
-  const { createLavaPitMaterial, createLavaPit, lavaFlicker } = await import('../src/textures/lavapit.js');
+test('the lava pit is Slimey\'s melt computed per pixel in 3D world space, with no baked textures', async () => {
+  const { createLavaPitMaterial, createLavaSurface, createLavaPit, lavaFlicker } = await import('../src/textures/lavapit.js');
   const material = createLavaPitMaterial(GFX);
-  assert.equal(material.name, 'lava-pit');
   assert.equal(material.type, 'ShaderMaterial');
-  assert.equal(material.side, GFX.DoubleSide);
-  assert.equal(material.uniforms.uTime.value, 0);
-  assert.equal(material.uniforms.uBright.value, 1);
-  // Reserved words in GLSL ES (half, ...) would fail to compile on a real driver.
-  assert.doesNotMatch(material.glsl.fragment, /\b(half|sample|common|filter)\b\s*[=;,)]/);
-  for (const part of ['crack', 'lake', 'spec', 'spark', 'ring', 'bulge', 'flash']) {
-    assert.match(material.glsl.fragment, new RegExp(`float ${part}\\b`), `GLSL has ${part}`);
-    assert.match(material.wgsl, new RegExp(`let ${part}\\b`), `WGSL has ${part}`);
+  assert.equal(material.name, 'lava-pit');
+  assert.equal(material.uniforms.map, undefined, 'no baked texture');
+  // The same melt field as Slimey's hot layer, in both backends.
+  for (const source of [material.glsl.fragment, material.wgsl]) {
+    for (const part of ['broadFlow', 'mediumFlow', 'reservoir', 'activity', 'coolingRim', 'bubblePulse', 'glint']) {
+      assert.match(source, new RegExp(`\\b${part}\\b`), part);
+    }
   }
-  assert.match(material.glsl.fragment, /cameraPosition/);
-  assert.match(material.wgsl, /object\.cameraPosition/);
+  assert.match(material.glsl.fragment, /vWorld/);
+  assert.doesNotMatch(material.glsl.fragment, /\bhalf\b/, 'half is reserved in GLSL ES');
 
   const pit = createLavaPit(GFX, { width: 3, depth: 2, sink: 0.5 });
+  assert.equal(pit.material.name, 'lava-pit');
   assert.equal(pit.surface.position.y, -0.5);
   assert.equal(pit.group.children.filter((c) => c.name.startsWith('pit_wall_')).length, 4);
   assert.ok(pit.light, 'a warm light hangs over the melt');
   pit.update(3);
   assert.equal(pit.material.uniforms.uTime.value, 3);
-  const f = lavaFlicker(3);
-  assert.ok(f > 0.5 && f < 1.1);
-  assert.ok(Math.abs(pit.light.intensity - 5 * f) < 1e-9);
+  assert.ok(Math.abs(pit.light.intensity - 5 * lavaFlicker(3)) < 1e-9);
+  const surface = createLavaSurface(GFX, new GFX.PlaneGeometry(1, 1, 1, 1));
+  assert.equal(surface.mesh.material, surface.material);
 });
 
 test('the dungeon draws its lava with the pit shader', async () => {
@@ -143,8 +142,8 @@ test('the dungeon draws its lava with the pit shader', async () => {
   const quad = { position: new Float32Array([0, -1, 0, 0, -1, 1, 1, -1, 0]), normal: new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0]), color: new Float32Array(9), uv: new Float32Array(6) };
   const empty = { position: new Float32Array(0), normal: new Float32Array(0), color: new Float32Array(0), uv: new Float32Array(0) };
   const meshes = createDungeonMeshes(GFX, { tops: empty, walls: empty, lava: quad });
-  const lava = meshes.group.children.find((c) => c.material?.name === 'lava-pit');
-  assert.ok(lava, 'lava uses lava-pit');
+  const lava = meshes.group.children.find((c) => c.name === 'lava');
+  assert.ok(lava);
   meshes.update(2.5);
   assert.equal(lava.material.uniforms.uTime.value, 2.5);
 });

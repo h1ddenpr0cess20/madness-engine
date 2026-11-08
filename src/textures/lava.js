@@ -366,62 +366,55 @@ vec3 heat(float x) {
   return mix(c, vec3(1.0, 0.88, 0.52), smoothstep(0.94, 1.0, x));
 }
 
-// Cracked basalt plates in 3D: distance to the nearest plate's middle, and the gap to the next (0 on a crack).
-vec2 plates3(vec3 p, float t) {
-  vec3 i = floor(p);
-  vec3 f = fract(p);
-  float d1 = 8.0;
-  float d2 = 8.0;
-  for (int z = -1; z <= 1; z++) {
-    for (int y = -1; y <= 1; y++) {
-      for (int x = -1; x <= 1; x++) {
-        vec3 g = vec3(float(x), float(y), float(z));
-        vec3 c = i + g;
-        vec3 h = vec3(hash31(c), hash31(c + vec3(17.0, 3.0, 9.0)), hash31(c + vec3(5.0, 29.0, 13.0)));
-        vec3 o = 0.5 + 0.36 * sin(t * 0.12 + 6.2831 * h);
-        float d = length(g + o - f);
-        if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
-      }
-    }
-  }
-  return vec2(d1, d2 - d1);
-}
-
 void main() {
   float t = uTime;
   vec3 p = (uLocal > 0.5 ? normalize(vMoltenPoint) : vMoltenPoint) * uScale;
 
-  // Dark plates of crust with a bright network of melt between them, the
-  // plates drifting and grinding so the cracks widen, pinch and shift.
-  vec3 drift = vec3(t * 0.02, -t * 0.015, t * 0.012);
+  // The field itself is advected and re-warped over time. Broad noise masses
+  // merge into irregular molten rivers and pools; there is no fixed contour
+  // or repeated line pattern beneath the animation.
+  vec3 drift = vec3(t * 0.032, -t * 0.024, t * 0.019);
   vec3 warp = vec3(
-    fbm3(p * 0.5 + drift),
-    fbm3(p.yzx * 0.5 - drift + vec3(4.1, 2.2, 7.7)),
-    fbm3(p.zxy * 0.5 + drift.yzx + vec3(8.3, 1.9, 5.5))
-  ) - 0.5;
-  vec3 q = p * 1.3 + warp * 1.1;
-  vec2 v = plates3(q, t);
-  vec2 w = plates3(q * 2.7 + vec3(3.1, 7.7, 1.3), t * 0.7);
+    fbm3(p * 0.42 + drift + vec3(2.1, 5.4, 1.7)),
+    fbm3(p.yzx * 0.42 - drift.zxy + vec3(7.2, 1.8, 4.3)),
+    fbm3(p.zxy * 0.42 + drift.yzx + vec3(3.4, 8.1, 6.2))
+  );
+  vec3 q = p * 0.78 + (warp - 0.5) * 1.18;
 
-  // Slowly, whole regions run hotter and cooler.
-  float life = fbm3(q * 0.6 + vec3(t * 0.03, -t * 0.02, t * 0.025) + vec3(6.1, 2.5, 9.3));
-  float activity = smoothstep(0.3, 0.7, life);
+  float broadFlow = fbm3(q * 0.62 + drift * 0.42 + vec3(4.1, 2.8, 7.3));
+  float mediumFlow = fbm3(q * 1.08 - drift.yzx * 0.52 + vec3(8.4, 6.3, 1.2));
+  float reservoir = fbm3(q * 0.30 + drift.zxy * 0.22 + vec3(9.7, 3.2, 5.8));
+  float detailHeat = fbm3(q * 1.85 + drift * 0.78 + vec3(2.7, 5.1, 8.2));
 
-  float crack = 1.0 - smoothstep(0.0, 0.3, v.y);
-  float core = 1.0 - smoothstep(0.0, 0.13, v.y);
-  float fine = (1.0 - smoothstep(0.0, 0.07, w.y)) * 0.6 * smoothstep(0.12, 0.4, v.y);
-  float flow = fbm3(q * 1.7 + drift * 3.0);
-  float pulse = 0.86 + 0.14 * sin(t * 1.3 + flow * 6.0);
+  // Large connected bodies, with a small amount of secondary structure.
+  // Smooth time-varying thresholds make regions widen, pinch off and join.
+  float magma = broadFlow * 0.70 + mediumFlow * 0.20 + reservoir * 0.10;
+  float edgeAA = clamp(fwidth(magma) * 1.35, 0.008, 0.045);
+  float body = smoothstep(0.485 - edgeAA, 0.585 + edgeAA, magma);
+  float shoulder = smoothstep(0.43 - edgeAA, 0.55 + edgeAA, magma);
+  float pools = smoothstep(0.70, 0.86, reservoir) * 0.44;
 
-  // The colour of heat: yellow-white in the middle of a crack, orange at its edges, red where it dies out.
-  float temperature = clamp((0.32 + 0.4 * crack + 0.4 * core + (flow - 0.5) * 0.35) * mix(0.82, 1.0, activity), 0.0, 1.0);
-  vec3 colour = heat(temperature) * pulse * 1.4;
-  float underglow = exp(-v.y * 6.0) * 0.4;
-  float mask = clamp(max(clamp(crack + fine, 0.0, 1.0), underglow), 0.0, 1.0);
-  if (mask < 0.01) discard;
+  // Bubbles of trapped gas periodically swell under the melt. Their influence
+  // is broad and independent of flow direction, rather than sliding linework.
+  float bubbleField = fbm3(q * 0.48 + vec3(t * 0.021, -t * 0.017, t * 0.014) + vec3(1.8, 6.4, 3.2));
+  float bubbleAA = clamp(fwidth(bubbleField) * 1.2, 0.01, 0.05);
+  float bubbles = smoothstep(0.66 - bubbleAA, 0.82 + bubbleAA, bubbleField);
+  float bubblePulse = 0.78 + 0.22 * sin(t * 0.82 + detailHeat * 5.4);
 
-  // The melt is wet and glassy: sharp highlights slide over it as it moves,
-  // while the basalt crust (the shell) stays dull.
+  // A second low-frequency field changes which areas are hot. Unlike a static
+  // mask over contour lines, this changes the actual connected magma shapes.
+  float life = fbm3(q * 0.54 + vec3(t * 0.037, -t * 0.029, t * 0.023) + vec3(6.1, 2.5, 9.3));
+  float activity = smoothstep(0.34, 0.70, life);
+  float mask = clamp(max(shoulder * 0.76, pools) * mix(0.52, 1.0, activity) * bubblePulse, 0.0, 0.82);
+  if (mask < 0.006) discard;
+
+  float core = smoothstep(0.565, 0.67, magma + detailHeat * 0.055);
+  float temperature = clamp(0.24 + core * 0.48 + pools * 0.28 + bubbles * 0.16 + detailHeat * 0.13, 0.0, 1.0);
+  vec3 colour = heat(temperature);
+  float coolingRim = smoothstep(0.47, 0.57, magma) * (1.0 - smoothstep(0.57, 0.65, magma));
+  colour = mix(colour * 0.58, colour, coolingRim * 0.65);
+  // Gloss: the melt is wet and glassy, so sharp highlights slide over it as
+  // it moves, while the basalt crust (the shell) stays dull.
   vec3 jitter = vec3(
     noise3(p * 5.0 + vec3(1.3, t * 0.05, 0.0)),
     noise3(p * 5.0 + vec3(7.1, 2.2, t * 0.04)),
@@ -430,8 +423,8 @@ void main() {
   vec3 nrm = normalize(normalize(vNormalView) + jitter * 0.55);
   vec3 hv = normalize(normalize(vec3(-0.45, 0.65, 0.6)) + vec3(0.0, 0.0, 1.0));
   float spec = pow(max(dot(nrm, hv), 0.0), 46.0);
-  colour += vec3(1.0, 0.82, 0.55) * spec * 1.7 * smoothstep(0.3, 0.8, mask);
-  gl_FragColor = vec4(colour, mask);
+  colour += vec3(1.0, 0.82, 0.55) * spec * 1.7 * smoothstep(0.1, 0.5, mask);
+  gl_FragColor = vec4(colour * 1.12, mask);
 }
 `;
 
@@ -498,56 +491,40 @@ fn heat(x: f32) -> vec3f {
   return mix(c, vec3f(1.0, 0.88, 0.52), smoothstep(0.94, 1.0, x));
 }
 
-fn plates3(p: vec3f, t: f32) -> vec2f {
-  let i = floor(p);
-  let f = fract(p);
-  var d1 = 8.0;
-  var d2 = 8.0;
-  for (var z = -1; z <= 1; z++) {
-    for (var y = -1; y <= 1; y++) {
-      for (var x = -1; x <= 1; x++) {
-        let g = vec3f(f32(x), f32(y), f32(z));
-        let c = i + g;
-        let h = vec3f(hash31(c), hash31(c + vec3f(17.0, 3.0, 9.0)), hash31(c + vec3f(5.0, 29.0, 13.0)));
-        let o = vec3f(0.5) + 0.36 * sin(vec3f(t * 0.12) + 6.2831 * h);
-        let d = length(g + o - f);
-        if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
-      }
-    }
-  }
-  return vec2f(d1, d2 - d1);
-}
-
 @fragment
 fn fs(in: Varyings) -> @location(0) vec4f {
   let t = material.uTime;
   let p = select(in.point, normalize(in.point), material.uLocal > 0.5) * material.uScale;
-
-  let drift = vec3f(t * 0.02, -t * 0.015, t * 0.012);
+  let drift = vec3f(t * 0.032, -t * 0.024, t * 0.019);
   let warp = vec3f(
-    fbm3(p * 0.5 + drift),
-    fbm3(p.yzx * 0.5 - drift + vec3f(4.1, 2.2, 7.7)),
-    fbm3(p.zxy * 0.5 + drift.yzx + vec3f(8.3, 1.9, 5.5))
-  ) - vec3f(0.5);
-  let q = p * 1.3 + warp * 1.1;
-  let v = plates3(q, t);
-  let w = plates3(q * 2.7 + vec3f(3.1, 7.7, 1.3), t * 0.7);
+    fbm3(p * 0.42 + drift + vec3f(2.1, 5.4, 1.7)),
+    fbm3(p.yzx * 0.42 - drift.zxy + vec3f(7.2, 1.8, 4.3)),
+    fbm3(p.zxy * 0.42 + drift.yzx + vec3f(3.4, 8.1, 6.2))
+  );
+  let q = p * 0.78 + (warp - vec3f(0.5)) * 1.18;
 
-  let life = fbm3(q * 0.6 + vec3f(t * 0.03, -t * 0.02, t * 0.025) + vec3f(6.1, 2.5, 9.3));
-  let activity = smoothstep(0.3, 0.7, life);
-
-  let crack = 1.0 - smoothstep(0.0, 0.3, v.y);
-  let core = 1.0 - smoothstep(0.0, 0.13, v.y);
-  let fine = (1.0 - smoothstep(0.0, 0.07, w.y)) * 0.6 * smoothstep(0.12, 0.4, v.y);
-  let flow = fbm3(q * 1.7 + drift * 3.0);
-  let pulse = 0.86 + 0.14 * sin(t * 1.3 + flow * 6.0);
-
-  let temperature = clamp((0.32 + 0.4 * crack + 0.4 * core + (flow - 0.5) * 0.35) * mix(0.82, 1.0, activity), 0.0, 1.0);
-  var colour = heat(temperature) * pulse * 1.4;
-  let underglow = exp(-v.y * 6.0) * 0.4;
-  let mask = clamp(max(clamp(crack + fine, 0.0, 1.0), underglow), 0.0, 1.0);
-  if (mask < 0.01) { discard; }
-
+  let broadFlow = fbm3(q * 0.62 + drift * 0.42 + vec3f(4.1, 2.8, 7.3));
+  let mediumFlow = fbm3(q * 1.08 - drift.yzx * 0.52 + vec3f(8.4, 6.3, 1.2));
+  let reservoir = fbm3(q * 0.30 + drift.zxy * 0.22 + vec3f(9.7, 3.2, 5.8));
+  let detailHeat = fbm3(q * 1.85 + drift * 0.78 + vec3f(2.7, 5.1, 8.2));
+  let magma = broadFlow * 0.70 + mediumFlow * 0.20 + reservoir * 0.10;
+  let edgeAA = clamp(fwidth(magma) * 1.35, 0.008, 0.045);
+  let body = smoothstep(0.485 - edgeAA, 0.585 + edgeAA, magma);
+  let shoulder = smoothstep(0.43 - edgeAA, 0.55 + edgeAA, magma);
+  let pools = smoothstep(0.70, 0.86, reservoir) * 0.44;
+  let bubbleField = fbm3(q * 0.48 + vec3f(t * 0.021, -t * 0.017, t * 0.014) + vec3f(1.8, 6.4, 3.2));
+  let bubbleAA = clamp(fwidth(bubbleField) * 1.2, 0.01, 0.05);
+  let bubbles = smoothstep(0.66 - bubbleAA, 0.82 + bubbleAA, bubbleField);
+  let bubblePulse = 0.78 + 0.22 * sin(t * 0.82 + detailHeat * 5.4);
+  let life = fbm3(q * 0.54 + vec3f(t * 0.037, -t * 0.029, t * 0.023) + vec3f(6.1, 2.5, 9.3));
+  let activity = smoothstep(0.34, 0.70, life);
+  let mask = clamp(max(shoulder * 0.76, pools) * mix(0.52, 1.0, activity) * bubblePulse, 0.0, 0.82);
+  if (mask < 0.006) { discard; }
+  let core = smoothstep(0.565, 0.67, magma + detailHeat * 0.055);
+  let temperature = clamp(0.24 + core * 0.48 + pools * 0.28 + bubbles * 0.16 + detailHeat * 0.13, 0.0, 1.0);
+  var colour = heat(temperature);
+  let coolingRim = smoothstep(0.47, 0.57, magma) * (1.0 - smoothstep(0.57, 0.65, magma));
+  colour = mix(colour * 0.58, colour, coolingRim * 0.65);
   let jitter = vec3f(
     noise3(p * 5.0 + vec3f(1.3, t * 0.05, 0.0)),
     noise3(p * 5.0 + vec3f(7.1, 2.2, t * 0.04)),
@@ -556,8 +533,8 @@ fn fs(in: Varyings) -> @location(0) vec4f {
   let nrm = normalize(normalize(in.normalView) + jitter * 0.55);
   let hv = normalize(normalize(vec3f(-0.45, 0.65, 0.6)) + vec3f(0.0, 0.0, 1.0));
   let spec = pow(max(dot(nrm, hv), 0.0), 46.0);
-  colour += vec3f(1.0, 0.82, 0.55) * spec * 1.7 * smoothstep(0.3, 0.8, mask);
-  return vec4f(colour, mask);
+  colour += vec3f(1.0, 0.82, 0.55) * spec * 1.7 * smoothstep(0.1, 0.5, mask);
+  return vec4f(colour * 1.12, mask);
 }
 `;
 
@@ -662,13 +639,12 @@ export function createLavaMaterial(GFX, { mapping = 'world', scale = 1.6 } = {})
     map: maps.map,
     bumpMap: maps.bump,
     bumpScale: mapping === 'local' ? 0.014 : 0.02,
-    // The basalt crust is dull; the melt over it is the glossy part (see the
-    // highlights in HOT_FRAGMENT).
+    // The basalt is dull; the melt over it carries the gloss (HOT_FRAGMENT).
     metalness: 0,
-    roughness: 0.72,
+    roughness: 0.8,
     clearcoat: 0,
-    specularIntensity: 0.5,
-    envMapIntensity: 0.35,
+    specularIntensity: 0.4,
+    envMapIntensity: 0.3,
     emissive: new GFX.Color('#100300'),
     emissiveIntensity: 0.075,
     side: GFX.DoubleSide,
