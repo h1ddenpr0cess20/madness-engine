@@ -31,7 +31,7 @@ const LEG = rgb('#9a8983');
 const LEG_LIGHT = rgb('#c0aaa0');
 const CLAW = rgb('#29292a');
 
-const BODY = { x: 0, y: 0.252, z: -0.006, rx: 0.15, ry: 0.13, rz: 0.18 };
+const BODY = { x: 0, y: 0.252, z: -0.006, rx: 0.15, ry: 0.15, rz: 0.18 };
 
 const bodyPlumage = (p, n) => {
   const tile = { height: 0, id: 0, edge: 0 };
@@ -145,20 +145,20 @@ export default {
     // Overlapping contour feathers wrap the breast and flanks. Their roots and
     // tips are calculated on the ellipsoid, so they sit on the body instead of
     // floating as blades or cutting through its surface.
-    for (let row = 0; row < 7; row++) {
-      const y = 0.337 - row * 0.022;
+    for (let row = 0; row < 8; row++) {
+      const y = 0.374 - row * 0.028;
       for (let i = 0; i < 15; i++) {
         const angle = -1.34 + (i / 14) * 2.68;
         const a = bodyPoint(y + 0.003, angle);
         const b = bodyPoint(y - 0.026, angle + 0.035);
-        const tangent = [Math.cos(angle), 0, -Math.sin(angle)];
+        const normal = unit([Math.sin(angle) / (BODY.rx * BODY.rx), (y - BODY.y) / (BODY.ry * BODY.ry), Math.cos(angle) / (BODY.rz * BODY.rz)]);
         const index = row * 15 + i;
-        s.flake(a, b, tangent, 0.0115, 0.0072, 0.32, {
+        s.flake(a, b, normal, 0.0115, 0.0072, 0.32, {
           color: (p, n) => {
             const t = project(p, a, b);
             const c = bodyPlumage(p, n);
             const edge = smooth(0.7, 1, t);
-            return mix(c, index % 3 === 0 ? PALE_SLATE : SLATE, edge * 0.2);
+            return mix(c, index % 3 === 0 ? PALE_SLATE : SLATE, edge * 0.3);
           },
           mat: 'feather', bone: 'body', k: 0.0014,
         });
@@ -180,7 +180,7 @@ export default {
           const z = 0.06 - i * 0.024;
           const a = wingPoint(m, y, z);
           const b = wingPoint(m, y - 0.024, z - 0.029);
-          s.flake(a, b, [0, 0.72, -0.69], 0.0115, 0.0065, 0.27, {
+          s.flake(a, b, [1, 0, 0], 0.0115, 0.0065, 0.27, {
             color: (p, n) => {
               const t = project(p, a, b);
               const c = flightPlumage(p, n);
@@ -196,7 +196,7 @@ export default {
         const y = 0.31 - i * 0.014;
         const a = wingPoint(m, y, 0.072 - i * 0.012);
         const b = wingPoint(m, y - 0.035, 0.045 - i * 0.012);
-        s.flake(a, b, [0, 0.72, -0.69], 0.012, 0.007, 0.25, {
+        s.flake(a, b, [1, 0, 0], 0.012, 0.007, 0.25, {
           color: flightPlumage, mat: 'feather', bone, k: 0.0014,
         });
       }
@@ -219,7 +219,7 @@ export default {
         const axis = sub(tip, root);
         const tangent = unit([-axis[1], axis[0], 0]);
         const total = Math.hypot(axis[0], axis[1], axis[2]);
-        s.flake(root, tip, tangent, 0.0135, 0.019, 0.19, {
+        s.flake(root, tip, [0, 0, 1], 0.0135, 0.019, 0.19, {
           color: (p) => tailColour(i, clamp(Math.hypot(p[0] - root[0], p[1] - root[1], p[2] - root[2]) / total)),
           mat: 'flight', bone: 'fan', k: 0.0017,
         });
@@ -237,7 +237,7 @@ export default {
       const f = (i / 12) * 2 - 1;
       const a = [f * 0.09, 0.292, -0.146];
       const b = [f * 0.105, 0.337, -0.174];
-      s.flake(a, b, [1, 0, 0], 0.012, 0.006, 0.3, {
+      s.flake(a, b, [0, 0, 1], 0.012, 0.006, 0.3, {
         color: bodyPlumage, mat: 'feather', bone: 'body', k: 0.0013,
       });
     }
