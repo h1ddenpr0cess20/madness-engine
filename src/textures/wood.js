@@ -48,30 +48,33 @@ const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const caches = new WeakMap();
 
 /**
- * The figure of one species, as fields over the unit square: `ring` is the
- * phase of the growth rings, bent by the cathedral; `late` the latewood in the
- * ring; `fibre` and `pore` stretched along u, so they run with the board;
- * `ray` the short fleck across it.
+ * The figure of one species, as continuous fields over the unit square (no
+ * steps: a wood's figure is soft gradients plus fine fibres). `band` is the
+ * latewood of the growth rings: a smooth wave along v, bent by the cathedral,
+ * sharpened by the species' latewood; `fibre` is fine noise stretched along u so
+ * it runs with the board; `pore` a few short dashes in the open-grained species.
  */
 function figure(species) {
   const p = WOOD_SPECIES[species];
   const bend = fractal(p.seed, 3, 4);
-  const broad = fractal(p.seed + 3, 6, 3);
-  const fine = fractal(p.seed + 5, 200, 2);
-  const pores = fractal(p.seed + 9, 320, 1);
-  const rays = fractal(p.seed + 13, 60, 2);
+  const width = fractal(p.seed + 3, 6, 3);
+  const fine = fractal(p.seed + 5, 160, 2);
+  const finer = fractal(p.seed + 17, 420, 1);
+  const pores = fractal(p.seed + 9, 240, 1);
   return (u, v) => {
-    // The cathedral: the rings bend toward the centre of the cut, and the centre drifts along the board.
-    const warp = (bend(u * 0.8, v) - 0.5) * 0.9 + (bend(u * 2.1 + 0.3, v * 2.4) - 0.5) * 0.12;
-    const phase = v * p.rings + warp * 3.2;
-    const ring = phase - Math.floor(phase);
+    // The cathedral: the rings bend toward the centre of the cut, and drift along the board.
+    const warp = (bend(u * 0.8, v) - 0.5) * 1.1 + (bend(u * 2.1 + 0.3, v * 2.4) - 0.5) * 0.25;
+    const phase = (v * p.rings + warp * 2.6) * Math.PI * 2;
+    // Two harmonics and a little drift in each band's spacing: the rings are not evenly laid.
+    const wave = 0.5 + 0.35 * Math.sin(phase) + 0.15 * Math.sin(phase * 2.3 + 1.7 * width(u * 0.5, v));
+    // Narrower and darker where the latewood is heavy; the band's width varies along the board.
+    const sharp = 1.5 + p.late * 4 + (width(u, v) - 0.5) * 2;
+    const late = p.late * Math.pow(wave, sharp);
     return {
-      ring,
-      late: p.late * ramp(0.62 + (broad(u, v) - 0.5) * 0.25, 0.94, ring),
-      sap: ramp(0.6, 0.85, broad(u * 0.6, v * 0.5)),
-      fibre: fine(u * 0.02, v),
+      late,
+      sap: ramp(0.6, 0.85, width(u * 0.6, v * 0.5)),
+      fibre: fine(u * 0.02, v) * 0.7 + finer(u * 0.01, v) * 0.3,
       pore: pores(u * 0.012, v),
-      ray: ramp(0.7, 0.8, rays(u * 0.9, v * 0.3)),
     };
   };
 }
@@ -88,18 +91,17 @@ function paint(GFX, species, finish) {
   const colour = (u, v) => {
     const f = field(u, v);
     // Heartwood to the typical board colour, the latewood darker, and the sapwood's pale flush in the figure.
-    let c = mix(p.heart, p.base, 0.55 + 0.45 * (1 - f.late));
-    c = mix(c, p.sap, f.sap * 0.35);
-    c = c.map((x) => x * (1 - f.late * 0.2));
-    const streak = (f.fibre - 0.5) * 26 * fibreDepth;
-    const pore = ramp(0.62, 0.7, f.pore) * 60 * porosity;
-    const fleck = f.ray * 14;
-    const tone = c.map((x) => x + streak - pore + fleck + (f.fibre - 0.5) * 6);
-    return sanded ? tone.map((x) => clamp255(x * 1.06 + 3)) : tone.map(clamp255);
+    let c = mix(p.heart, p.base, 0.7 + 0.3 * (1 - f.late));
+    c = mix(c, p.sap, f.sap * 0.3);
+    c = c.map((x) => x * (1 - f.late * 0.18));
+    const streak = (f.fibre - 0.5) * 34 * fibreDepth;
+    const pore = ramp(0.7, 0.8, f.pore) * 40 * porosity;
+    const tone = c.map((x) => x + streak - pore);
+    return tone.map(clamp255);
   };
   const relief = (u, v) => {
     const f = field(u, v);
-    const h = 0.5 + f.late * 0.22 + (f.fibre - 0.5) * 0.3 * fibreDepth - ramp(0.62, 0.7, f.pore) * 0.45 * porosity;
+    const h = 0.5 + f.late * 0.14 + (f.fibre - 0.5) * 0.45 * fibreDepth - ramp(0.7, 0.8, f.pore) * 0.3 * porosity;
     const x = clamp255(128 + (h - 0.5) * 255);
     return [x, x, x];
   };
