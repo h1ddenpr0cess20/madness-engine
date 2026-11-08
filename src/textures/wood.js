@@ -30,12 +30,14 @@ export const WOOD_FINISHES = Object.freeze(['raw', 'sanded', 'lacquered']);
  * little figure); `pores` how open the pores are (0 closed, 1 ring-porous oak).
  */
 export const WOOD_SPECIES = Object.freeze({
-  walnut: { heart: [62, 33, 24], base: [116, 68, 43], sap: [178, 122, 77], rings: 11, late: 0.6, pores: 0.5, seed: 709 },
+  // Walnut and ash: sampled from reference photographs (see docs/wood.md), the darkest, typical and palest tones.
+  walnut: { heart: [119, 72, 31], base: [174, 127, 84], sap: [238, 192, 150], rings: 11, late: 0.6, pores: 0.5, seed: 709 },
+  // Not sampled yet: the reference photograph is greyed, so these are approximate.
   oak: { heart: [97, 64, 35], base: [166, 117, 61], sap: [213, 173, 112], rings: 14, late: 0.75, pores: 1, seed: 719 },
   mahogany: { heart: [57, 27, 24], base: [113, 59, 45], sap: [169, 99, 70], rings: 8, late: 0.45, pores: 0.7, seed: 727 },
   maple: { heart: [200, 150, 100], base: [228, 190, 140], sap: [240, 215, 175], rings: 6, late: 0.2, pores: 0.15, seed: 733 },
   cherry: { heart: [140, 70, 40], base: [190, 110, 70], sap: [225, 170, 130], rings: 9, late: 0.35, pores: 0.3, seed: 739 },
-  ash: { heart: [170, 130, 80], base: [205, 170, 115], sap: [225, 200, 160], rings: 13, late: 0.7, pores: 0.8, seed: 743 },
+  ash: { heart: [197, 111, 40], base: [221, 140, 68], sap: [243, 169, 100], rings: 13, late: 0.7, pores: 0.8, seed: 743 },
   pine: { heart: [170, 110, 60], base: [222, 172, 108], sap: [240, 215, 170], rings: 10, late: 0.55, pores: 0.4, seed: 751 },
   teak: { heart: [110, 70, 35], base: [160, 105, 55], sap: [195, 150, 95], rings: 9, late: 0.4, pores: 0.5, seed: 757 },
 });
