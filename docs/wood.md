@@ -4,6 +4,16 @@
 The colours of a species are its darkest (`heart`), typical (`base`) and palest
 (`sap`) tones.
 
+## Photograph-backed species
+
+- **Walnut** is painted from its photograph itself: `src/textures/wood/walnut-photo.js`
+  holds a tileable 1024-pixel crop of "20160211154306!Nussbaum Holz.jpg" by
+  User:Das_Ohr on Wikimedia Commons, licensed CC BY 3.0,
+  https://commons.wikimedia.org/wiki/File:20160211154306!Nussbaum_Holz.jpg
+  It was cropped, made tileable by blending its edges with the half-shifted
+  image, resized, and saved as a JPEG. The bump is the photo's luminance.
+  **Attribution is required** wherever this texture ships.
+
 ## Sampled from reference photographs
 
 Colours are the 5th, 50th and 95th percentiles of the luminance of each photo,

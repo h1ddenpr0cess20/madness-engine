@@ -20,6 +20,10 @@
  * photographs of each species before they are relied on for a likeness.
  */
 import { fractal, pixels, texture, DETAIL } from './painters.js';
+import { WALNUT_JPEG } from './wood/walnut-photo.js';
+
+/** The species that are painted from a photograph, not the figure below: their JPEG, decoded into the maps. */
+const PHOTOS = Object.freeze({ walnut: WALNUT_JPEG });
 
 export const WOOD_FINISHES = Object.freeze(['raw', 'sanded', 'lacquered']);
 
@@ -30,7 +34,7 @@ export const WOOD_FINISHES = Object.freeze(['raw', 'sanded', 'lacquered']);
  * little figure); `pores` how open the pores are (0 closed, 1 ring-porous oak).
  */
 export const WOOD_SPECIES = Object.freeze({
-  // Walnut and ash: sampled from reference photographs (see docs/wood.md), the darkest, typical and palest tones.
+  // Walnut and ash: colours sampled from reference photographs (see docs/wood.md). Walnut's maps are the photograph itself.
   walnut: { heart: [119, 72, 31], base: [174, 127, 84], sap: [238, 192, 150], rings: 11, late: 0.6, pores: 0.5, seed: 709 },
   // Not sampled yet: the reference photograph is greyed, so these are approximate.
   oak: { heart: [97, 64, 35], base: [166, 117, 61], sap: [213, 173, 112], rings: 14, late: 0.75, pores: 1, seed: 719 },
@@ -80,9 +84,48 @@ function figure(species) {
   };
 }
 
+/**
+ * A species painted from its photograph: the maps are created at once, and
+ * filled when the embedded JPEG has decoded (the texture is marked as changed
+ * then, so the first frames may show it blank). The bump is the photograph's
+ * luminance, stretched about its mean, so the grain stands where it is dark.
+ */
+function photoMaps(GFX, data) {
+  const colour = document.createElement('canvas');
+  colour.width = colour.height = DETAIL;
+  const relief = document.createElement('canvas');
+  relief.width = relief.height = DETAIL;
+  const map = texture(GFX, colour, { wrap: true });
+  const bump = texture(GFX, relief, { srgb: false, wrap: true });
+  const image = new Image();
+  image.src = `data:image/jpeg;base64,${data}`;
+  image.decode().then(() => {
+    const ctx = colour.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(image, 0, 0, DETAIL, DETAIL);
+    const pixelsOf = ctx.getImageData(0, 0, DETAIL, DETAIL);
+    const d = pixelsOf.data;
+    let mean = 0;
+    for (let i = 0; i < d.length; i += 4) mean += 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+    mean /= d.length / 4;
+    const rctx = relief.getContext('2d');
+    const out = rctx.createImageData(DETAIL, DETAIL);
+    for (let i = 0; i < d.length; i += 4) {
+      const l = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+      const h = clamp255(128 + (l - mean) * 1.4);
+      out.data[i] = out.data[i + 1] = out.data[i + 2] = h;
+      out.data[i + 3] = 255;
+    }
+    rctx.putImageData(out, 0, 0);
+    map.needsUpdate = true;
+    bump.needsUpdate = true;
+  }).catch(() => {});
+  return { map, bump };
+}
+
 function paint(GFX, species, finish) {
   // Under node there is no canvas: the material is the colour alone.
   if (typeof document === 'undefined' || !GFX?.CanvasTexture) return { map: null, bump: null };
+  if (PHOTOS[species]) return photoMaps(GFX, PHOTOS[species]);
   const p = WOOD_SPECIES[species];
   const field = figure(species);
   const sanded = finish !== 'raw';
