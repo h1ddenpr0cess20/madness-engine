@@ -29,7 +29,7 @@ test('the kitchen reuses the engine granite and metal palettes, and is a counter
   assert.equal(kitchen.group.userData.materials.granite.name, 'polished granite countertop');
   assert.equal(kitchen.group.userData.materials.finishedWood.name, 'finished walnut hardwood');
   assert.equal(kitchen.group.userData.materials.rawLumber.name, 'raw walnut lumber');
-  assert.equal(kitchen.group.userData.materials.brass.color.getHexString(), 'e0b84e');
+  assert.equal(kitchen.group.userData.materials.hardware.color.getHexString(), 'e0b84e');
   assert.equal(kitchen.group.userData.materials.copper.color.getHexString(), 'f08a68');
   assert.ok(kitchen.sink.getObjectByName('formed copper bowl'));
   assert.ok(kitchen.sink.getObjectByName('solid brass kitchen faucet'));
@@ -85,8 +85,19 @@ test('the kitchen validates material selectors and dimensions', () => {
 test('every engine metal finish is available for the basin and the fixtures', () => {
   assert.deepEqual(FINISHES, Object.keys(ALL_METALS));
   for (const metal of FINISHES) {
-    const kitchen = createGraniteKitchen(GFX, { basinMetal: metal, fixtureMetal: metal });
+    const kitchen = createGraniteKitchen(GFX, { basinMetal: metal, fixtureMetal: metal, hardwareMetal: metal });
     assert.equal(kitchen.copper.name, metal);
-    assert.equal(kitchen.brass.name, metal);
+    assert.equal(kitchen.faucet.name, metal);
+    assert.equal(kitchen.hardware.name, metal);
   }
+});
+
+test('cabinet hardware and the faucet take separate finishes', () => {
+  const kitchen = createGraniteKitchen(GFX, { hardwareMetal: 'chrome', fixtureMetal: 'gold' });
+  assert.equal(kitchen.hardware.name, 'chrome');
+  assert.equal(kitchen.faucet.name, 'gold');
+  assert.ok(kitchen.counter.getObjectByName('brass cabinet pull 1'));
+  assert.equal(kitchen.counter.getObjectByName('brass cabinet pull 1').material.name, 'chrome');
+  assert.equal(kitchen.sink.getObjectByName('solid brass kitchen faucet').children.find((c) => c.name === 'brass faucet escutcheon').material.name, 'gold');
+  assert.throws(() => createGraniteKitchen(GFX, { hardwareMetal: 'tin' }), /invalid hardware metal/);
 });

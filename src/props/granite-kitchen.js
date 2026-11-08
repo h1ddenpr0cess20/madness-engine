@@ -264,13 +264,13 @@ export function createGraniteCounter(GFX, {
   height = 0.92,
   granite = 'grey',
   wood = 'walnut',
-  fixtureMetal = 'brass',
+  hardwareMetal = 'brass',
   environment = null,
   cutout = null,
 } = {}) {
   if (!Object.hasOwn(GRANITES, granite)) throw new Error(`kitchen: unknown granite "${granite}"`);
   if (!Object.hasOwn(WOOD_SPECIES, wood)) throw new Error(`kitchen: unknown hardwood "${wood}"`);
-  if (!FINISHES.includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
+  if (!FINISHES.includes(hardwareMetal)) throw new Error(`kitchen: invalid hardware metal "${hardwareMetal}"`);
   if (!inRange(length, MIN_LENGTH, MAX_LENGTH) || !inRange(depth, 0.55, 1.1) || !inRange(height, 0.7, 1.2)) {
     throw new Error('kitchen: dimensions outside supported ranges');
   }
@@ -288,7 +288,8 @@ export function createGraniteCounter(GFX, {
 
   const finishedMat = makeWoodMaterial(GFX, wood, 'finished');
   const rawMat = makeWoodMaterial(GFX, wood, 'raw');
-  const brass = makeMetalMaterial(GFX, fixtureMetal, environment);
+  // The pulls and their mounts, in their own finish, separate from the faucet.
+  const hardware = makeMetalMaterial(GFX, hardwareMetal, environment);
 
   // The granite: the boulder's own colour and bump maps, at the boulder's grain scale.
   const source = createGraniteBoulder(GFX, { colour: granite, detail: 2 });
@@ -340,12 +341,12 @@ export function createGraniteCounter(GFX, {
     const doorH = cabinetTop - PLINTH - 0.035;
     box(GFX, counter, `finished hardwood cabinet door ${i + 1}`, [bayW - 0.024, doorH, 0.038], [x, (cabinetTop + PLINTH) / 2, frontZ], finishedMat);
     box(GFX, counter, `raised cabinet centre panel ${i + 1}`, [bayW - 0.13, cabinetTop - PLINTH - 0.14, 0.012], [x, (cabinetTop + PLINTH) / 2, frontZ + 0.024], finishedMat);
-    const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayW * 0.38), 0.018, 0.022), brass);
+    const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayW * 0.38), 0.018, 0.022), hardware);
     pull.name = `brass cabinet pull ${i + 1}`;
     pull.position.set(x, cabinetTop - 0.14, frontZ + 0.047);
     pull.castShadow = true;
     counter.add(pull);
-    const mount = new GFX.Mesh(new GFX.CylinderGeometry(0.022, 0.022, 0.008, 24), brass);
+    const mount = new GFX.Mesh(new GFX.CylinderGeometry(0.022, 0.022, 0.008, 24), hardware);
     mount.name = `brass pull mounts ${i + 1}`;
     mount.rotation.x = Math.PI / 2;
     mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.047);
@@ -371,10 +372,10 @@ export function createGraniteCounter(GFX, {
     box(GFX, counter, 'polished solid granite countertop', [length + overhang, SLAB, depth + overhang], [0, topPos, 0], graniteMat);
   }
 
-  counter.userData.materials = { granite: graniteMat, finishedWood: finishedMat, rawLumber: rawMat, brass };
+  counter.userData.materials = { granite: graniteMat, finishedWood: finishedMat, rawLumber: rawMat, hardware };
   counter.userData.dimensions = { length, height, depth };
   counter.userData.cutout = cutout ? { ...cutout } : null;
-  return { group: counter, granite: graniteMat, finishedWood: finishedMat, rawLumber: rawMat, brass, environment };
+  return { group: counter, granite: graniteMat, finishedWood: finishedMat, rawLumber: rawMat, hardware, environment };
 }
 
 /**
@@ -419,6 +420,7 @@ export function createGraniteKitchen(GFX, {
   wood = 'walnut',
   basinMetal = 'copper',
   fixtureMetal = 'brass',
+  hardwareMetal = 'brass',
   length = 2.8,
   height = 0.92,
   depth = 0.72,
@@ -430,7 +432,7 @@ export function createGraniteKitchen(GFX, {
   const sinkDepth = clamp(depth * 0.58, 0.36, 0.48);
   const cutout = { x: -length * 0.22, z: -depth * 0.02, width: sinkWidth, depth: sinkDepth };
 
-  const counter = createGraniteCounter(GFX, { length, depth, height, granite, wood, fixtureMetal, environment, cutout });
+  const counter = createGraniteCounter(GFX, { length, depth, height, granite, wood, hardwareMetal, environment, cutout });
   const sink = createKitchenSink(GFX, { width: sinkWidth, depth: sinkDepth, basinMetal, fixtureMetal, environment });
   sink.group.position.set(cutout.x, height, cutout.z);
 
@@ -448,7 +450,8 @@ export function createGraniteKitchen(GFX, {
     granite: counter.granite,
     finishedWood: counter.finishedWood,
     rawLumber: counter.rawLumber,
-    brass: counter.brass,
+    hardware: counter.hardware,
+    faucet: sink.brass,
     copper: sink.copper,
     basin: sink.basin,
     environment,
@@ -465,6 +468,7 @@ export const assetViewer = Object.freeze({
     wood: Object.keys(WOOD_SPECIES),
     basinMetal: FINISHES,
     fixtureMetal: FINISHES,
+    hardwareMetal: FINISHES,
   },
   build({ GFX, renderer = null, ...options }) {
     const environment = studioEnvironment(GFX, renderer);

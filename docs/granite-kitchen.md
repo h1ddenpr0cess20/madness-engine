@@ -7,12 +7,13 @@ fit together, so a game can take any one of them:
   granite top. `length` is any value from 1.2 to 4.8 m; the doors and drawers
   are counted to the run (about one door per 0.62 m), so a longer counter is the
   same counter, not a stretched one. `depth`, `height`, `granite`, `wood` and
-  `fixtureMetal` are the rest. With a `cutout` (`{ x, z, width, depth }`, its
+  `hardwareMetal` (the cabinet pulls and mounts) are the rest. With a `cutout` (`{ x, z, width, depth }`, its
   middle from the middle of the counter), the top is cut round an aperture and
   the carcass beneath is open to receive a sink; without one, the top is one
   solid slab.
 - **`createKitchenSink(GFX, options)`**: the sink, as its own part: a formed
-  copper basin with a rolled rim, drain and strainer, and a solid brass faucet.
+  copper basin with a rolled rim, drain and strainer, and a solid faucet in its
+  own `fixtureMetal`. The cabinet pulls take `hardwareMetal`, separately.
   Its origin is the middle of the rim, which sits flush with the counter. Build
   it for the cutout's `width` and `depth`, and place it at the cutout's middle.
 - **`createGraniteKitchen(GFX, options)`**: the counter and the sink together,
