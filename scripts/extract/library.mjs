@@ -35,7 +35,7 @@ import { split } from './split.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Engine-authored library assets are kept when the game-built library is regenerated.
-const ENGINE_OWNED = ['props/bowling-ball.js', 'props/book.js', 'props/book-art.js'];
+const ENGINE_OWNED = ['props/bowling-ball.js', 'props/book.js', 'props/book-art.js', 'props/bookcase.js'];
 const SRC = join(HERE, '..', '..', 'src');
 export const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music'];
 export const ORIGINS = join(HERE, 'origins.json');

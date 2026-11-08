@@ -362,10 +362,18 @@ function proceduralPropItem(def, path) {
       const made = await def.build({ GFX, ...opts, renderer: globalThis.assetViewer?.renderer ?? null });
       const object = objectOf(made);
       if (!object?.isObject3D) throw new Error(`${name} did not give an object to draw`);
+      // One that offers controls of its own (the bookcase's book) is moved on by the viewer's loop with the time.
+      let last = 0;
+      const pose = made?.ui && typeof made.update === 'function' ? ({ time }) => { made.update(Math.max(0, time - last)); last = time; } : undefined;
       return {
         object,
+        pose,
         frame: made?.frame,
         mist: made?.mist,
+        ui: made?.ui,
+        click: made?.click,
+        key: made?.key,
+        made,
         ...dressOf(made),
         info: { Source: source, ...countOf(object) },
       };
