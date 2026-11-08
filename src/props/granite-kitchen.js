@@ -18,7 +18,10 @@
  */
 import { createGraniteBoulder, GRANITES, GRANITE_TILE_SIZE } from '../heroes/rock-granite.js';
 import { METALS, studioEnvironment } from './metalglobe.js';
-import { rawLumber, finishedWood } from '../textures/wood.js';
+
+/** Every metal finish the engine has, for the basin and the fixtures. */
+export const FINISHES = Object.freeze(Object.keys(METALS));
+import { rawLumber, finishedWood, WOOD_SPECIES } from '../textures/wood.js';
 
 export const MIN_LENGTH = 1.2;
 export const MAX_LENGTH = 4.8;
@@ -29,7 +32,6 @@ const PLINTH = 0.08;
 /** How far below the top the carcass is open beneath a sink. */
 const BOWL_DEPTH = 0.2;
 
-const WOOD_TONES = Object.freeze({ walnut: true, oak: true, mahogany: true });
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const inRange = (v, a, b) => Number.isFinite(v) && v >= a && v <= b;
 
@@ -261,8 +263,8 @@ export function createGraniteCounter(GFX, {
   cutout = null,
 } = {}) {
   if (!Object.hasOwn(GRANITES, granite)) throw new Error(`kitchen: unknown granite "${granite}"`);
-  if (!Object.hasOwn(WOOD_TONES, wood)) throw new Error(`kitchen: unknown hardwood "${wood}"`);
-  if (!['brass', 'gold', 'bronze'].includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
+  if (!Object.hasOwn(WOOD_SPECIES, wood)) throw new Error(`kitchen: unknown hardwood "${wood}"`);
+  if (!FINISHES.includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
   if (!inRange(length, MIN_LENGTH, MAX_LENGTH) || !inRange(depth, 0.55, 1.1) || !inRange(height, 0.7, 1.2)) {
     throw new Error('kitchen: dimensions outside supported ranges');
   }
@@ -381,8 +383,8 @@ export function createKitchenSink(GFX, {
   fixtureMetal = 'brass',
   environment = null,
 } = {}) {
-  if (!['copper', 'brass', 'bronze'].includes(basinMetal)) throw new Error(`kitchen: invalid basin metal "${basinMetal}"`);
-  if (!['brass', 'gold', 'bronze'].includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
+  if (!FINISHES.includes(basinMetal)) throw new Error(`kitchen: invalid basin metal "${basinMetal}"`);
+  if (!FINISHES.includes(fixtureMetal)) throw new Error(`kitchen: invalid fixture metal "${fixtureMetal}"`);
   if (!inRange(width, 0.4, 0.9) || !inRange(depth, 0.3, 0.6)) throw new Error('kitchen: sink dimensions outside supported ranges');
 
   const sink = new GFX.Group();
@@ -416,7 +418,7 @@ export function createGraniteKitchen(GFX, {
   environment = null,
 } = {}) {
   if (!Object.hasOwn(GRANITES, granite)) throw new Error(`kitchen: unknown granite "${granite}"`);
-  if (!Object.hasOwn(WOOD_TONES, wood)) throw new Error(`kitchen: unknown hardwood "${wood}"`);
+  if (!Object.hasOwn(WOOD_SPECIES, wood)) throw new Error(`kitchen: unknown hardwood "${wood}"`);
   const sinkWidth = clamp(length * 0.27, 0.5, 0.72);
   const sinkDepth = clamp(depth * 0.58, 0.36, 0.48);
   const cutout = { x: -length * 0.22, z: -depth * 0.02, width: sinkWidth, depth: sinkDepth };
@@ -453,9 +455,9 @@ export const assetViewer = Object.freeze({
   group: 'kitchen',
   options: {
     granite: Object.keys(GRANITES),
-    wood: Object.keys(WOOD_TONES),
-    basinMetal: ['copper', 'brass', 'bronze'],
-    fixtureMetal: ['brass', 'gold', 'bronze'],
+    wood: Object.keys(WOOD_SPECIES),
+    basinMetal: FINISHES,
+    fixtureMetal: FINISHES,
   },
   build({ GFX, renderer = null, ...options }) {
     const environment = studioEnvironment(GFX, renderer);

@@ -1,52 +1,71 @@
 /**
- * Hardwood material maps, painted at DETAIL: exposed raw lumber, and the same
- * boards finished with a sanded, sealed surface (the lacquer is the material's
- * clearcoat, in `props/granite-kitchen`).
+ * Hardwood and softwood material maps, reusable by any prop or set: for a
+ * species and a finish, a colour map and a bump map, painted at DETAIL, one
+ * repeat of the map a metre of board, grain along u.
  *
- * One repeat of a map is a metre of board, with the grain running along u.
- * The figure is built the way a board is cut: rings laid by the growth of the
- * tree, bent round the cathedral of the cut, with the latewood (the dark band
- * of each ring) between the earlywood; fine fibres that run the length of the
- * board, long pores in the fibres of the open-grained species, and a few
- * rays across the grain. Species share one figure field, so the two finishes
- * are recognisably the same wood.
+ *   import { woodTexture, WOOD_SPECIES, WOOD_FINISHES } from 'madness-engine/textures/wood';
+ *   const { map, bump } = woodTexture(GFX, 'oak', 'lacquered');
+ *
+ * The finishes: `raw` (the sawn surface, fibres and open pores), `sanded` (the
+ * same boards finely sanded, the pores softened), and `lacquered` (sanded, and
+ * meant to be sealed: the material's clearcoat does the lacquer).
+ *
+ * Each species is a set of parameters for the figure, which is built as a board
+ * is cut: growth rings laid by the tree and bent round the cathedral of the cut,
+ * latewood in the dark band of each ring, fibres that run the length of the
+ * board, pores where the species has them, and rays across the grain.
+ *
+ * Colours are the species' heartwood and sapwood, as a woodworker would name
+ * them; they are approximate, and they should be re-sampled from the reference
+ * photographs of each species before they are relied on for a likeness.
  */
 import { fractal, pixels, texture, DETAIL } from './painters.js';
 
+export const WOOD_FINISHES = Object.freeze(['raw', 'sanded', 'lacquered']);
+
+/**
+ * The species. `heart` is the darker heartwood, `base` the typical colour of the
+ * board, `sap` the pale sapwood flush; `rings` is how many growth rings cross a
+ * metre; `late` how dark the latewood is (0 for a diffuse-porous wood, which has
+ * little figure); `pores` how open the pores are (0 closed, 1 ring-porous oak).
+ */
 export const WOOD_SPECIES = Object.freeze({
-  walnut: { base: [116, 68, 43], heart: [62, 33, 24], sap: [178, 122, 77], open: 0.5 },
-  oak: { base: [166, 117, 61], heart: [97, 64, 35], sap: [213, 173, 112], open: 1 },
-  mahogany: { base: [113, 59, 45], heart: [57, 27, 24], sap: [169, 99, 70], open: 0.7 },
+  walnut: { heart: [62, 33, 24], base: [116, 68, 43], sap: [178, 122, 77], rings: 11, late: 0.6, pores: 0.5, seed: 709 },
+  oak: { heart: [97, 64, 35], base: [166, 117, 61], sap: [213, 173, 112], rings: 14, late: 0.75, pores: 1, seed: 719 },
+  mahogany: { heart: [57, 27, 24], base: [113, 59, 45], sap: [169, 99, 70], rings: 8, late: 0.45, pores: 0.7, seed: 727 },
+  maple: { heart: [200, 150, 100], base: [228, 190, 140], sap: [240, 215, 175], rings: 6, late: 0.2, pores: 0.15, seed: 733 },
+  cherry: { heart: [140, 70, 40], base: [190, 110, 70], sap: [225, 170, 130], rings: 9, late: 0.35, pores: 0.3, seed: 739 },
+  ash: { heart: [170, 130, 80], base: [205, 170, 115], sap: [225, 200, 160], rings: 13, late: 0.7, pores: 0.8, seed: 743 },
+  pine: { heart: [170, 110, 60], base: [222, 172, 108], sap: [240, 215, 170], rings: 10, late: 0.55, pores: 0.4, seed: 751 },
+  teak: { heart: [110, 70, 35], base: [160, 105, 55], sap: [195, 150, 95], rings: 9, late: 0.4, pores: 0.5, seed: 757 },
 });
 
-const SEED = { walnut: 709, oak: 719, mahogany: 727 };
 const clamp255 = (x) => Math.max(0, Math.min(255, x));
 const ramp = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const caches = new WeakMap();
 
 /**
- * The figure of one species, as fields over the unit square. `ring` is the
- * phase of the growth rings (0 to 1 from one ring to the next, bent by the
- * cathedral); `fibre` and `pore` are stretched along u, so they run with the
- * board; `ray` is the short fleck across it.
+ * The figure of one species, as fields over the unit square: `ring` is the
+ * phase of the growth rings, bent by the cathedral; `late` the latewood in the
+ * ring; `fibre` and `pore` stretched along u, so they run with the board;
+ * `ray` the short fleck across it.
  */
 function figure(species) {
-  const seed = SEED[species];
-  const bend = fractal(seed, 3, 4);
-  const broad = fractal(seed + 3, 6, 3);
-  const fine = fractal(seed + 5, 200, 2);
-  const pores = fractal(seed + 9, 320, 1);
-  const rays = fractal(seed + 13, 60, 2);
+  const p = WOOD_SPECIES[species];
+  const bend = fractal(p.seed, 3, 4);
+  const broad = fractal(p.seed + 3, 6, 3);
+  const fine = fractal(p.seed + 5, 200, 2);
+  const pores = fractal(p.seed + 9, 320, 1);
+  const rays = fractal(p.seed + 13, 60, 2);
   return (u, v) => {
-    // The cathedral: the rings bend up toward the centre of the cut, and the centre drifts along the board.
+    // The cathedral: the rings bend toward the centre of the cut, and the centre drifts along the board.
     const warp = (bend(u * 0.8, v) - 0.5) * 0.9 + (bend(u * 2.1 + 0.3, v * 2.4) - 0.5) * 0.12;
-    const phase = v * 11 + warp * 3.2;
+    const phase = v * p.rings + warp * 3.2;
     const ring = phase - Math.floor(phase);
     return {
       ring,
-      // Latewood: the last tenth of each ring, darker and denser; its thickness varies from ring to ring.
-      late: ramp(0.62 + (broad(u, v) - 0.5) * 0.25, 0.94, ring),
+      late: p.late * ramp(0.62 + (broad(u, v) - 0.5) * 0.25, 0.94, ring),
       sap: ramp(0.6, 0.85, broad(u * 0.6, v * 0.5)),
       fibre: fine(u * 0.02, v),
       pore: pores(u * 0.012, v),
@@ -55,27 +74,26 @@ function figure(species) {
   };
 }
 
-function paintSpecies(GFX, species, finish) {
+function paint(GFX, species, finish) {
   // Under node there is no canvas: the material is the colour alone.
   if (typeof document === 'undefined' || !GFX?.CanvasTexture) return { map: null, bump: null };
-  const pal = WOOD_SPECIES[species];
+  const p = WOOD_SPECIES[species];
   const field = figure(species);
-  const finished = finish === 'finished';
-  // Open-grained species show their pores; a sealed finish fills them, so the finished boards have far fewer.
-  const porosity = pal.open * (finished ? 0.35 : 1);
-  const fibreDepth = finished ? 0.45 : 1;
+  const sanded = finish !== 'raw';
+  const porosity = p.pores * (sanded ? 0.35 : 1);
+  const fibreDepth = sanded ? 0.45 : 1;
 
   const colour = (u, v) => {
     const f = field(u, v);
-    // Earlywood to heartwood, with the latewood darker, and the sapwood's pale flush in the figure.
-    let c = mix(pal.heart, pal.base, 0.55 + 0.45 * (1 - f.late));
-    c = mix(c, pal.sap, f.sap * 0.35);
+    // Heartwood to the typical board colour, the latewood darker, and the sapwood's pale flush in the figure.
+    let c = mix(p.heart, p.base, 0.55 + 0.45 * (1 - f.late));
+    c = mix(c, p.sap, f.sap * 0.35);
     c = c.map((x) => x * (1 - f.late * 0.2));
     const streak = (f.fibre - 0.5) * 26 * fibreDepth;
     const pore = ramp(0.62, 0.7, f.pore) * 60 * porosity;
     const fleck = f.ray * 14;
     const tone = c.map((x) => x + streak - pore + fleck + (f.fibre - 0.5) * 6);
-    return finished ? tone.map((x) => clamp255(x * 1.06 + 3)) : tone.map(clamp255);
+    return sanded ? tone.map((x) => clamp255(x * 1.06 + 3)) : tone.map(clamp255);
   };
   const relief = (u, v) => {
     const f = field(u, v);
@@ -89,22 +107,27 @@ function paintSpecies(GFX, species, finish) {
   };
 }
 
-function woodMaps(GFX, species, finish) {
-  if (!WOOD_SPECIES[species]) throw new Error(`wood: unknown species "${species}"`);
+/**
+ * The colour and bump maps of `species` in `finish` (one of WOOD_FINISHES),
+ * painted once per renderer. Throws for an unknown species or finish.
+ */
+export function woodTexture(GFX, species = 'walnut', finish = 'sanded') {
+  if (!Object.hasOwn(WOOD_SPECIES, species)) throw new Error(`wood: unknown species "${species}"`);
+  if (!WOOD_FINISHES.includes(finish)) throw new Error(`wood: unknown finish "${finish}"`);
   if (!GFX || (typeof GFX !== 'object' && typeof GFX !== 'function')) throw new TypeError('wood: a graphics namespace is required');
   let cache = caches.get(GFX);
   if (!cache) { cache = new Map(); caches.set(GFX, cache); }
   const key = `${finish}:${species}`;
-  if (!cache.has(key)) cache.set(key, paintSpecies(GFX, species, finish));
+  if (!cache.has(key)) cache.set(key, paint(GFX, species, finish));
   return cache.get(key);
 }
 
-/** Exposed natural surface: sawn fibres, the rings, and open pores. */
+/** The bare carcass: the species, sawn and unfinished. */
 export function rawLumber(GFX, species = 'walnut') {
-  return woodMaps(GFX, species, 'raw');
+  return woodTexture(GFX, species, 'raw');
 }
 
-/** The same boards, finely sanded: the fibres softened, the pores filled, ready for a lacquer. */
+/** The same boards, finely sanded and sealed: the doors and drawers. */
 export function finishedWood(GFX, species = 'walnut') {
-  return woodMaps(GFX, species, 'finished');
+  return woodTexture(GFX, species, 'lacquered');
 }

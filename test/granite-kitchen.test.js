@@ -5,6 +5,8 @@ import { GRANITES } from '../src/heroes/rock-granite.js';
 import { METALS } from '../src/props/metalglobe.js';
 import { createGraniteKitchen, createGraniteCounter, createKitchenSink, MAX_LENGTH, MIN_LENGTH } from '../src/props/granite-kitchen.js';
 import { rawLumber, finishedWood, WOOD_SPECIES } from '../src/textures/wood.js';
+import { FINISHES } from '../src/props/granite-kitchen.js';
+import { METALS as ALL_METALS } from '../src/props/metalglobe.js';
 
 const doors = (group) => group.children.filter((c) => /^finished hardwood cabinet door/.test(c.name)).length;
 
@@ -74,7 +76,17 @@ test('the finished boards are lacquered, the raw lumber is not', () => {
 
 test('the kitchen validates material selectors and dimensions', () => {
   assert.throws(() => createGraniteKitchen(GFX, { granite: 'blue' }), /unknown granite/);
-  assert.throws(() => createGraniteKitchen(GFX, { wood: 'pine' }), /unknown hardwood/);
-  assert.throws(() => createGraniteKitchen(GFX, { basinMetal: 'steel' }), /invalid basin metal/);
+  assert.throws(() => createGraniteKitchen(GFX, { wood: 'balsa' }), /unknown hardwood/);
+  assert.throws(() => createGraniteKitchen(GFX, { basinMetal: 'tin' }), /invalid basin metal/);
+  assert.throws(() => createGraniteKitchen(GFX, { fixtureMetal: 'tin' }), /invalid fixture metal/);
   assert.throws(() => createGraniteKitchen(GFX, { length: 9 }), /dimensions/);
+});
+
+test('every engine metal finish is available for the basin and the fixtures', () => {
+  assert.deepEqual(FINISHES, Object.keys(ALL_METALS));
+  for (const metal of FINISHES) {
+    const kitchen = createGraniteKitchen(GFX, { basinMetal: metal, fixtureMetal: metal });
+    assert.equal(kitchen.copper.name, metal);
+    assert.equal(kitchen.brass.name, metal);
+  }
 });
