@@ -147,3 +147,12 @@ test('the dungeon draws its lava with the pit shader', async () => {
   meshes.update(2.5);
   assert.equal(lava.material.uniforms.uTime.value, 2.5);
 });
+
+test('the pit WGSL reads every uniform through `material.`, as the GLSL reads it bare', async () => {
+  const { createLavaPitMaterial } = await import('../src/textures/lavapit.js');
+  const material = createLavaPitMaterial(GFX);
+  for (const name of Object.keys(material.uniforms)) {
+    assert.doesNotMatch(material.wgsl, new RegExp(`(?<!material\\.)\\b${name}\\b`), `${name} is used bare in the WGSL`);
+    assert.match(material.glsl.fragment, new RegExp(`uniform float ${name};`), `${name} is declared in the GLSL`);
+  }
+});

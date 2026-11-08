@@ -212,7 +212,7 @@ fn heat(x: f32) -> vec3f {
   let temperature = clamp(0.24 + core * 0.48 + pools * 0.28 + bubbles * 0.16 + detailHeat * 0.13, 0.0, 1.0);
   var melt = heat(temperature);
   let coolingRim = smoothstep(0.47, 0.57, magma) * (1.0 - smoothstep(0.57, 0.65, magma));
-  melt = mix(melt * 0.58, melt, coolingRim * 0.65) * 1.12 * uGlow;
+  melt = mix(melt * 0.58, melt, coolingRim * 0.65) * 1.12 * material.uGlow;
 
   let broad = fbm3(w * 1.6 + vec3f(1.3, 4.7, 8.1));
   let grain = noise3(w * 4.5 + vec3f(8.4, 2.1, 6.8)) * 0.6 + noise3(w * 10.0 + vec3f(2.9, 7.3, 1.7)) * 0.4;
