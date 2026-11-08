@@ -4,11 +4,12 @@ import { createLobes } from './lobes.js';
 import { ENERGY_GAIN, MODES } from './modes.js';
 import { createPalette } from './palette.js';
 import { createBubbles, createCore, createGlow, createShell } from './parts.js';
+import { applyMolten, moltenColor } from './molten.js';
 import { METALS } from '../../props/metalglobe.js';
 
 export { METALS };
 
-export function createSlimeOrb({ stage, GFX, metal = null }) {
+export function createSlimeOrb({ stage, GFX, metal = null, molten = false }) {
   buildEnvironment({ stage, GFX });
 
   const paletteAt = createPalette(GFX);
@@ -21,9 +22,13 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
   const glow = createGlow(GFX, shell.geometry);
   const bubbles = createBubbles(GFX);
 
+  const moltenAt = molten ? moltenColor(GFX) : null;
+  if (molten) applyMolten(GFX, { shell, glow });
+
   const orb = new GFX.Group();
   orb.name = 'slime_orb';
-  orb.add(shell.mesh, core.mesh, glow.mesh, ...bubbles.meshes);
+  orb.add(shell.mesh, glow.mesh);
+  if (!molten) orb.add(core.mesh, ...bubbles.meshes);
 
   let mode = MODES.idle;
   let state = 'idle';
@@ -97,13 +102,23 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
       phaseScale: -3,
     });
 
-    if (selectedMetal) tmpColor.set(METALS[selectedMetal].color);
-    else paletteAt(hue, tmpColor);
-    shell.material.color.copy(tmpColor);
-    shell.material.attenuationColor.copy(tmpColor).lerp(white, 0.35);
-    core.material.emissive.copy(tmpColor);
-    core.material.emissiveIntensity = selectedMetal ? 0 : m.glow + energy * ENERGY_GAIN.glow;
-    glow.material.uniforms.uColor.value.copy(tmpColor);
+    if (molten) {
+      // Heat drifts slowly, and rises with energy as if the gather were being reheated.
+      const heat = Math.min(1, 0.45 + Math.sin(hue * 5) * 0.18 + energy * 0.35);
+      moltenAt(heat, tmpColor);
+      shell.material.attenuationColor.copy(tmpColor);
+      shell.material.emissive.copy(tmpColor);
+      shell.material.emissiveIntensity = 0.35 + heat * 0.4;
+      glow.material.uniforms.uColor.value.copy(tmpColor);
+    } else {
+      if (selectedMetal) tmpColor.set(METALS[selectedMetal].color);
+      else paletteAt(hue, tmpColor);
+      shell.material.color.copy(tmpColor);
+      shell.material.attenuationColor.copy(tmpColor).lerp(white, 0.35);
+      core.material.emissive.copy(tmpColor);
+      core.material.emissiveIntensity = selectedMetal ? 0 : m.glow + energy * ENERGY_GAIN.glow;
+    }
+    if (!molten) glow.material.uniforms.uColor.value.copy(tmpColor);
     glow.material.uniforms.uStrength.value = halo * 6.0 * (0.85 + Math.sin(phase * 2.1) * 0.15);
 
     core.mesh.position.set(
@@ -147,4 +162,9 @@ export function createSlimeOrb({ stage, GFX, metal = null }) {
 
 export function createMetalSlimeOrb({ stage, GFX, metal = 'steel' }) {
   return createSlimeOrb({ stage, GFX, metal });
+}
+
+/** Slimey as molten glass: the same orb, lobes and moods, in hot orange glass with a procedural swirl painted on the shell. */
+export function createMoltenSlimeOrb({ stage, GFX }) {
+  return createSlimeOrb({ stage, GFX, molten: true });
 }

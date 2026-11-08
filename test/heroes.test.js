@@ -7,7 +7,7 @@ import * as GFX from '../src/gfx/index.js';
 const HEROES = {
   marble: ['createMarble', 'RADIUS'],
   'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
-  'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'METALS'],
+  'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'createMoltenSlimeOrb', 'METALS'],
   'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'METALS', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
@@ -124,6 +124,33 @@ test('metal Slimey keeps the orb geometry and controls while switching shared me
   assert.equal(metal.state, 'speaking');
   assert.equal(typeof original.setState, 'function');
   assert.equal(typeof metal.pulse, 'function');
+});
+
+
+test('molten Slimey keeps the orb geometry and controls in hot orange glass, with no mist, core or bubbles', async () => {
+  const { createSlimeOrb, createMoltenSlimeOrb } = await import('../src/heroes/slimey/index.js');
+  const originalStage = { setObject(object) { this.object = object; } };
+  const moltenStage = { setObject(object) { this.object = object; } };
+  createSlimeOrb({ stage: originalStage, GFX });
+  const molten = createMoltenSlimeOrb({ stage: moltenStage, GFX });
+  const shell = moltenStage.object.children.find((child) => child.name === 'shell');
+  const originalShell = originalStage.object.children.find((child) => child.name === 'shell');
+
+  assert.equal(shell.geometry.attributes.position.count, originalShell.geometry.attributes.position.count);
+  assert.equal(shell.material.metalness, 0, 'it is glass, not metal');
+  assert.ok(shell.material.transmission > 0.4, 'the shell stays transmissive');
+  const { r, g, b } = shell.material.emissive;
+  assert.ok(r > g && g > b, 'the glass glows orange-red, not green');
+  assert.equal(moltenStage.object.children.some((child) => child.name === 'molten_swirl'), false, 'no mist inside');
+  assert.equal(moltenStage.object.children.some((child) => child.name.startsWith('bubble_')), false, 'no bubbles');
+  assert.equal(moltenStage.object.children.some((child) => child.name === 'core'), false, 'no core');
+
+  molten.setState('speaking');
+  molten.setLevel(0.7);
+  molten.pulse(0.4);
+  assert.equal(molten.state, 'speaking');
+  shell.onBeforeRender();
+  assert.ok(shell.material.emissive.r > shell.material.emissive.b, 'it stays molten while it moves');
 });
 
 
