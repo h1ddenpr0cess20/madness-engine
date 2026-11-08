@@ -173,6 +173,8 @@ const HEROES = [
   ['metal vibey', ({ metal = 'steel' } = {}) => avatar('../../../src/heroes/vibey/index.js', 'createMetalStar', { metal }), null, { metal: METAL_CHOICES }],
   ['slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createSlimeOrb')],
   ['metal slimey', ({ metal = 'steel' } = {}) => avatar('../../../src/heroes/slimey/index.js', 'createMetalSlimeOrb', { metal }), null, { metal: METAL_CHOICES }],
+  ['molten glass slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createMoltenSlimeOrb')],
+  ['lava slimey', () => avatar('../../../src/heroes/slimey/index.js', 'createLavaSlimeOrb')],
   // Floating at its own height, framed on the berry rather than on its halos, which spread far wider.
   ['blubber', () => import('../../../src/heroes/blubber.js').then((m) => {
     const b = m.createBlubber(GFX, { size: 1 });

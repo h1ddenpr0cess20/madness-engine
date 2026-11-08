@@ -7,7 +7,7 @@ import * as GFX from '../src/gfx/index.js';
 const HEROES = {
   marble: ['createMarble', 'RADIUS'],
   'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
-  'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'METALS'],
+  'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'createMoltenSlimeOrb', 'createLavaSlimeOrb', 'METALS'],
   'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'METALS', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
@@ -124,6 +124,33 @@ test('metal Slimey keeps the orb geometry and controls while switching shared me
   assert.equal(metal.state, 'speaking');
   assert.equal(typeof original.setState, 'function');
   assert.equal(typeof metal.pulse, 'function');
+});
+
+
+test('molten Slimey keeps the orb geometry and controls in hot orange glass, with no mist, core or bubbles', async () => {
+  const { createSlimeOrb, createMoltenSlimeOrb } = await import('../src/heroes/slimey/index.js');
+  const originalStage = { setObject(object) { this.object = object; } };
+  const moltenStage = { setObject(object) { this.object = object; } };
+  createSlimeOrb({ stage: originalStage, GFX });
+  const molten = createMoltenSlimeOrb({ stage: moltenStage, GFX });
+  const shell = moltenStage.object.children.find((child) => child.name === 'shell');
+  const originalShell = originalStage.object.children.find((child) => child.name === 'shell');
+
+  assert.equal(shell.geometry.attributes.position.count, originalShell.geometry.attributes.position.count);
+  assert.equal(shell.material.metalness, 0, 'it is glass, not metal');
+  assert.ok(shell.material.transmission > 0.4, 'the shell stays transmissive');
+  const { r, g, b } = shell.material.emissive;
+  assert.ok(r > g && g > b, 'the glass glows orange-red, not green');
+  assert.equal(moltenStage.object.children.some((child) => child.name === 'molten_swirl'), false, 'no mist inside');
+  assert.equal(moltenStage.object.children.some((child) => child.name.startsWith('bubble_')), false, 'no bubbles');
+  assert.equal(moltenStage.object.children.some((child) => child.name === 'core'), false, 'no core');
+
+  molten.setState('speaking');
+  molten.setLevel(0.7);
+  molten.pulse(0.4);
+  assert.equal(molten.state, 'speaking');
+  shell.onBeforeRender();
+  assert.ok(shell.material.emissive.r > shell.material.emissive.b, 'it stays molten while it moves');
 });
 
 
@@ -262,4 +289,39 @@ test('metal Egg has continuous UV-seam and pole normals for unbroken reflections
       }
     }
   }
+});
+
+
+test('lava Slimey reuses the deforming orb while replacing every slime layer with a moving lava surface', async () => {
+  const { createSlimeOrb, createLavaSlimeOrb } = await import('../src/heroes/slimey/index.js');
+  const originalStage = { setObject(object) { this.object = object; } };
+  const lavaStage = { setObject(object) { this.object = object; } };
+  createSlimeOrb({ stage: originalStage, GFX });
+  const lava = createLavaSlimeOrb({ stage: lavaStage, GFX });
+
+  const originalShell = originalStage.object.children.find((child) => child.name === 'shell');
+  const lavaShell = lavaStage.object.children.find((child) => child.name === 'shell');
+  const core = lavaStage.object.children.find((child) => child.name === 'core');
+  const glow = lavaStage.object.children.find((child) => child.name === 'glow');
+  const bubbles = lavaStage.object.children.filter((child) => child.name.startsWith('bubble_'));
+
+  assert.equal(lava.appearance, 'lava');
+  assert.equal(lavaShell.geometry.attributes.position.count, originalShell.geometry.attributes.position.count);
+  assert.equal(lavaShell.material, lava.lavaMaterial);
+  assert.equal(lavaShell.material.name, 'lava-basalt');
+  assert.equal(lavaShell.material.mapping, 'local');
+  assert.equal(lavaShell.material.textures.width, 1024);
+  assert.equal(lavaShell.material.textures.height, 512);
+  assert.equal(lavaShell.material.hotMaterial.type, 'ShaderMaterial');
+  assert.equal(lavaShell.material.hotMaterial.uniforms.uTime.value, 0);
+  assert.equal(core.visible, false, 'no green slime core remains');
+  assert.equal(glow.visible, false, 'no slime rim glow remains');
+  assert.ok(bubbles.every((bubble) => !bubble.visible), 'no translucent slime bubbles remain');
+
+  lava.setState('speaking');
+  lava.setLevel(0.75);
+  lava.pulse(0.4);
+  assert.equal(lava.state, 'speaking');
+  assert.equal(typeof lava.setState, 'function');
+  assert.throws(() => createSlimeOrb({ stage: lavaStage, GFX, metal: 'steel', lava: true }), /both lava and metal/);
 });
