@@ -26,8 +26,15 @@ uniform float uBright;
 uniform float uScale;
 uniform float uCoverage;
 uniform float uGlow;
+uniform float uHue;
 varying vec3 vWorld;
 varying vec3 vNormalWorld;
+// Turns a colour round the grey axis by a radians, keeping how bright it is.
+vec3 hueTurn(vec3 c, float a) {
+  float k = cos(a), s = sin(a);
+  vec3 axis = vec3(0.57735);
+  return c * k + cross(axis, c) * s + axis * dot(axis, c) * (1.0 - k);
+}
 
 float hash31(vec3 p) {
   vec3 q = fract(p * 0.1031);
@@ -127,7 +134,7 @@ void main() {
   vec3 meltN = normalize(nw - slope * 0.4);
   float glint = pow(max(dot(meltN, hv), 0.0), 60.0) * 1.7 + pow(max(dot(meltN, hv), 0.0), 14.0) * 0.3;
   vec3 col = crust + (melt + vec3(1.0, 0.82, 0.55) * glint) * mask;
-  gl_FragColor = vec4(col * uBright, 1.0);
+  gl_FragColor = vec4(hueTurn(col, uHue) * uBright, 1.0);
 }`;
 
 
@@ -143,6 +150,12 @@ const WGSL = `struct Varyings {
   out.normalWorld = normalize((object.modelMatrix * vec4f(normal, 0.0)).xyz);
   out.position = object.projectionMatrix * object.viewMatrix * world;
   return out;
+}
+fn hueTurn(c: vec3f, a: f32) -> vec3f {
+  let k = cos(a);
+  let s = sin(a);
+  let axis = vec3f(0.57735);
+  return c * k + cross(axis, c) * s + axis * dot(axis, c) * (1.0 - k);
 }
 fn hash31(p: vec3f) -> f32 {
   var q = fract(p * 0.1031);
@@ -236,7 +249,7 @@ fn heat(x: f32) -> vec3f {
   let meltN = normalize(nw - slope * 0.4);
   let glint = pow(max(dot(meltN, hv), 0.0), 60.0) * 1.7 + pow(max(dot(meltN, hv), 0.0), 14.0) * 0.3;
   let col = crust + (melt + vec3f(1.0, 0.82, 0.55) * glint) * mask;
-  return vec4f(col * material.uBright, 1.0);
+  return vec4f(hueTurn(col, material.uHue) * material.uBright, 1.0);
 }`;
 
 
@@ -253,14 +266,16 @@ export const SLIMEY_SCALE = 2.2;
  * `uniforms.uBright`, and `uniforms.uScale`, the size of the pattern
  * (`scale`, default `SLIMEY_SCALE`; smaller is bigger lava), `uniforms.uCoverage`
  * (`coverage`: how much of the surface is molten, 0 is Slimey's own, 0.07 by
- * default for a pit) and `uniforms.uGlow` (`glow`: melt brightness, 1.6).
+ * default for a pit), `uniforms.uGlow` (`glow`: melt brightness, 1.6) and
+ * `uniforms.uHue` (`hue`, radians: 0 is lava orange; 2.9 turns it electric
+ * blue, as for a live floor).
  */
-export function createLavaPitMaterial(GFX, { scale = SLIMEY_SCALE, coverage = 0.07, glow = 1.6 } = {}) {
+export function createLavaPitMaterial(GFX, { scale = SLIMEY_SCALE, coverage = 0.07, glow = 1.6, hue = 0 } = {}) {
   if (!Number.isFinite(scale) || scale <= 0) throw new Error('lava scale must be a positive finite number');
-  if (!Number.isFinite(coverage) || !Number.isFinite(glow)) throw new Error('lava coverage and glow must be finite numbers');
+  if (!Number.isFinite(coverage) || !Number.isFinite(glow) || !Number.isFinite(hue)) throw new Error('lava coverage, glow and hue must be finite numbers');
   const material = new GFX.ShaderMaterial({
     name: 'lava-pit',
-    uniforms: { uTime: { value: 0 }, uBright: { value: 1 }, uScale: { value: scale }, uCoverage: { value: coverage }, uGlow: { value: glow } },
+    uniforms: { uTime: { value: 0 }, uBright: { value: 1 }, uScale: { value: scale }, uCoverage: { value: coverage }, uGlow: { value: glow }, uHue: { value: hue } },
     glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT },
     wgsl: WGSL,
     side: GFX.DoubleSide,
@@ -298,12 +313,12 @@ export function lavaFlicker(time) {
  * `width` by `depth` across and `sink` deep, centred on the origin with its
  * rim at y = 0. `update(time)` moves it.
  */
-export function createLavaPit(GFX, { width = 3, depth = 3, sink = 0.6, rim = 0.3, light = true, scale = SLIMEY_SCALE, coverage, glow } = {}) {
+export function createLavaPit(GFX, { width = 3, depth = 3, sink = 0.6, rim = 0.3, light = true, scale = SLIMEY_SCALE, coverage, glow, hue } = {}) {
   const group = new GFX.Group();
   group.name = 'lava_pit';
 
   const plane = new GFX.PlaneGeometry(width, depth, 1, 1);
-  const lava = createLavaSurface(GFX, plane, { scale, ...(coverage === undefined ? {} : { coverage }), ...(glow === undefined ? {} : { glow }) });
+  const lava = createLavaSurface(GFX, plane, { scale, ...(coverage === undefined ? {} : { coverage }), ...(glow === undefined ? {} : { glow }), ...(hue === undefined ? {} : { hue }) });
   const material = lava.material;
   const surface = lava.mesh;
   surface.name = 'lava_surface';
