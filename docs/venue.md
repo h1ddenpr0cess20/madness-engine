@@ -14,6 +14,9 @@ Import as `madness-engine/venue/<module>`.
 | `venue/helpers` | Small helpers for placing things across a dug piece: `across`, `barred`, `flat`, `loop`, `along`, and so on. |
 | `venue/gig` | `createGig(GFX, index, { loadVenue, createActors, pickups })` and `stepGig`: one venue as it is played, with no drawing or sound. The rules: grip, rev, sticky floor, ice, belts, bumpers, breakaways, gates, hits and smashes, falls, pickups. |
 | `venue/hype`, `venue/integrity`, `venue/smash`, `venue/roll` | The score and combo, the hero's integrity (and its spare), how a hit is graded, and how the ball turns as it rolls. |
+| `venue/loading` | `createLoading(root, label, library)`: the loading screen while models bake. `library` is the game's `{ isBaked, ready, SCULPTED }`. |
+| `venue/foemesh` | `createFoeMeshes({ foes, cast, isBaked, ready })` gives `createFoeMesh(GFX, kind)`: a foe's mesh with its clips (idle, walk, attack, ko), or a stand-in until its model has baked. The roster itself stays the game's. |
+| `models/viewer` | `startViewer({ definitions })`: the models turntable page (`#view`, `#bar`). |
 | `venue/scenery` | `createVenueMeshes(GFX, built, venue)` draws a built venue, `createExit(GFX, venue, { last, signs })` the exit. The electrified floor is the engine's lava pit (`textures/lavapit`) turned to blue by the palette's `zapHue` (default 2.9). |
 
 ## What a game gives it
