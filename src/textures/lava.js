@@ -190,10 +190,6 @@ const TAU = Math.PI * 2;
 const textureCache = new WeakMap();
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const smooth = (a, b, x) => {
-  const t = clamp01((x - a) / (b - a));
-  return t * t * (3 - 2 * t);
-};
 const mix = (a, b, t) => a + (b - a) * t;
 
 function hash3(x, y, z, seed = 0) {
@@ -260,7 +256,7 @@ function fbm2(u, v, seed, cells = 3, octaves = 4) {
 }
 
 
-function sphereField(u, v, scale) {
+function sphereField(u, v, _scale) {
   const phi = v * Math.PI;
   const theta = u * TAU;
   const sinPhi = Math.sin(phi);
@@ -283,7 +279,7 @@ function sphereField(u, v, scale) {
   return { albedo, relief };
 }
 
-function floorField(u, v, scale) {
+function floorField(u, v, _scale) {
   // Periodic mineral variation only. Molten areas are rendered by the same
   // animated shader used on Slimey; no fixed lava lines are baked into this map.
   const broad = fbm2(u, v, 67, 5, 4);

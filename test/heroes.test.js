@@ -296,7 +296,7 @@ test('lava Slimey reuses the deforming orb while replacing every slime layer wit
   const { createSlimeOrb, createLavaSlimeOrb } = await import('../src/heroes/slimey/index.js');
   const originalStage = { setObject(object) { this.object = object; } };
   const lavaStage = { setObject(object) { this.object = object; } };
-  const original = createSlimeOrb({ stage: originalStage, GFX });
+  createSlimeOrb({ stage: originalStage, GFX });
   const lava = createLavaSlimeOrb({ stage: lavaStage, GFX });
 
   const originalShell = originalStage.object.children.find((child) => child.name === 'shell');
