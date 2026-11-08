@@ -249,44 +249,113 @@ export function concrete(GFX) {
 }
 
 /** Boards, three to the tile, laid end to end: each its own shade, a soft grain, dark thin seams and nail heads. Stage decks and barroom floors. */
+
+// ———————————————————————————————————————————————————————————— wood, from the photograph
+
+import { WALNUT_JPEG } from './wood/walnut-photo.js';
+
+let photoState = null;
+
+/**
+ * The walnut photograph as a DETAIL canvas, once its embedded JPEG has decoded:
+ * `{ canvas, ready }`, where `ready` resolves to the canvas. Null where there is
+ * no document (under node).
+ */
+export function woodPhoto() {
+  if (typeof document === 'undefined' || typeof Image === 'undefined') return null;
+  if (!photoState) {
+    const [canvasOut, ctx] = canvas(DETAIL);
+    const image = new Image();
+    image.src = `data:image/jpeg;base64,${WALNUT_JPEG}`;
+    const ready = image.decode().then(() => {
+      ctx.drawImage(image, 0, 0, DETAIL, DETAIL);
+      return canvasOut;
+    });
+    photoState = { canvas: canvasOut, ready };
+  }
+  return photoState;
+}
+
+/**
+ * A map and a bump painted from the walnut photograph by `paint(src, map, bump)`,
+ * where `src` is the photograph's pixels (see `sample`). Until the photograph has
+ * decoded the maps show `base`, a plain board colour; then they are painted again
+ * and the textures are marked changed. Under node both are null.
+ */
+export function photoPair(GFX, base, paint, opts = {}) {
+  const [mapC, mapCtx] = canvas(DETAIL);
+  const [bumpC, bumpCtx] = canvas(DETAIL);
+  mapCtx.fillStyle = base;
+  mapCtx.fillRect(0, 0, DETAIL, DETAIL);
+  bumpCtx.fillStyle = '#808080';
+  bumpCtx.fillRect(0, 0, DETAIL, DETAIL);
+  const map = texture(GFX, mapC, { wrap: true });
+  const bump = texture(GFX, bumpC, { srgb: false, wrap: true });
+  const photo = woodPhoto();
+  if (photo) {
+    photo.ready.then((src) => {
+      const pix = src.getContext('2d').getImageData(0, 0, DETAIL, DETAIL).data;
+      paint(pix, mapCtx, bumpCtx);
+      map.needsUpdate = true;
+      bump.needsUpdate = true;
+    }).catch(() => {});
+  }
+  return { map, bump, ...opts };
+}
+
+/** The photograph's colour at (x, y), wrapping, from its pixel data. */
+export function sample(pix, x, y) {
+  const i = ((((y % DETAIL) + DETAIL) % DETAIL) * DETAIL + (((x % DETAIL) + DETAIL) % DETAIL)) * 4;
+  return [pix[i], pix[i + 1], pix[i + 2]];
+}
+
+/** The photograph written into an ImageData of `DETAIL` pixels, shaded by `shade(u, v)` (a multiplier), and its luminance as the bump. */
+export function paintFromPhoto(pix, mapCtx, bumpCtx, shadeAt) {
+  const mapImg = mapCtx.createImageData(DETAIL, DETAIL);
+  const bumpImg = bumpCtx.createImageData(DETAIL, DETAIL);
+  const out = mapImg.data, bout = bumpImg.data;
+  for (let y = 0; y < DETAIL; y++) {
+    for (let x = 0; x < DETAIL; x++) {
+      const [sx, sy] = shadeAt.coords(x, y);
+      const [r, g, b] = sample(pix, sx, sy);
+      const m = shadeAt.tone(x / DETAIL, y / DETAIL);
+      const i = (y * DETAIL + x) * 4;
+      out[i] = clamp255(r * m.k); out[i + 1] = clamp255(g * m.k); out[i + 2] = clamp255(b * m.k); out[i + 3] = 255;
+      const lum = 0.3 * r + 0.59 * g + 0.11 * b;
+      const h = clamp255(128 + (lum - 120) * 0.9 * m.relief);
+      bout[i] = bout[i + 1] = bout[i + 2] = h; bout[i + 3] = 255;
+    }
+  }
+  mapCtx.putImageData(mapImg, 0, 0);
+  bumpCtx.putImageData(bumpImg, 0, 0);
+}
+
+const clamp255 = (x) => Math.max(0, Math.min(255, x));
+
 export function planks(GFX) {
+  // Three boards to the tile, running along v; each takes its own region of the photograph, its own tone, and its own butt joint.
   const rnd = random(23);
-  const boards = Array.from({ length: 3 }, () => ({ tone: 0.8 + rnd() * 0.2, offset: rnd() * 5, butt: 0.15 + rnd() * 0.7 }));
-  const grain = fractal(3, 2, 4);
-  const paint = (relief) => (size) => {
-    const [c, ctx] = canvas(size);
-    ctx.fillStyle = relief ? '#000' : '#1a1410';
-    ctx.fillRect(0, 0, size, size);
-    const w = size / boards.length;
-    const img = ctx.getImageData(0, 0, size, size);
-    boards.forEach((b, i) => {
-      for (let y = 0; y < size; y++) {
-        for (let x = Math.floor(i * w) + 1; x < Math.floor((i + 1) * w) - 1; x++) {
-          // Long soft figure along the board, with a faint fine grain across it.
-          const along = y / size, across = (x - i * w) / w;
-          const g = grain(across * 0.7 + i * 1.3, along * 0.25 + b.offset);
-          const fine = 0.5 + 0.5 * Math.sin((across * 9 + g * 6) * Math.PI);
-          const shade = relief ? 0.55 + g * 0.25 + fine * 0.08 : b.tone * (0.84 + g * 0.2 + fine * 0.04);
-          const edge = Math.min(across, 1 - across) < 0.03 ? 0.78 : 1;
-          const v = Math.round(255 * Math.min(1, shade * edge));
-          const k = (y * size + x) * 4;
-          img.data[k] = v; img.data[k + 1] = v; img.data[k + 2] = v; img.data[k + 3] = 255;
-        }
-      }
-    });
-    ctx.putImageData(img, 0, 0);
-    boards.forEach((b, i) => {
-      const x = i * w;
-      ctx.fillStyle = relief ? '#000' : '#14100c';
-      ctx.fillRect(x + K, b.butt * size, w - 2 * K, 2 * K);
-      ctx.fillStyle = relief ? '#fff' : '#4a3a2c';
-      for (const y of [b.butt * size - 10, b.butt * size + 11]) {
-        ctx.beginPath(); ctx.arc(x + 9 * K, y, 1.8 * K, 0, 7); ctx.arc(x + w - 9 * K, y, 1.8 * K, 0, 7); ctx.fill();
-      }
-    });
-    return c;
-  };
-  return pair(GFX, DETAIL, paint(false), paint(true));
+  const boards = Array.from({ length: 3 }, () => ({ tone: 0.86 + rnd() * 0.16, offX: Math.floor(rnd() * DETAIL), offY: Math.floor(rnd() * DETAIL), butt: 0.15 + rnd() * 0.7 }));
+  return photoPair(GFX, '#9a7448', (pix, mc, bc) => {
+    const w = DETAIL / boards.length;
+    const shadeAt = {
+      coords: (x, y) => {
+        const i = Math.min(boards.length - 1, Math.floor(x / w));
+        const b = boards[i];
+        // The grain runs along the board (along v): the photograph's grain is along its x, so x and y are swapped.
+        return [b.offX + y, b.offY + Math.floor(x - i * w) * 2];
+      },
+      tone: (u, v) => {
+        const i = Math.min(boards.length - 1, Math.floor(u * boards.length));
+        const b = boards[i];
+        const across = u * boards.length - i;
+        const butt = Math.abs(v - b.butt) < 0.0025 ? 0.45 : 1;
+        const seam = Math.min(across, 1 - across) < 0.02 ? 0.5 : 1;
+        return { k: b.tone * butt * seam, relief: 1 };
+      },
+    };
+    paintFromPhoto(pix, mc, bc, shadeAt);
+  });
 }
 
 /** Linoleum: two by two squares, light and dark, scuffed and worn at the edges. The dive bar. */
@@ -555,28 +624,20 @@ export const FLOORS = { concrete, planks, checker, carpet, plate, grass, panels,
 
 /** Plywood: a sheet to the tile, screwed to the studs, with a stencilled mark. The garage. */
 export function plywood(GFX) {
-  const grain = fractal(43, 3, 4);
-  const rnd = random(9);
-  const knots = Array.from({ length: 4 }, () => [rnd(), rnd(), 0.015 + rnd() * 0.02]);
-  const paint = (relief) => (size) => {
-    const c = pixels(size, (u, v) => {
-      const g = grain(u * 0.5, v * 6);
-      const lines = 0.5 + 0.5 * Math.sin(v * 90 + g * 14);
-      let k = relief ? 0.5 + g * 0.3 + lines * 0.1 : 0.62 + g * 0.3 + lines * 0.07;
-      for (const [x, y, r] of knots) {
-        const d = Math.hypot((u - x) * 1.6, v - y) / r;
-        if (d < 1) k *= relief ? 0.7 : 0.62 + 0.38 * d;
-      }
-      const seam = Math.min(u, 1 - u) < 0.008 || v < 0.006 ? 0.35 : 1;
-      return grey(Math.round(255 * Math.min(1, k) * seam));
-    });
-    const ctx = c.getContext('2d');
-    // Screws along the studs.
-    ctx.fillStyle = relief ? '#fff' : '#403830';
+  // A sheet to the tile: veneer grain across the sheet, the seams at its edges, and the screws along the studs.
+  return photoPair(GFX, '#b89a6e', (pix, mc, bc) => {
+    const shadeAt = {
+      coords: (x, y) => [x, y + 120],
+      tone: (u, v) => {
+        const seam = Math.min(u, 1 - u) < 0.008 || v < 0.006 ? 0.5 : 1;
+        return { k: 0.9 * seam, relief: 1 };
+      },
+    };
+    paintFromPhoto(pix, mc, bc, shadeAt);
+    const ctx = mc;
+    ctx.fillStyle = '#403830';
     for (const x of [16, 128, 240]) for (const y of [20, 100, 180, 240]) { ctx.beginPath(); ctx.arc(x * K, y * K, 3 * K, 0, 7); ctx.fill(); }
-    return c;
-  };
-  return pair(GFX, DETAIL, paint(false), paint(true));
+  });
 }
 
 /** Acoustic foam: wedges in a grid, each lit on one side. Practice rooms and studios. */
@@ -679,21 +740,28 @@ export function fence(GFX) {
 
 /** Clapboard: overlapping boards laid across, each shadowed under its lip, nailed at the studs. Huts and boathouses. */
 export function clapboard(GFX) {
-  const grain = fractal(181, 3, 4);
-  const paint = (relief) => (size) => {
-    const c = pixels(size, (u, v) => {
-      const boards = 6, f = (v * boards) % 1;
-      const lip = smoothstep(0.75, 1, f);
-      const g = grain(u * 0.6, v * 6 + Math.floor(v * boards) * 0.37);
-      const k = relief ? 0.25 + f * 0.7 : (0.78 + g * 0.2) * (1 - lip * 0.35) * (f < 0.04 ? 0.5 : 1);
-      return grey(Math.round(255 * Math.min(1, k)));
-    });
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = relief ? '#fff' : '#3a3028';
-    for (const x of [24, 232]) for (let b = 0; b < 6; b++) { ctx.beginPath(); ctx.arc(x * K, b * (size / 6) + 8 * K, 1.6 * K, 0, 7); ctx.fill(); }
-    return c;
-  };
-  return pair(GFX, DETAIL, paint(false), paint(true));
+  // Six courses of siding to the tile, each its own board: the grain along each, the lip of each course in shadow.
+  const rnd = random(181);
+  const courses = Array.from({ length: 6 }, () => ({ tone: 0.82 + rnd() * 0.18, off: Math.floor(rnd() * DETAIL) }));
+  return photoPair(GFX, '#e6dccb', (pix, mc, bc) => {
+    const shadeAt = {
+      coords: (x, y) => {
+        const f = ((y / DETAIL) * courses.length) % 1;
+        const c = Math.min(courses.length - 1, Math.floor((y / DETAIL) * courses.length));
+        return [courses[c].off + x, Math.floor(f * DETAIL)];
+      },
+      tone: (u, v) => {
+        const f = (v * courses.length) % 1;
+        const c = Math.min(courses.length - 1, Math.floor(v * courses.length));
+        const lip = smoothstep(0.75, 1, f);
+        return { k: courses[c].tone * (1 - lip * 0.3) * (f < 0.04 ? 0.5 : 1), relief: 0.6 + f * 0.6 };
+      },
+    };
+    paintFromPhoto(pix, mc, bc, shadeAt);
+    const ctx = mc;
+    ctx.fillStyle = '#3a3028';
+    for (const x of [24, 232]) for (let b = 0; b < 6; b++) { ctx.beginPath(); ctx.arc(x * K, b * (DETAIL / 6) + 8 * K, 1.6 * K, 0, 7); ctx.fill(); }
+  });
 }
 
 /** Stucco: rough plaster, trowel marks, a hairline crack, a darker band at the foot. Paris and Seville, Venice and Rio. */
@@ -936,15 +1004,21 @@ export function shoji(GFX) {
 
 /** A chalet's timber: round-edged logs laid one on another, the grain along them. The Alps. */
 export function timber(GFX) {
-  const n = fractal(531, 2, 4);
-  const paint = (relief) => (size) => pixels(size, (u, v) => {
-    const fv = (v * 5) % 1;
-    const round = Math.sin(fv * Math.PI);
-    const grain = 0.5 + 0.5 * Math.sin((v * 5 + n(u, v) * 0.6) * Math.PI * 2 * 8 + u * 2);
-    const k = relief ? 0.2 + round * 0.7 : (0.62 + round * 0.22) * (0.88 + grain * 0.12);
-    return grey(Math.round(255 * Math.min(1, k)));
+  // Round logs laid one on another, five to the tile, the grain along each log.
+  return photoPair(GFX, '#8a6a48', (pix, mc, bc) => {
+    const shadeAt = {
+      coords: (x, y) => {
+        const r = Math.floor((y / DETAIL) * 5);
+        return [x + r * 97, Math.floor(((y / DETAIL) * 5) % 1 * DETAIL)];
+      },
+      tone: (u, v) => {
+        const fv = (v * 5) % 1;
+        const round = Math.sin(fv * Math.PI);
+        return { k: 0.5 + round * 0.4, relief: round };
+      },
+    };
+    paintFromPhoto(pix, mc, bc, shadeAt);
   });
-  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Paris stone: pale ashlar, a tall window with its shutters and a wrought-iron balcony rail across. */
