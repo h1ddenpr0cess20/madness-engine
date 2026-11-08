@@ -1,133 +1,188 @@
 import { fbm, noise, rgb, shingles } from '../models/sdf.js';
 import { mix, smooth } from '../models/skins.js';
 
+/**
+ * The wild turkey tom, in display: a deep black-blue body of scalloped
+ * feathers with a bronze-green sheen, a fan of broad rust and cream tail
+ * feathers raised high behind it, barred wing primaries hanging down the
+ * flank, and a small bare head on a long neck, blue above and red below,
+ * with a large red wattle under the beak.
+ *
+ * Units are tiles; y is up and the bird faces +z. Bone pivots are absolute
+ * rest-pose positions (see rig.js).
+ */
+
 const side = (m) => (m > 0 ? 'L' : 'R');
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const scale = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 const unit = (a) => scale(a, 1 / (Math.hypot(a[0], a[1], a[2]) || 1));
-const project = (p, a, b) => {
-  const d = sub(b, a);
-  return clamp(((p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1] + (p[2] - a[2]) * d[2]) /
-    (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]));
+
+const INK = rgb('#0d1013');
+const BLUE_BLACK = rgb('#18232a');
+const GREEN_SHEEN = rgb('#2d4c4a');
+const SLATE = rgb('#5d6c72');
+const TAIL_BROWN = rgb('#4f2c1b');
+const TAIL_RUST = rgb('#8e5b33');
+const TAIL_DARK = rgb('#1c1412');
+const TAIL_CREAM = rgb('#eee6d3');
+const WING_BROWN = rgb('#2a1d15');
+const WING_CREAM = rgb('#d8ccb5');
+const COVERT = rgb('#6e4229');
+const SKIN = rgb('#4f7f96');
+const SKIN_BLUE = rgb('#3fa2e0');
+const SKIN_PALE = rgb('#d3ecf7');
+const RED = rgb('#c2162e');
+const RED_LIGHT = rgb('#e5444f');
+const BEAK = rgb('#d9ccc0');
+const BEAK_SHADE = rgb('#8c7b73');
+const LEG = rgb('#b39e96');
+const LEG_LIGHT = rgb('#d0bbb2');
+const CLAW = rgb('#2b2725');
+
+const BODY = { x: 0, y: 0.25, z: 0, rx: 0.155, ry: 0.14, rz: 0.195 };
+const FAN = { pivot: [0, 0.3, -0.13], count: 19, spread: 1.45, length: 0.27, lean: 0.38 };
+
+/** A point on the torso's surface at height y, `angle` round it (0 at the breast, +z). */
+const bodyPoint = (y, angle) => {
+  const v = clamp((y - BODY.y) / BODY.ry, -0.96, 0.96);
+  const r = Math.sqrt(1 - v * v);
+  return [BODY.x + BODY.rx * r * Math.sin(angle), y, BODY.z + BODY.rz * r * Math.cos(angle)];
 };
 
-const INK = rgb('#11151a');
-const BLUE_BLACK = rgb('#202a32');
-const SLATE = rgb('#4d5b63');
-const PALE_SLATE = rgb('#929b9d');
-const TAIL_BROWN = rgb('#4c2d20');
-const TAIL_RUST = rgb('#795039');
-const TAIL_DARK = rgb('#211a18');
-const TAIL_CREAM = rgb('#e0d9c8');
-const SKIN = rgb('#657c88');
-const SKIN_BLUE = rgb('#3597c7');
-const RED = rgb('#c5233d');
-const RED_LIGHT = rgb('#ec5261');
-const BEAK = rgb('#b9a8a0');
-const BEAK_SHADE = rgb('#8d7772');
-const LEG = rgb('#9a8983');
-const LEG_LIGHT = rgb('#c0aaa0');
-const CLAW = rgb('#29292a');
+/** The outward normal of the torso at p (on its surface). */
+const onBody = (p) => unit([
+  (p[0] - BODY.x) / (BODY.rx * BODY.rx),
+  (p[1] - BODY.y) / (BODY.ry * BODY.ry),
+  (p[2] - BODY.z) / (BODY.rz * BODY.rz),
+]);
 
-const BODY = { x: 0, y: 0.252, z: -0.006, rx: 0.15, ry: 0.15, rz: 0.18 };
+/**
+ * A feather's colour from its root a to its tip b (width r1 at the root,
+ * r2 at the tip): `paint(p, n, t, edge)`, with t 0 at the root to 1 at the tip
+ * and edge 0 on the shaft to 1 at the rim.
+ */
+const plumage = (a, b, r1, r2, paint) => {
+  const ax = sub(b, a), L2 = dot(ax, ax) || 1;
+  return (p, n) => {
+    const v = sub(p, a);
+    const t = clamp(dot(v, ax) / L2);
+    const q = sub(v, scale(ax, t));
+    const edge = Math.hypot(q[0], q[1], q[2]) / Math.max(r1 + (r2 - r1) * t, 1e-4);
+    return paint(p, n, t, edge);
+  };
+};
 
+/** Body plumage: black with a blue-green sheen on the back, its scales picked out a little. */
 const bodyPlumage = (p, n) => {
   const tile = { height: 0, id: 0, edge: 0 };
   shingles(p, 0.016, 1, 1.7, tile);
   const mottling = 0.9 + 0.2 * fbm(p[0] * 23, p[1] * 23, p[2] * 23, 3);
   const fine = 0.95 + 0.1 * noise(p[0] * 150, p[1] * 150, p[2] * 150);
-  const base = mix(INK, BLUE_BLACK, 0.32 + tile.id * 0.26);
-  const upper = smooth(-0.45, 0.7, n[1]);
-  const sheen = 0.8 + tile.height * 0.2 + upper * 0.12;
-  return base.map((v) => v * mottling * fine * sheen);
+  const upper = smooth(-0.2, 0.8, n[1]);
+  const shimmer = 0.5 + 0.5 * Math.sin(p[0] * 40 + p[2] * 25 + tile.id * 6);
+  const base = mix(INK, BLUE_BLACK, 0.2 + upper * 0.2);
+  const colour = mix(base, GREEN_SHEEN, upper * (0.1 + 0.25 * shimmer));
+  return colour.map((v) => v * mottling * fine * (0.82 + tile.height * 0.26));
 };
 
-const flightPlumage = (p, n) => {
-  const base = bodyPlumage(p, n);
-  const shade = smooth(-0.4, 0.55, n[1]);
-  return mix(base, SLATE, shade * 0.19);
+// The feathers' own colours are cheap constants with a rim picked out: each vertex asks every feather near it for
+// its colour, so the textured torso colour is kept for the torso itself.
+const FEATHER = mix(INK, BLUE_BLACK, 0.3);
+const COVERT_BASE = mix(WING_BROWN, COVERT, 0.6);
+
+/** A body feather: black, its rim picked out in slate. */
+const bodyFeather = (a, b, r1, r2) => plumage(a, b, r1, r2, (p, n, t, edge) => {
+  const rim = Math.max(smooth(0.55, 1, edge), smooth(0.78, 1, t) * 0.6) * 0.45;
+  return mix(FEATHER, SLATE, rim);
+});
+
+/** The rust-brown wing coverts over the shoulder: scalloped, a pale edge to each. */
+const covertColour = (p) => {
+  const cell = { height: 0, id: 0, edge: 0 };
+  shingles(p, 0.014, 2, 1.6, cell);
+  const c = mix(WING_BROWN, COVERT, 0.35 + cell.id * 0.5);
+  return mix(c, SLATE, smooth(0.6, 1, cell.edge) * 0.22).map((v) => v * (0.9 + 0.12 * cell.height));
 };
 
-const bodyPoint = (y, angle) => {
-  const v = clamp((y - BODY.y) / BODY.ry, -0.96, 0.96);
-  const r = Math.sqrt(1 - v * v);
-  return [
-    BODY.x + BODY.rx * r * Math.sin(angle),
-    y,
-    BODY.z + BODY.rz * r * Math.cos(angle),
-  ];
+/** A coverts feather: rust-brown, its rim a little paler. */
+const covert = (a, b, r1, r2) => plumage(a, b, r1, r2, (p, n, t, edge) => {
+  const rim = smooth(0.6, 1, edge) * 0.25 + smooth(0.85, 1, t) * 0.2;
+  return mix(COVERT_BASE, TAIL_CREAM, rim * 0.5);
+});
+
+/** A primary: dark brown with cream bars across it, as the tom's wing is barred. */
+const primaryColour = (i) => (p, n, t, edge) => {
+  const bar = (a, b) => smooth(a, a + 0.02, t) * (1 - smooth(b, b + 0.02, t));
+  const barred = Math.max(bar(0.22, 0.29), bar(0.4, 0.46), bar(0.58, 0.64), bar(0.76, 0.82));
+  const c = mix(WING_BROWN, WING_CREAM, barred * 0.85);
+  const rim = smooth(0.7, 1, edge) * 0.15 * (i % 2 ? 1 : 0.6);
+  return mix(c, TAIL_CREAM, rim).map((v) => v * (0.92 + 0.1 * noise(p[0] * 120, p[1] * 120, p[2] * 120)));
 };
 
-const wingPoint = (m, y, z) => {
-  const qy = (y - 0.278) / 0.078;
-  const qz = (z + 0.018) / 0.112;
-  const r = Math.sqrt(Math.max(0.08, 1 - qy * qy - qz * qz));
-  return [m * (0.114 + 0.043 * r + 0.0015), y, z];
+/** Each tail feather: dark crossbars, then a broad cream band, a dark sub-tip and a cream rim, as on a tom's fan. */
+const fanColour = (i) => {
+  const variation = 0.5 + 0.5 * Math.sin(i * 8.13 + 0.8);
+  const ground = mix(TAIL_BROWN, TAIL_RUST, 0.2 + variation * 0.35);
+  return (p, n, t, edge) => {
+    const bar = (a, b) => smooth(a, a + 0.025, t) * (1 - smooth(b, b + 0.025, t));
+    let c = mix(TAIL_DARK, ground, smooth(0.02, 0.3, t));
+    c = mix(c, TAIL_DARK, Math.max(bar(0.3, 0.36), bar(0.46, 0.52), bar(0.62, 0.67)) * 0.8);
+    c = mix(c, TAIL_DARK, bar(0.74, 0.8) * 0.9);
+    c = mix(c, TAIL_CREAM, bar(0.82, 0.9) * 0.95);
+    return mix(c, TAIL_CREAM, smooth(0.72, 0.98, edge) * smooth(0.6, 0.85, t) * 0.85);
+  };
 };
 
-const legColour = (p) => {
-  const v = (noise(p[0] * 250, p[1] * 250, p[2] * 250) - 0.5) * 0.12;
-  const scaleMark = Math.pow(Math.max(0, Math.sin(p[1] * 330 + p[2] * 130)), 12) * 0.06;
-  return LEG.map((c, i) => c * (0.94 + v + scaleMark * [0.6, 0.42, 0.3][i]));
-};
-
-const bareHead = (p, n) => {
-  const blue = mix(SKIN, SKIN_BLUE, smooth(0.43, 0.49, p[1]) * 0.78);
-  const highlight = smooth(-0.1, 0.9, n[1]) * 0.24;
-  const mottling = 0.94 + 0.1 * fbm(p[0] * 115, p[1] * 115, p[2] * 115, 2);
-  const redPatch = smooth(0.455, 0.48, p[1]) * smooth(0.16, 0.19, p[2]) * 0.18;
-  return mix(blue, RED, redPatch).map((v) => v * (mottling + highlight));
-};
-
+/** The collar of the neck: feathers at the breast, bare skin above, red below and blue at the crown. */
 const neckSkin = (p, n) => {
-  const blue = mix(SKIN, SKIN_BLUE, smooth(0.42, 0.49, p[1]) * 0.42);
-  return blue.map((v) => v * (0.94 + 0.08 * noise(p[0] * 90, p[1] * 110, p[2] * 90)) * (0.94 + 0.08 * Math.max(0, n[1])));
+  const bare = mix(RED, SKIN_BLUE, smooth(0.36, 0.44, p[1])).map((v) => v * (0.94 + 0.08 * noise(p[0] * 90, p[1] * 110, p[2] * 90)));
+  return mix(bodyPlumage(p, n), bare, smooth(0.335, 0.365, p[1]));
 };
 
-const tailColour = (index, t) => {
-  const variation = 0.5 + 0.5 * Math.sin(index * 8.13 + 0.8);
-  const ground = mix(TAIL_BROWN, TAIL_RUST, 0.22 + variation * 0.23);
-  const darkBar = smooth(0.48, 0.51, t) * (1 - smooth(0.56, 0.59, t));
-  const paleBand = smooth(0.78, 0.81, t) * (1 - smooth(0.88, 0.91, t));
-  const darkTip = smooth(0.92, 0.96, t);
-  const paleFringe = smooth(0.982, 0.995, t);
-  let color = mix(ground, TAIL_DARK, darkBar * 0.72);
-  color = mix(color, TAIL_CREAM, paleBand * 0.96);
-  color = mix(color, TAIL_DARK, darkTip * 0.96);
-  return mix(color, TAIL_CREAM, paleFringe * 0.9);
+/** The bare head: blue, paling to white over the crown, a mottled skin. */
+const bareHead = (p, n) => {
+  const blue = mix(SKIN, SKIN_BLUE, smooth(0.455, 0.485, p[1]) * 0.85);
+  const crown = smooth(0.478, 0.5, p[1]) * smooth(0.1, 0.8, n[1]) * 0.6;
+  const mottling = 0.94 + 0.1 * fbm(p[0] * 115, p[1] * 115, p[2] * 115, 2);
+  return mix(blue, SKIN_PALE, crown).map((v) => v * mottling);
 };
+
+/** The wattle: a bright red lobe, lighter where the light falls on it. */
+const wattle = (p, n) => mix(RED, RED_LIGHT, 0.15 + smooth(0.38, 0.46, n[1]) * 0.25);
 
 export default {
   name: 'turkey',
   scale: 1.5,
-  cell: 0.003,
-  cells: { eyes: 0.00085, face: 0.0011, beak: 0.0009, fan: 0.002, feet: 0.0015 },
+  cell: 0.0044,
+  cells: { head: 0.003, face: 0.002, eyes: 0.00085, fan: 0.0041 },
   budget: 85000,
-  refine: 0.3,
+  refine: 0.2,
   blend: 0.18,
 
   bones: [
     ['root', null, [0, 0, 0]],
     ['body', 'root', [0, BODY.y, BODY.z]],
-    ['neck', 'body', [0, 0.326, 0.103]],
-    ['head', 'neck', [0, 0.466, 0.164]],
-    ['jaw', 'head', [0, 0.456, 0.193]],
-    ['fan', 'body', [0, 0.268, -0.15]],
-    ['wingL', 'body', [0.114, 0.278, -0.018]],
-    ['wingR', 'body', [-0.114, 0.278, -0.018]],
-    ['legL', 'root', [0.059, 0.158, -0.025]],
-    ['legR', 'root', [-0.059, 0.158, -0.025]],
+    ['neck', 'body', [0, 0.33, 0.12]],
+    ['head', 'neck', [0, 0.46, 0.2]],
+    ['jaw', 'head', [0, 0.455, 0.22]],
+    ['fan', 'body', FAN.pivot],
+    ['wingL', 'body', [0.12, 0.28, -0.02]],
+    ['wingR', 'body', [-0.12, 0.28, -0.02]],
+    ['legL', 'root', [0.06, 0.158, -0.025]],
+    ['legR', 'root', [-0.06, 0.158, -0.025]],
     ['footL', 'legL', [0.06, 0.028, 0.02]],
     ['footR', 'legR', [-0.06, 0.028, 0.02]],
   ],
 
   materials: {
-    feather: { roughness: 0.76, sheen: 0.72, sheenColor: '#758b9a', sheenRoughness: 0.42 },
-    flight: { roughness: 0.7, sheen: 0.62, sheenColor: '#8f8174', sheenRoughness: 0.45 },
-    skin: { roughness: 0.64, sheen: 0.22, sheenColor: '#7d9da9' },
-    beak: { roughness: 0.34, clearcoat: 0.45, clearcoatRoughness: 0.25 },
+    // Dull feathers: little specular, so the black body reads black and not grey under a bright sky.
+    feather: { roughness: 0.7, specularIntensity: 0.3, sheen: 0.05, sheenColor: '#2e444b', sheenRoughness: 0.5 },
+    flight: { roughness: 0.66, specularIntensity: 0.35, sheen: 0.12, sheenColor: '#6b5a4c', sheenRoughness: 0.5 },
+    skin: { roughness: 0.6, sheen: 0.2, sheenColor: '#6b8c99' },
+    beak: { roughness: 0.34, clearcoat: 0.4, clearcoatRoughness: 0.25 },
     eye: { roughness: 0.045, clearcoat: 1, clearcoatRoughness: 0.01 },
     claw: { roughness: 0.42, clearcoat: 0.22 },
   },
@@ -135,169 +190,125 @@ export default {
   sculpt(s) {
     const coat = { color: bodyPlumage, mat: 'feather', bone: 'body' };
 
-    // Measured body mass: approximately 690 x 620 px in the 1500 x 1000 reference.
-    // In sculpt units the torso is 0.30 wide by 0.26 high, with a full breast
-    // and a shorter, tapered rump rather than a spherical egg.
-    s.ellipsoid([0, BODY.y, BODY.z], [BODY.rx, BODY.ry, BODY.rz], { ...coat, k: 0.024 });
-    s.ellipsoid([0, 0.268, -0.118], [0.116, 0.096, 0.087], { ...coat, k: 0.025 });
-    s.ellipsoid([0, 0.244, 0.075], [0.132, 0.108, 0.11], { ...coat, k: 0.026 });
+    // The torso: a full breast, a deep belly and a rump that rises into the fan.
+    s.ellipsoid([BODY.x, BODY.y, BODY.z], [BODY.rx, BODY.ry, BODY.rz], { ...coat, k: 0.024 });
+    s.ellipsoid([0, 0.28, -0.13], [0.115, 0.1, 0.085], { ...coat, k: 0.025 });
 
-    // Overlapping contour feathers wrap the breast and flanks. Their roots and
-    // tips are calculated on the ellipsoid, so they sit on the body instead of
-    // floating as blades or cutting through its surface.
-    for (let row = 0; row < 8; row++) {
-      const y = 0.374 - row * 0.028;
-      for (let i = 0; i < 15; i++) {
-        const angle = -1.34 + (i / 14) * 2.68;
-        const a = bodyPoint(y + 0.003, angle);
-        const b = bodyPoint(y - 0.026, angle + 0.035);
-        const normal = unit([Math.sin(angle) / (BODY.rx * BODY.rx), (y - BODY.y) / (BODY.ry * BODY.ry), Math.cos(angle) / (BODY.rz * BODY.rz)]);
-        const index = row * 15 + i;
-        s.flake(a, b, normal, 0.0115, 0.0072, 0.32, {
-          color: (p, n) => {
-            const t = project(p, a, b);
-            const c = bodyPlumage(p, n);
-            const edge = smooth(0.7, 1, t);
-            return mix(c, index % 3 === 0 ? PALE_SLATE : SLATE, edge * 0.3);
-          },
-          mat: 'feather', bone: 'body', k: 0.0014,
-        });
+    // Scalloped body feathers in staggered rows over the breast and flanks: each lies on the surface, its tip
+    // overlapping the row below, and its rim picked out.
+    const rows = 8, per = 13;
+    for (let row = 0; row < rows; row++) {
+      const y = 0.37 - row * 0.03;
+      const stagger = (row % 2) * 0.5 * (2.9 / (per - 1));
+      for (let i = 0; i < per; i++) {
+        const angle = -1.45 + (i / (per - 1)) * 2.9 + stagger;
+        const a = bodyPoint(y + 0.006, angle);
+        const b = bodyPoint(y - 0.034, angle);
+        const up = onBody(a);
+        s.flake(a, b, up, 0.0118, 0.0135, 0.3, { color: bodyFeather(a, b, 0.0118, 0.0135), mat: 'feather', bone: 'body', k: 0.0014 });
       }
     }
 
-    // Folded wings are padded into the flanks. Each covert follows the curved
-    // outside of the wing and lies flat against it; the trailing edge is layered,
-    // not a row of long triangular spikes.
+    // Folded wings: a rust shoulder of coverts, and barred primaries hanging down the flank behind the leg.
     for (const m of [1, -1]) {
       const bone = 'wing' + side(m);
-      s.ellipsoid([m * 0.114, 0.278, -0.018], [0.043, 0.078, 0.112], {
-        ...coat, bone, k: 0.018, rot: [0.12, 0, m * 0.08],
+      s.ellipsoid([m * 0.125, 0.27, -0.035], [0.045, 0.08, 0.14], {
+        ...coat, bone, k: 0.018, rot: [0.1, 0, m * 0.1], color: covertColour,
       });
 
-      for (let row = 0; row < 5; row++) {
-        const y = 0.319 - row * 0.018;
+      for (let row = 0; row < 3; row++) {
+        const y = 0.33 - row * 0.026;
         for (let i = 0; i < 6; i++) {
-          const z = 0.06 - i * 0.024;
-          const a = wingPoint(m, y, z);
-          const b = wingPoint(m, y - 0.024, z - 0.029);
-          s.flake(a, b, [1, 0, 0], 0.0115, 0.0065, 0.27, {
-            color: (p, n) => {
-              const t = project(p, a, b);
-              const c = flightPlumage(p, n);
-              return mix(c, i % 2 ? SLATE : PALE_SLATE, smooth(0.64, 1, t) * 0.23);
-            },
-            mat: 'flight', bone, k: 0.0015,
-          });
+          const z = 0.06 - i * 0.03;
+          const a = [m * 0.152, y, z];
+          const b = [m * 0.168, y - 0.03, z - 0.02];
+          s.flake(a, b, [m, 0, 0], 0.0125, 0.0105, 0.3, { color: covert(a, b, 0.0125, 0.0105), mat: 'feather', bone, k: 0.0015 });
         }
       }
 
-      // A short row of tertials closes the wing root into the body.
-      for (let i = 0; i < 5; i++) {
-        const y = 0.31 - i * 0.014;
-        const a = wingPoint(m, y, 0.072 - i * 0.012);
-        const b = wingPoint(m, y - 0.035, 0.045 - i * 0.012);
-        s.flake(a, b, [1, 0, 0], 0.012, 0.007, 0.25, {
-          color: flightPlumage, mat: 'feather', bone, k: 0.0014,
-        });
+      // Eight primaries, each overlapping the next, lying down the flank and fanning back behind the leg.
+      for (let i = 0; i < 8; i++) {
+        const f = i / 7;
+        const a = [m * (0.135 + 0.004 * f), 0.285 - 0.022 * f, 0.045 - 0.028 * f];
+        const b = [m * (0.158 + 0.003 * f), 0.1 - 0.01 * f, -0.1 - 0.03 * f];
+        s.flake(a, b, [m, 0, 0], 0.0115, 0.0175, 0.24, { color: plumage(a, b, 0.0115, 0.0175, primaryColour(i)), mat: 'flight', bone, k: 0.0015 });
       }
     }
 
-    // Broad, rounded tail fan: 19 overlapping rectrices on a shallow arc.
-    // The fan is about as wide as the torso and rises a little higher than the head.
+    // The tail fan: 19 broad feathers on a shallow arc, raised behind the bird and leaning back. Each is a paddle
+    // (narrow at the root, broad at the tip) lying flat on the fan's face, the longest in the middle.
     s.part('fan', () => {
-      const count = 19;
+      const { pivot, count, spread, length, lean } = FAN;
+      const sl = Math.sin(lean), cl = Math.cos(lean);
+      const face = [0, sl, cl];
       for (let i = 0; i < count; i++) {
         const f = (i / (count - 1)) * 2 - 1;
-        const angle = f * 1.0;
-        const root = [f * 0.012, 0.268, -0.15];
-        const length = 0.29 * (1 - 0.12 * Math.abs(f));
-        const tip = [
-          f * 0.165,
-          0.285 + Math.cos(angle) * length,
-          -0.215 - Math.abs(f) * 0.012,
-        ];
-        const axis = sub(tip, root);
-        const total = Math.hypot(axis[0], axis[1], axis[2]);
-        s.flake(root, tip, [0, 0, 1], 0.0135, 0.019, 0.19, {
-          color: (p) => tailColour(i, clamp(Math.hypot(p[0] - root[0], p[1] - root[1], p[2] - root[2]) / total)),
-          mat: 'flight', bone: 'fan', k: 0.0017,
-        });
-        const shaftEnd = add(root, scale(axis, 0.9));
-        s.limb(root, shaftEnd, 0.00125, 0.0006, {
-          color: () => mix(TAIL_RUST, TAIL_CREAM, 0.12),
-          mat: 'flight', bone: 'fan', k: 0.00035,
-        });
+        const th = f * spread;
+        const dir = [Math.sin(th), Math.cos(th) * cl, -Math.cos(th) * sl];
+        const L = length * (1 - 0.16 * f * f);
+        const a = add(pivot, scale(dir, 0.01));
+        const b = add(pivot, scale(dir, L));
+        s.flake(a, b, face, 0.011, 0.034, 0.26, { color: plumage(a, b, 0.011, 0.034, fanColour(i)), mat: 'flight', bone: 'fan', k: 0.0016 });
+      }
+
+      // Short coverts hide the roots of the feathers where they meet the rump.
+      for (let i = 0; i < 11; i++) {
+        const f = (i / 10) * 2 - 1;
+        const a = [f * 0.085, 0.29, -0.12];
+        const b = [f * 0.1, 0.335, -0.15];
+        s.flake(a, b, [0, 0, 1], 0.012, 0.007, 0.3, { color: covertColour, mat: 'feather', bone: 'fan', k: 0.0013 });
       }
     });
 
-    // Short upper-tail coverts conceal the roots without covering the fan's
-    // individual feather boundaries.
-    for (let i = 0; i < 13; i++) {
-      const f = (i / 12) * 2 - 1;
-      const a = [f * 0.09, 0.292, -0.146];
-      const b = [f * 0.105, 0.337, -0.174];
-      s.flake(a, b, [0, 0, 1], 0.012, 0.006, 0.3, {
-        color: bodyPlumage, mat: 'feather', bone: 'body', k: 0.0013,
+    // The neck: feathered at its foot, then bare, blue above and red below, leaning forward to the head.
+    s.part('head', () => {
+      s.limb([0, 0.33, 0.12], [0, 0.46, 0.2], 0.03, 0.02, {
+        color: neckSkin, mat: 'skin', bone: 'neck', k: 0.012,
       });
-    }
-
-    // Narrow exposed neck, tapering into the crown; no oversized grey neck bulb.
-    s.limb([0, 0.322, 0.096], [0, 0.455, 0.158], 0.024, 0.017, {
-      color: neckSkin, mat: 'skin', bone: 'neck', k: 0.012,
-    });
-    s.ellipsoid([0, 0.466, 0.164], [0.028, 0.03, 0.032], {
-      color: bareHead, mat: 'skin', bone: 'head', k: 0.009,
+      s.ellipsoid([0, 0.47, 0.205], [0.028, 0.031, 0.034], {
+        color: bareHead, mat: 'skin', bone: 'head', k: 0.008,
+      });
     });
 
     s.part('face', () => {
-      // Small horn-coloured bill with a continuous upper profile and a fine lower seam.
-      s.ellipsoid([0, 0.456, 0.193], [0.0105, 0.0075, 0.011], {
+      // A short bill, pale horn, hooked at the tip.
+      s.ellipsoid([0, 0.458, 0.238], [0.0105, 0.0075, 0.012], {
         color: BEAK, mat: 'beak', bone: 'head', k: 0.0015,
       });
-      s.limb([0, 0.457, 0.198], [0, 0.446, 0.231], 0.0082, 0.0012, {
+      s.limb([0, 0.46, 0.245], [0, 0.45, 0.268], 0.0078, 0.0012, {
         color: (p) => mix(BEAK, BEAK_SHADE, smooth(0.455, 0.444, p[1]) * 0.35),
         mat: 'beak', bone: 'head', k: 0.001,
       });
-      s.limb([0, 0.449, 0.197], [0, 0.443, 0.222], 0.0053, 0.0008, {
+      s.limb([0, 0.452, 0.24], [0, 0.444, 0.262], 0.0052, 0.0008, {
         color: BEAK_SHADE, mat: 'beak', bone: 'jaw', k: 0.0008,
       });
 
-      // The short snood drapes from the forehead over the base of the bill.
-      s.limb([0, 0.492, 0.177], [0.001, 0.463, 0.197], 0.0042, 0.0032, {
+      // The snood: a fleshy red lobe over the base of the bill.
+      s.limb([0, 0.493, 0.205], [0, 0.468, 0.236], 0.0045, 0.0035, {
         color: (p) => mix(RED, RED_LIGHT, smooth(0.46, 0.49, p[1]) * 0.25),
         mat: 'skin', bone: 'head', k: 0.001,
       });
 
-      // Pendulous wattle close to the throat, with clustered caruncles at its base.
-      s.limb([0, 0.452, 0.185], [0.002, 0.372, 0.171], 0.011, 0.0065, {
-        color: (p, n) => mix(RED, RED_LIGHT, 0.18 + smooth(0.38, 0.45, n[1]) * 0.2),
-        mat: 'skin', bone: 'neck', k: 0.003,
+      // The wattle: a large lobe hanging from the throat, its lower end out over the breast.
+      s.limb([0, 0.462, 0.222], [0.003, 0.355, 0.205], 0.0135, 0.02, {
+        color: wattle, mat: 'skin', bone: [['head', 0.5], ['neck', 0.5]], k: 0.003,
       });
-      s.ellipsoid([0.002, 0.378, 0.18], [0.014, 0.014, 0.009], {
-        color: RED, mat: 'skin', bone: 'neck', k: 0.0035,
-      });
-      for (let i = 0; i < 6; i++) {
-        const x = (i - 2.5) * 0.006;
-        const y = 0.38 + (i % 2) * 0.007;
-        s.ellipsoid([x, y, 0.185 - Math.abs(x) * 0.18], [0.0065, 0.0085, 0.0055], {
-          color: (p, n) => mix(RED, RED_LIGHT, smooth(0.1, 0.85, n[1]) * 0.3),
+      // Caruncles, small lumps down the front of the wattle.
+      for (let i = 0; i < 9; i++) {
+        const y = 0.365 + i * 0.0085;
+        const z = 0.205 + ((y - 0.355) / 0.107) * 0.017;
+        const x = ((i % 3) - 1) * 0.008;
+        s.ellipsoid([x, y, z + 0.012], [0.0055, 0.0065, 0.0045], {
+          color: (p, n) => mix(RED, RED_LIGHT, 0.2 + smooth(0.1, 0.85, n[1]) * 0.3),
           mat: 'skin', bone: 'neck', k: 0.002,
-        });
-      }
-      // Small fleshy nodules along the crown and cheek; these sit against the skin.
-      for (let i = 0; i < 5; i++) {
-        const m = i % 2 ? 1 : -1;
-        const y = 0.481 - Math.floor(i / 2) * 0.009;
-        s.ellipsoid([m * (0.014 + (i % 3) * 0.002), y, 0.185], [0.0045, 0.006, 0.0035], {
-          color: RED, mat: 'skin', bone: 'head', k: 0.0012,
         });
       }
     });
 
-    // Tiny dark eyes recessed into the sides of the blue head.
+    // Dark eyes set into the sides of the head, with a glint.
     s.part('eyes', () => {
       for (const m of [1, -1]) {
-        const eye = [m * 0.019, 0.472, 0.184];
+        const eye = [m * 0.024, 0.472, 0.218];
         s.sphere(eye, 0.0062, { color: '#342c2a', mat: 'skin', bone: 'head', k: 0.0004 });
         s.sphere([eye[0] + m * 0.0012, eye[1] + 0.0005, eye[2] + 0.0032], 0.0038, {
           color: '#9d623d', mat: 'eye', bone: 'head', k: 0,
@@ -318,17 +329,17 @@ export default {
         color: bodyPlumage, mat: 'feather', bone: leg, k: 0.008,
       });
       s.limb([m * 0.06, 0.151, -0.024], [m * 0.06, 0.031, 0.016], 0.011, 0.0072, {
-        color: legColour, mat: 'skin', bone: leg, k: 0.004,
+        color: LEG,
+        mat: 'skin', bone: leg, k: 0.004,
       });
       for (let i = 0; i < 6; i++) {
         const y = 0.133 - i * 0.016;
         s.limb([m * 0.06, y, 0.003], [m * 0.061, y - 0.002, 0.011], 0.0029, 0.002, {
-          color: (p) => mix(legColour(p), LEG_LIGHT, 0.18),
-          mat: 'skin', bone: leg, k: 0.0007,
+          color: LEG_LIGHT, mat: 'skin', bone: leg, k: 0.0007,
         });
       }
       s.ellipsoid([m * 0.06, 0.029, 0.018], [0.009, 0.007, 0.013], {
-        color: legColour, mat: 'skin', bone: foot, k: 0.002,
+        color: LEG, mat: 'skin', bone: foot, k: 0.002,
       });
 
       for (const a of [-1, 0, 1]) {
@@ -336,14 +347,14 @@ export default {
         const start = [m * 0.06 + spread * 0.24, 0.027, 0.024];
         const joint = [m * 0.06 + spread * 0.58, 0.014, 0.046];
         const end = [m * 0.06 + spread, 0.0085, 0.075 - Math.abs(a) * 0.004];
-        s.limb(start, joint, 0.0058, 0.0047, { color: legColour, mat: 'skin', bone: foot, k: 0.0012 });
-        s.limb(joint, end, 0.0047, 0.0028, { color: legColour, mat: 'skin', bone: foot, k: 0.001 });
+        s.limb(start, joint, 0.0058, 0.0047, { color: LEG, mat: 'skin', bone: foot, k: 0.0012 });
+        s.limb(joint, end, 0.0047, 0.0028, { color: LEG, mat: 'skin', bone: foot, k: 0.001 });
         s.limb(end, [end[0] + a * 0.004, 0.0065, end[2] + 0.012], 0.0027, 0.0007, {
           color: CLAW, mat: 'claw', bone: foot, k: 0.0004,
         });
       }
       s.limb([m * 0.06, 0.024, 0.009], [m * 0.06, 0.012, -0.017], 0.0042, 0.0018, {
-        color: legColour, mat: 'skin', bone: foot, k: 0.001,
+        color: LEG, mat: 'skin', bone: foot, k: 0.001,
       });
       s.limb([m * 0.06, 0.09, -0.025], [m * 0.06, 0.074, -0.046], 0.0035, 0.0012, {
         color: '#6f625d', mat: 'claw', bone: leg, k: 0.0008,
