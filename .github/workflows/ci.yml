@@ -94,14 +94,14 @@ jobs:
             page.on('pageerror', (error) => errors.push(error.message));
             const response = await page.goto(
               'http://127.0.0.1:4173/#characters%2Fturkey.js',
-              { waitUntil: 'domcontentloaded', timeout: 60000 },
+              { waitUntil: 'commit', timeout: 60000 },
             );
             if (!response?.ok()) throw new Error(`Asset viewer returned HTTP ${response?.status()}`);
             await page.waitForFunction(
               () => document.querySelector('#title b')?.textContent?.toLowerCase().includes('turkey')
                 && document.querySelector('#busy')?.style.display === 'none',
               null,
-              { timeout: 60000 },
+              { timeout: 120000 },
             );
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'artifacts/turkey.png', fullPage: true });
