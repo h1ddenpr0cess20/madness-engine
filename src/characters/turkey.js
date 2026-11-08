@@ -164,7 +164,7 @@ export default {
           const a = [x, y, z];
           const b = [x + m * 0.018, y - 0.029, z - 0.055];
           s.flake(a, b, [0, 1, 0], 0.0135 - row * 0.0006, 0.0036, 0.27, {
-            color: (p, n) => mix(wingPlumage(p, n), row % 2 ? COPPER : BRONZE, 0.14),
+            color: (p, n) => mix(wingPlumage(p, n), row % 2 ? COPPER : CHESTNUT, 0.14),
             mat: 'feather', bone, k: 0.0017,
           });
         }
@@ -201,12 +201,12 @@ export default {
         const axis = [tip[0] - root[0], tip[1] - root[1], tip[2] - root[2]];
         const total = Math.hypot(...axis);
         s.flake(root, tip, [0, -0.12, 1], width * 0.73, width, 0.16, {
-          color: (p, n) => tailColour(i, clamp(Math.hypot(p[0] - root[0], p[1] - root[1], p[2] - root[2]) / total)),
+          color: (p) => tailColour(i, clamp(Math.hypot(p[0] - root[0], p[1] - root[1], p[2] - root[2]) / total)),
           mat: 'flight', bone: 'fan', k: 0.0021,
         });
         // Fine rachis along each feather's centerline.
         s.limb(root, shaftEnd, 0.00135, 0.00055, {
-          color: (p, n) => mix(BRONZE, CREAM, 0.2),
+          color: () => mix(RUST, CREAM, 0.2),
           mat: 'flight', bone: 'fan', k: 0.0004,
         });
       }
@@ -246,15 +246,15 @@ export default {
       // Upper beak: broad at its base, convex over the maxilla, tapering into
       // a sharp down-curved hook. A narrow basal saddle keeps the cere seated.
       s.ellipsoid([0, 0.397, 0.191], [0.014, 0.0105, 0.023], {
-        color: (p, n) => mix(BEAK, BEAK_DARK, smooth(0.405, 0.386, p[1]) * 0.35),
+        color: (p) => mix(BEAK, BEAK_DARK, smooth(0.405, 0.386, p[1]) * 0.35),
         mat: 'beak', bone: 'head', k: 0.002,
       });
       s.limb([0, 0.399, 0.202], [0, 0.389, 0.234], 0.0105, 0.006, {
-        color: (p, n) => mix(BEAK, rgb('#8b612e'), smooth(0.397, 0.378, p[1]) * 0.35),
+        color: (p) => mix(BEAK, rgb('#8b612e'), smooth(0.397, 0.378, p[1]) * 0.35),
         mat: 'beak', bone: 'head', k: 0.0015,
       });
       s.limb([0, 0.389, 0.232], [0, 0.371, 0.246], 0.0062, 0.0009, {
-        color: (p, n) => mix(rgb('#bf8b3d'), BEAK_DARK, smooth(0.386, 0.371, p[1]) * 0.38),
+        color: (p) => mix(rgb('#bf8b3d'), BEAK_DARK, smooth(0.386, 0.371, p[1]) * 0.38),
         mat: 'beak', bone: 'head', k: 0.001,
       });
       // Lower mandible is distinct, a little shorter and shallower, with a visible seam.
@@ -280,7 +280,7 @@ export default {
 
       // Snood rises from the forehead, droops over the top of the bill.
       s.limb([0, 0.437, 0.166], [0.001, 0.417, 0.191], 0.005, 0.0041, {
-        color: (p, n) => mix(RED, CORAL, smooth(0.42, 0.45, p[1]) * 0.35),
+        color: (p) => mix(RED, CORAL, smooth(0.42, 0.45, p[1]) * 0.35),
         mat: 'skin', bone: 'head', k: 0.0012,
       });
       s.ellipsoid([0.001, 0.416, 0.19], [0.0045, 0.0065, 0.0042], {
@@ -355,7 +355,7 @@ export default {
       for (let i = 0; i < 7; i++) {
         const y = 0.135 - i * 0.014;
         s.limb([m * 0.052, y, 0.004], [m * 0.054, y - 0.002, 0.013], 0.0038, 0.0028, {
-          color: (p, n) => mix(scaledLeg(p), OCHRE, 0.2),
+          color: (p) => mix(scaledLeg(p), OCHRE, 0.2),
           mat: 'skin', bone: leg, k: 0.0011,
         });
       }
