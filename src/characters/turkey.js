@@ -256,7 +256,7 @@ export default {
         color: BEAK, mat: 'beak', bone: 'head', k: 0.0015,
       });
       s.limb([0, 0.457, 0.198], [0, 0.446, 0.231], 0.0082, 0.0012, {
-        color: (p, n) => mix(BEAK, BEAK_SHADE, smooth(0.455, 0.444, p[1]) * 0.35),
+        color: (p) => mix(BEAK, BEAK_SHADE, smooth(0.455, 0.444, p[1]) * 0.35),
         mat: 'beak', bone: 'head', k: 0.001,
       });
       s.limb([0, 0.449, 0.197], [0, 0.443, 0.222], 0.0053, 0.0008, {
@@ -265,7 +265,7 @@ export default {
 
       // The short snood drapes from the forehead over the base of the bill.
       s.limb([0, 0.492, 0.177], [0.001, 0.463, 0.197], 0.0042, 0.0032, {
-        color: (p, n) => mix(RED, RED_LIGHT, smooth(0.46, 0.49, p[1]) * 0.25),
+        color: (p) => mix(RED, RED_LIGHT, smooth(0.46, 0.49, p[1]) * 0.25),
         mat: 'skin', bone: 'head', k: 0.001,
       });
 

@@ -57,6 +57,50 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build
+      - name: Install Chromium for model preview
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Render turkey in the asset viewer
+        run: |
+          mkdir -p artifacts
+          npm run dev -- --host 127.0.0.1 --port 4173 > /tmp/asset-viewer.log 2>&1 &
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+
+          const browser = await chromium.launch({ headless: true });
+          try {
+            const page = await browser.newPage({
+              viewport: { width: 1440, height: 1000 },
+              deviceScaleFactor: 1,
+            });
+            const errors = [];
+            page.on('pageerror', (error) => errors.push(error.message));
+            const response = await page.goto(
+              'http://127.0.0.1:4173/#characters%2Fturkey',
+              { waitUntil: 'domcontentloaded', timeout: 60000 },
+            );
+            if (!response?.ok()) throw new Error(`Asset viewer returned HTTP ${response?.status()}`);
+            await page.waitForFunction(
+              () => document.querySelector('#title b')?.textContent?.toLowerCase().includes('turkey')
+                && document.querySelector('#busy')?.style.display === 'none',
+              null,
+              { timeout: 60000 },
+            );
+            await page.waitForTimeout(1500);
+            await page.screenshot({ path: 'artifacts/turkey.png', fullPage: true });
+            if (errors.length) throw new Error(errors.join('\\n'));
+            console.log('Rendered turkey in the asset viewer:', await page.locator('#title b').textContent());
+          } finally {
+            await browser.close();
+          }
+          NODE
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: turkey-asset-viewer
+          path: examples/asset-viewer/artifacts/turkey.png
+          if-no-files-found: warn
 
   # Keep the repository's interactive asset viewer buildable on pull requests.
   asset-viewer:
