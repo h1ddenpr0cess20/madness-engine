@@ -683,7 +683,8 @@ export function createLightshow(GFX, venue) {
   function strobe(f) {
     const y = heightOf(f.x, f.z);
     const high = f.height ?? 1.5;
-    const lens = [f.x, y + high, f.z];
+    // The lens is the front (+z) face of the housing: the light comes out of it, not out of the middle of the box.
+    const lens = [f.x, y + high, f.z + 0.2];
     const g = new GFX.Group();
     g.position.set(f.x, y, f.z);
     const post = new GFX.Mesh(new GFX.CylinderGeometry(0.025, 0.04, high, 8), iron);
@@ -694,7 +695,7 @@ export function createLightshow(GFX, venue) {
     const faceMesh = new GFX.Mesh(new GFX.BoxGeometry(0.54, 0.1, 0.02), faceMat);
     faceMesh.position.set(0, high, 0.115);
     const h = halo([1, 1, 1], 2.4);
-    h.position.y = high;
+    h.position.set(0, high, 0.2);
     h.material.opacity = 0;
     post.castShadow = bar.castShadow = true;
     g.add(post, bar, faceMesh, h);
@@ -709,7 +710,9 @@ export function createLightshow(GFX, venue) {
         const k = Math.max(s, calm);
         faceMat.color.setRGB(0.25 + k * 3, 0.25 + k * 3, 0.3 + k * 3);
         h.material.opacity = k * 0.95;
-        if (k > 0.01) ctx.offer({ pos: [lens[0], lens[1] + 0.3, lens[2]], color: [0.92, 0.96, 1], intensity: 38 * k, reach: 11, flash: s });
+        // Offered every frame, dark between flashes: a light that came and went with each flash would
+        // re-rank every other offer, and the stage's real lights would jump from fixture to fixture on the beat.
+        ctx.offer({ pos: lens, color: [0.92, 0.96, 1], intensity: 38 * k, reach: 11, flash: s });
       },
     };
   }

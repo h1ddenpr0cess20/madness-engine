@@ -109,3 +109,28 @@ test('every version of the light show loads and keeps the same fixtures', async 
   }
   assert.equal(kinds.size, 5);
 });
+
+test('a strobe\'s glow and light come out of its lens, and its light never jumps between flashes', async () => {
+  for (const file of ['lightshow', 'lightshow.rocknroller', 'lightshow.rocknroller-ii', 'lightshow.rocknroller-iii']) {
+    const { createLightshow } = await import(`../src/scenery/${file}.js`);
+    const fixture = { kind: 'strobe', x: 3.5, z: 3.5 };
+    const show = createLightshow(GFX, venue([fixture]));
+    let halo, face;
+    show.group.traverse((o) => { if (o.isSprite) halo = o; if (o.material?.toneMapped === false && o.geometry?.parameters?.depth === 0.02) face = o; });
+    assert.ok(halo && face, `${file}: halo and lens face are built`);
+    assert.ok(halo.position.z > face.position.z, `${file}: the glow sits in front of the lens, not inside the housing`);
+    assert.equal(halo.position.y, face.position.y, `${file}: and level with it`);
+
+    const lights = [new GFX.PointLight(0xffffff, 0, 7, 1.1)];
+    const at = (beat) => {
+      show.update({ time: beat * 0.5, beat, troll: [3.5, 0, 3.5], rock: [3.5, 0, 3.5], lights, flashing: true });
+      return { position: lights[0].position.toArray(), intensity: lights[0].intensity };
+    };
+    const flash = at(0);
+    const dark = at(2.5);
+    assert.ok(flash.intensity > 0, `${file}: lit on the flash`);
+    assert.ok(dark.intensity < flash.intensity * 0.05, `${file}: dark between flashes`);
+    assert.deepEqual(dark.position, flash.position, `${file}: the light stays on its fixture rather than jumping`);
+    assert.ok(Math.abs(flash.position[2] - (fixture.z + 0.2)) < 1e-9, `${file}: out of the lens, at its front`);
+  }
+});
