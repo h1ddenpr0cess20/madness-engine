@@ -29,6 +29,11 @@ export const MAX_LENGTH = 4.8;
 export const SLAB = 0.075;
 /** The toe kick, under the cabinets. */
 const PLINTH = 0.08;
+/**
+ * The granite top's grain, in repeats a metre: twice the boulder's grain (one
+ * repeat per 0.95 m rather than per 1.9 m), so the counter's pattern reads finer.
+ */
+export const COUNTER_GRANITE_REPEATS_PER_METRE = 2 / GRANITE_TILE_SIZE;
 /** How far below the top the carcass is open beneath a sink. */
 const BOWL_DEPTH = 0.2;
 
@@ -188,7 +193,8 @@ function makeCopperBasin(GFX, parent, metal, width, depth) {
   basin.add(floor);
 
   // The beaded, rolled rim round the opening, in straight lengths with polished joints.
-  const r = Math.min(0.055, hx * 0.22, hz * 0.28);
+  // A tight corner radius: the rim fills the cutout's corners instead of leaving notches beside them.
+  const r = Math.min(0.015, hx * 0.22, hz * 0.28);
   const rimPoints = [
     [-hx + r, 0.004, -hz], [hx - r, 0.004, -hz],
     [hx, 0.004, -hz + r], [hx, 0.004, hz - r],
@@ -297,7 +303,7 @@ export function createGraniteCounter(GFX, {
     clearcoat: 0.75,
     clearcoatRoughness: 0.12,
   });
-  graniteMat.userData.uvScale = 1 / GRANITE_TILE_SIZE;
+  graniteMat.userData.uvScale = COUNTER_GRANITE_REPEATS_PER_METRE;
   source.geometry.dispose();
   source.material.dispose();
 
@@ -393,7 +399,8 @@ export function createKitchenSink(GFX, {
   const brass = makeMetalMaterial(GFX, fixtureMetal, environment);
 
   // The bowl sits inside the rim; the faucet stands on the counter behind it.
-  const basin = makeCopperBasin(GFX, sink, copper, width - 0.012, depth - 0.012);
+  // The rim's tube is 12mm across and sits on the cutout's edge: the basin's outline is the cutout less that.
+  const basin = makeCopperBasin(GFX, sink, copper, width - 0.024, depth - 0.024);
   basin.position.set(0, -0.002, 0);
   makeFaucet(GFX, sink, brass, 0, 0, -depth / 2 - 0.07);
 

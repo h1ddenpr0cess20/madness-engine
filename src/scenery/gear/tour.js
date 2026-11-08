@@ -116,9 +116,11 @@ function bench(GFX, { rise = 0.8 }) {
 
   // The back: three slats, each leaning back on the same line as the uprights.
   const backZ = (y) => seatZ - (y - seatY) * Math.tan(lean);
+  // Three slats, spread evenly between the seat and the top of the back, whatever its height.
+  const lo = seatY + 0.14, hi = backTop - 0.05;
   for (let i = 0; i < 3; i++) {
-    const y = seatY + 0.2 + i * 0.13;
-    if (y < backTop - 0.04) slat(GFX, k, [1.0, 0.07, 0.03], wood, [0, y, backZ(y)], [-lean, 0, 0]);
+    const y = lo + ((hi - lo) * i) / 2;
+    slat(GFX, k, [1.0, 0.07, 0.03], wood, [0, y, backZ(y)], [-lean, 0, 0]);
   }
 
   // Each end: an A-frame of cast iron, the back upright continuing it, and a stretcher low down.
