@@ -1,12 +1,13 @@
+import { buildTeeth } from './teeth.js';
 import { baseMesh } from './basemesh.js';
 import { frameAt, Part, smooth } from './kit.js';
 import { EYE, FACE } from './skeleton.js';
 
 /**
  * What the head needs beyond the skin: the eyeballs (seen through the lids'
- * opening), the teeth, tongue and lashes (MakeHuman's own, fitted to its
- * mouth and lids), and the mouth's corners given bones of their own, so the
- * mouth can smile.
+ * opening), the teeth and gums (built tooth by tooth, in teeth.js), the
+ * tongue and lashes (MakeHuman's own, fitted to its mouth and lids), and
+ * the mouth's corners given bones of their own, so the mouth can smile.
  */
 
 const G = (t) => Math.exp(-t * t);
@@ -58,14 +59,14 @@ export function buildEyes(detail = 1) {
 }
 
 /** One of the baked mesh's small surfaces (teeth, tongue, lashes) as a part, in `material`. */
-function helperPart(name, material, tint = () => 1) {
+function helperPart(name, material, tint = () => 1, shift = (p) => p) {
   const m = baseMesh();
   const s = m.surfaces[name];
   const part = new Part(name, material);
   const map = new Map();
   const at = (v) => {
     if (!map.has(v)) {
-      const p = [m.position[v * 3], m.position[v * 3 + 1], m.position[v * 3 + 2]];
+      const p = shift([m.position[v * 3], m.position[v * 3 + 1], m.position[v * 3 + 2]]);
       const w = {};
       for (let k = 0; k < 4; k++) { const x = m.weight[v * 4 + k]; if (x > 0) w[m.bones[m.bone[v * 4 + k]]] = (w[m.bones[m.bone[v * 4 + k]]] ?? 0) + x; }
       map.set(v, part.vertex(p, [0, 0], w, tint(p), null, { zone: 'head', y: p[1], d: 0 }));
@@ -80,10 +81,12 @@ function helperPart(name, material, tint = () => 1) {
   return part;
 }
 
-/** The teeth of each jaw, and the tongue. */
-export function buildMouth() {
+/** The teeth and gums of each jaw (built tooth by tooth), and the tongue. */
+export function buildMouth(detail = 1) {
   const mouth = FACE.mouth;
   // Darker toward the back of the mouth.
   const back = (p) => 0.55 + 0.45 * smooth(mouth[2] - 0.05, mouth[2] - 0.01, p[2]);
-  return [helperPart('upperTeeth', 'teeth', back), helperPart('lowerTeeth', 'teeth', back), helperPart('tongue', 'tongue', back)];
+  // The tongue's tip eased back a little, to lie behind the lower front teeth.
+  const tip = (p) => [p[0], p[1], p[2] - 0.0035 * smooth(mouth[2] - 0.045, mouth[2] - 0.026, p[2])];
+  return [...buildTeeth(detail), helperPart('tongue', 'tongue', back, tip)];
 }

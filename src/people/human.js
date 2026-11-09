@@ -38,7 +38,7 @@ import { CLIPS, moveHuman } from './human/motion.js';
 export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 
-const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'tongue', 'lash'];
+const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'gums', 'tongue', 'lash'];
 const builds = new Map();
 const NAMES = bones().map(([n]) => n);
 
@@ -92,7 +92,7 @@ function bodyData(detail) {
   const level = levelFor(detail);
   const key = `body@${level}`;
   if (!builds.has(key)) {
-    const parts = [skinPart(level), buildEyes(detail), ...buildMouth()];
+    const parts = [skinPart(level), buildEyes(detail), ...buildMouth(detail)];
     builds.set(key, { data: assemble(parts, NAMES, BODY_MATERIALS) });
   }
   return builds.get(key);
@@ -122,7 +122,8 @@ function makeMaterials(GFX, look, tex) {
       sheen: 0.3, sheenColor: new GFX.Color('#e8a090'), sheenRoughness: 0.4, clearcoat: 0.06, clearcoatRoughness: 0.45,
     }),
     eye: M('eyes', { color: '#ffffff', map: tex?.eye ?? null, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.03 }),
-    teeth: M('teeth', { color: '#efe6d6', roughness: 0.25, clearcoat: 0.4 }),
+    teeth: M('teeth', { color: '#e8dfcb', roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.15, sheen: 0.25, sheenColor: new GFX.Color('#fff8ea') }),
+    gums: M('gums', { color: '#c8706c', roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.2 }),
     tongue: M('tongue', { color: '#94504f', roughness: 0.45, clearcoat: 0.25 }),
     lash: M('lashes', { color: '#1a1412', roughness: 0.7, side: GFX.DoubleSide }),
     briefs: M('briefs', { color: look.briefs, roughness: 0.8, sheen: 0.5, sheenColor: new GFX.Color('#9aa0aa'), sheenRoughness: 0.5 }),
@@ -161,7 +162,7 @@ function skinnedMesh(GFX, data, materials, name) {
 export const HAND_POSES = Object.freeze({
   relaxed: { curl: [0.22, 0.3, 0.2], thumb: 0.15, spread: 0.1 },
   open: { curl: [0, 0.04, 0.02], thumb: 0, spread: 0.6 },
-  grip: { curl: [0.95, 1.0, 0.65], thumb: 0.85, spread: 0 },
+  grip: { curl: [0.75, 0.95, 0.6], thumb: 0.85, spread: 0 },
   fist: { curl: [1.0, 1.0, 0.4], thumb: 1, spread: 0 },
   point: { curl: [1.0, 1.0, 0.4], thumb: 0.9, spread: 0, straight: ['index'] },
 });
@@ -191,6 +192,12 @@ const HAND_AXES = Object.fromEntries(FINGER_NAMES.map((name) => {
   const l = len(spread) || 1;
   return [name, { curl: f.curl, spread: spread.map((v) => v / l) }];
 }));
+
+// The swings made with both hands on the grip.
+const TWO_HANDED = new Set(['chop']);
+
+// Where a held grip's middle sits in the (left) hand at rest, and how its axis tilts.
+const GRIP_AT = [0.283, 0.79, 0.04], GRIP_TILT = -0.05;
 
 // The axis the thumb's root turns about to come across the palm (left hand).
 const THUMB_IN = [-0.225, 0.03, 0.974];
@@ -445,15 +452,76 @@ export function createHuman(GFX, options = {}) {
     }
   }
 
+  /** How much the left hand takes the right's weapon too, in `state`: for the swings made with both hands. */
+  function twoHanded(state) {
+    if (state.clip !== 'attack' || !TWO_HANDED.has(style.attack)) return 0;
+    const t = state.t ?? 0;
+    return Math.min(1, Math.max(0, (t - 0.04) / 0.12)) * Math.min(1, Math.max(0, (0.88 - t) / 0.12));
+  }
+
+  /**
+   * Turns the left arm, forearm and hand (on from the clip's pose, `amount`
+   * of the way) so the left hand closes on the right hand's weapon below
+   * it, along the grip, its knuckles the same way as the right's.
+   */
+  function bothHands(amount) {
+    const h = held.R;
+    skeleton.compute();
+    const o = skeleton.index.get('handR') * 12, B = skeleton.matrices;
+    M4.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
+    const world = new GFX.Matrix4().multiplyMatrices(M4, h.rest);
+    const target = new GFX.Vector3(0, h.second, 0).applyMatrix4(world);
+    const axis = new GFX.Vector3(0, 1, 0).transformDirection(world);
+    // The right hand's back (rest −x for the right hand): the left's (rest +x) goes the same way.
+    const back = new GFX.Vector3(B[o] * -1, B[o + 4] * -1, B[o + 8] * -1).normalize();
+    const grip = mirror(GRIP_AT, 1), along = [0, GRIP_TILT, 1];
+    const bonesL = ['armL', 'foreL', 'handL'];
+    const start = bonesL.map((b) => skeleton.bone(b).rot.slice());
+    const dirOf = (name, d) => {
+      const q = skeleton.index.get(name) * 12, M = skeleton.matrices;
+      return new GFX.Vector3(M[q] * d[0] + M[q + 1] * d[1] + M[q + 2] * d[2], M[q + 4] * d[0] + M[q + 5] * d[1] + M[q + 6] * d[2], M[q + 8] * d[0] + M[q + 9] * d[1] + M[q + 10] * d[2]).normalize();
+    };
+    const cost = () => {
+      skeleton.compute();
+      const p = skeleton.point('handL', grip);
+      const dp = (p[0] - target.x) ** 2 + (p[1] - target.y) ** 2 + (p[2] - target.z) ** 2;
+      const da = 1 - dirOf('handL', along).dot(axis), db = 1 - dirOf('handL', [1, 0, 0]).dot(back);
+      return dp + 0.004 * da + 0.0015 * db;
+    };
+    let best = cost(), step = 0.25;
+    for (let it = 0; it < 40 && step > 0.004; it++) {
+      let moved = false;
+      for (const b of bonesL) {
+        const r = skeleton.bone(b).rot;
+        for (let a = 0; a < 3; a++) {
+          for (const d of [step, -step]) {
+            r[a] += d;
+            const c = cost();
+            if (c < best) { best = c; moved = true; break; }
+            r[a] -= d;
+          }
+        }
+      }
+      if (!moved) step *= 0.5;
+    }
+    // Only `amount` of the way from the clip's pose.
+    bonesL.forEach((b, i) => {
+      const r = skeleton.bone(b).rot;
+      for (let a = 0; a < 3; a++) r[a] = start[i][a] + (r[a] - start[i][a]) * amount;
+    });
+  }
+
   function pose(state = {}) {
     last = state;
     skeleton.reset();
     const armed = held.R ? 'R' : null;
     moveHuman(skeleton, state, { ...style, armed, heavy: style.heavy ?? 0 });
     shrug(skeleton);
+    const both = held.R && !held.L ? twoHanded(state) : 0;
+    if (both) bothHands(both);
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
-      const shape = held[S] ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
+      const shape = held[S] || (S === 'L' && both > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
       poseHand(skeleton, S, shape, held[S] ? 1 : hands[S].amount);
     }
     // Speech, when he is talking (or shouting) and his face has not been told otherwise.
@@ -487,12 +555,12 @@ export function createHuman(GFX, options = {}) {
     const bounds = thing.gripBounds;
     const y = grip ?? (bounds ? Math.max((bounds.bottom + bounds.top) / 2, bounds.top - 0.05) : 0);
     const m = S === 'L' ? 1 : -1;
-    // The fist's middle, at rest: down the hand from the wrist and in front of the palm; its axis runs forward.
+    // The grip's middle, at rest: across the roots of the fingers, in front of the palm, where they close round it; its axis runs forward along them.
     const wrist = mirror(JOINTS.wrist, m), elbow = mirror(JOINTS.elbow, m);
     const down = new GFX.Vector3(wrist[0] - elbow[0], wrist[1] - elbow[1], wrist[2] - elbow[2]).normalize();
-    const centre = new GFX.Vector3(...wrist).addScaledVector(down, 0.068).add(new GFX.Vector3(-m * 0.024, 0, 0.012));
-    // The object's +y along the fist; its +x (a blade's width) in the plane the wrist bends in, edge leading.
-    const along = new GFX.Vector3(0, 0.12, 1).normalize();
+    const centre = new GFX.Vector3(...mirror(GRIP_AT, m));
+    // The object's +y along the grip; its +x (a blade's width) in the plane the wrist bends in, edge leading.
+    const along = new GFX.Vector3(0, GRIP_TILT, 1).normalize();
     const side = new GFX.Vector3().crossVectors(along, down).normalize();
     const width = new GFX.Vector3().crossVectors(side, along).normalize();
     const rest = new GFX.Matrix4().makeBasis(width, along, side.negate());
@@ -500,7 +568,9 @@ export function createHuman(GFX, options = {}) {
     rest.multiply(new GFX.Matrix4().makeTranslation(0, -y, 0));
     object.matrixAutoUpdate = false;
     group.add(object);
-    held[S] = { thing, object, rest };
+    // Where a second hand takes it, below the first (toward the pommel), as far down the grip as there is.
+    const second = bounds ? Math.max(bounds.bottom + 0.03, y - 0.085) : y - 0.085;
+    held[S] = { thing, object, rest, second };
     if (last) pose(last);
     return api;
   }
