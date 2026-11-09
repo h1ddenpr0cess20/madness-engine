@@ -1,8 +1,8 @@
 import { bodyLevel } from './basemesh.js';
 import { zoneOf } from './body.js';
 import { clamp, cross, fbm, noise3, smooth } from './kit.js';
-import { EYE, FACE, FINGERS, JOINTS } from './skeleton.js';
-import { COLLAR, HEM, jeansHeight, jeansPoint, neckline, shirtPoint, SHIRT_UV, SLEEVE_RANGE } from './clothes.js';
+import { armDistance, EYE, FACE, FINGERS, JOINTS } from './skeleton.js';
+import { HEM, jeansHeight, legAngle, neckline, SHIRT_Z, SLEEVE_RANGE } from './clothes.js';
 
 /**
  * The human's textures, painted when he is first built (in a browser; with
@@ -57,7 +57,13 @@ function texture(GFX, canvas, { color = true, repeat = null } = {}) {
  * position, normal and zone, by rasterising the body's quads in UV space.
  * Texels no quad covers are left empty (zone 0).
  */
+const positionMaps = new Map();
 function positionMap(size) {
+  if (!positionMaps.has(size)) positionMaps.set(size, makePositionMap(size));
+  return positionMaps.get(size);
+}
+
+function makePositionMap(size) {
   const { pos, uv, faces, uvFaces, weights } = bodyLevel(0);
   const N = size * size;
   const P = new Float32Array(N * 3), Nn = new Float32Array(N * 3), Z = new Uint8Array(N);
@@ -267,8 +273,12 @@ function skinColour(tone, L) {
 
 /** The skin's map, on the base mesh's own UVs, `size` square: RGBA bytes. */
 export function skinPixels(size, tone) {
+  return bodyPixels(size, skinColour(hex(tone), landmarks()), [180, 130, 110]);
+}
+
+/** Paints the body's UV layout texel by texel: `colour(p, n, zone)` → [r, g, b] for each texel's place on the body. */
+function bodyPixels(size, colour, empty = [128, 128, 128]) {
   const { P, N, Z, ZONES } = positionMap(size);
-  const colour = skinColour(hex(tone), landmarks());
   const rgba = new Uint8ClampedArray(size * size * 4);
   const filled = new Uint8Array(size * size);
   const p = [0, 0, 0], n = [0, 0, 0];
@@ -282,7 +292,7 @@ export function skinPixels(size, tone) {
     filled[o] = 1;
   }
   bleed(rgba, filled, size);
-  for (let o = 0; o < size * size; o++) if (!rgba[o * 4 + 3]) { rgba[o * 4] = 180; rgba[o * 4 + 1] = 130; rgba[o * 4 + 2] = 110; rgba[o * 4 + 3] = 255; }
+  for (let o = 0; o < size * size; o++) if (!rgba[o * 4 + 3]) { rgba[o * 4] = empty[0]; rgba[o * 4 + 1] = empty[1]; rgba[o * 4 + 2] = empty[2]; rgba[o * 4 + 3] = 255; }
   return rgba;
 }
 
@@ -338,31 +348,36 @@ function eyeMap(iris) {
 
 /** The shirt: off-white to be tinted, flecked like a heather jersey, with its seams and the hems' double stitching. */
 function shirtMaps() {
-  const W = 1024, H = 1024;
-  const yOfT = (t, th) => HEM - 0.002 + (neckline(th) - HEM) * (1 - Math.pow(1 - t, 1.2));
-  const map = paint(W, H, (u, v) => {
-    const th = u * Math.PI * 2;
-    let c = 232 + 10 * noise3(u * 900, v * 600, 0) + 8 * noise3(u * 120, v * 80, 5);
+  // Painted on the body's own layout (the shirt is cut from the skin), by where each texel is on him.
+  const size = 1024;
+  const dash = (p, k) => 0.5 + 0.5 * Math.sign(Math.sin((p[0] * 0.7 + p[1] + p[2] * 0.8) * k));
+  const rgba = bodyPixels(size, (p, n, zone) => {
+    let c = 232 + 10 * noise3(p[0] * 300, p[1] * 300, p[2] * 300) + 8 * noise3(p[0] * 40, p[1] * 40, p[2] * 40);
     let seam = 0;
-    if (v < SHIRT_UV.body) {
-      const y = yOfT(v / SHIRT_UV.body, th);
-      const p = shirtPoint(Math.min(COLLAR, y), th);
-      // Side seams, and the hem's two rows of stitching.
-      const side = Math.min(Math.abs(Math.atan2(Math.sin(th - Math.PI / 2), Math.cos(th - Math.PI / 2))), Math.abs(Math.atan2(Math.sin(th + Math.PI / 2), Math.cos(th + Math.PI / 2))));
-      seam += G(side / 0.006) * smooth(1.36, 1.33, y) * 0.8;
-      for (const dy of [0.011, 0.0175]) seam += G((y - HEM - dy) / 0.0007) * (0.5 + 0.5 * Math.sign(Math.sin(u * 900)));
-      // The shoulder seams: along the top of each shoulder, from the collar out.
-      if (y > 1.44) seam += G((p[2] + 0.005) / 0.0025) * smooth(0.08, 0.11, Math.abs(p[0])) * 0.8;
-    } else if (v < SHIRT_UV.collar) {
-      const d = SLEEVE_RANGE[0] + (SLEEVE_RANGE[1] - SLEEVE_RANGE[0]) * clamp((v - SHIRT_UV.sleeve[0]) / (SHIRT_UV.sleeve[1] - SHIRT_UV.sleeve[0]));
-      for (const dd of [0.011, 0.0165]) seam += G((SLEEVE_RANGE[1] - dd - d) / 0.0007) * (0.5 + 0.5 * Math.sign(Math.sin(u * 600)));
+    const th = Math.atan2(p[0], p[2] - SHIRT_Z);
+    const r = Math.hypot(p[0], p[2] - SHIRT_Z);
+    if (zone === 'arm') {
+      const d = armDistance(p, p[0] >= 0 ? 1 : -1);
+      // The cuff's two rows of stitching, and the seam round the top of the sleeve.
+      for (const dd of [0.011, 0.0165]) seam += G((SLEEVE_RANGE[1] - dd - d) / 0.0008) * dash(p, 900);
+      seam += 0.7 * G((d - 0.03) / 0.0018);
     } else {
-      // The rib: fine lines up and down it.
-      c -= 18 * Math.max(0, Math.sin(u * 900));
+      // The side seams, under the arms.
+      const side = Math.min(Math.abs(th - Math.PI / 2), Math.abs(th + Math.PI / 2)) * r;
+      seam += 0.8 * G(side / 0.0025) * smooth(1.36, 1.32, p[1]);
+      // The hem's two rows of stitching.
+      for (const dy of [0.011, 0.0175]) seam += G((p[1] - HEM - dy) / 0.0008) * dash(p, 900);
+      // The shoulder seams, along the top of each shoulder from the collar out.
+      if (p[1] > 1.42) seam += 0.8 * G((p[2] + 0.005) / 0.0025) * smooth(0.07, 0.1, Math.abs(p[0]));
+      // The collar's rib: fine lines up and down it.
+      const down = neckline(th) - p[1];
+      if (down < 0.016) c -= 18 * Math.max(0, Math.sin(th * 260)) * smooth(0.016, 0.014, down);
+      seam += 0.8 * G((down - 0.016) / 0.0012);
     }
     c -= 40 * clamp(seam);
     return [c, c, c];
-  });
+  }, [232, 232, 232]);
+  const map = canvasOf(rgba, size);
   // A jersey's knit, as a repeating tile: rows of little V-shaped stitches.
   const bump = paint(128, 128, (u, v) => {
     const cols = 16, rows = 16;
@@ -378,13 +393,9 @@ function shirtMaps() {
 
 /** The jeans: indigo, faded where they wear (thighs, knees), with every seam and pocket topstitched in gold. */
 function denimMaps() {
-  const W = 1024, H = 1024;
   const indigo = hex('#2c4a78'), faded = hex('#6f8fb8'), deep = hex('#1d3256'), thread = hex('#c9934a');
-  const map = paint(W, H, (u, v) => {
-    const th = u * Math.PI * 2;
-    const y = jeansHeight(v, th);
-    const p = jeansPoint(y, th, 1);
-    const x = p[0], z = p[2];
+  // Painted on the body's own layout (the jeans are cut from the skin), by where each texel is round its leg.
+  const at = (u, v, th, y, x, z) => {
     const front = Math.cos(th);
     // Wear: whiskers across the tops of the thighs, a pale knee, honeycombs behind it, lighter down the shins.
     let fade = 0.18 + 0.1 * fbm(x * 30, y * 30, z * 30, 3);
@@ -433,10 +444,15 @@ function denimMaps() {
     }
     c = mixc(c, deep, clamp(dark) * 0.7);
     // Stitches as dashes of gold thread.
-    const dash = 0.55 + 0.45 * Math.sign(Math.sin((u * 1.3 + v * 2.0) * 1400));
-    c = mixc(c, thread, clamp(st) * 0.85 * dash);
+    c = mixc(c, thread, clamp(st) * 0.6);
     return c;
-  });
+  };
+  const map = canvasOf(bodyPixels(1024, (p) => {
+    const { th } = legAngle(p);
+    const t = ((th / (Math.PI * 2)) % 1 + 1) % 1;
+    const v = clamp((p[1] - jeansHeight(0, th)) / (jeansHeight(1, th) - jeansHeight(0, th)));
+    return at(t, v, th, p[1], Math.abs(p[0]), p[2]);
+  }, [44, 74, 120]), 1024);
   // A 3/1 twill as a repeating tile: diagonal ribs.
   const bump = paint(128, 128, (u, v) => {
     const h = 128 + 80 * Math.sin((u * 16 + v * 16) * Math.PI * 2) + 25 * noise3(u * 64, v * 64, 9);
@@ -494,8 +510,8 @@ export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 
   const garments = byGFX.get('garments') ?? (() => {
     const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps();
     const g = {
-      shirt: { map: texture(GFX, shirt.map), bump: texture(GFX, shirt.bump, { color: false, repeat: [70, 50] }) },
-      denim: { map: texture(GFX, denim.map), bump: texture(GFX, denim.bump, { color: false, repeat: [60, 90] }) },
+      shirt: { map: texture(GFX, shirt.map), bump: texture(GFX, shirt.bump, { color: false, repeat: [140, 140] }) },
+      denim: { map: texture(GFX, denim.map), bump: texture(GFX, denim.bump, { color: false, repeat: [150, 150] }) },
       shoe: texture(GFX, shoes.upper),
       sole: texture(GFX, shoes.sole),
       pores: texture(GFX, poreTile(), { color: false, repeat: [24, 24] }),

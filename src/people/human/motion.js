@@ -148,59 +148,96 @@ function jump(k, t, leap, armed) {
   }
 }
 
+/** The weapon held ready (right hand), as a keyed pose: where every swing starts and ends. */
+const READY_R = { armR: [-0.42, 0, -0.04], foreR: [-0.85, 0.35, 0], handR: [0.25, 0, 0] };
+
+/**
+ * Poses at times, eased from one to the next: `keys` is [[t, { bone: [x, y, z] }], ...]
+ * (a bone missing from a key is at 0 there). Added onto what the bones already have.
+ */
+function keyed(k, t, keys) {
+  let i = 0;
+  while (i < keys.length - 2 && t > keys[i + 1][0]) i++;
+  const [ta, a] = keys[i], [tb, b] = keys[i + 1];
+  const f = ease((t - ta) / (tb - ta));
+  const bones = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const bone of bones) {
+    const p = a[bone] ?? [0, 0, 0], q = b[bone] ?? [0, 0, 0];
+    k.turn(bone, p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f, p[2] + (q[2] - p[2]) * f);
+  }
+}
+
+/** The swings, each from ready to ready: wind up, strike, follow through, recover. Times are of the clip's 0..1. */
+const SWINGS = {
+  // From high over the right shoulder, across and down to the left hip.
+  slash: [
+    [0, READY_R],
+    [0.24, { chest: [-0.08, 0.45, 0.05], spine: [0, 0.15, 0], armR: [-2.5, 0, -0.35], foreR: [-0.75, 0.3, 0], handR: [0.2, 0, 0], armL: [-0.25, 0, 0.25], foreL: [-0.4, 0, 0], head: [0, -0.2, 0] }],
+    [0.36, { chest: [0.15, -0.45, -0.05], spine: [0.08, -0.15, 0], armR: [-1.35, 0, 0.7], foreR: [-0.15, 0.25, 0], handR: [0.95, 0, 0], armL: [0.25, 0, 0.15], foreL: [-0.3, 0, 0], head: [0.05, 0.2, 0] }],
+    [0.52, { chest: [0.22, -0.75, -0.05], spine: [0.1, -0.22, 0], armR: [-0.75, 0, 1.15], foreR: [-0.15, 0.1, 0], handR: [1.1, 0, 0], armL: [0.3, 0, 0.15], foreL: [-0.3, 0, 0], head: [0.05, 0.25, 0] }],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+  // Straight down from overhead, both hands, the body folding into it.
+  chop: [
+    [0, READY_R],
+    [0.24, { chest: [-0.22, 0.1, 0], spine: [-0.08, 0, 0], armR: [-2.85, 0, 0.15], foreR: [-1.1, 0.2, 0], handR: [-0.5, 0, 0], armL: [-2.75, 0, -0.35], foreL: [-1.1, -0.4, 0], handL: [-0.4, 0, 0], head: [-0.15, 0, 0] }],
+    [0.36, { chest: [0.3, 0, 0], spine: [0.15, 0, 0], armR: [-1.45, 0, 0.35], foreR: [-0.2, 0.2, 0], handR: [0.85, 0, 0], armL: [-1.3, 0, -0.45], foreL: [-0.4, -0.3, 0], handL: [0.7, 0, 0], head: [0.15, 0, 0] }],
+    [0.52, { chest: [0.38, 0, 0], spine: [0.2, 0, 0], armR: [-0.95, 0, 0.35], foreR: [-0.15, 0.2, 0], handR: [1.0, 0, 0], armL: [-0.85, 0, -0.45], foreL: [-0.35, -0.3, 0], handL: [0.85, 0, 0], head: [0.2, 0, 0] }],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+  // Drawn back by the hip, then driven straight out, the point first.
+  thrust: [
+    [0, READY_R],
+    [0.24, { chest: [0, 0.45, 0], armR: [0.25, 0, -0.15], foreR: [-1.5, 0.5, 0], handR: [1.0, 0, 0], armL: [-0.6, 0, 0.35], foreL: [-0.6, 0, 0] }],
+    [0.36, { chest: [0.08, -0.35, 0], spine: [0.06, -0.1, 0], armR: [-1.45, 0, 0.3], foreR: [-0.05, 0.15, 0], handR: [1.25, 0, 0], armL: [0.35, 0, 0.25], foreL: [-0.3, 0, 0] }],
+    [0.5, { chest: [0.1, -0.4, 0], spine: [0.08, -0.12, 0], armR: [-1.5, 0, 0.3], foreR: [-0.02, 0.15, 0], handR: [1.25, 0, 0], armL: [0.35, 0, 0.25], foreL: [-0.3, 0, 0] }],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+  // Overhand and heavy: right up behind the head and all the way down.
+  smite: [
+    [0, READY_R],
+    [0.26, { chest: [-0.25, 0.3, 0], spine: [-0.08, 0.1, 0], armR: [-3.0, 0, -0.1], foreR: [-1.6, 0.3, 0], handR: [-0.6, 0, 0], armL: [-0.6, 0, 0.4], foreL: [-0.5, 0, 0], head: [-0.1, -0.1, 0] }],
+    [0.38, { chest: [0.35, -0.2, 0], spine: [0.15, -0.05, 0], armR: [-1.3, 0, 0.45], foreR: [-0.1, 0.2, 0], handR: [1.0, 0, 0], armL: [0.3, 0, 0.2], foreL: [-0.3, 0, 0], head: [0.15, 0.05, 0] }],
+    [0.55, { chest: [0.45, -0.3, 0], spine: [0.22, -0.08, 0], armR: [-0.75, 0, 0.55], foreR: [-0.1, 0.15, 0], handR: [1.15, 0, 0], armL: [0.3, 0, 0.2], foreL: [-0.3, 0, 0], head: [0.2, 0.05, 0] }],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+  // A straight right: the hip and shoulder turning through it.
+  punch: [
+    [0, { armR: [-0.35, 0, 0.2], foreR: [-1.9, 0.4, 0], armL: [-0.45, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
+    [0.22, { chest: [0, 0.4, 0], armR: [-0.15, 0, 0.1], foreR: [-2.0, 0.4, 0], armL: [-0.5, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
+    [0.34, { chest: [0.05, -0.55, 0], spine: [0, -0.15, 0], armR: [-1.45, 0, 0.4], foreR: [-0.08, 0.6, 0], armL: [-0.3, 0, -0.1], foreL: [-1.9, -0.4, 0] }],
+    [0.48, { chest: [0.05, -0.55, 0], spine: [0, -0.15, 0], armR: [-1.45, 0, 0.4], foreR: [-0.08, 0.6, 0], armL: [-0.3, 0, -0.1], foreL: [-1.9, -0.4, 0] }],
+    [0.9, { armR: [-0.35, 0, 0.2], foreR: [-1.9, 0.4, 0], armL: [-0.45, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
+    [1, { armR: [-0.35, 0, 0.2], foreR: [-1.9, 0.4, 0], armL: [-0.45, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
+  ],
+  // Both hands drawn in to the chest, then pushed out.
+  shove: [
+    [0, {}],
+    [0.24, { chest: [-0.08, 0, 0], armR: [-0.35, 0, 0.1], foreR: [-1.8, 0.5, 0], handR: [0, 0, -0.9], armL: [-0.35, 0, -0.1], foreL: [-1.8, -0.5, 0], handL: [0, 0, 0.9] }],
+    [0.36, { chest: [0.15, 0, 0], spine: [0.08, 0, 0], armR: [-1.4, 0, 0.35], foreR: [-0.15, 0.3, 0], handR: [-0.4, 0, -1.0], armL: [-1.4, 0, -0.35], foreL: [-0.15, -0.3, 0], handL: [-0.4, 0, 1.0] }],
+    [0.52, { chest: [0.15, 0, 0], spine: [0.08, 0, 0], armR: [-1.4, 0, 0.35], foreR: [-0.15, 0.3, 0], handR: [-0.4, 0, -1.0], armL: [-1.4, 0, -0.35], foreL: [-0.15, -0.3, 0], handL: [-0.4, 0, 1.0] }],
+    [0.92, {}],
+    [1, {}],
+  ],
+};
+
 function attack(k, t, style) {
   const heavy = style.heavy ?? 0;
-  const wind = win(t, 0, 0.22 + heavy * 0.06), strike = win(t, 0.24 + heavy * 0.05, 0.34 + heavy * 0.05), back = win(t, 0.5, 0.85);
-  const w = wind * (1 - strike), s = strike * (1 - back), rest = 1 - w - s;
-  // A step into it: the left foot forward, the weight going onto it.
-  k.move('root', 0, 0, 0.12 * s);
-  k.move('hips', 0, -0.03 * s, 0);
-  k.turn('thighL', -0.45 * s, 0, 0); k.turn('shinL', 0.4 * s, 0, 0); k.turn('footL', 0.05 * s, 0, 0);
-  k.turn('thighR', 0.35 * s, 0, 0); k.turn('shinR', 0.25 * s, 0, 0); k.turn('footR', -0.2 * s, 0, 0);
-  switch (style.attack ?? 'slash') {
-    case 'chop':
-      k.turn('chest', -0.25 * w + 0.35 * s, 0.2 * w, 0);
-      k.turn('armR', -2.8 * w - 1.0 * s - 0.42 * rest, 0, -0.1);
-      k.turn('foreR', -0.5 * w - 0.2 * s - 0.85 * rest, 0, 0);
-      k.turn('armL', -2.6 * w - 0.9 * s, 0, -0.35 * (w + s));
-      k.turn('foreL', -0.6 * w - 0.4 * s, 0, 0);
-      k.turn('handR', 0.4 * w - 0.6 * s, 0, 0);
-      break;
-    case 'thrust':
-      k.turn('chest', 0.05 * s, 0.4 * w - 0.3 * s, 0);
-      k.turn('armR', -0.2 * w - 1.4 * s - 0.42 * rest, 0, -0.2 * w);
-      k.turn('foreR', -1.4 * w - 0.05 * s - 0.85 * rest, 0, 0);
-      k.turn('handR', -0.5 * s, 0, 0);
-      k.turn('armL', 0.3 * s, 0, 0.3);
-      break;
-    case 'smite':
-      k.turn('chest', -0.2 * w + 0.3 * s, 0.25 * w, 0);
-      k.turn('armR', -2.9 * w - 0.9 * s - 0.42 * rest, 0, -0.3 * w);
-      k.turn('foreR', -0.2 * w - 0.3 * s - 0.85 * rest, 0, 0);
-      k.turn('armL', -0.5 * w, 0, 0.4 * w);
-      break;
-    case 'punch':
-      k.turn('chest', 0, 0.6 * w - 0.8 * s, 0);
-      k.turn('armR', -0.3 * w - 1.4 * s, 0, -0.5 * w);
-      k.turn('foreR', -1.6 * w - 0.1 * s, 0, 0);
-      k.turn('armL', -0.4, 0, 0.3); k.turn('foreL', -1.6, 0, 0);
-      break;
-    case 'shove':
-      k.turn('chest', 0.12 * s - 0.1 * w, 0, 0);
-      for (const [S, m] of [['L', 1], ['R', -1]]) {
-        k.turn(`arm${S}`, 0.5 * w - 1.5 * s, 0, m * 0.1);
-        k.turn(`fore${S}`, -0.4 * w - 0.1 * s, 0, 0);
-      }
-      break;
-    case 'slash':
-    default:
-      // From high on the right, across and down to the left.
-      k.turn('chest', -0.1 * w + 0.15 * s, 0.6 * w - 0.6 * s, 0);
-      k.turn('armR', -2.1 * w - 1.15 * s - 0.42 * rest, 0, -0.6 * w + 0.3 * s);
-      k.turn('foreR', -0.4 * w - 0.2 * s - 0.85 * rest, 0, 0);
-      k.turn('handR', 0.3 * w - 0.5 * s, 0, 0);
-      k.turn('armL', 0.3 * s, 0, 0.3 * w);
-  }
+  // Heavier is slower into the swing (the same shape, later).
+  const tt = heavy ? Math.min(1, t / (1 + heavy * 0.25)) : t;
+  const kind = SWINGS[style.attack] ? style.attack : 'slash';
+  // A step into it with the left foot, the weight going onto it as the blow lands, then back.
+  const s = win(tt, 0.2, 0.36) * (1 - win(tt, 0.6, 0.92));
+  k.move('root', 0, 0, 0.1 * s);
+  k.move('hips', 0, -drop(0.4 * s, 0.55 * s), 0);
+  k.turn('hips', 0, -0.12 * s, 0);
+  k.turn('thighL', -0.4 * s, 0, 0); k.turn('shinL', 0.5 * s, 0, 0); k.turn('footL', -0.1 * s, 0, 0);
+  k.turn('thighR', 0.3 * s, 0, 0); k.turn('shinR', 0.2 * s, 0, 0); k.turn('footR', 0.15 * s, 0, 0); k.turn('toesR', -0.35 * s, 0, 0);
+  keyed(k, tt, SWINGS[kind]);
 }
 
 function talking(k, T, { talk = 1, think = 0, listen = 0, beat = 0 } = {}, armed) {

@@ -1,6 +1,7 @@
 import { add, clamp, cross, dot, len, norm, Part, scale, smooth, sub } from './kit.js';
-import { castBody, footPoints, legAxis, skinWeightsAt } from './body.js';
-import { JOINTS, mirror } from './skeleton.js';
+import { castBody, footPoints, legAxis, skinWeightsAt, skinWeightsUnder } from './body.js';
+import { armDistance, JOINTS, mirror } from './skeleton.js';
+import { skinShell } from './shell.js';
 
 /**
  * The wardrobe: boxer briefs, a crew-neck t-shirt, straight jeans and a pair
@@ -19,7 +20,6 @@ import { JOINTS, mirror } from './skeleton.js';
 
 const G = (t) => Math.exp(-t * t);
 const TAU = Math.PI * 2;
-const ad = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
 /** A table of radii round an axis by height and angle, read back smoothly (angles wrap). */
 function table(y0, y1, rows, cols, sample) {
@@ -118,12 +118,10 @@ const zoneIs = (...names) => (z) => names.includes(z);
 // ———————————————————————————————————————————————— the t-shirt
 
 export const HEM = 0.885, COLLAR = 1.5;
-/** Where each piece of the shirt is in its texture: the body below `body`, the sleeves between, the collar above `collar`. */
-export const SHIRT_UV = Object.freeze({ body: 0.74, sleeve: [0.76, 0.97], collar: 0.975 });
 export const SLEEVE_RANGE = Object.freeze([0.03, 0.17]);
 /** Above this the shirt's body goes over the shoulders' caps; the sleeves come out from under it. */
 const ARMPIT = 1.365;
-const SHIRT_Z = 0.028;
+export const SHIRT_Z = 0.028;
 /** The neckline: lower in front, as a crew neck sits. */
 export const neckline = (th) => COLLAR - 0.026 * Math.pow(Math.max(0, Math.cos(th)), 1.6) - 0.004 * Math.max(0, Math.cos(th));
 
@@ -165,46 +163,6 @@ export function shirtPoint(y, th) {
 }
 
 const clothWeights = (only) => (p) => skinWeightsAt(p, { only });
-const shirtWeights = clothWeights(zoneIs('trunk', 'neck', 'leg'));
-const sleeveWeights = clothWeights(zoneIs('trunk', 'arm'));
-
-function shirt(detail) {
-  const body = new Part('shirt', 'shirt');
-  const rows = Math.round(64 * detail), around = Math.round(72 * detail);
-  // Rows: the hem turned up inside (three rows), then the body from the hem to the collar.
-  body.grid(rows + 3, around, (i, j) => {
-    const th = (j / around) * TAU;
-    if (i < 3) {
-      const t = i / 3;
-      const y = HEM + 0.02 * (1 - t) * (1 - t);
-      const p = shirtPoint(Math.max(HEM, y), th);
-      const dir = norm([p[0], 0, p[2] - SHIRT_Z]);
-      const inset = 0.0035 * (1 - t);
-      const q = [p[0] - dir[0] * inset, y - 0.002 * t, p[2] - dir[2] * inset];
-      return { p: q, uv: [j / around, 0], w: shirtWeights(q), tint: 0.55 };
-    }
-    const t = (i - 3) / rows;
-    const top = neckline(th);
-    const y = HEM - 0.002 + (top - HEM) * (1 - Math.pow(1 - t, 1.2));
-    const p = shirtPoint(y, th);
-    // Darker in the folds' hollows and under the arms.
-    const tint = 1 - 0.22 * G((y - 1.3) / 0.05) * G((Math.abs(Math.sin(th)) - 1) / 0.25) - 0.25 * (0.0045 - shirtFolds(y, th)) / 0.0045 * smooth(1.2, 0.95, y) * 0.5;
-    return { p, uv: [j / around, SHIRT_UV.body * t], w: shirtWeights(p), tint };
-  }, { flip: true });
-  // The collar's rib: a soft rolled band round the neckline.
-  const rib = new Part('collar', 'shirt');
-  rib.grid(around, 10, (j, i) => {
-    const th = (j / around) * TAU;
-    const y = neckline(th);
-    const p = shirtPoint(y, th);
-    const out = norm([p[0], 0, p[2] - SHIRT_Z]);
-    const a = (i / 10) * TAU;
-    const o = 0.0015 + Math.cos(a) * 0.0035, h = -0.006 + Math.sin(a) * 0.0075;
-    const q = [p[0] + out[0] * o, y + h, p[2] + out[2] * o];
-    return { p: q, uv: [j / around, SHIRT_UV.collar + (1 - SHIRT_UV.collar) * (i / 10)], w: shirtWeights(q), tint: Math.cos(a) < -0.3 ? 0.55 : 0.95 };
-  }, { flip: true });
-  return [body, rib];
-}
 
 /** The upper arm's frame (side `m`): where it starts, which way it runs, and out and forward square to it. */
 function armFrame(m) {
@@ -240,18 +198,64 @@ export function sleevePoint(d, th, m, inset = 0) {
   return add(add(sh, scale(t, d)), scale(dir(th), r - inset));
 }
 
-function sleeve(part, m, detail) {
-  const rows = Math.round(18 * detail), around = Math.round(40 * detail);
+/**
+ * The t-shirt's outline on the body (how far inside it skin at `p` is): above
+ * the hem, below the crew neck, and on the arms down to the sleeves' ends.
+ * Which of the three it is nearest, too, for its edge.
+ */
+function shirtCut(p, z) {
+  if (z.zone === 'hand' || z.zone === 'foot' || p[1] > 1.6) return { f: -1, at: null };
+  const th = Math.atan2(p[0], p[2] - SHIRT_Z);
+  const terms = [['hem', p[1] - HEM], ['collar', neckline(th) - p[1]]];
+  if (z.zone === 'arm') terms.push(['cuff', SLEEVE_RANGE[1] - armDistance(p, p[0] >= 0 ? 1 : -1)]);
+  let best = terms[0];
+  for (const t of terms) if (t[1] < best[1]) best = t;
+  return { f: best[1], at: best[0] };
+}
+
+/** How the sleeve hangs at skin point `p` on the arm: the loose tube round it, from the shoulder. */
+function sleeveDrape(p, q) {
+  const m = p[0] >= 0 ? 1 : -1;
+  const { cloth, sh, t, dir } = sleeveShape(m);
   const [D0, D1] = SLEEVE_RANGE;
-  part.grid(rows + 3, around, (i, j) => {
-    const th = (j / around) * TAU;
-    let d, inset = 0;
-    if (i <= rows) d = D0 + (D1 - D0) * (i / rows);
-    else { const k = (i - rows) / 3; d = D1 - 0.018 * k; inset = 0.004 * Math.sin((k * Math.PI) / 2); }
-    const p = sleevePoint(d, th, m, inset);
-    const uv = [j / around, SHIRT_UV.sleeve[0] + (SHIRT_UV.sleeve[1] - SHIRT_UV.sleeve[0]) * clamp((d - D0) / (D1 - D0))];
-    return { p, uv, w: sleeveWeights(p), tint: i > rows ? 0.55 : 1 - 0.3 * G(ad(th, -Math.PI / 2) / 0.6) * smooth(0.07, 0, d) };
-  }, { flip: m > 0 });
+  const r0 = sub(q, sh), d = dot(r0, t);
+  if (d < D0 - 0.03 || d > D1 + 0.02) return q;
+  const radial = sub(r0, scale(t, d));
+  const fwd = dir(0), out = dir(Math.PI / 2);
+  const th = Math.atan2(dot(radial, out), dot(radial, fwd));
+  const r = len(radial);
+  const want = Math.max(cloth.at(clamp(d, D0, D1 + 0.02), th), 0.05 - 0.003 * smooth(0.04, D1, d)) * smooth(D0 - 0.03, D0 + 0.02, d) + r * (1 - smooth(D0 - 0.03, D0 + 0.02, d));
+  if (want <= r) return q;
+  return add(add(sh, scale(t, d)), scale(radial, want / (r || 1)));
+}
+
+/** How the shirt's body hangs at skin point `p`: off the chest and the shoulder blades, across the hollows. */
+function bodyDrape(p, q) {
+  const { cloth } = shirtShape();
+  const y = q[1];
+  if (y < cloth.y0 || y > cloth.y1) return q;
+  const th = Math.atan2(q[0], q[2] - SHIRT_Z);
+  const r = Math.hypot(q[0], q[2] - SHIRT_Z);
+  const want = cloth.at(y, th) + shirtFolds(y, th);
+  if (want <= r) return q;
+  // Up at the neck it closes in on the neck itself.
+  const k = (want - r) * smooth(COLLAR - 0.01, 1.42, y);
+  return [q[0] + (q[0] / r) * k, y, q[2] + ((q[2] - SHIRT_Z) / r) * k];
+}
+
+function shirt(detail) {
+  const part = skinShell('shirt', 'shirt', {
+    level: detail >= 0.8 ? 1 : 0,
+    field: (p, z) => shirtCut(p, z).f,
+    ease: (p, z) => (z.zone === 'arm' ? 0.006 : 0.0065 + 0.011 * smooth(1.09, 1.0, p[1])),
+    drape: (p, q, z) => (z.zone === 'arm' ? sleeveDrape(p, q) : z.zone === 'trunk' || z.zone === 'leg' ? bodyDrape(p, q) : q),
+    edge: (p, z) => {
+      const at = shirtCut(p, z).at;
+      return at === 'collar' ? { thick: 0.0055, turn: 0.012 } : at === 'cuff' ? { thick: 0.0032, turn: 0.016 } : { thick: 0.0035, turn: 0.02 };
+    },
+    smooth: detail >= 0.8 ? 6 : 3,
+  });
+  return [part];
 }
 
 // ———————————————————————————————————————————————— the jeans
@@ -311,42 +315,40 @@ export function jeansPoint(y, th, m) {
   return [o[0] + d[0] * r, y, o[2] + d[2] * r];
 }
 
-const jeansWeights = clothWeights(zoneIs('leg', 'trunk', 'foot'));
+/** Where skin point `p` is round its leg: the side (1 left, -1 right) and the angle (0 forward, π/2 out). */
+export function legAngle(p) {
+  const m = p[0] >= 0 ? 1 : -1;
+  const o = legAxis(clamp(p[1], 0.03, 1.04), m);
+  return { m, th: Math.atan2(m * (p[0] - o[0]), p[2] - o[2]) };
+}
+
+/** The jeans' outline on the body: below the waistband, above the hems. */
+function jeansCut(p, z) {
+  if (z.zone === 'hand' || z.zone === 'arm' || z.zone === 'head' || z.zone === 'neck' || (z.zone === 'foot' && p[1] < 0.03)) return { f: -1, at: null };
+  const { th } = legAngle(p);
+  const body = Math.atan2(p[0], p[2] - SHIRT_Z);
+  const waist = waistAt(body) - p[1], hem = p[1] - hemAt(th);
+  return waist < hem ? { f: waist, at: 'waist' } : { f: hem, at: 'hem' };
+}
 
 function jeans(detail) {
-  const part = new Part('jeans', 'denim');
-  const rows = Math.round(80 * detail), around = Math.round(48 * detail);
-  for (const m of [1, -1]) {
-    part.grid(rows + 6, around, (i, j) => {
-      const th = (j / around) * TAU;
-      const hem = hemAt(th), top = waistAt(th);
-      const o = (y) => legAxis(y, m);
-      if (i < 3) {
-        // The hem, turned up inside.
-        const t = i / 3;
-        const y = hem + 0.025 * (1 - t) * (1 - t);
-        const p = jeansPoint(y, th, m), c = o(y);
-        const n = norm([p[0] - c[0], 0, p[2] - c[2]]);
-        const q = [p[0] - n[0] * 0.004 * (1 - t), y, p[2] - n[2] * 0.004 * (1 - t)];
-        return { p: q, uv: [j / around, 0], w: jeansWeights(q), tint: 0.5 };
-      }
-      if (i > rows + 3) {
-        // The waistband's top edge, turned in.
-        const t = (i - rows - 3) / 3;
-        const y = top - 0.012 * t * t;
-        const p = jeansPoint(top, th, m), c = o(y);
-        const n = norm([p[0] - c[0], 0, p[2] - c[2]]);
-        const q = [p[0] - n[0] * 0.0035 * Math.sin((t * Math.PI) / 2), y + 0.0015 * Math.sin(t * Math.PI), p[2] - n[2] * 0.0035 * Math.sin((t * Math.PI) / 2)];
-        return { p: q, uv: [j / around, 1], w: jeansWeights(q), tint: 0.6 };
-      }
-      const t = (i - 3) / rows;
-      const y = hem + (top - hem) * t;
-      const p = jeansPoint(y, th, m);
-      const crotch = 0.3 * smooth(CROTCH + 0.02, CROTCH - 0.05, y) * G((m * Math.sin(th) + 1) / 0.5);
-      const crease = (0.0045 - jeansFolds(y, th)) / 0.0045;
-      return { p, uv: [j / around, t], w: jeansWeights(p), tint: 1 - crotch - 0.12 * clamp(crease) * smooth(0.25, 0.1, y) };
-    }, { flip: m > 0 });
-  }
+  const part = skinShell('jeans', 'denim', {
+    level: detail >= 0.8 ? 1 : 0,
+    field: (p, z) => jeansCut(p, z).f,
+    ease: (p) => 0.005 + 0.0025 * smooth(WAIST - 0.06, WAIST - 0.03, p[1]),
+    // Straight legs: hanging from the seat and the thighs, never across the middle.
+    drape: (p, q) => {
+      if (q[1] > 1.04 || q[1] < 0.03) return q;
+      const { m, th } = legAngle(q);
+      const y = q[1], o = legAxis(y, m), d = legDir(th, m);
+      const r = Math.hypot(q[0] - o[0], q[2] - o[2]);
+      const want = Math.min(legShape(m).cloth.at(y, th) + jeansFolds(y, th), toMiddle(o, d, m));
+      if (want <= r) return q;
+      return [o[0] + d[0] * want, y, o[2] + d[2] * want];
+    },
+    edge: (p, z) => (jeansCut(p, z).at === 'waist' ? { thick: 0.006, turn: 0.03 } : { thick: 0.0045, turn: 0.02 }),
+    smooth: detail >= 0.8 ? 5 : 3,
+  });
   return part;
 }
 
@@ -545,6 +547,56 @@ function briefs(detail) {
   return [part];
 }
 
+/**
+ * Weights a garment's `parts` by the skin under them, then smooths them over
+ * the cloth (treating the parts as one, joined where their vertices meet), so
+ * the cloth stretches evenly where the body bends instead of creasing hard or
+ * tearing at its seams. `only`: which zones of skin it may follow.
+ */
+function fitWeights(parts, only, passes = 2) {
+  const all = [];
+  for (const part of parts) {
+    const n = part.normals();
+    for (let v = 0; v < part.count; v++) {
+      const p = [part.pos[v * 3], part.pos[v * 3 + 1], part.pos[v * 3 + 2]];
+      const w = skinWeightsUnder(p, [n[v * 3], n[v * 3 + 1], n[v * 3 + 2]], { only });
+      if (w) part.weights[v] = w;
+      all.push([part, v]);
+    }
+  }
+  // Blended with the cloth round about, near in space (so a sleeve tucked under the shirt's body moves with it).
+  const R = 0.018, cell = new Map();
+  const ck = (x, y, z) => `${Math.floor(x / R)},${Math.floor(y / R)},${Math.floor(z / R)}`;
+  all.forEach(([part, v], i) => {
+    const k = ck(part.pos[v * 3], part.pos[v * 3 + 1], part.pos[v * 3 + 2]);
+    if (!cell.has(k)) cell.set(k, []);
+    cell.get(k).push(i);
+  });
+  let W = all.map(([part, v]) => part.weights[v]);
+  for (let pass = 0; pass < passes; pass++) {
+    W = all.map(([part, v]) => {
+      const x = part.pos[v * 3], y = part.pos[v * 3 + 1], z = part.pos[v * 3 + 2];
+      const cx = Math.floor(x / R), cy = Math.floor(y / R), cz = Math.floor(z / R);
+      const out = {};
+      let total = 0;
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) {
+        for (const o of cell.get(`${cx + i},${cy + j},${cz + k}`) ?? []) {
+          const [q, u] = all[o];
+          const d2 = (q.pos[u * 3] - x) ** 2 + (q.pos[u * 3 + 1] - y) ** 2 + (q.pos[u * 3 + 2] - z) ** 2;
+          if (d2 > R * R) continue;
+          const g = Math.exp(-d2 / (0.5 * R * R));
+          total += g;
+          for (const [b, w] of Object.entries(W[o])) out[b] = (out[b] ?? 0) + w * g;
+        }
+      }
+      for (const b of Object.keys(out)) out[b] /= total;
+      return out;
+    });
+  }
+  all.forEach(([part, v], i) => { part.weights[v] = W[i]; });
+  return parts;
+}
+
 /** Tags every vertex of `parts` as part of the garment `name` (for the garments over it to know what they cover). */
 function tag(parts, name) {
   for (const part of parts) part.zones = part.zones.map((z, v) => ({ zone: name, y: part.pos[v * 3 + 1], d: 0 }));
@@ -565,7 +617,7 @@ export const GARMENTS = Object.freeze({
   briefs: {
     layer: 1,
     materials: ['briefs'],
-    build: (detail) => tag(briefs(detail), 'briefs'),
+    build: (detail) => tag(fitWeights(briefs(detail), zoneIs('leg', 'trunk')), 'briefs'),
     covers: ({ zone, y }) => (zone === 'leg' || zone === 'trunk') && y > BRIEFS.legs + OPEN && y < BRIEFS.waist - OPEN,
   },
   sneakers: {
@@ -587,12 +639,7 @@ export const GARMENTS = Object.freeze({
   tshirt: {
     layer: 4,
     materials: ['shirt'],
-    build: (detail) => {
-      const [body, rib] = shirt(detail);
-      const sleeves = new Part('sleeves', 'shirt');
-      for (const m of [1, -1]) sleeve(sleeves, m, detail);
-      return tag([body, rib, sleeves], 'tshirt');
-    },
+    build: (detail) => tag(shirt(detail), 'tshirt'),
     covers: ({ zone, y, d, x = 1 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || x > 0.1)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN),
   },
 });

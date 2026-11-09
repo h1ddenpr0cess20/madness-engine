@@ -89,10 +89,15 @@ function surface() {
  * How far from `o` along unit `d` the ray first crosses the skin, counting
  * only the zones `only` allows (or all); null if it doesn't within `far`.
  */
-export function castBody(o, d, { far = 0.45, only = null } = {}) {
+export function castBody(o, d, options = {}) {
+  return hitBody(o, d, options)?.dist ?? null;
+}
+
+/** Where a ray first crosses the skin: { dist, tri, u, v } (the triangle and the place in it), or null. */
+export function hitBody(o, d, { far = 0.45, only = null } = {}) {
   const s = surface();
   const { P, tris, cells, cellOf, CELL } = s;
-  let best = Infinity;
+  let best = Infinity, hit = null;
   const seen = new Set();
   for (let r = 0; r <= far + CELL; r += CELL * 0.5) {
     if (r > best + CELL) break;
@@ -118,10 +123,44 @@ export function castBody(o, d, { far = 0.45, only = null } = {}) {
       const v = f * (d[0] * qx + d[1] * qy + d[2] * qz);
       if (v < 0 || u + v > 1) continue;
       const dist = f * (e2x * qx + e2y * qy + e2z * qz);
-      if (dist > 1e-5 && dist < best) best = dist;
+      if (dist > 1e-5 && dist < best) { best = dist; hit = { dist, tri: t, u, v }; }
     }
   }
-  return best <= far ? best : null;
+  return best <= far ? hit : null;
+}
+
+/**
+ * The skin's bone weights straight under a point of cloth at `p` facing `n`
+ * ({ boneName: weight }): read where a ray in from just outside it meets the
+ * skin, so cloth moves with the skin it lies on and not with whatever is
+ * merely near (an arm by the side, say). Null if there is no skin under it.
+ */
+export function skinWeightsUnder(p, n, { only = null, reach = 0.08 } = {}) {
+  const s = surface();
+  const P = s.P;
+  let best = null;
+  // In along the cloth's normal and out against it (a hem turned up inside faces the body), keeping the nearest skin the cloth lies outside of.
+  for (const k of [1, -1]) {
+    const d = [-n[0] * k, -n[1] * k, -n[2] * k];
+    const o = [p[0] - d[0] * 0.015, p[1] - d[1] * 0.015, p[2] - d[2] * 0.015];
+    const hit = hitBody(o, d, { far: reach + 0.015, only });
+    if (!hit) continue;
+    const [a, b, c] = s.tris[hit.tri];
+    const e1 = [0, 1, 2].map((i) => P[b * 3 + i] - P[a * 3 + i]), e2 = [0, 1, 2].map((i) => P[c * 3 + i] - P[a * 3 + i]);
+    const tn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+    const at = [0, 1, 2].map((i) => o[i] + d[i] * hit.dist);
+    // The skin's outside must face the cloth.
+    if (tn[0] * (p[0] - at[0]) + tn[1] * (p[1] - at[1]) + tn[2] * (p[2] - at[2]) < -1e-9) continue;
+    const away = Math.abs(hit.dist - 0.015);
+    if (!best || away < best.away) best = { away, hit };
+  }
+  if (!best) return null;
+  const [a, b, c] = s.tris[best.hit.tri];
+  const out = {};
+  for (const [v, k] of [[a, 1 - best.hit.u - best.hit.v], [b, best.hit.u], [c, best.hit.v]]) {
+    for (const [bone, w] of Object.entries(s.weights[v])) out[BONES[bone]] = (out[BONES[bone]] ?? 0) + w * k;
+  }
+  return out;
 }
 
 /** The skin's bone weights near `p` ({ boneName: weight }), blended from the nearest few vertices of the body. */
