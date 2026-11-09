@@ -194,6 +194,47 @@ sword.setBladeMist(false);
 ```
 
 
+## Wizard staff
+
+`createStaff(GFX, options)` builds a gnarled wizard's staff about 1.7 m tall,
+carved entirely from the library's wood textures (`textures/wood`, via
+`woodBoardMaterial`), with the grain running along the staff. The shaft is a
+tapering rod with a few knots, a leather grip with crossed thread, and two
+roots entwined up toward the head. The head is a cradle of twisting, knotted
+root tendrils that grows out of the shaft, bound by winding bands, and rises
+in a ragged lip that clasps the topper. All of it is the same wood as the
+shaft (only the optional grip wrap of leather and thread is not), and `setWood()` changes it
+all at once. The `seed` shapes the gnarls: the same seed gives the same
+staff.
+
+The topper is the Krystal crystal orb (the default, with its ray-marched
+visions) or, optionally, the Magic Egg's glass egg with its white/yellow mist,
+stood on its broad end with the point up. Use `topper: 'none'` for an empty
+cradle. The orb and egg are each built the first time they are shown.
+
+| Option | Choices | Default |
+|---|---|---|
+| `species` | any `WOOD_SPECIES` (walnut, oak, mahogany, maple, cherry, ash, pine, teak) | `walnut` |
+| `finish` | `raw`, `sanded`, `lacquered` | `lacquered` |
+| `wrap` | `true` or `false`: the leather and thread wrap on the grip (`setWrap()` toggles it) | `true` |
+| `gripColor`, `threadColor` | six-digit hex, for the wrap | `#3a2418`, `#e2b857` |
+| `topper` | `orb`, `egg`, `none` | `orb` |
+| `vine` | `true` or `false`: the roots entwined up the shaft (fixed at creation) | `true` |
+| `tendrils` | whole number from 8 to 32: how many roots make the cradle (fixed at creation) | `18` |
+| `seed` | any number: shapes the gnarls (fixed at creation) | `7` |
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createStaff } from 'madness-engine/weapons';
+
+const staff = createStaff(GFX, { species: 'cherry', topper: 'egg' });
+scene.add(staff.group);
+
+staff.setTopper('orb');
+staff.setWood('oak', 'sanded');
+staff.setGripColor('#25364a').setThreadColor('#a7e6ff');
+```
+
 ## Magic Egg Sword, Dagger and Greatsword
 
 `createMagicEggSword(GFX, options)` follows the Krystal sword construction
