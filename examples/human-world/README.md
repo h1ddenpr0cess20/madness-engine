@@ -24,4 +24,4 @@ URL options:
 - `?mobs=20` sets how many there are (default 14).
 - `?detail=0.6` builds the crowd coarser, for slow machines. Everyone is at full detail by default.
 
-Posing is the expensive part, because the skin is moved on the CPU. The five nearest people are posed every frame, and the rest take turns.
+Posing is the expensive part, because the skin is moved on the CPU. The six nearest people are posed every frame, and the rest every other frame.

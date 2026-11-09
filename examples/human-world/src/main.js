@@ -39,7 +39,7 @@ const HIT_TIME = 0.6, DOWN_TIME = 9;
 const NOTICE = 8, GIVE_UP = 14;
 const PLAYER_LIFE = 12, MOB_LIFE = 3;
 /** How many of the crowd are posed every frame (the nearest); the rest are posed one frame in TURNS. */
-const NEAREST = 5, TURNS = 3;
+const NEAREST = 6, TURNS = 2;
 
 // ———————————————————————————————————————————————— the looks
 
@@ -100,7 +100,7 @@ function person({ look, weapon, swing, detail }) {
   stage.scene.add(group);
   return {
     man, group, swing,
-    x: 0, z: 0, yaw: 0, want: 0, speed: 0,
+    x: 0, z: 0, yaw: 0, want: 0, speed: 0, pace: 0, gait: rand() * 10, running: false,
     state: 'idle', since: 0, clock: rand() * 10, struck: false,
     life: 1, cool: 0,
     place(x, z, yaw = 0) { this.x = x; this.z = z; this.yaw = this.want = yaw; },
@@ -119,11 +119,15 @@ function pose(p, dt, { shout = false } = {}) {
   if (state === 'hit') return p.man.pose({ clip: 'hit', t: Math.min(1, since / HIT_TIME), time: p.clock });
   if (state === 'down') return p.man.pose({ clip: 'ko', t: Math.min(1, since / 1.2), time: p.clock });
   if (state === 'yell') return p.man.pose({ clip: 'yell', t: since, time: p.clock });
-  if (p.speed > 0.1) {
-    // The stride kept to the ground: the walk's stride is about 2 m/s a unit of `speed` at full size, the run's 3.3.
-    const run = p.speed > 2.4;
-    const pace = p.speed / ((run ? 3.3 : 2.0) * SCALE);
-    return p.man.pose({ clip: run ? 'run' : 'walk', time: p.clock, speed: pace, speaking: shout, yell: shout });
+  // The pace is eased (it changes every step as he slides along walls), and the stride's own phase is
+  // kept and advanced by it, so the legs never jump when the pace changes.
+  p.pace += (p.speed - p.pace) * Math.min(1, dt * 8);
+  if (p.pace > 0.15) {
+    // Walk to run and back at different paces, so he doesn't flicker between the two.
+    p.running = p.running ? p.pace > 2.0 : p.pace > 2.5;
+    // The walk's stride is about 2 m/s at `speed` 1 at full size, the run's about 3.3.
+    p.gait += dt * p.pace / ((p.running ? 3.3 : 2.0) * SCALE);
+    return p.man.pose({ clip: p.running ? 'run' : 'walk', time: p.gait, speed: 1, speaking: shout, yell: shout });
   }
   return p.man.pose({ clip: 'idle', time: p.clock });
 }

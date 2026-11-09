@@ -95,27 +95,71 @@ function walk(k, T, speed, heavy, armed) {
   k.turn('clavicleR', 0, -g * 0.05, 0);
 }
 
+/**
+ * One leg's running stride, from touching down (0) round to touching down
+ * again (1): [thigh (− forward), knee bend, foot (+ toes down), toes]. It
+ * lands a little ahead of the hips, the knee giving under the weight,
+ * pushes off behind, kicks the heel up high and drives the knee through.
+ */
+const STRIDE = [
+  [0, -0.42, 0.22, -0.12, 0],
+  [0.13, -0.08, 0.62, 0.02, 0],
+  [0.3, 0.38, 0.32, 0.5, -0.35],
+  [0.42, 0.42, 0.95, 0.6, -0.1],
+  [0.55, 0.12, 1.95, 0.45, 0],
+  [0.72, -0.62, 1.55, 0.15, 0],
+  [0.88, -0.7, 0.6, -0.05, 0],
+  [1, -0.42, 0.22, -0.12, 0],
+];
+
+/** The stride at `u` (0..1, wrapping), eased through its keys (Catmull–Rom, round the loop). */
+function strideAt(u) {
+  u = ((u % 1) + 1) % 1;
+  let i = 0;
+  while (i < STRIDE.length - 2 && u > STRIDE[i + 1][0]) i++;
+  const n = STRIDE.length - 1;
+  const at = (j) => STRIDE[((j % n) + n) % n];
+  const p0 = at(i - 1), p1 = STRIDE[i], p2 = STRIDE[i + 1], p3 = at(i + 2);
+  const f = (u - p1[0]) / (p2[0] - p1[0]);
+  const f2 = f * f, f3 = f2 * f;
+  return [1, 2, 3, 4].map((c) => 0.5 * ((2 * p1[c]) + (-p0[c] + p2[c]) * f + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * f2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * f3));
+}
+
+/** How far below the hip the ankle hangs, for a leg at `thigh` (− forward) with its knee bent by `knee`. */
+const legHeight = (thigh, knee) => THIGH * Math.cos(thigh) + SHIN * Math.cos(thigh + knee);
+
 function run(k, T, speed, heavy, armed) {
-  const ph = T * (15 - heavy * 3) * Math.max(0.5, speed), g = Math.sin(ph), c = Math.cos(ph);
-  k.move('hips', 0, 0.035 - Math.abs(c) * 0.05, 0.0);
-  k.turn('hips', 0, g * 0.14, 0);
-  k.turn('spine', 0.14, -g * 0.06, 0);
-  k.turn('chest', 0.08, -g * 0.2, 0);
-  k.turn('neck', -0.08, g * 0.08, 0);
-  k.turn('head', -0.1, g * 0.06, 0);
-  for (const [S, m] of [['L', 1], ['R', -1]]) {
-    const a = m * g, swing = Math.max(0, m * c);
-    k.turn(`thigh${S}`, -a * 0.85 - swing * 0.3, 0, 0);
-    k.turn(`shin${S}`, 0.3 + swing * 1.55, 0, 0);
-    k.turn(`foot${S}`, -a * 0.2 + swing * 0.25, 0, 0);
-    k.turn(`toes${S}`, Math.max(0, -a) * -0.5, 0, 0);
+  // A stride of each leg a cycle, the right half a cycle behind the left.
+  const ph = T * (15 - heavy * 3) * Math.max(0.5, speed);
+  const u = ph / (Math.PI * 2);
+  const L = strideAt(u), R = strideAt(u + 0.5);
+  // The hips ride on whichever leg is down (so its foot stays on the ground), and rise off both between.
+  const flight = (x) => { x = ((x % 0.5) + 0.5) % 0.5; return Math.sin(Math.PI * Math.max(0, Math.min(1, (x - 0.3) / 0.2))); };
+  const down = Math.max(legHeight(L[0] + 0.12, L[1]), legHeight(R[0] + 0.12, R[1]));
+  k.move('hips', 0, down - LEG + 0.035 * flight(u), 0.02);
+  // Leaning into it from the hips, the pelvis and shoulders turning against each other.
+  const twist = Math.sin(ph);
+  k.turn('hips', 0.12, 0.12 * twist, 0);
+  k.turn('spine', 0.06, -0.05 * twist, 0);
+  k.turn('chest', 0.04, -0.16 * twist, 0);
+  k.turn('neck', -0.08, 0.06 * twist, 0);
+  k.turn('head', -0.1, 0.05 * twist, 0);
+  for (const [S, leg] of [['L', L], ['R', R]]) {
+    // The hips lean forward; the thighs are set against it so the stride is about straight down.
+    k.turn(`thigh${S}`, leg[0] - 0.12, 0, 0);
+    k.turn(`shin${S}`, leg[1], 0, 0);
+    k.turn(`foot${S}`, leg[2], 0, 0);
+    k.turn(`toes${S}`, leg[3], 0, 0);
   }
-  // Elbows at a right angle, hands pumping from the hip to the chest.
-  k.turn('armL', g * 0.85, 0, 0.04);
-  k.turn('foreL', -1.35 + g * 0.2, 0.2, 0);
-  if (armed === 'R') { ready(k, 'R', 0.9); k.turn('armR', -g * 0.2, 0, 0); } else {
-    k.turn('armR', -g * 0.85, 0, -0.04);
-    k.turn('foreR', -1.35 - g * 0.2, -0.2, 0);
+  // The arms against the legs: elbows bent near square, the hands swinging from the hip up to the chest,
+  // a little in across the body going forward. Each follows the other side's thigh.
+  for (const [S, m, other] of [['L', 1, R], ['R', -1, L]]) {
+    if (armed === S) { ready(k, S, 0.9); k.turn(`arm${S}`, 0.15 * other[0], 0, 0); continue; }
+    const swing = other[0]; // − when that leg is forward: then this arm is forward too
+    // Elbows kept in by the sides; the forearms pointing ahead and a little in, not out.
+    k.turn(`arm${S}`, 0.15 + swing * 1.1, 0, -m * (0.07 + 0.04 * Math.max(0, -swing)));
+    k.turn(`fore${S}`, -1.45 + 0.35 * Math.max(0, swing) - 0.15 * Math.max(0, -swing), -m * (0.55 + 0.15 * Math.max(0, -swing)), 0);
+    k.turn(`hand${S}`, 0.1, 0, m * 0.1);
   }
 }
 

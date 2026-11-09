@@ -163,6 +163,7 @@ export const HAND_POSES = Object.freeze({
   relaxed: { curl: [0.22, 0.3, 0.2], thumb: 0.15, spread: 0.1 },
   open: { curl: [0, 0.04, 0.02], thumb: 0, spread: 0.6 },
   grip: { curl: [0.75, 0.95, 0.6], thumb: 0.85, spread: 0 },
+  loose: { curl: [0.55, 0.75, 0.45], thumb: 0.45, spread: 0 },
   fist: { curl: [1.0, 1.0, 0.4], thumb: 1, spread: 0 },
   point: { curl: [1.0, 1.0, 0.4], thumb: 0.9, spread: 0, straight: ['index'] },
 });
@@ -523,7 +524,10 @@ export function createHuman(GFX, options = {}) {
     if (both) bothHands(both);
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
-      const shape = held[S] || (S === 'L' && both > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
+      const shape = held[S] || (S === 'L' && both > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
+        // Running, a hand that was left easy closes loosely.
+        : state.clip === 'run' && want === 'relaxed' ? HAND_POSES.loose
+        : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
       poseHand(skeleton, S, shape, held[S] ? 1 : hands[S].amount);
     }
     // Speech, when he is talking (or shouting) and his face has not been told otherwise.
