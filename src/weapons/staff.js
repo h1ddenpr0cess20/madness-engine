@@ -16,8 +16,10 @@ export const STAFF_DIMENSIONS = Object.freeze({
   gripDiameter: 0.037,
   cradleDepth: 0.1,
   orbRadius: 0.045,
-  eggHalfWidth: 0.0272,
-  eggHalfHeight: 0.04,
+  // The glass egg as the pommel builds it is 54 x 80 mm; on a staff it is drawn this much larger.
+  eggScale: 1.7,
+  eggHalfWidth: 0.0272 * 1.7,
+  eggHalfHeight: 0.04 * 1.7,
   unit: 'm',
 });
 
@@ -357,13 +359,18 @@ export function createStaff(GFX, {
         const asset = createKrystalOrbPommel(GFX, STAFF_DIMENSIONS.orbRadius);
         toppers.orb = { asset, object: asset.group };
       } else {
-        const asset = createMagicEggPommel(GFX, STAFF_DIMENSIONS.eggHalfHeight);
+        const asset = createMagicEggPommel(GFX, STAFF_DIMENSIONS.eggHalfHeight / STAFF_DIMENSIONS.eggScale);
         // The sword's egg hangs point-down; stand it on its broad end by turning it end over end about its centre.
         const holder = new GFX.Group();
         holder.name = 'Magic Egg staff topper';
-        asset.group.position.y = -STAFF_DIMENSIONS.eggHalfHeight;
+        asset.group.position.y = -STAFF_DIMENSIONS.eggHalfHeight / STAFF_DIMENSIONS.eggScale;
         holder.add(asset.group);
         holder.rotation.z = Math.PI;
+        // Enlarge the egg and the world-space volume its mist is marched through, together.
+        holder.scale.setScalar(STAFF_DIMENSIONS.eggScale);
+        asset.mist.material.uniforms.uShape.value.multiplyScalar(STAFF_DIMENSIONS.eggScale);
+        asset.glass.material.thickness *= STAFF_DIMENSIONS.eggScale;
+        asset.glass.material.attenuationDistance *= STAFF_DIMENSIONS.eggScale;
         toppers.egg = { asset, object: holder };
       }
       topperHolder.add(toppers[kind].object);
