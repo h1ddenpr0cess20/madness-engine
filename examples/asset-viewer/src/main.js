@@ -238,8 +238,9 @@ let uiTimer = null;
 /**
  * An item can hand over `ui`, a list of controls for itself: { type: 'buttons', items: [{ label, onClick }] },
  * { type: 'range', label, min, max, step, get, set }, { type: 'select', label, options, get, set },
- * { type: 'color' | 'text', label, get, set }, { type: 'check', label, get, set } and { type: 'textarea', label, apply, onApply }.
- * Those with a `get` follow the item while it moves on its own.
+ * { type: 'color' | 'text', label, get, set }, { type: 'check', label, get, set }, { type: 'textarea', label, apply, onApply }
+ * and { type: 'heading', label }. Those with a `get` follow the item while it moves on its own; `disabled` greys a
+ * control out (its `title` saying why).
  */
 function renderItemUi(specs) {
   clearInterval(uiTimer);
@@ -249,7 +250,9 @@ function renderItemUi(specs) {
   if (!specs?.length) return;
   const syncs = [];
   for (const sp of specs) {
-    if (sp.type === 'buttons') {
+    if (sp.type === 'heading') {
+      rows.append(el('div', { className: 'heading' }, sp.label));
+    } else if (sp.type === 'buttons') {
       rows.append(el('div', { className: 'line' }, ...sp.items.map((b) => el('button', { title: b.title ?? '', onclick: () => b.onClick() }, b.label))));
     } else if (sp.type === 'textarea') {
       const area = el('textarea', { placeholder: sp.placeholder ?? '' });
@@ -281,7 +284,8 @@ function renderItemUi(specs) {
         syncs.push(() => { if (sp.get) input.checked = !!sp.get(); });
       }
       if (!input) continue;
-      rows.append(el('div', { className: 'line' }, el('label', {}, sp.label), input, sp.type === 'range' ? readout : ''));
+      if (sp.disabled) Object.assign(input, { disabled: true, title: sp.title ?? '' });
+      rows.append(el('div', { className: 'line', title: sp.title ?? '', style: sp.disabled ? 'opacity:0.5' : '' }, el('label', {}, sp.label), input, sp.type === 'range' ? readout : ''));
     }
   }
   const sync = () => { for (const f of syncs) f(); };

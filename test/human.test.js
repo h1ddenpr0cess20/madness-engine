@@ -188,3 +188,22 @@ test('hair and a beard: cards where they grow, the beard moving with the jaw', (
   assert.equal(mesh('hair'), undefined);
   assert.equal(mesh('beard'), undefined);
 });
+
+test('the character creator: every slot has a default, the built ones change him, the rest are kept', async () => {
+  const { CUSTOMIZATION, DEFAULT_FEATURES } = await import('../src/people/index.js');
+  const keys = CUSTOMIZATION.flatMap((g) => g.slots.map((s) => s.key));
+  assert.equal(new Set(keys).size, keys.length, 'no slot is listed twice');
+  for (const k of ['noseShape', 'eyeShape', 'mouthShape', 'earShape', 'build', 'face']) assert.ok(keys.includes(k), `${k} is offered`);
+  const him = createHuman(GFX, { detail: 0.5, features: { hair: 'none', beard: 'full', noseShape: 'aquiline', skin: '#8a5a3c' } });
+  assert.deepEqual(him.hair, { hair: null, beard: 'full', brows: 'natural' });
+  assert.equal(him.look.skin, '#8a5a3c');
+  assert.equal(him.features.noseShape, 'aquiline', 'a slot not built yet is kept');
+  him.customize({ eyeSize: 0.4, hairColour: '#c8a060', hair: 'sidePart' });
+  assert.equal(him.features.eyeSize, 0.4);
+  assert.equal(him.look.hair, '#c8a060');
+  assert.equal(him.hair.hair, 'sidePart');
+  assert.equal(Object.keys(him.features).length, Object.keys(DEFAULT_FEATURES).length);
+  assert.throws(() => him.customize({ noseShape: 'trunk' }), /noseShape is one of/);
+  assert.throws(() => him.customize({ eyeSize: 3 }), /runs -1 to 1/);
+  assert.throws(() => him.customize({ tail: 'long' }), /no feature called tail/);
+});

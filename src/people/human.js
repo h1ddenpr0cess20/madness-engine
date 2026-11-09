@@ -8,6 +8,7 @@ import { BONES as BAKED_BONES } from './human/data/base.js';
 import { DEFAULT_OUTFIT, GARMENTS } from './human/clothes.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
+import { checkFeatures, CUSTOMIZATION, DEFAULT_FEATURES } from './human/features.js';
 import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
 
 /**
@@ -36,7 +37,7 @@ import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYL
  * `hands` set the rest, and `pose` takes them on every frame.
  */
 
-export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS };
+export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, CUSTOMIZATION, DEFAULT_FEATURES };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 
 const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'gums', 'tongue', 'lash'];
@@ -394,8 +395,17 @@ function poseFace(k, f, time, said = null) {
 
 export function createHuman(GFX, options = {}) {
   const { detail = 1, outfit = DEFAULT_OUTFIT, look: lookIn = {} } = options;
-  let grooming = { hair: options.hair === undefined ? 'sidePart' : options.hair, beard: options.beard ?? null, brows: options.brows === undefined ? 'natural' : options.brows };
-  const look = { ...DEFAULT_LOOK, ...lookIn };
+  // The character creator's choices (features.js): those the human shows yet set his look and
+  // grooming, the rest are kept for when they are built. `look`, `hair`, `beard` and `brows`, given
+  // as well, win.
+  const features = { ...DEFAULT_FEATURES, ...checkFeatures({ ...options.features }) };
+  const none = (v) => (v === 'none' ? null : v);
+  const look = { ...DEFAULT_LOOK, skin: features.skin, iris: features.iris, hair: features.hairColour, ...lookIn };
+  let grooming = {
+    hair: options.hair === undefined ? none(features.hair) : options.hair,
+    beard: options.beard === undefined ? none(features.beard) : options.beard,
+    brows: options.brows === undefined ? none(features.brows) : options.brows,
+  };
   const group = new GFX.Group();
   group.name = 'human';
   const { data: base } = bodyData(detail);
@@ -723,6 +733,30 @@ export function createHuman(GFX, options = {}) {
     get look() { return { ...look }; },
     setHair,
     get hair() { return { ...grooming }; },
+    /**
+     * The character creator's choices (see `CUSTOMIZATION`): every slot, those he shows yet read
+     * from him as he is (his colours, his hair), the rest as they were last set.
+     */
+    get features() {
+      return {
+        ...features, skin: look.skin, iris: look.iris, hairColour: look.hair,
+        hair: grooming.hair ?? 'none', beard: grooming.beard ?? 'none', brows: grooming.brows ?? 'none',
+      };
+    },
+    /** Sets any of the creator's choices: `{ noseShape: 'aquiline', hair: 'sidePart', eyeSize: 0.3 }`. */
+    customize(change) {
+      checkFeatures(change);
+      Object.assign(features, change);
+      const colours = {};
+      if (change.skin) colours.skin = change.skin;
+      if (change.iris) colours.iris = change.iris;
+      if (change.hairColour) colours.hair = change.hairColour;
+      if (Object.keys(colours).length) setLook(colours);
+      const groom = {};
+      for (const k of ['hair', 'beard', 'brows']) if (k in change) groom[k] = none(change[k]);
+      if (Object.keys(groom).length) setHair(groom);
+      return api;
+    },
     setHairColor: (c) => setLook({ hair: c }),
     setShirtColor: (c) => setLook({ shirt: c }),
     setJeansColor: (c) => setLook({ denim: c }),
