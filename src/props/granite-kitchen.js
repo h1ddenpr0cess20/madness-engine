@@ -374,24 +374,33 @@ export function createGraniteCounter(GFX, {
     mount.rotation.x = Math.PI / 2;
     mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.031);
     counter.add(mount);
-    // Two brass butt hinges on the edge the door swings from (alternating bays swing from opposite edges): a barrel
-    // in the gap between doors and a leaf screwed to the door's face. The upper one sits under the drawer, if any.
-    const swing = i % 2 === 0 ? -1 : 1;
+    // Two brass butt hinges on the edge the door swings from (every door swings from its left edge, the pairs at the same heights): a barrel
+    // in the gap between doors and a leaf screwed to the door's face. The upper one sits under the drawer line.
+    const swing = -1;
     const edge = x + swing * (bayW - 0.024) / 2;
     const faceZ = frontZ + DOOR / 2;
-    const doorBottom = PLINTH + 0.0175, doorTop = cabinetTop - 0.0175;
-    const upper = i % 2 === 1 ? cabinetTop - 0.11 - 0.07 : doorTop - 0.075;
+    const doorBottom = PLINTH + 0.0175;
+    const upper = cabinetTop - 0.11 - 0.07;
     [doorBottom + 0.075, upper].forEach((y, h) => {
-      const barrel = new GFX.Mesh(new GFX.CylinderGeometry(0.007, 0.007, 0.07, 16), hardware);
-      barrel.name = `brass cabinet hinge barrel ${i + 1}.${h + 1}`;
-      barrel.position.set(edge, y, faceZ + 0.0015);
-      barrel.castShadow = true;
-      counter.add(barrel);
-      const leaf = new GFX.Mesh(new GFX.BoxGeometry(0.03, 0.07, 0.003), hardware);
-      leaf.name = `brass cabinet hinge leaf ${i + 1}.${h + 1}`;
-      leaf.position.set(edge - swing * 0.015, y, faceZ + 0.001);
-      leaf.castShadow = true;
-      counter.add(leaf);
+      // A butt hinge: five knuckles on a pin (a cap at each end), standing proud of the door's face at its edge,
+      // and a leaf screwed to the face with two screws.
+      const tag = `${i + 1}.${h + 1}`;
+      const part = (mesh, name, x, py, z, rotate) => {
+        mesh.name = `brass cabinet hinge ${name} ${tag}`;
+        mesh.position.set(x, py, z);
+        if (rotate) mesh.rotation.x = Math.PI / 2;
+        mesh.castShadow = true;
+        counter.add(mesh);
+      };
+      const KNUCKLE = 0.0135, PITCH = 0.0145;
+      for (let k = 0; k < 5; k++) {
+        part(new GFX.Mesh(new GFX.CylinderGeometry(0.0062, 0.0062, KNUCKLE, 16), hardware), `knuckle ${k + 1}`, edge, y + (k - 2) * PITCH, faceZ + 0.0055);
+      }
+      for (const end of [-1, 1]) part(new GFX.Mesh(new GFX.SphereGeometry(0.0045, 12, 8), hardware), end < 0 ? 'foot cap' : 'head cap', edge, y + end * 2.5 * PITCH, faceZ + 0.0055);
+      part(new GFX.Mesh(new GFX.BoxGeometry(0.034, 0.068, 0.002), hardware), 'leaf', edge - swing * 0.017, y, faceZ + 0.0005);
+      for (const dy of [-0.022, 0.022]) {
+        part(new GFX.Mesh(new GFX.CylinderGeometry(0.0033, 0.0033, 0.003, 12), hardware), 'screw', edge - swing * 0.024, y + dy, faceZ + 0.0016, true);
+      }
     });
     if (i % 2 === 1) {
       box(GFX, counter, `finished top drawer ${i + 1}`, [bayW - 0.024, 0.09, 0.028], [x, cabinetTop - 0.065, frontZ + 0.008], finishedMat);

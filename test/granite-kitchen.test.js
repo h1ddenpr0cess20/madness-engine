@@ -125,11 +125,12 @@ test('the counter holds together: doors, drawers, pulls and the faucet lever all
   assert.equal(seen.size, boxes.length);
 });
 
-test('every door hangs on two brass hinges, each with a barrel and a leaf', () => {
+test('every door hangs on two brass hinges, each a knuckled barrel, a leaf and screws', () => {
   const { group } = createGraniteCounter(GFX, { length: 2.8 });
   const names = group.children.map((c) => c.name);
   const doors = names.filter((n) => n.startsWith('finished hardwood cabinet door')).length;
   assert.ok(doors >= 2);
-  assert.equal(names.filter((n) => n.startsWith('brass cabinet hinge barrel')).length, doors * 2);
+  assert.equal(names.filter((n) => n.startsWith('brass cabinet hinge knuckle')).length, doors * 10);
   assert.equal(names.filter((n) => n.startsWith('brass cabinet hinge leaf')).length, doors * 2);
+  assert.equal(names.filter((n) => n.startsWith('brass cabinet hinge screw')).length, doors * 4);
 });
