@@ -3,7 +3,7 @@
  * in one finish, textured in the world so the grain runs along each board, with the library's wood when
  * `textures/wood.js` is there and plain painted boards when it is not.
  *
- * `kind` picks a starting shape and size (dining, coffee, side, console); every measure, the top's
+ * `kind` picks a starting shape and size (dining, coffee, side, console, desk, bar); every measure, the top's
  * `shape` (rectangle, round, oval), the `legs` (square, tapered, turned, trestle), the `apron`, a lower `shelf`
  * and a `drawer` can be given to change it. `surface` says where the top is, so that models can be set on it.
  *
@@ -16,7 +16,7 @@
 import { FINISHES, SPECIES, mulberry, woodMaterial, woodUV, WOOD_SOURCE } from './bookcase.js';
 
 export { FINISHES, SPECIES, WOOD_SOURCE };
-export const KINDS = Object.freeze(['dining', 'coffee', 'side', 'console']);
+export const KINDS = Object.freeze(['dining', 'coffee', 'side', 'console', 'desk', 'bar']);
 export const SHAPES = Object.freeze(['rectangle', 'round', 'oval']);
 export const LEGS = Object.freeze(['square', 'tapered', 'turned', 'trestle']);
 
@@ -26,6 +26,8 @@ export const KIND_DEFAULTS = Object.freeze({
   coffee: { shape: 'oval', legs: 'tapered', width: 1.1, depth: 0.6, height: 0.42, apron: false, shelf: true, drawer: false },
   side: { shape: 'round', legs: 'tapered', width: 0.5, depth: 0.5, height: 0.55, apron: true, shelf: false, drawer: false },
   console: { shape: 'rectangle', legs: 'square', width: 1.2, depth: 0.35, height: 0.8, apron: true, shelf: true, drawer: true },
+  desk: { shape: 'rectangle', legs: 'square', width: 1.4, depth: 0.7, height: 0.75, apron: true, shelf: false, drawer: true },
+  bar: { shape: 'round', legs: 'trestle', width: 0.8, depth: 0.8, height: 1.05, apron: false, shelf: false, drawer: false },
 });
 
 export const DEFAULTS = Object.freeze({

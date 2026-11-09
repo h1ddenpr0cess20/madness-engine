@@ -29,7 +29,7 @@ test('a table has a top, four legs and the parts it was asked for', () => {
 });
 
 test('measures can be changed, and the surface says where the top is', () => {
-  const made = createWoodTable(GFX, { kind: 'console', width: 2, depth: 0.8, height: 0.72, species: 'maple', finish: 'raw' });
+  const made = createWoodTable(GFX, { kind: 'desk', width: 2, depth: 0.8, height: 0.72, species: 'maple', finish: 'raw' });
   assert.deepEqual(made.dimensions, { width: 2, depth: 0.8, height: 0.72, topThickness: 0.035 });
   assert.equal(made.surface.y, 0.72);
   assert.deepEqual(made.wood, { species: 'maple', finish: 'raw', source: made.wood.source });
