@@ -58,7 +58,7 @@ bowlingBall.setColors({ base: '#153a31', swirl: '#78d6ad', accent: '#f4e28b' });
 
 | Import | What it is |
 |---|---|
-| `madness-engine/gfx` | The renderer: three.js-shaped but not three.js (see `src/gfx/LICENSE`). It uses WebGPU where the browser has it and WebGL 2 where it doesn't (`?renderer=webgl` pins it), with physically based shading, transmission, shadows and instancing (`InstancedMesh`: one geometry, many copies, one draw call, standard and basic materials, in the shadow map too). `gfx/renderer`, `gfx/webgl`, `gfx/webgpu` and the rest are its parts. |
+| `madness-engine/gfx` | The engine's own graphics API and renderer. It uses WebGPU where the browser has it and WebGL 2 where it doesn't (`?renderer=webgl` pins it), with physically based shading, transmission, shadows and instancing (`InstancedMesh`: one geometry, many copies, one draw call, standard and basic materials, in the shadow map too). `gfx/renderer`, `gfx/webgl`, `gfx/webgpu` and the rest are its parts. |
 | `madness-engine/physics` | Sphere physics over a triangle soup, with moving boxes, still boxes and cylinders: `World`, `createBall`, `stepBall`, `collideBalls`, `rollSpin`, `turn`. Units are tiles. `new World({ cols, rows, slideUnder })`. |
 | `madness-engine/input` | Keys, mouse, touch and gamepad reduced to one stick, a view to turn and zoom, and one-shot presses. Options: `boost` (a held button), and `presses` and `padPresses` (a game's own buttons). |
 | `madness-engine/view`, `views/arcade`, `views/close`, `views/town` | Where the camera sits round the ball, and `toGround` (the stick as a push along the ground). The arcade's corner, the same a little nearer, or higher and further back for streets; `defineView({ home, limits })` for your own. |
