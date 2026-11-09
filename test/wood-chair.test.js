@@ -84,3 +84,21 @@ test('a back can be curved: it bows out behind the sitter and still holds togeth
   assert.throws(() => createWoodChair(GFX, { curve: 0.5 }), /curve/);
   assert.throws(() => createWoodChair(GFX, { curve: -1 }), /curve/);
 });
+
+test('a back can be arched: its middle rises above its ends, and it still holds together', () => {
+  for (const back of ['slat', 'spindle', 'ladder']) for (const curve of [0, 0.08]) {
+    const flat = createWoodChair(GFX, { kind: 'dining', back });
+    const arched = createWoodChair(GFX, { kind: 'dining', back, arch: 0.1, curve });
+    assert.equal(arched.options.arch, 0.1);
+    assert.equal(pieces(arched.group), 1, `${back} curve ${curve}`);
+    const top = (m) => new GFX.Box3().setFromObject(m.group).max.y;
+    assert.ok(top(arched) > top(flat) + 0.08, `${back} rises`);
+  }
+  const posts = createWoodChair(GFX, { kind: 'dining', arch: 0.1 });
+  const rail = posts.group.children.find((c) => c.name === 'back top rail');
+  const post = posts.group.children.find((c) => c.name === 'leg rear left');
+  const ymax = (m) => new GFX.Box3().setFromObject(m).max.y;
+  assert.ok(ymax(rail) > ymax(post) + 0.08, 'the rail arches above the posts');
+  assert.throws(() => createWoodChair(GFX, { arch: 0.5 }), /arch/);
+  assert.throws(() => createWoodChair(GFX, { arch: -0.1 }), /arch/);
+});
