@@ -33,7 +33,7 @@ export function zoneOf(w, p) {
   let d = 0;
   if (zone === 'arm' || zone === 'hand') d = armDistance(p, m);
   if (zone === 'foot') d = p[2] - mirror(JOINTS.ankle, m)[2];
-  return { zone, y: p[1], d, x: Math.abs(p[0]) };
+  return { zone, y: p[1], d, x: Math.abs(p[0]), z: p[2] };
 }
 
 let S = null;

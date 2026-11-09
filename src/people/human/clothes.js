@@ -1,5 +1,5 @@
 import { add, clamp, cross, dot, len, norm, Part, scale, smooth, sub } from './kit.js';
-import { castBody, footPoints, legAxis, skinWeightsAt, skinWeightsUnder } from './body.js';
+import { castBody, footPoints, legAxis, skinWeightsAt } from './body.js';
 import { armDistance, JOINTS, mirror } from './skeleton.js';
 import { skinShell } from './shell.js';
 
@@ -248,7 +248,14 @@ function shirt(detail) {
     level: detail >= 0.8 ? 1 : 0,
     field: (p, z) => shirtCut(p, z).f,
     ease: (p, z) => (z.zone === 'arm' ? 0.006 : 0.0065 + 0.011 * smooth(1.09, 1.0, p[1])),
-    drape: (p, q, z) => (z.zone === 'arm' ? sleeveDrape(p, q) : z.zone === 'trunk' || z.zone === 'leg' ? bodyDrape(p, q) : q),
+    drape: (p, q, z, w) => {
+      if (z.zone === 'arm') return sleeveDrape(p, q);
+      if (z.zone !== 'trunk' && z.zone !== 'leg') return q;
+      // Where the skin goes with the arm (round the armpit), the cloth keeps close to it, or the arm swings it out in a fin.
+      const arm = (w.armL ?? 0) + (w.armR ?? 0) + (w.foreL ?? 0) + (w.foreR ?? 0);
+      const k = 1 - smooth(0.02, 0.25, arm), d = bodyDrape(p, q);
+      return [q[0] + (d[0] - q[0]) * k, q[1] + (d[1] - q[1]) * k, q[2] + (d[2] - q[2]) * k];
+    },
     edge: (p, z) => {
       const at = shirtCut(p, z).at;
       return at === 'collar' ? { thick: 0.0055, turn: 0.012 } : at === 'cuff' ? { thick: 0.0032, turn: 0.016 } : { thick: 0.0035, turn: 0.02 };
@@ -339,6 +346,7 @@ function jeans(detail) {
     // Straight legs: hanging from the seat and the thighs, never across the middle.
     drape: (p, q) => {
       if (q[1] > 1.04 || q[1] < 0.03) return q;
+      q = withBulge(p, q, 0.85);
       const { m, th } = legAngle(q);
       const y = q[1], o = legAxis(y, m), d = legDir(th, m);
       const r = Math.hypot(q[0] - o[0], q[2] - o[2]);
@@ -523,78 +531,37 @@ function shoe(upper, sole, laces, m, detail) {
 // ———————————————————————————————————————————————— the briefs
 
 export const BRIEFS = Object.freeze({ legs: 0.74, waist: 0.985 });
-const briefsWeights = clothWeights(zoneIs('leg', 'trunk'));
-
-/** Boxer briefs: close over the seat and the tops of the thighs, a band at the waist, the legs' hems turned in. */
-function briefs(detail) {
-  const part = new Part('briefs', 'briefs');
-  const rows = Math.round(28 * detail), around = Math.round(40 * detail);
-  for (const m of [1, -1]) {
-    part.grid(rows + 2, around, (i, j) => {
-      const th = (j / around) * TAU;
-      if (i < 2) {
-        const y = BRIEFS.legs + 0.012 * (1 - i / 2);
-        const p = legPoint(y, th, m, { ease: 0.0015 });
-        return { p, uv: [j / around, 0], w: briefsWeights(p), tint: 0.55 };
-      }
-      const t = (i - 2) / rows;
-      const y = BRIEFS.legs + (BRIEFS.waist - BRIEFS.legs) * t;
-      const band = 0.0018 * smooth(BRIEFS.waist - 0.04, BRIEFS.waist - 0.036, y);
-      const p = legPoint(y, th, m, { ease: 0.0035 + band });
-      return { p, uv: [j / around, t], w: briefsWeights(p), tint: 1 - 0.25 * smooth(CROTCH + 0.02, CROTCH - 0.04, y) * G((m * Math.sin(th) + 1) / 0.45) };
-    }, { flip: m > 0 });
-  }
-  return [part];
+/** Where the briefs end: the waistband, or the legs' hems (cut a touch higher on the outside of the thigh). */
+function briefsCut(p, z) {
+  if (z.zone !== 'leg' && z.zone !== 'trunk') return { f: -1, at: null };
+  const { th } = legAngle(p);
+  const waist = BRIEFS.waist - p[1], hem = p[1] - (BRIEFS.legs + 0.011 * Math.sin(th) + 0.003);
+  return waist < hem ? { f: waist, at: 'waist' } : { f: hem, at: 'hem' };
 }
 
 /**
- * Weights a garment's `parts` by the skin under them, then smooths them over
- * the cloth (treating the parts as one, joined where their vertices meet), so
- * the cloth stretches evenly where the body bends instead of creasing hard or
- * tearing at its seams. `only`: which zones of skin it may follow.
+ * How far the cloth over the groin stands forward (and a little down) of the
+ * skin at `p`, for what the base body leaves out.
  */
-function fitWeights(parts, only, passes = 2) {
-  const all = [];
-  for (const part of parts) {
-    const n = part.normals();
-    for (let v = 0; v < part.count; v++) {
-      const p = [part.pos[v * 3], part.pos[v * 3 + 1], part.pos[v * 3 + 2]];
-      const w = skinWeightsUnder(p, [n[v * 3], n[v * 3 + 1], n[v * 3 + 2]], { only });
-      if (w) part.weights[v] = w;
-      all.push([part, v]);
-    }
-  }
-  // Blended with the cloth round about, near in space (so a sleeve tucked under the shirt's body moves with it).
-  const R = 0.018, cell = new Map();
-  const ck = (x, y, z) => `${Math.floor(x / R)},${Math.floor(y / R)},${Math.floor(z / R)}`;
-  all.forEach(([part, v], i) => {
-    const k = ck(part.pos[v * 3], part.pos[v * 3 + 1], part.pos[v * 3 + 2]);
-    if (!cell.has(k)) cell.set(k, []);
-    cell.get(k).push(i);
+export function bulge(p) {
+  return 0.05 * G(p[0] / 0.05) * G((p[1] - 0.872) / 0.032) * smooth(0.0, 0.07, p[2]);
+}
+// Forward, a little down, and drawn in toward the middle line.
+const withBulge = (p, q, k = 1) => {
+  const b = bulge(p) * k;
+  return b ? [q[0] * (1 - 13 * b), q[1] - b * 0.45, q[2] + b] : q;
+};
+
+/** Boxer briefs: one piece close over the seat and the tops of the thighs, a band at the waist, the legs' hems turned in. */
+function briefs(detail) {
+  return skinShell('briefs', 'briefs', {
+    level: detail >= 0.8 ? 1 : 0,
+    field: (p, z) => briefsCut(p, z).f,
+    ease: (p) => 0.0025 + 0.0015 * smooth(BRIEFS.waist - 0.04, BRIEFS.waist - 0.034, p[1]),
+    drape: (p, q) => withBulge(p, q),
+    edge: (p, z) => (briefsCut(p, z).at === 'waist' ? { thick: 0.004, turn: 0.025 } : { thick: 0.0025, turn: 0.012 }),
+    smooth: detail >= 0.8 ? 4 : 2,
   });
-  let W = all.map(([part, v]) => part.weights[v]);
-  for (let pass = 0; pass < passes; pass++) {
-    W = all.map(([part, v]) => {
-      const x = part.pos[v * 3], y = part.pos[v * 3 + 1], z = part.pos[v * 3 + 2];
-      const cx = Math.floor(x / R), cy = Math.floor(y / R), cz = Math.floor(z / R);
-      const out = {};
-      let total = 0;
-      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) {
-        for (const o of cell.get(`${cx + i},${cy + j},${cz + k}`) ?? []) {
-          const [q, u] = all[o];
-          const d2 = (q.pos[u * 3] - x) ** 2 + (q.pos[u * 3 + 1] - y) ** 2 + (q.pos[u * 3 + 2] - z) ** 2;
-          if (d2 > R * R) continue;
-          const g = Math.exp(-d2 / (0.5 * R * R));
-          total += g;
-          for (const [b, w] of Object.entries(W[o])) out[b] = (out[b] ?? 0) + w * g;
-        }
-      }
-      for (const b of Object.keys(out)) out[b] /= total;
-      return out;
-    });
-  }
-  all.forEach(([part, v], i) => { part.weights[v] = W[i]; });
-  return parts;
 }
 
 /** Tags every vertex of `parts` as part of the garment `name` (for the garments over it to know what they cover). */
@@ -617,7 +584,7 @@ export const GARMENTS = Object.freeze({
   briefs: {
     layer: 1,
     materials: ['briefs'],
-    build: (detail) => tag(fitWeights(briefs(detail), zoneIs('leg', 'trunk')), 'briefs'),
+    build: (detail) => tag([briefs(detail)], 'briefs'),
     covers: ({ zone, y }) => (zone === 'leg' || zone === 'trunk') && y > BRIEFS.legs + OPEN && y < BRIEFS.waist - OPEN,
   },
   sneakers: {
@@ -640,7 +607,7 @@ export const GARMENTS = Object.freeze({
     layer: 4,
     materials: ['shirt'],
     build: (detail) => tag(shirt(detail), 'tshirt'),
-    covers: ({ zone, y, d, x = 1 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || x > 0.1)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN),
+    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN),
   },
 });
 

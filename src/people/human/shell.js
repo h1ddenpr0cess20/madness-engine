@@ -19,7 +19,7 @@ import { Part } from './kit.js';
  *   (zone { zone, y, d, x }) is, in metres; ≤ 0 outside, and -1 where it
  *   never goes (the hands, say). The cut follows where it is 0.
  * - `ease(p, zone)`: how far off the skin the cloth sits.
- * - `drape(p, q, zone)`: where the cloth at `q` (lifted off skin point `p`)
+ * - `drape(p, q, zone, weights)`: where the cloth at `q` (lifted off skin point `p`, whose bone weights are `weights`, by name)
  *   hangs instead, if it hangs loose (across a hollow, off the chest); or `q`.
  * - `folds(p, zone)`: a little more off the skin, for creases.
  * - `edge(p, zone)`: the turned edge at a cut there: { thick, turn } (the
@@ -85,6 +85,12 @@ export function skinShell(name, material, spec) {
     return { p: [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t), n: nn.map((x) => x / l), w, occ: occ[v] + (occ[u] - occ[v]) * t };
   };
 
+  // A vertex's weights by bone name.
+  const named = (w) => {
+    const out = {};
+    for (const [b, x] of Object.entries(w)) out[BONES[b]] = (out[BONES[b]] ?? 0) + x;
+    return out;
+  };
   // Each vertex it uses: lifted off the skin, hung, and smoothed.
   const used = new Map();
   for (const f of kept) for (let k = 0; k < 4; k++) if (!used.has(faces[f + k])) used.set(faces[f + k], used.size);
@@ -94,7 +100,7 @@ export function skinShell(name, material, spec) {
     const b = B[i], z = zone[v];
     const e = ease(b.p, z);
     const q = [b.p[0] + b.n[0] * e, b.p[1] + b.n[1] * e, b.p[2] + b.n[2] * e];
-    return drape(b.p, q, z);
+    return drape(b.p, q, z, named(b.w));
   });
   // How far each stands off the skin, smoothed over its neighbours, never less than its ease.
   const nbr = verts.map(() => new Set());
@@ -152,11 +158,6 @@ export function skinShell(name, material, spec) {
 
   // The part: one vertex for each skin vertex and UV it uses.
   const part = new Part(name, material);
-  const named = (w) => {
-    const out = {};
-    for (const [b, x] of Object.entries(w)) out[BONES[b]] = (out[BONES[b]] ?? 0) + x;
-    return out;
-  };
   const ids = new Map();
   const corner = (v, t) => {
     const key = v * 4194304 + t;

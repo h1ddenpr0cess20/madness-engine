@@ -388,7 +388,7 @@ uvOrder.forEach((t, i) => { uv[i * 2] = Math.round(uvs[t][0] * 65535); uv[i * 2 
 const bone = new Uint8Array(P.length * 4), weight = new Uint8Array(P.length * 4);
 weights.forEach((list, i) => {
   let left = 255;
-  list.forEach(([b, w], k) => { bone[i * 4 + k] = b; const q = k === list.length - 1 ? left : Math.round(w * 255); weight[i * 4 + k] = q; left -= q; });
+  list.forEach(([b, w], k) => { bone[i * 4 + k] = b; const q = k === list.length - 1 ? Math.max(0, left) : Math.min(left, Math.round(w * 255)); weight[i * 4 + k] = q; left -= q; });
 });
 const occlusion = Uint8Array.from(ao, (a) => Math.round(a * 255));
 const facesOf = (g) => {

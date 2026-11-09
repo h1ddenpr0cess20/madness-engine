@@ -162,8 +162,8 @@ export const HAND_POSES = Object.freeze({
   relaxed: { curl: [0.22, 0.3, 0.2], thumb: 0.15, spread: 0.1 },
   open: { curl: [0, 0.04, 0.02], thumb: 0, spread: 0.6 },
   grip: { curl: [0.95, 1.0, 0.65], thumb: 0.85, spread: 0 },
-  fist: { curl: [1.05, 1.25, 0.9], thumb: 1, spread: 0 },
-  point: { curl: [1.05, 1.25, 0.9], thumb: 0.9, spread: 0, straight: ['index'] },
+  fist: { curl: [1.0, 1.0, 0.4], thumb: 1, spread: 0 },
+  point: { curl: [1.0, 1.0, 0.4], thumb: 0.9, spread: 0, straight: ['index'] },
 });
 
 /** Euler angles (for Rz·Ry·Rx, as the rig turns) of the turn by `angle` about unit `axis`. */
@@ -191,6 +191,9 @@ const HAND_AXES = Object.fromEntries(FINGER_NAMES.map((name) => {
   const l = len(spread) || 1;
   return [name, { curl: f.curl, spread: spread.map((v) => v / l) }];
 }));
+
+// The axis the thumb's root turns about to come across the palm (left hand).
+const THUMB_IN = [-0.225, 0.03, 0.974];
 
 /**
  * The shoulders follow the arms, as the collarbone and shoulder blade do: as
@@ -235,11 +238,12 @@ function poseHand(k, S, shape, amount = 1) {
       set(`${name}${i + 1}${S}`, R);
     });
   }
+  // The thumb swings in at its root and folds over the index and middle fingers.
   const t = shape.thumb * amount;
   const thumb = sideAxis(HAND_AXES.thumb.curl, m);
-  set(`thumb1${S}`, axisTurn(thumb, 0.45 * t));
-  set(`thumb2${S}`, axisTurn(thumb, 0.6 * t));
-  set(`thumb3${S}`, axisTurn(thumb, 0.8 * t));
+  set(`thumb1${S}`, axisTurn(sideAxis(THUMB_IN, m), 0.21 * t));
+  set(`thumb2${S}`, axisTurn(thumb, 1.08 * t));
+  set(`thumb3${S}`, axisTurn(thumb, 0.69 * t));
 }
 
 /**
