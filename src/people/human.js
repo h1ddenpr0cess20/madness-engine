@@ -679,11 +679,56 @@ export function createHuman(GFX, options = {}) {
     });
   }
 
+  /** The pose a crossfade starts from: every bone's turn, move and scale. */
+  const fromPose = new Float64Array(skeleton.pose.length * 9);
+
+  /** The clip `state` names, posed; `mix` of the way on from the clip in `state.from`, if it has one. */
+  function moveBlended(state, moveStyle) {
+    const mix = state.from ? Math.min(1, Math.max(0, state.mix ?? 1)) : 1;
+    if (mix < 1) {
+      moveHuman(skeleton, state.from, moveStyle);
+      skeleton.pose.forEach((p, b) => { fromPose.set(p.rot, b * 9); fromPose.set(p.move, b * 9 + 3); fromPose.set(p.scale, b * 9 + 6); });
+      skeleton.reset();
+    }
+    moveHuman(skeleton, state, moveStyle);
+    if (mix >= 1) return;
+    skeleton.pose.forEach((p, b) => {
+      const o = b * 9;
+      for (let a = 0; a < 3; a++) {
+        p.rot[a] = fromPose[o + a] + (p.rot[a] - fromPose[o + a]) * mix;
+        p.move[a] = fromPose[o + 3 + a] + (p.move[a] - fromPose[o + 3 + a]) * mix;
+        p.scale[a] = fromPose[o + 6 + a] + (p.scale[a] - fromPose[o + 6 + a]) * mix;
+      }
+    });
+  }
+
+  /** The vertices of `m` its triangles use (those left showing under what is worn), or null for all of them. */
+  function drawn(m) {
+    const index = m.geometry.index;
+    if (drawnOf.has(index)) return drawnOf.get(index);
+    const used = new Uint8Array(m.data.count);
+    let n = 0;
+    for (const v of index.array) if (!used[v]) { used[v] = 1; n++; }
+    let list = null;
+    if (n < m.data.count) {
+      list = new Uint32Array(n);
+      for (let v = 0, j = 0; v < used.length; v++) if (used[v]) list[j++] = v;
+    }
+    drawnOf.set(index, list);
+    return list;
+  }
+  const drawnOf = new WeakMap();
+
+  /**
+   * Poses him: `{ clip, t, time, speed, seed, speaking, yell, talk, loud }`.
+   * To crossfade, `from` is the state he is coming from and `mix` (0..1)
+   * how far on from it he is.
+   */
   function pose(state = {}) {
     last = state;
     skeleton.reset();
     const armed = held.R ? 'R' : null;
-    moveHuman(skeleton, state, { ...style, armed, heavy: style.heavy ?? 0 });
+    moveBlended(state, { ...style, armed, heavy: style.heavy ?? 0 });
     shrug(skeleton);
     const both = held.R && !held.L ? twoHanded(state) : 0;
     if (both) bothHands(both);
@@ -701,11 +746,12 @@ export function createHuman(GFX, options = {}) {
       : null;
     poseFace(skeleton, face, state.time, said);
     skeleton.compute();
-    skinDual(body.data, skeleton, body.position.array, body.normal.array);
+    // Only what shows is moved: the skin under his clothes is left where it was.
+    skinDual(body.data, skeleton, body.position.array, body.normal.array, drawn(body));
     body.position.needsUpdate = true;
     body.normal.needsUpdate = true;
     for (const { mesh: m } of worn.values()) {
-      skinDual(m.data, skeleton, m.position.array, m.normal.array);
+      skinDual(m.data, skeleton, m.position.array, m.normal.array, drawn(m));
       m.position.needsUpdate = true;
       m.normal.needsUpdate = true;
     }

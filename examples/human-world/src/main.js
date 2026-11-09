@@ -102,7 +102,8 @@ function person({ look, weapon, swing, detail, beard = null }) {
   stage.scene.add(group);
   return {
     man, group, swing,
-    x: 0, z: 0, yaw: 0, want: 0, speed: 0, pace: 0, gait: rand() * 10, running: false,
+    x: 0, z: 0, yaw: 0, want: 0, speed: 0, pace: 0, gait: rand() * 10, running: false, moving: false,
+    shown: null, from: null, fade: FADE,
     state: 'idle', since: 0, clock: rand() * 10, struck: false,
     life: 1, cool: 0,
     place(x, z, yaw = 0) { this.x = x; this.z = z; this.yaw = this.want = yaw; },
@@ -110,28 +111,56 @@ function person({ look, weapon, swing, detail, beard = null }) {
   };
 }
 
-/** Poses `p` for this frame: the clip its state calls for, at its own time. */
-function pose(p, dt, { shout = false } = {}) {
-  p.yaw += angleTo(p.yaw, p.want) * Math.min(1, dt * 10);
+/** Puts `p` where it is and turns it the way it faces: every frame, posed this frame or not. */
+function stand(p, dt) {
+  p.yaw += angleTo(p.yaw, p.want) * (1 - Math.exp(-dt * 10));
   p.group.position.set(p.x, 0, p.z);
   p.group.rotation.y = p.yaw;
-  p.clock += dt;
+}
+
+/**
+ * How far one stride (a step of each foot) takes him at full size, walking and running: the walk
+ * goes 2 m/s at `speed` 1 at 9 radians a second, the run 3.3 m/s at 15.
+ */
+const STRIDE = { walk: (2.0 * 2 * Math.PI) / 9, run: (3.3 * 2 * Math.PI) / 15 };
+/** Where in the run's stride its legs are as the walk's are at the start of its own, so the two line up. */
+const RUN_PHASE = 0.63;
+/** How long, in seconds, one clip is crossfaded into the next. */
+const FADE = 0.22;
+const smooth = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+
+/** The clip `p`'s state calls for this frame, at its own time. */
+function clipOf(p, dt, shout) {
   const { state, since } = p;
-  if (state === 'attack') return p.man.pose({ clip: 'attack', t: Math.min(1, since / SWING), time: p.clock, speaking: shout, yell: shout });
-  if (state === 'hit') return p.man.pose({ clip: 'hit', t: Math.min(1, since / HIT_TIME), time: p.clock });
-  if (state === 'down') return p.man.pose({ clip: 'ko', t: Math.min(1, since / 1.2), time: p.clock });
-  if (state === 'yell') return p.man.pose({ clip: 'yell', t: since, time: p.clock });
+  if (state === 'attack') return { clip: 'attack', t: Math.min(1, since / SWING), time: p.clock, speaking: shout, yell: shout };
+  if (state === 'hit') return { clip: 'hit', t: Math.min(1, since / HIT_TIME), time: p.clock };
+  if (state === 'down') return { clip: 'ko', t: Math.min(1, since / 1.2), time: p.clock };
+  if (state === 'yell') return { clip: 'yell', t: since, time: p.clock };
   // The pace is eased (it changes every step as he slides along walls), and the stride's own phase is
   // kept and advanced by it, so the legs never jump when the pace changes.
-  p.pace += (p.speed - p.pace) * Math.min(1, dt * 8);
-  if (p.pace > 0.15) {
-    // Walk to run and back at different paces, so he doesn't flicker between the two.
-    p.running = p.running ? p.pace > 2.0 : p.pace > 2.5;
-    // The walk's stride is about 2 m/s at `speed` 1 at full size, the run's about 3.3.
-    p.gait += dt * p.pace / ((p.running ? 3.3 : 2.0) * SCALE);
-    return p.man.pose({ clip: p.running ? 'run' : 'walk', time: p.gait, speed: 1, speaking: shout, yell: shout });
-  }
-  return p.man.pose({ clip: 'idle', time: p.clock });
+  p.pace += (p.speed - p.pace) * (1 - Math.exp(-dt * 8));
+  // Off his feet and back at different paces, and walk to run and back, so he doesn't flicker between them.
+  p.moving = p.moving ? p.pace > 0.12 : p.pace > 0.2;
+  if (!p.moving) return { clip: 'idle', time: p.clock };
+  p.running = p.running ? p.pace > 2.0 : p.pace > 2.5;
+  // One phase for both, in strides, so the feet carry on where they were when he breaks into a run.
+  p.gait += (dt * p.pace) / ((p.running ? STRIDE.run : STRIDE.walk) * SCALE);
+  if (p.running) return { clip: 'run', time: ((p.gait + RUN_PHASE) * 2 * Math.PI) / 15, speed: 1, speaking: shout, yell: shout };
+  return { clip: 'walk', time: (p.gait * 2 * Math.PI) / 9, speed: 1, speaking: shout, yell: shout };
+}
+
+/**
+ * Poses `p` for this frame (`dt` since it was last posed): the clip its state calls for, and when
+ * that is a new one, crossfaded from the last over FADE, so he never snaps from one to the next.
+ */
+function pose(p, dt, { shout = false } = {}) {
+  p.clock += dt;
+  const now = clipOf(p, dt, shout);
+  if (p.shown && p.shown.clip !== now.clip) { p.from = p.shown; p.fade = 0; }
+  p.shown = now;
+  p.fade = Math.min(FADE, p.fade + dt);
+  const mix = smooth(p.fade / FADE);
+  return p.man.pose(mix < 1 && p.from ? { ...now, from: p.from, mix } : now);
 }
 
 /** A step of `speed` toward ground direction (ax, az), sliding along what is in the way. */
@@ -323,6 +352,7 @@ function update(dt) {
     const stick = input.stick();
     if (Math.hypot(stick.x, stick.y) > 0.05) { const [ax, az] = toGround(stick, stage.view.yaw); walk(player, ax, az, 0.6, dt); }
   }
+  stand(player, dt);
   pose(player, dt, { shout: player.state === 'yell' });
 
   // Them.
@@ -380,17 +410,20 @@ function update(dt) {
     }
   }
 
-  // Draw only who is near enough to be seen. Posing a person is the costly part (the skin is moved on
-  // the CPU), so the nearest are posed every frame and the rest take turns, a few a frame, each
-  // posed with the time it has missed.
+  // Draw only who is near enough to be seen, and pose only who is in the picture (or casting a shadow
+  // into it). Posing a person is the costly part (the skin is moved on the CPU), so the nearest are
+  // posed every frame and any more take turns, each posed with the time it has missed. Everyone is
+  // put where he is, and turned, every frame.
   frame++;
+  sight.setFromProjectionMatrix(viewMatrix.multiplyMatrices(stage.camera.projectionMatrix, stage.camera.matrixWorldInverse));
   const seen = [];
   for (const m of mobs) {
     m.owed = (m.owed ?? 0) + dt;
-    m.group.position.set(m.x, 0, m.z);
+    stand(m, dt);
     const d = Math.hypot(m.x - stage.target.x, m.z - stage.target.z);
     m.group.visible = d < 26;
-    if (m.group.visible) seen.push([d, m]);
+    bounds.center.set(m.x, 0.45, m.z);
+    if (m.group.visible && sight.intersectsSphere(bounds)) seen.push([d, m]);
   }
   seen.sort((a, b) => a[0] - b[0]);
   seen.forEach(([, m], i) => {
@@ -410,6 +443,8 @@ function update(dt) {
   stage.target.z += (player.z - stage.target.z) * k;
 }
 let frame = 0;
+/** What the camera saw last frame, and room round a person for his weapon and his shadow. */
+const sight = new GFX.Frustum(), viewMatrix = new GFX.Matrix4(), bounds = new GFX.Sphere(new GFX.Vector3(), 1.3);
 
 document.getElementById('loading').classList.add('hidden');
 globalThis.__world = { player, mobs, stage, update };

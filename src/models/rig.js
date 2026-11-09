@@ -27,6 +27,8 @@ export class Skeleton {
     this.pose = bones.map(still);
     this.matrices = new Float32Array(bones.length * 12);
     this.index = new Map(this.names.map((n, i) => [n, i]));
+    /** How many times the matrices have been worked out. */
+    this.version = 0;
   }
 
   /** Back to the rest pose. */
@@ -66,6 +68,8 @@ export class Skeleton {
 
   /** Works out every bone's matrix from the pose. */
   compute() {
+    // Counted, so what is worked out from the matrices (skinDual's turns) is worked out once a pose.
+    this.version++;
     const M = this.matrices;
     for (let b = 0; b < this.pose.length; b++) {
       const { rot, move, scale } = this.pose[b];
@@ -154,31 +158,32 @@ export function skin(rest, M, position, normal) {
   }
 }
 
+/** Floats a bone takes in `dualsOf`'s table: its dual quaternion (8), what is left of its matrix past the turn (9), its pivot (3), its turn as a matrix (9). */
+const DUAL = 29;
+
 /**
- * Moves the skin as `skin` does, but blends each vertex's bones as dual
- * quaternions (their turns and moves, not their matrices), so a joint bent
- * far, or twisted, keeps its volume instead of pinching thin: shoulders
- * and elbows stay round. Any squash or stretch a bone has (its matrix less
- * its turn) is added on as `skin` would. `skeleton`: the Skeleton whose
- * matrices (already computed) move it.
+ * Every bone of `skeleton` as a dual quaternion, with the squash its matrix
+ * has past its turn, about its pivot: worked out once each time the
+ * skeleton is computed, however many meshes it then moves.
  */
-export function skinDual(rest, skeleton, position, normal) {
-  const { position: P, normal: N, skinIndex: I, skinWeight: W } = rest;
-  const M = skeleton.matrices, n = skeleton.pivots.length;
-  // Each bone: its turn as a quaternion (x, y, z, w), its move as the dual part, and what is left of its matrix.
-  const Q = new Float64Array(n * 8), D = new Float64Array(n * 12), scaled = new Uint8Array(n);
+function dualsOf(skeleton) {
+  const n = skeleton.pivots.length;
+  let cache = skeleton.duals;
+  if (cache && cache.version === skeleton.version) return cache;
+  if (!cache) cache = skeleton.duals = { version: -1, bones: new Float64Array(n * DUAL), scaled: new Uint8Array(n) };
+  const M = skeleton.matrices, Q = cache.bones;
   for (let b = 0; b < n; b++) {
-    const o = b * 12;
+    const o = b * 12, q = b * DUAL;
     // The turn: the matrix's columns made unit length and square (enough for the slight squashes bones are given).
-    let c0 = [M[o], M[o + 4], M[o + 8]], c1 = [M[o + 1], M[o + 5], M[o + 9]];
-    const l0 = Math.hypot(...c0), l1 = Math.hypot(...c1), l2 = Math.hypot(M[o + 2], M[o + 6], M[o + 10]);
-    c0 = c0.map((x) => x / l0);
-    const d01 = c0[0] * c1[0] + c0[1] * c1[1] + c0[2] * c1[2];
-    c1 = [c1[0] - c0[0] * d01, c1[1] - c0[1] * d01, c1[2] - c0[2] * d01];
-    const l1b = Math.hypot(...c1);
-    c1 = c1.map((x) => x / l1b);
-    const c2 = [c0[1] * c1[2] - c0[2] * c1[1], c0[2] * c1[0] - c0[0] * c1[2], c0[0] * c1[1] - c0[1] * c1[0]];
-    const r00 = c0[0], r10 = c0[1], r20 = c0[2], r01 = c1[0], r11 = c1[1], r21 = c1[2], r02 = c2[0], r12 = c2[1], r22 = c2[2];
+    const l0 = Math.sqrt(M[o] * M[o] + M[o + 4] * M[o + 4] + M[o + 8] * M[o + 8]);
+    const l1 = Math.sqrt(M[o + 1] * M[o + 1] + M[o + 5] * M[o + 5] + M[o + 9] * M[o + 9]);
+    const l2 = Math.sqrt(M[o + 2] * M[o + 2] + M[o + 6] * M[o + 6] + M[o + 10] * M[o + 10]);
+    const r00 = M[o] / l0, r10 = M[o + 4] / l0, r20 = M[o + 8] / l0;
+    const d01 = r00 * M[o + 1] + r10 * M[o + 5] + r20 * M[o + 9];
+    let r01 = M[o + 1] - r00 * d01, r11 = M[o + 5] - r10 * d01, r21 = M[o + 9] - r20 * d01;
+    const l1b = Math.sqrt(r01 * r01 + r11 * r11 + r21 * r21);
+    r01 /= l1b; r11 /= l1b; r21 /= l1b;
+    const r02 = r10 * r21 - r20 * r11, r12 = r20 * r01 - r00 * r21, r22 = r00 * r11 - r10 * r01;
     let qx, qy, qz, qw;
     const tr = r00 + r11 + r22;
     if (tr > 0) {
@@ -199,31 +204,70 @@ export function skinDual(rest, skeleton, position, normal) {
     const tx = M[o] * px + M[o + 1] * py + M[o + 2] * pz + M[o + 3] - (r00 * px + r01 * py + r02 * pz);
     const ty = M[o + 4] * px + M[o + 5] * py + M[o + 6] * pz + M[o + 7] - (r10 * px + r11 * py + r12 * pz);
     const tz = M[o + 8] * px + M[o + 9] * py + M[o + 10] * pz + M[o + 11] - (r20 * px + r21 * py + r22 * pz);
-    const q = b * 8;
     Q[q] = qx; Q[q + 1] = qy; Q[q + 2] = qz; Q[q + 3] = qw;
     // Dual part: ½ (t, 0) · r.
     Q[q + 4] = 0.5 * (tx * qw + ty * qz - tz * qy);
     Q[q + 5] = 0.5 * (-tx * qz + ty * qw + tz * qx);
     Q[q + 6] = 0.5 * (tx * qy - ty * qx + tz * qw);
     Q[q + 7] = -0.5 * (tx * qx + ty * qy + tz * qz);
-    // The squash left over (the matrix less its turn), about the pivot.
-    if (Math.abs(l0 - 1) > 1e-5 || Math.abs(l1 - 1) > 1e-5 || Math.abs(l2 - 1) > 1e-5 || Math.abs(d01) > 1e-5) {
-      scaled[b] = 1;
-      const R = [r00, r01, r02, r10, r11, r12, r20, r21, r22];
-      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) D[b * 12 + r * 3 + c] = M[o + r * 4 + c] - R[r * 3 + c];
-      D[b * 12 + 9] = px; D[b * 12 + 10] = py; D[b * 12 + 11] = pz;
-    }
+    // The squash left over (the matrix less its turn), about the pivot, for the bones that have one.
+    cache.scaled[b] = Math.abs(l0 - 1) > 1e-5 || Math.abs(l1 - 1) > 1e-5 || Math.abs(l2 - 1) > 1e-5 || Math.abs(d01) > 1e-5 ? 1 : 0;
+    Q[q + 8] = M[o] - r00; Q[q + 9] = M[o + 1] - r01; Q[q + 10] = M[o + 2] - r02;
+    Q[q + 11] = M[o + 4] - r10; Q[q + 12] = M[o + 5] - r11; Q[q + 13] = M[o + 6] - r12;
+    Q[q + 14] = M[o + 8] - r20; Q[q + 15] = M[o + 9] - r21; Q[q + 16] = M[o + 10] - r22;
+    Q[q + 17] = px; Q[q + 18] = py; Q[q + 19] = pz;
+    Q[q + 20] = r00; Q[q + 21] = r01; Q[q + 22] = r02;
+    Q[q + 23] = r10; Q[q + 24] = r11; Q[q + 25] = r12;
+    Q[q + 26] = r20; Q[q + 27] = r21; Q[q + 28] = r22;
   }
-  const count = P.length / 3;
-  for (let v = 0; v < count; v++) {
-    const i4 = v * 4;
-    let b = I[i4] * 8;
-    const sx = Q[b], sy = Q[b + 1], sz = Q[b + 2], sw = Q[b + 3];
+  cache.version = skeleton.version;
+  return cache;
+}
+
+/**
+ * Moves the skin as `skin` does, but blends each vertex's bones as dual
+ * quaternions (their turns and moves, not their matrices), so a joint bent
+ * far, or twisted, keeps its volume instead of pinching thin: shoulders
+ * and elbows stay round. Any squash or stretch a bone has (its matrix less
+ * its turn) is added on as `skin` would. `skeleton`: the Skeleton whose
+ * matrices (already computed) move it. `only`, if given, lists the vertices
+ * to move (those drawn, say); the rest are left where they were.
+ */
+export function skinDual(rest, skeleton, position, normal, only = null) {
+  const { position: P, normal: N, skinIndex: I, skinWeight: W } = rest;
+  const { bones: Q, scaled } = dualsOf(skeleton);
+  const M = skeleton.matrices;
+  const count = only ? only.length : P.length / 3;
+  for (let j = 0; j < count; j++) {
+    const v = only ? only[j] : j;
+    const i4 = v * 4, v3 = v * 3;
+    const px = P[v3], py = P[v3 + 1], pz = P[v3 + 2];
+    const na = N[v3], nb = N[v3 + 1], nc = N[v3 + 2];
+    if (W[i4] >= 0.9999) {
+      // One bone: its own matrix moves the vertex (its turn, move and squash together), its turn the normal.
+      const o = I[i4] * 12, b = I[i4] * DUAL;
+      position[v3] = M[o] * px + M[o + 1] * py + M[o + 2] * pz + M[o + 3];
+      position[v3 + 1] = M[o + 4] * px + M[o + 5] * py + M[o + 6] * pz + M[o + 7];
+      position[v3 + 2] = M[o + 8] * px + M[o + 9] * py + M[o + 10] * pz + M[o + 11];
+      normal[v3] = Q[b + 20] * na + Q[b + 21] * nb + Q[b + 22] * nc;
+      normal[v3 + 1] = Q[b + 23] * na + Q[b + 24] * nb + Q[b + 25] * nc;
+      normal[v3 + 2] = Q[b + 26] * na + Q[b + 27] * nb + Q[b + 28] * nc;
+      continue;
+    }
     let x0 = 0, y0 = 0, z0 = 0, w0 = 0, x1 = 0, y1 = 0, z1 = 0, w1 = 0;
+    // The squashes, each about its own bone's pivot.
+    let ex = 0, ey = 0, ez = 0;
+    const f = I[i4] * DUAL, sx = Q[f], sy = Q[f + 1], sz = Q[f + 2], sw = Q[f + 3];
     for (let k = 0; k < 4; k++) {
       let w = W[i4 + k];
       if (w <= 0) break;
-      b = I[i4 + k] * 8;
+      const s = I[i4 + k], b = s * DUAL;
+      if (scaled[s]) {
+        const qx = px - Q[b + 17], qy = py - Q[b + 18], qz = pz - Q[b + 19];
+        ex += w * (Q[b + 8] * qx + Q[b + 9] * qy + Q[b + 10] * qz);
+        ey += w * (Q[b + 11] * qx + Q[b + 12] * qy + Q[b + 13] * qz);
+        ez += w * (Q[b + 14] * qx + Q[b + 15] * qy + Q[b + 16] * qz);
+      }
       // The shorter way round, as the first bone turns.
       if (Q[b] * sx + Q[b + 1] * sy + Q[b + 2] * sz + Q[b + 3] * sw < 0) w = -w;
       x0 += Q[b] * w; y0 += Q[b + 1] * w; z0 += Q[b + 2] * w; w0 += Q[b + 3] * w;
@@ -240,21 +284,9 @@ export function skinDual(rest, skeleton, position, normal) {
     const a00 = 1 - 2 * (yy + zz), a01 = 2 * (xy - wz), a02 = 2 * (xz + wy);
     const a10 = 2 * (xy + wz), a11 = 1 - 2 * (xx + zz), a12 = 2 * (yz - wx);
     const a20 = 2 * (xz - wy), a21 = 2 * (yz + wx), a22 = 1 - 2 * (xx + yy);
-    const v3 = v * 3;
-    const px = P[v3], py = P[v3 + 1], pz = P[v3 + 2];
-    let ox = a00 * px + a01 * py + a02 * pz + tx, oy = a10 * px + a11 * py + a12 * pz + ty, oz = a20 * px + a21 * py + a22 * pz + tz;
-    for (let k = 0; k < 4; k++) {
-      const w = W[i4 + k];
-      if (w <= 0) break;
-      const s = I[i4 + k];
-      if (!scaled[s]) continue;
-      const d = s * 12, qx = px - D[d + 9], qy = py - D[d + 10], qz = pz - D[d + 11];
-      ox += w * (D[d] * qx + D[d + 1] * qy + D[d + 2] * qz);
-      oy += w * (D[d + 3] * qx + D[d + 4] * qy + D[d + 5] * qz);
-      oz += w * (D[d + 6] * qx + D[d + 7] * qy + D[d + 8] * qz);
-    }
-    position[v3] = ox; position[v3 + 1] = oy; position[v3 + 2] = oz;
-    const na = N[v3], nb = N[v3 + 1], nc = N[v3 + 2];
+    position[v3] = a00 * px + a01 * py + a02 * pz + tx + ex;
+    position[v3 + 1] = a10 * px + a11 * py + a12 * pz + ty + ey;
+    position[v3 + 2] = a20 * px + a21 * py + a22 * pz + tz + ez;
     normal[v3] = a00 * na + a01 * nb + a02 * nc;
     normal[v3 + 1] = a10 * na + a11 * nb + a12 * nc;
     normal[v3 + 2] = a20 * na + a21 * nb + a22 * nc;
