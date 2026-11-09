@@ -4,8 +4,9 @@
  * can be built and measured under Node. The renderers read it.
  *
  * The shapes of these objects, and the order things happen in (world
- * matrices, bounds, normals), follow three.js r186 (MIT, © 2010-2025 three.js
- * authors), which is what the scenes were written against.
+ * matrices, bounds, normals), are what the scenes were written against.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 import {
@@ -310,7 +311,7 @@ export class Scene extends Object3D {
     this.type = 'Scene';
     /** The prefiltered studio the physical materials reflect — from a PMREMGenerator. */
     this.environment = null;
-    /** How that studio is turned in the world, as three's `Scene.environmentRotation` is. */
+    /** How that studio is turned in the world. */
     this.environmentRotation = new Euler();
   }
 }
@@ -467,7 +468,7 @@ export class BufferGeometry extends EventDispatcher {
     this.boundingSphere.radius = Math.sqrt(maxRadiusSq);
   }
 
-  /** Area-weighted and summed in the attribute's own float32, as three does. */
+  /** Area-weighted and summed in the attribute's own float32. */
   computeVertexNormals() {
     const index = this.index;
     const positionAttribute = this.getAttribute('position');

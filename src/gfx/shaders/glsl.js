@@ -8,12 +8,12 @@
  * so a program only carries the terms its material actually uses. The shading
  * itself — the GGX specular, the multiple-scattering compensation, clearcoat,
  * sheen, thin-film iridescence, transmission, the cube-UV environment lookup
- * and the PCF shadow taps — is the physically based model of three.js r186
- * (MIT, © 2010-2025 three.js authors), term for term, so that nothing a scene
- * was tuned against moves. (The one difference: r186 turns the shadow's taps by
- * a different amount at each pixel; here they keep to one pattern, so that a
- * shadow's edge does not crawl with dots as the camera moves.) `wgsl/` is the same model for WebGPU; keep the two
- * in step.
+ * and the PCF shadow taps — is kept term for term, so that nothing a scene
+ * was tuned against moves. The shadow's taps keep to one pattern, so that a
+ * shadow's edge does not crawl with dots as the camera moves. `wgsl/` is the
+ * same model for WebGPU; keep the two in step.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 import { include } from './preprocess.js';

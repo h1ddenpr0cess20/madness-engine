@@ -29,8 +29,7 @@ function norm([x, z]) {
 
 /*
  * A centripetal Catmull-Rom spline through the knots — the parameterisation
- * that never loops or cusps between close knots — the way three.js's
- * CatmullRomCurve3 works it out, open at both ends.
+ * that never loops or cusps between close knots — open at both ends.
  */
 function cubic(x0, x1, x2, x3, dt0, dt1, dt2) {
   let t1 = (x1 - x0) / dt0 - (x2 - x0) / (dt0 + dt1) + (x2 - x1) / dt1;

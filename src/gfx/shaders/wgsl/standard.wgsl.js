@@ -1,4 +1,4 @@
-export default `// MeshStandardMaterial and MeshPhysicalMaterial: three.js r186's physically based model.
+export default `// MeshStandardMaterial and MeshPhysicalMaterial: the physically based model (adapted from three.js; see LICENSE).
 
 #include <frame>
 #include <draw>

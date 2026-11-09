@@ -1,6 +1,6 @@
 export default `// The PCF lookup into the key light's shadow map: five taps on a disc, in a fixed pattern. (Turning the disc a
-// different amount at each pixel, as three.js r186 does, softens the edge with noise that stays put on the screen
-// while the shadow moves under it, so a shadow edge crawls with dots as the camera moves.)
+// different amount at each pixel softens the edge with noise that stays put on the screen while the shadow moves
+// under it, so a shadow edge crawls with dots as the camera moves.)
 
 fn vogelDiskSample(sampleIndex: i32, samplesCount: i32) -> vec2f {
   let goldenAngle = 2.399963229728653;

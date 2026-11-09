@@ -1,11 +1,12 @@
 /**
  * Vectors, matrices, rotations, colour and bounds.
  *
- * The scene code was written against three.js, and the numbers it lands on —
- * where a die comes to rest, how tall a debater stands, which way a face
- * points — are only the same if every formula here is the same one. So the
- * API and the arithmetic follow three.js r186 (MIT, © 2010-2025 three.js
- * authors) operation for operation; the storage is column-major throughout.
+ * The numbers the scene code lands on — where a die comes to rest, how tall
+ * a debater stands, which way a face points — depend on every formula here,
+ * so they are kept exactly as they are; the storage is column-major
+ * throughout.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 export const DEG2RAD = Math.PI / 180;
