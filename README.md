@@ -37,6 +37,16 @@ it in that set's mood. Start a new game by copying it:
 cd examples/starter && npm install && npm run dev
 ```
 
+`examples/human-world` is a test world for the human (`people/human`):
+Gravemoor's town at night (from the rpg-test-world game), you with the
+banana broadsword, and a crowd of the same man in every colour of skin,
+eyes, shirt, jeans and shoes, each armed from the engine's weapons, who
+come at you swinging. `?mobs=20` sets how many.
+
+```sh
+cd examples/human-world && npm install && npm run dev
+```
+
 ## Bowling ball
 
 The engine includes a high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs: classic marble, spiral ribbons, flame ribbons, a two-tone split and a blotchy marble. Its palette and surface design can be changed at runtime without rebuilding the sphere:

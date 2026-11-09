@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>Human World</title>
+    <style>
+      :root { --bone: #e8e0cc; --dim: #a89f88; --blood: #c8463c; --panel: rgba(8, 9, 10, 0.82); --edge: #55503f; }
+      html, body { margin: 0; height: 100%; background: #020203; color: var(--bone); overflow: hidden; font: 15px/1.4 Georgia, serif; }
+      #game { position: fixed; inset: 0; touch-action: none; }
+      #hud { position: fixed; inset: 0; pointer-events: none; text-shadow: 0 1px 3px #000, 0 0 10px #000; }
+      #life { position: absolute; left: 16px; top: 14px; width: 220px; }
+      #life b { display: block; font-weight: normal; letter-spacing: 0.2em; text-transform: uppercase; font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+      #bar { height: 10px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--edge); border-radius: 5px; overflow: hidden; }
+      #bar div { height: 100%; width: 100%; background: linear-gradient(90deg, #7a2a24, var(--blood)); transition: width 0.2s; }
+      #score { position: absolute; left: 16px; top: 52px; font-size: 14px; color: var(--dim); }
+      #score span { color: var(--bone); }
+      #help { position: absolute; right: 16px; top: 12px; font-size: 12px; color: var(--dim); text-align: right; line-height: 1.7; }
+      #help kbd { font: inherit; border: 1px solid var(--edge); border-radius: 4px; padding: 0 5px; background: rgba(0, 0, 0, 0.5); color: var(--bone); }
+      #toast { position: absolute; left: 50%; top: 26%; transform: translateX(-50%); font-size: clamp(22px, 3.4vw, 34px); letter-spacing: 0.12em; opacity: 0; transition: opacity 0.4s; text-transform: uppercase; }
+      #toast.show { opacity: 1; }
+      #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #020203; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); font-size: 14px; }
+      #loading.hidden { display: none; }
+      #attack { position: fixed; right: 22px; bottom: 26px; width: 74px; height: 74px; border-radius: 50%; border: 1px solid var(--edge); background: var(--panel); color: var(--bone); font: inherit; font-size: 13px; letter-spacing: 0.1em; display: none; }
+      @media (pointer: coarse) { #attack { display: block; } }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="hud">
+      <div id="life"><b>You</b><div id="bar"><div></div></div></div>
+      <div id="score">Put down: <span id="downs">0</span> · Times down: <span id="falls">0</span></div>
+      <div id="help">
+        <kbd>WASD</kbd> walk · <kbd>Shift</kbd> run<br />
+        <kbd>Space</kbd> / <kbd>J</kbd> swing<br />
+        <kbd>Q</kbd> <kbd>E</kbd> turn view · wheel zooms<br />
+        <kbd>Y</kbd> yell · <kbd>C</kbd> reset view
+      </div>
+      <div id="toast"></div>
+    </div>
+    <button id="attack">SWING</button>
+    <div id="loading">Waking the town…</div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
