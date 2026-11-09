@@ -129,26 +129,69 @@ export function createWoodChair(GFX, options = {}) {
   /* -------------------------------- back ------------------------------- */
 
   if (hasBack) {
-    // The back bows out behind the sitter by `curve` at its middle, and meets the posts at its ends. A board is cut
-    // into strips along x and each strip's z follows the arc, so it is one curved board.
-    const bow = (x) => -o.curve * (1 - (x / lx) ** 2);
-    // The arch lifts a board's middle by `arch`, less for the boards lower on the back, so that they stay in step.
-    const lift = (x, y) => o.arch * Math.min(1, Math.max(0, (y - height) / backHeight)) * (1 - (x / lx) ** 2);
+    // The back is formed, not bent: a board of one thickness swept along a true circular arc, its ends cut plumb where
+    // they meet the posts, as a bentwood or laminated part would come from the press. `curve` is the arc in plan (the middle
+    // bowed out behind the sitter); `arch` the arc in elevation (the middle lifted), less for the boards lower on the back.
+    const sag = (x, s) => {                                  // the circular arc through (±lx, 0) that rises s at x = 0
+      if (!(s > 1e-9)) return 0;
+      const R = (lx * lx + s * s) / (2 * s);
+      return Math.sqrt(R * R - x * x) - (R - s);
+    };
+    const bow = (x) => -sag(x, o.curve);
+    const archOf = (y) => o.arch * Math.min(1, Math.max(0, (y - height) / backHeight));
+    const lift = (x, y) => sag(x, archOf(y));
     const backBoard = (name, h, t, y) => {
-      const bent = o.curve > 0 || o.arch > 0;
-      const g = new GFX.BoxGeometry(2 * lx, h, t, bent ? 24 : 1, 1, 1);
-      if (bent) {
-        const P = g.attributes.position;
-        for (let i = 0; i < P.count; i++) {
-          const x = P.getX(i);
-          P.setZ(i, P.getZ(i) + bow(x));
-          P.setY(i, P.getY(i) + lift(x, y));
-        }
-        g.computeVertexNormals();
+      if (!(o.curve > 0 || archOf(y) > 0)) return board(name, [2 * lx, h, t], [0, y, -lz], 'x');
+      const N = 48;
+      const rows = [];                                       // the board's frame at each station along the arc
+      const at = (x) => [x, lift(x, y), bow(x)];
+      for (let i = 0; i <= N; i++) {
+        const x = -lx + (2 * lx) * i / N, e = 1e-4;
+        const a = at(x - e), b = at(x + e), c = at(x);
+        let T = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+        const tl = Math.hypot(...T); T = T.map((v) => v / tl);
+        const d = T[1];                                      // B: the board's face-up, the world's up made square to T
+        let B = [-d * T[0], 1 - d * T[1], -d * T[2]];
+        const bl = Math.hypot(...B); B = B.map((v) => v / bl);
+        const Nn = [T[1] * B[2] - T[2] * B[1], T[2] * B[0] - T[0] * B[2], T[0] * B[1] - T[1] * B[0]];
+        rows.push({ c, T, B, N: Nn, end: i === 0 ? -1 : i === N ? 1 : 0 });
       }
+      const pos = [], nor = [], idx = [];
+      const quad = (p0, p1, p2, p3, n) => {                  // four corners round a face, wound to face along n
+        const k = pos.length / 3;
+        for (const q of [p0, p1, p2, p3]) { pos.push(...q); nor.push(...n); }
+        const u = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], v = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
+        const cr = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+        if (cr[0] * n[0] + cr[1] * n[1] + cr[2] * n[2] >= 0) idx.push(k, k + 1, k + 2, k, k + 2, k + 3);
+        else idx.push(k, k + 2, k + 1, k, k + 3, k + 2);
+      };
+      // A corner of the board at a station. At the two ends it is run along the board to the plane x = ±lx, so the
+      // ends are cut plumb, flush with the middle of each post (as a rail is tenoned into it), however steep the arch.
+      const corner = (r, sb, sn) => {
+        const p = r.c.map((v, i) => v + sb * r.B[i] * h / 2 + sn * r.N[i] * t / 2);
+        if (!r.end) return p;
+        const k = (r.end * lx - p[0]) / r.T[0];
+        return p.map((v, i) => v + r.T[i] * k);
+      };
+      for (let i = 0; i < N; i++) {
+        const r0 = rows[i], r1 = rows[i + 1];
+        const mid = { B: r0.B.map((v, k) => v + r1.B[k]), N: r0.N.map((v, k) => v + r1.N[k]) };
+        const norm = (w) => { const l = Math.hypot(...w); return w.map((v) => v / l); };
+        quad(corner(r0, 1, 1), corner(r0, 1, -1), corner(r1, 1, -1), corner(r1, 1, 1), norm(mid.B));            // face up
+        quad(corner(r0, -1, -1), corner(r0, -1, 1), corner(r1, -1, 1), corner(r1, -1, -1), norm(mid.B).map((v) => -v));
+        quad(corner(r0, -1, 1), corner(r0, 1, 1), corner(r1, 1, 1), corner(r1, -1, 1), norm(mid.N));            // front
+        quad(corner(r0, 1, -1), corner(r0, -1, -1), corner(r1, -1, -1), corner(r1, 1, -1), norm(mid.N).map((v) => -v));
+      }
+      const first = rows[0], last = rows[N];                 // the ends, plumb
+      quad(corner(first, -1, 1), corner(first, -1, -1), corner(first, 1, -1), corner(first, 1, 1), [-1, 0, 0]);
+      quad(corner(last, 1, 1), corner(last, 1, -1), corner(last, -1, -1), corner(last, -1, 1), [1, 0, 0]);
+      const g = new GFX.BufferGeometry();
+      g.setAttribute('position', new GFX.BufferAttribute(new Float32Array(pos), 3));
+      g.setAttribute('normal', new GFX.BufferAttribute(new Float32Array(nor), 3));
+      g.setIndex(idx);
       add(name, g, [0, y, -lz], 'x');
     };
-    const topRail = (h) => backBoard('back top rail', h, 0.024, backTop - h / 2);
+    const topRail = (h) => backBoard('back top rail', h, 0.024, backTop - h / 2 - 0.012);   // seated just below the post tops, whose ends it would otherwise overhang
     if (o.back === 'slat') {
       topRail(0.1);
       for (let i = 0; i < 2; i++) backBoard(`back slat ${i + 1}`, 0.07, 0.02, height + 0.1 + i * (backHeight - 0.28));
