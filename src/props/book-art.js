@@ -430,19 +430,27 @@ export function paintCover(g, mode) {
       ctx.fillRect(a === 0 ? 0 : b - 14, 0, 14, H);
       ctx.fillRect(a, 0, b - a, 14); ctx.fillRect(a, H - 14, b - a, 14);
     }
-    // The bookplate (mirrored: this face lies the other way up when it is open).
+    // The bookplate (mirrored: this face lies the other way up when it is open); `g.bookplate: false` leaves the endpaper plain.
+    if (g.bookplate !== false) {
     ctx.save();
     ctx.translate(mid(front), 0); ctx.scale(-1, 1);
     ctx.strokeStyle = '#3a2a1c'; ctx.fillStyle = '#3a2a1c';
     ctx.lineWidth = 0.9; ctx.strokeRect(-62, 150, 124, 134); ctx.lineWidth = 0.4; ctx.strokeRect(-59, 153, 118, 128);
     ctx.textAlign = 'center';
-    ctx.font = `bold 17px ${TITLE_FONT}`; ctx.fillText('EX LIBRIS', 0, 186);
-    ctx.font = `italic 9.5px ${TITLE_FONT}`;
-    ctx.fillText('the property of', 0, 206);
-    ctx.font = `bold 11px ${TITLE_FONT}`; ctx.fillText('THE ONE WHO LISTENS', 0, 226);
-    ctx.font = `italic 8.5px ${TITLE_FONT}`;
-    ctx.fillText('(if found, do not return me.', 0, 252); ctx.fillText('do not read after dark.)', 0, 264);
+    // Each line is set at its size, then narrowed to sit inside the frame (118 wide, a little margin each side).
+    const line = (text, font, y, size) => {
+      ctx.font = `${font} ${size}px ${TITLE_FONT}`;
+      const wide = ctx.measureText(text).width;
+      if (wide > 108) ctx.font = `${font} ${(size * 108 / wide).toFixed(2)}px ${TITLE_FONT}`;
+      ctx.fillText(text, 0, y);
+    };
+    line('EX LIBRIS', 'bold', 186, 17);
+    line('the property of', 'italic', 206, 9.5);
+    line('THE ONE WHO LISTENS', 'bold', 226, 11);
+    line('(if found, do not return me.', 'italic', 252, 8.5);
+    line('do not read after dark.)', 'italic', 264, 8.5);
     ctx.restore();
+    }
   }
   ctx.restore();
   return canvas;
