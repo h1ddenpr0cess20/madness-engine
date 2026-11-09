@@ -480,6 +480,10 @@ function describe(object, geometry, material, side, context, frame) {
       kind: 'standard', physical, output, opaque, hasNormal, instanced,
       map: !!material.map,
       bumpMap: !!material.bumpMap,
+      // Fragments under this alpha are not drawn: hair cards, leaves. 0 for none.
+      alphaTest: material.alphaTest > 0 ? material.alphaTest : 0,
+      // Hair: highlights across the strands, which run along the map's v.
+      strands: material.strands === true && !!material.map,
       vertexColors: material.vertexColors === true,
       flat: material.flatShading === true || !hasNormal,
       doubleSided: side === DoubleSide,

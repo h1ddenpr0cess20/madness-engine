@@ -699,12 +699,12 @@ function humanItems() {
     source: 'people/human',
     kind: 'object',
     async build() {
-      const [{ createHuman, CLIPS: clips, GARMENTS, HAND_POSES }, weapons, metals] = await Promise.all([
+      const [{ createHuman, CLIPS: clips, GARMENTS, HAND_POSES, HAIRSTYLES, BEARDS }, weapons, metals] = await Promise.all([
         import('../../../src/people/human.js'),
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
-      const man = createHuman(GFX);
+      const man = createHuman(GFX, { beard: 'full' });
       let weapon = 'none', attack = 'slash', handL = 'relaxed';
       const style = {};
       const rearm = () => {
@@ -717,6 +717,9 @@ function humanItems() {
         { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm(); } },
         { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove'], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
         { type: 'select', label: 'Left hand', options: Object.keys(HAND_POSES), get: () => handL, set: (v) => { handL = v; man.hands(v, { hand: 'L' }); } },
+        { type: 'select', label: 'Hair', options: ['none', ...Object.keys(HAIRSTYLES)], get: () => man.hair.hair ?? 'none', set: (v) => man.setHair({ hair: v === 'none' ? null : v }) },
+        { type: 'select', label: 'Beard', options: ['none', ...Object.keys(BEARDS)], get: () => man.hair.beard ?? 'none', set: (v) => man.setHair({ beard: v === 'none' ? null : v }) },
+        { type: 'color', label: 'Hair colour', get: () => man.look.hair, set: (c) => man.setHairColor(c) },
         { type: 'color', label: 'Skin', get: () => man.look.skin, set: (c) => man.setSkin(c) },
         { type: 'color', label: 'Eyes', get: () => man.look.iris, set: (c) => man.setEyeColor(c) },
         { type: 'color', label: 'T-shirt', get: () => man.look.shirt, set: (c) => man.setShirtColor(c) },

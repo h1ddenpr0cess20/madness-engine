@@ -50,6 +50,7 @@ const DENIMS = ['#ffffff', '#c8d4e8', '#9aa4b8', '#5a5a60', '#2a2a30', '#c8b48a'
 const SHOES = ['#2c2c30', '#e8e4dc', '#b8342c', '#2c5aa8', '#6a4a2a', '#3f7a3a', '#d8a02a'];
 const SOLES = ['#efece6', '#2a2a2a', '#d8c8a8', '#efece6'];
 const BRIEFS = ['#2a2b30', '#2c5aa8', '#b8342c', '#e8e4da', '#3f7a3a'];
+const HAIRS = ['#1c1410', '#2e2018', '#3b2a1f', '#5a3c26', '#7a5434', '#a8783e', '#c8a060', '#8a3a1c', '#6a6a6a', '#c8c4bc'];
 
 /** Every weapon there is but the player's own, and the swing each is used with. */
 const ARMOURY = Object.keys(WEAPONS)
@@ -89,14 +90,15 @@ stage.key.intensity = 1.7;
 // ———————————————————————————————————————————————— people
 
 /** One person in the world: the human, where he is, and what he is doing. */
-function person({ look, weapon, swing, detail }) {
-  const man = createHuman(GFX, { detail, look });
+function person({ look, weapon, swing, detail, beard = null }) {
+  const man = createHuman(GFX, { detail, look, beard });
   man.group.scale.setScalar(SCALE);
   man.hold(weapon);
   man.setStyle({ attack: swing });
   const group = new GFX.Group();
   group.add(man.group);
-  man.group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  // (Not the hair's cards: they would cast their whole quads.)
+  man.group.traverse((o) => { if (o.isMesh && !/hair|beard/.test(o.name)) { o.castShadow = true; o.receiveShadow = true; } });
   stage.scene.add(group);
   return {
     man, group, swing,
@@ -156,7 +158,7 @@ function clearSpot(ax = -99, az = -99, away = 10) {
 
 // ———————————————————————————————————————————————— you
 
-const player = person({ look: { skin: '#b98a70', iris: '#5a4632' }, weapon: WEAPONS.createBananaBroadsword(GFX), swing: 'slash', detail: 1 });
+const player = person({ look: { skin: '#b98a70', iris: '#5a4632', hair: '#3b2a1f' }, beard: 'full', weapon: WEAPONS.createBananaBroadsword(GFX), swing: 'slash', detail: 1 });
 player.place(START[0], START[1] - 1.5, Math.PI);
 player.life = PLAYER_LIFE;
 
@@ -167,8 +169,8 @@ const mobDetail = Number(params.get('detail') ?? 1);
 const mobs = [];
 for (let i = 0; i < MOBS; i++) {
   const arm = ARMOURY[i % ARMOURY.length];
-  const look = { skin: pick(SKINS), iris: pick(IRISES), shirt: pick(SHIRTS), denim: pick(DENIMS), shoe: pick(SHOES), sole: pick(SOLES), briefs: pick(BRIEFS) };
-  const m = person({ look, weapon: WEAPONS[arm.factory](GFX), swing: arm.swing, detail: mobDetail });
+  const look = { skin: pick(SKINS), iris: pick(IRISES), shirt: pick(SHIRTS), denim: pick(DENIMS), shoe: pick(SHOES), sole: pick(SOLES), briefs: pick(BRIEFS), hair: pick(HAIRS) };
+  const m = person({ look, weapon: WEAPONS[arm.factory](GFX), swing: arm.swing, detail: mobDetail, beard: rand() < 0.5 ? 'full' : null });
   const [x, z] = clearSpot(player.x, player.z, 12);
   m.place(x, z, rand() * Math.PI * 2);
   m.life = MOB_LIFE;

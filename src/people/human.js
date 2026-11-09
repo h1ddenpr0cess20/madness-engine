@@ -8,6 +8,7 @@ import { BONES as BAKED_BONES } from './human/data/base.js';
 import { DEFAULT_OUTFIT, GARMENTS } from './human/clothes.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
+import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
 
 /**
  * A human, at real size (1.76 m, one world unit a metre, as the weapons
@@ -35,7 +36,7 @@ import { CLIPS, moveHuman } from './human/motion.js';
  * `hands` set the rest, and `pose` takes them on every frame.
  */
 
-export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT };
+export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 
 const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'gums', 'tongue', 'lash'];
@@ -98,6 +99,14 @@ function bodyData(detail) {
   return builds.get(key);
 }
 
+/** A haircut's or a beard's mesh data at `detail`, made once and shared. */
+function hairData(kind, name, detail) {
+  const key = `${kind}:${name}@${levelFor(detail)}`;
+  const build = { hair: buildHair, beard: buildBeard, brows: buildBrows }[kind];
+  if (!builds.has(key)) builds.set(key, assemble([build(name, detail)], NAMES, ['hair']));
+  return builds.get(key);
+}
+
 /** A garment's mesh data at `detail`, made once and shared. */
 function garmentData(name, garment, detail) {
   const key = garment === GARMENTS[name] ? `${name}@${detail}` : null;
@@ -108,9 +117,24 @@ function garmentData(name, garment, detail) {
 }
 
 const DEFAULT_LOOK = Object.freeze({
-  skin: '#b98a70', iris: '#5a4632',
+  skin: '#b98a70', iris: '#5a4632', hair: '#3b2a1f',
   shirt: '#8f9399', denim: '#ffffff', shoe: '#2c2c30', sole: '#efece6', briefs: '#2a2b30',
 });
+
+/** The hair's sheen: its own colour, a third of the way to white. */
+function sheenOf(GFX, colour) {
+  const c = new GFX.Color(colour);
+  c.r += (1 - c.r) * 0.35; c.g += (1 - c.g) * 0.35; c.b += (1 - c.b) * 0.35;
+  return c;
+}
+
+/** What the hair's two materials share. */
+function hairLook(GFX, look, tex, more) {
+  return {
+    color: look.hair, map: tex ? hairTexture(GFX) : null, side: GFX.DoubleSide, roughness: 0.6, strands: true,
+    specularIntensity: 0.15, sheen: 0.15, sheenColor: sheenOf(GFX, look.hair), sheenRoughness: 0.5, ...more,
+  };
+}
 
 /** The materials, by name, for a look. Textures where there is a document to paint them on. */
 function makeMaterials(GFX, look, tex) {
@@ -125,6 +149,11 @@ function makeMaterials(GFX, look, tex) {
     teeth: M('teeth', { color: '#e8dfcb', roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.15, sheen: 0.25, sheenColor: new GFX.Color('#fff8ea') }),
     gums: M('gums', { color: '#c8706c', roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.2 }),
     tongue: M('tongue', { color: '#94504f', roughness: 0.45, clearcoat: 0.25 }),
+    // Hair: the strand texture's gaps cut out; a soft sheen along it, as light runs down a strand.
+    // Hair, in two passes: its strands solid where the texture is (writing depth), then their soft edges
+    // blended over. Its highlights run across the strands (`strands`), the way hair's do.
+    hair: M('hair', hairLook(GFX, look, tex, { alphaTest: 0.5 })),
+    hairEdge: M('hair edges', hairLook(GFX, look, tex, { alphaTest: 0.04, transparent: true, depthWrite: false })),
     lash: M('lashes', { color: '#1a1412', roughness: 0.7, side: GFX.DoubleSide }),
     briefs: M('briefs', { color: look.briefs, roughness: 0.8, sheen: 0.5, sheenColor: new GFX.Color('#9aa0aa'), sheenRoughness: 0.5 }),
     shirt: M('t-shirt', { color: look.shirt, map: tex?.shirt.map ?? null, bumpMap: tex?.shirt.bump ?? null, bumpScale: 0.0003, roughness: 0.9, sheen: 0.7, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.55, side: GFX.DoubleSide }),
@@ -365,15 +394,42 @@ function poseFace(k, f, time, said = null) {
 
 export function createHuman(GFX, options = {}) {
   const { detail = 1, outfit = DEFAULT_OUTFIT, look: lookIn = {} } = options;
+  let grooming = { hair: options.hair === undefined ? 'sidePart' : options.hair, beard: options.beard ?? null, brows: options.brows === undefined ? 'natural' : options.brows };
   const look = { ...DEFAULT_LOOK, ...lookIn };
   const group = new GFX.Group();
   group.name = 'human';
   const { data: base } = bodyData(detail);
-  let tex = humanTextures(GFX, { skin: look.skin, iris: look.iris, size: levelFor(detail) ? 2048 : 1024 });
+  const paintFor = () => ({ skin: look.skin, iris: look.iris, hair: look.hair, style: grooming.hair, beard: grooming.beard, size: levelFor(detail) ? 2048 : 1024 });
+  let tex = humanTextures(GFX, paintFor());
   let mats = makeMaterials(GFX, look, tex);
   const skeleton = new Skeleton(bones());
   const body = skinnedMesh(GFX, base, BODY_MATERIALS.map((n) => mats[n]), 'human body');
   group.add(body.mesh);
+
+  // His hair, beard and brows: the hair rides the head bone as a whole; the beard and brows are skinned,
+  // so they move with the jaw, the lips and the brows.
+  const groomed = { hair: null, beard: null, brows: null };
+  function groom(next) {
+    for (const kind of ['hair', 'beard', 'brows']) {
+      const name = next[kind] ?? null;
+      if (groomed[kind]?.name === name) continue;
+      if (groomed[kind]) group.remove(groomed[kind].mesh.mesh, groomed[kind].edges);
+      groomed[kind] = null;
+      if (!name) continue;
+      const m = skinnedMesh(GFX, hairData(kind, name, detail), [mats.hair], `human ${kind}`);
+      // Its soft edges: the same cards, blended over, drawn after everything solid.
+      const edges = new GFX.Mesh(m.geometry, [mats.hairEdge]);
+      edges.name = `human ${kind} edges`;
+      // The cards cast no shadow of their own: they would cast their whole quads.
+      m.mesh.castShadow = edges.castShadow = false;
+      edges.receiveShadow = true;
+      if (kind === 'hair') m.mesh.matrixAutoUpdate = edges.matrixAutoUpdate = false;
+      group.add(m.mesh, edges);
+      groomed[kind] = { name, mesh: m, edges };
+    }
+    grooming = { hair: groomed.hair?.name ?? null, beard: groomed.beard?.name ?? null, brows: groomed.brows?.name ?? null };
+  }
+  groom(grooming);
 
   // What he has on, by name: { garment, mesh, layer }.
   const worn = new Map();
@@ -544,6 +600,20 @@ export function createHuman(GFX, options = {}) {
       m.position.needsUpdate = true;
       m.normal.needsUpdate = true;
     }
+    for (const kind of ['beard', 'brows']) {
+      if (!groomed[kind]) continue;
+      const m = groomed[kind].mesh;
+      skinDual(m.data, skeleton, m.position.array, m.normal.array);
+      m.position.needsUpdate = true;
+      m.normal.needsUpdate = true;
+    }
+    if (groomed.hair) {
+      const o = skeleton.index.get('head') * 12, B = skeleton.matrices;
+      for (const mesh of [groomed.hair.mesh.mesh, groomed.hair.edges]) {
+        mesh.matrix.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
+        mesh.matrixWorldNeedsUpdate = true;
+      }
+    }
     placeHeld();
     return api;
   }
@@ -593,13 +663,28 @@ export function createHuman(GFX, options = {}) {
 
   function setLook(change) {
     Object.assign(look, change);
-    if (change.skin || change.iris) {
-      tex = humanTextures(GFX, { skin: look.skin, iris: look.iris, size: levelFor(detail) ? 2048 : 1024 });
+    if (change.skin || change.iris || change.hair) {
+      tex = humanTextures(GFX, paintFor());
       const next = makeMaterials(GFX, look, tex);
       for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
     }
     for (const n of ['shirt', 'shoe', 'sole', 'briefs']) if (change[n]) mats[n].color.set(change[n]);
     if (change.denim) mats.denim.color.set(change.denim);
+    if (change.hair) {
+      for (const m of [mats.hair, mats.hairEdge]) {
+        m.color.set(change.hair);
+        m.sheenColor.copy(sheenOf(GFX, change.hair));
+      }
+    }
+    return api;
+  }
+
+  /** Gives him the haircut `hair` (one of `HAIRSTYLES`, or null for none), the beard `beard` (one of `BEARDS`, or null) and the brows `brows` (one of `BROWS`); any left out stays. */
+  function setHair(next = {}) {
+    groom({ ...grooming, ...next });
+    tex = humanTextures(GFX, paintFor());
+    if (tex) Object.assign(mats.skin, { map: tex.skin.map }), mats.skin.needsUpdate = true;
+    if (last) pose(last);
     return api;
   }
 
@@ -636,6 +721,9 @@ export function createHuman(GFX, options = {}) {
     held: (hand = 'R') => held[hand === 'L' || hand === 'left' ? 'L' : 'R']?.thing ?? null,
     setLook,
     get look() { return { ...look }; },
+    setHair,
+    get hair() { return { ...grooming }; },
+    setHairColor: (c) => setLook({ hair: c }),
     setShirtColor: (c) => setLook({ shirt: c }),
     setJeansColor: (c) => setLook({ denim: c }),
     setShoeColor: (c) => setLook({ shoe: c }),

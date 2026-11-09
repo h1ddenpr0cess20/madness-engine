@@ -81,9 +81,11 @@ function standardDefines(key) {
     OPAQUE: key.opaque,
     HAS_NORMAL: key.hasNormal,
     USE_INSTANCING: key.instanced,
+    USE_STRANDS: key.strands,
   }) + `#define NUM_DIR_LIGHTS ${key.numDir}\n#define NUM_POINT_LIGHTS ${key.numPoint}\n`
     + `#define NUM_HEMI_LIGHTS ${key.numHemi}\n#define NUM_DIR_LIGHT_SHADOWS ${key.numDirShadows}\n`
-    + (key.envMap ? cubeUVDefines(key.env) : '');
+    + (key.envMap ? cubeUVDefines(key.env) : '')
+    + (key.alphaTest > 0 ? `#define USE_ALPHATEST\n#define ALPHA_TEST ${key.alphaTest.toFixed(4)}\n` : '');
 }
 
 export function programSources(key, material) {

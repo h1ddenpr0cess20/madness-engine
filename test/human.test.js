@@ -167,3 +167,24 @@ test('talking moves the mouth through its shapes, and a yell opens it wide', asy
   assert.ok(mouth() < shut - 0.02, 'the chin drops when he yells');
   man.pose({ clip: 'idle', t: 0, time: 0 });
 });
+
+test('hair and a beard: cards where they grow, the beard moving with the jaw', () => {
+  const bearded = createHuman(GFX, { detail: 0.5, beard: 'full' });
+  assert.deepEqual(bearded.hair, { hair: 'sidePart', beard: 'full', brows: 'natural' });
+  const mesh = (name) => bearded.group.children.find((c) => c.name === `human ${name}`);
+  const beard = mesh('beard'), hair = mesh('hair');
+  assert.ok(hair.geometry.attributes.position.count > 1000 && beard.geometry.attributes.position.count > 1000);
+  // The hair is on the scalp, above the brows; the beard on the jaw, below the nose.
+  const hb = boundsOf(hair.geometry.attributes.position), bb = boundsOf(beard.geometry.attributes.position);
+  assert.ok(hb.min[1] > 1.58 && hb.max[1] < 1.85, 'the hair is on the head');
+  assert.ok(bb.max[1] < 1.71 && bb.min[1] > 1.5, 'the beard is on the face');
+  const at = beard.geometry.attributes.position.array.slice();
+  bearded.face({ jaw: 1, auto: false });
+  const moved = beard.geometry.attributes.position.array;
+  let most = 0;
+  for (let i = 1; i < at.length; i += 3) most = Math.max(most, at[i] - moved[i]);
+  assert.ok(most > 0.01, 'the beard on the chin drops with the jaw');
+  bearded.setHair({ hair: null, beard: null });
+  assert.equal(mesh('hair'), undefined);
+  assert.equal(mesh('beard'), undefined);
+});

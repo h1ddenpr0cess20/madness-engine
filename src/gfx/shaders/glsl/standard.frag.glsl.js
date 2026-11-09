@@ -139,6 +139,21 @@ uniform vec3 ambientLightColor;
 
 out highp vec4 pc_fragColor;
 
+#ifdef USE_STRANDS
+  // Hair's two highlights (Kajiya and Kay's model, as Scheuermann shifts it): light glancing off each
+  // strand's surface, white and tight, toward the root; and light that went into the strand and back out,
+  // coloured by it and broader, toward the tip. Both run across the strands, not along them, as hair's do.
+  vec3 strandSpecular( vec3 L, vec3 lightColor, vec3 N, vec3 V, vec3 T, float jitter, vec3 tint ) {
+    vec3 H = normalize( L + V );
+    vec3 T1 = normalize( T + N * ( 0.1 + jitter ) ), T2 = normalize( T - N * ( 0.12 - jitter ) );
+    float d1 = dot( T1, H ), d2 = dot( T2, H );
+    float s1 = pow( sqrt( max( 0.0, 1.0 - d1 * d1 ) ), 260.0 );
+    float s2 = pow( sqrt( max( 0.0, 1.0 - d2 * d2 ) ), 90.0 );
+    float lit = smoothstep( -0.15, 0.35, dot( N, L ) );
+    return lightColor * lit * ( 0.035 * s1 + 0.18 * s2 * tint );
+  }
+#endif
+
 void main() {
   vec4 diffuseColor = vec4( diffuse, opacity );
   ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
@@ -149,6 +164,17 @@ void main() {
   #endif
   #if defined( USE_COLOR ) || defined( USE_INSTANCING )
     diffuseColor *= vColor;
+  #endif
+  #ifdef USE_ALPHATEST
+    #ifdef USE_MAP
+      // A mip averages thin texels away; scaled back up by how far down the chain this lookup is, a
+      // strand keeps the coverage it had up close.
+      vec2 texel = vMapUv * vec2( textureSize( map, 0 ) );
+      vec2 tdx = dFdx( texel ), tdy = dFdy( texel );
+      float mipLevel = max( 0.0, 0.5 * log2( max( dot( tdx, tdx ), dot( tdy, tdy ) ) ) );
+      diffuseColor.a = min( 1.0, diffuseColor.a * ( 1.0 + mipLevel * 0.25 ) );
+    #endif
+    if ( diffuseColor.a < ALPHA_TEST ) discard;
   #endif
   float roughnessFactor = roughness;
   float metalnessFactor = metalness;
@@ -170,6 +196,17 @@ void main() {
   #endif
   #ifdef USE_CLEARCOAT
     vec3 clearcoatNormal = nonPerturbedNormal;
+  #endif
+  #ifdef USE_STRANDS
+    // Which way the strand runs here (the texture's v), from how the place and the UV change across the pixel.
+    vec3 sq0 = dFdx( - vViewPosition ), sq1 = dFdy( - vViewPosition );
+    vec2 sst0 = dFdx( vMapUv ), sst1 = dFdy( vMapUv );
+    vec3 strand = cross( sq1, normal ) * sst0.y + cross( normal, sq0 ) * sst1.y;
+    strand *= inversesqrt( max( dot( strand, strand ), 1e-20 ) );
+    // Each strand's highlight a little off its neighbours', by its own shade in the texture.
+    float strandJitter = ( texture( map, vMapUv ).g - 0.9 ) * 0.5;
+    // The second highlight has been through the strand: it is the hair's own colour, as bright as the hair is.
+    vec3 strandTint = diffuseColor.rgb;
   #endif
 
   PhysicalMaterial material;
@@ -252,6 +289,9 @@ void main() {
       vec3 lightColor = pointLightColor[ i ];
       lightColor *= getDistanceAttenuation( lightDistance, pointLightDistance[ i ], pointLightDecay[ i ] );
       RE_Direct_Physical( lightDirection, lightColor, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
+      #ifdef USE_STRANDS
+        reflectedLight.directSpecular += strandSpecular( lightDirection, lightColor, geometryNormal, geometryViewDir, strand, strandJitter, strandTint );
+      #endif
     }
   #endif
 
@@ -262,6 +302,9 @@ void main() {
         if ( i == 0 ) lightColor *= receiveShadow ? directionalShadow() : 1.0;
       #endif
       RE_Direct_Physical( directionalLightDirection[ i ], lightColor, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
+      #ifdef USE_STRANDS
+        reflectedLight.directSpecular += strandSpecular( directionalLightDirection[ i ], lightColor, geometryNormal, geometryViewDir, strand, strandJitter, strandTint );
+      #endif
     }
   #endif
 

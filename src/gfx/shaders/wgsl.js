@@ -87,6 +87,9 @@ function standardDefines(key) {
     NUM_POINT_LIGHTS: key.numPoint,
     NUM_HEMI_LIGHTS: key.numHemi,
     NUM_DIR_LIGHT_SHADOWS: key.numDirShadows,
+    USE_ALPHATEST: key.alphaTest > 0,
+    USE_STRANDS: key.strands,
+    ALPHA_TEST: key.alphaTest > 0 ? key.alphaTest.toFixed(4) : null,
     ...(key.envMap ? cubeUVDefines(key.env) : {}),
   };
 }

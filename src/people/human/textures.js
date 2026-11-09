@@ -2,6 +2,7 @@ import { bodyLevel } from './basemesh.js';
 import { zoneOf } from './body.js';
 import { clamp, cross, fbm, noise3, smooth } from './kit.js';
 import { armDistance, EYE, FACE, FINGERS, JOINTS } from './skeleton.js';
+import { hairPaint } from './hair.js';
 import { HEM, jeansHeight, legAngle, neckline, SHIRT_Z, SLEEVE_RANGE } from './clothes.js';
 
 /**
@@ -166,9 +167,12 @@ function landmarks() {
  * The skin's colour at a place `p` (rest, metres) with normal `n` in `zone`:
  * the tone, mottled; flushed at the cheeks, nose, ears, knuckles, elbows
  * and knees; the lips, the brows' hair, the lash line, a shaved man's
- * shadow on the jaw and scalp, paler palms and soles, the nails.
+ * shadow on the jaw and scalp (or, where his hair or beard grows, the
+ * hair's own colour, so no skin shows between its cards), paler palms and
+ * soles, the nails.
  */
-function skinColour(tone, L) {
+function skinColour(tone, L, groom = {}) {
+  const grown = groom.hairColour ? hex(groom.hairColour) : null;
   const base = tone;
   const red = [tone[0] * 1.0, tone[1] * 0.8, tone[2] * 0.8];
   const lipC = [tone[0] * 0.9, tone[1] * 0.72, tone[2] * 0.72];
@@ -198,6 +202,14 @@ function skinColour(tone, L) {
       const scalp = smooth(E[1] + 0.06, E[1] + 0.085, y + (0.06 - Math.min(0.06, z)) * 0.35) * smooth(E[1] - 0.04, E[1] - 0.01, y) * (1 - front * smooth(E[1] + 0.09, E[1] + 0.06, y));
       const dots = 0.6 + 0.4 * noise3(x * 900, y * 900, z * 900);
       c = mixc(c, shadow, clamp(beard * 0.55 + scalp * 0.22) * dots);
+      // Where hair grows, its colour, streaked as the hair is.
+      if (grown) {
+        const { cover, shade } = hairPaint(groom.style, groom.beard, p, n);
+        // Stippled, as short hair is, and thinning toward the hairline at the neck, as a taper does.
+        const stipple = 0.8 + 0.2 * noise3(x * 4000, y * 4000, z * 4000);
+        const taper = groom.style ? 0.65 + 0.35 * smooth(1.615, 1.69, y) : 1;
+        if (cover > 0) c = mixc(c, grown.map((v) => v * shade * (0.9 + 0.3 * noise3(x * 1800, y * 240, z * 1800))), clamp(cover * taper * stipple));
+      }
       // The lips.
       const lc = FACE.lipCorner[0] + 0.001;
       const t = clamp(s / lc);
@@ -220,7 +232,8 @@ function skinColour(tone, L) {
         const ends = smooth(-0.05, 0.08, bx) * smooth(1.05, 0.85, bx);
         const hairs = 0.5 + 0.5 * noise3(s * 700 + y * 500, y * 250, z * 300);
         const b = smooth(1, 0.2, Math.abs(across)) * ends * (0.4 + 0.6 * hairs) * smooth(E[2] - 0.03, E[2] - 0.01, z);
-        c = mixc(c, hair, clamp(b) * 0.55);
+        // (Under the brows' own hairs, when he has them: in his hair's colour, softer.)
+        c = mixc(c, grown ? grown.map((v) => v * 0.7) : hair, clamp(b) * (grown ? 0.4 : 0.55));
       }
       // The lash line round each eye: the lids' rims, darkest along the upper.
       const e = [E[0] * (x >= 0 ? 1 : -1), E[1], E[2]];
@@ -272,8 +285,8 @@ function skinColour(tone, L) {
 }
 
 /** The skin's map, on the base mesh's own UVs, `size` square: RGBA bytes. */
-export function skinPixels(size, tone) {
-  return bodyPixels(size, skinColour(hex(tone), landmarks()), [180, 130, 110]);
+export function skinPixels(size, tone, groom = {}) {
+  return bodyPixels(size, skinColour(hex(tone), landmarks(), groom), [180, 130, 110]);
 }
 
 /** Paints the body's UV layout texel by texel: `colour(p, n, zone)` → [r, g, b] for each texel's place on the body. */
@@ -501,11 +514,12 @@ const cache = new WeakMap();
  * skin map, made once and kept. Returns null where there is no document to
  * paint on.
  */
-export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048 } = {}) {
+export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColour = null, style = null, beard = null } = {}) {
   if (typeof document === 'undefined') return null;
   let byGFX = cache.get(GFX);
   if (!byGFX) cache.set(GFX, (byGFX = new Map()));
-  const key = `${skin}|${iris}|${size}`;
+  const groom = style || beard ? { hairColour, style, beard } : {};
+  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}`;
   if (byGFX.has(key)) return byGFX.get(key);
   const garments = byGFX.get('garments') ?? (() => {
     const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps();
@@ -521,7 +535,7 @@ export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 
   })();
   const made = {
     ...garments,
-    skin: { map: texture(GFX, canvasOf(skinPixels(size, skin), size)), bump: garments.pores },
+    skin: { map: texture(GFX, canvasOf(skinPixels(size, skin, groom), size)), bump: garments.pores },
     eye: texture(GFX, eyeMap(iris)),
   };
   byGFX.set(key, made);
