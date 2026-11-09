@@ -700,14 +700,15 @@ function staffItem() {
       topper: ['orb', 'egg', 'none'],
       species: ['walnut', ...Object.keys(WOOD_SPECIES).filter((k) => k !== 'walnut')],
       finish: ['lacquered', ...WOOD_FINISHES.filter((k) => k !== 'lacquered')],
+      wrap: ['on', 'off'],
       vine: ['roots', 'none'],
     },
-    async build({ topper = 'orb', species = 'walnut', finish = 'lacquered', vine = 'roots', colours = {} } = {}) {
+    async build({ topper = 'orb', species = 'walnut', finish = 'lacquered', vine = 'roots', wrap = 'on', colours = {} } = {}) {
       const [{ createStaff }, metals] = await Promise.all([
         import('../../../src/weapons/staff.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
-      const made = createStaff(GFX, { topper, species, finish, vine: vine === 'roots',
+      const made = createStaff(GFX, { topper, species, finish, vine: vine === 'roots', wrap: wrap === 'on',
         gripColor: colours.gripColor ?? '#3a2418', threadColor: colours.threadColor ?? '#e2b857' });
       return {
         object: made.group,

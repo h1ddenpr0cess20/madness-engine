@@ -137,6 +137,7 @@ export function createStaff(GFX, {
   finish = 'lacquered',
   gripColor = '#3a2418',
   threadColor = '#e2b857',
+  wrap = true,
   topper = 'orb',
   vine = true,
   tendrils = 18,
@@ -153,6 +154,7 @@ export function createStaff(GFX, {
     if (!/^#[0-9a-f]{6}$/i.test(c)) throw new TypeError(`${name} must be a six-digit hex colour`);
   }
 
+  let wrapOn = Boolean(wrap);
   const seg = (n) => Math.max(6, Math.round(n * detail));
   const group = new GFX.Group();
   group.name = 'wizard staff display';
@@ -198,6 +200,9 @@ export function createStaff(GFX, {
   }
   const gripThread = add(group, sweepTube(GFX, helix, 0.0016, 6), thread, 'grip thread');
   const gripThread2 = add(group, sweepTube(GFX, helix.map((p) => new GFX.Vector3(-p.x, p.y, -p.z)), 0.0016, 6), thread, 'grip thread crossing');
+
+  const showWrap = () => { for (const m of [grip, gripThread, gripThread2]) m.visible = wrapOn; };
+  showWrap();
 
   // Two roots entwined up the shaft between the grip and the head, as if the staff were still growing.
   const vineGroup = new GFX.Group();
@@ -403,6 +408,7 @@ export function createStaff(GFX, {
     get finish() { return woodFinish; },
     get gripColor() { return `#${leather.color.getHexString()}`; },
     get threadColor() { return `#${thread.color.getHexString()}`; },
+    get wrap() { return wrapOn; },
     get vine() { return vine; },
     get tendrils() { return tendrils; },
     get seed() { return seed; },
@@ -437,6 +443,11 @@ export function createStaff(GFX, {
     setThreadColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('threadColor must be a six-digit hex colour');
       thread.color.set(color);
+      return api;
+    },
+    setWrap(on = true) {
+      wrapOn = Boolean(on);
+      showWrap();
       return api;
     },
     setTopper(kind) {

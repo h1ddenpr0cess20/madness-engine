@@ -86,3 +86,12 @@ test('every decorative part is wood: only the grip leather and thread are not', 
   const cup = staff.head.children.find((c) => c.name === 'topper cup');
   assert.equal(cup.material, staff.shaft.material, 'the cup follows the wood chosen');
 });
+
+test('the grip wrap is optional', () => {
+  const bare = createStaff(GFX, { wrap: false });
+  assert.equal(bare.wrap, false);
+  assert.ok([bare.grip, bare.gripThread, bare.gripThread2].every((m) => !m.visible));
+  bare.setWrap(true);
+  assert.ok([bare.grip, bare.gripThread, bare.gripThread2].every((m) => m.visible));
+  assert.equal(createStaff(GFX).wrap, true);
+});

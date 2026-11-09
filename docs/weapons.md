@@ -203,7 +203,7 @@ tapering rod with a few knots, a leather grip with crossed thread, and two
 roots entwined up toward the head. The head is a cradle of twisting, knotted
 root tendrils that grows out of the shaft, bound by winding bands, and rises
 in a ragged lip that clasps the topper. All of it is the same wood as the
-shaft (only the grip's leather and thread are not), and `setWood()` changes it
+shaft (only the optional grip wrap of leather and thread is not), and `setWood()` changes it
 all at once. The `seed` shapes the gnarls: the same seed gives the same
 staff.
 
@@ -216,7 +216,8 @@ cradle. The orb and egg are each built the first time they are shown.
 |---|---|---|
 | `species` | any `WOOD_SPECIES` (walnut, oak, mahogany, maple, cherry, ash, pine, teak) | `walnut` |
 | `finish` | `raw`, `sanded`, `lacquered` | `lacquered` |
-| `gripColor`, `threadColor` | six-digit hex | `#3a2418`, `#e2b857` |
+| `wrap` | `true` or `false`: the leather and thread wrap on the grip (`setWrap()` toggles it) | `true` |
+| `gripColor`, `threadColor` | six-digit hex, for the wrap | `#3a2418`, `#e2b857` |
 | `topper` | `orb`, `egg`, `none` | `orb` |
 | `vine` | `true` or `false`: the roots entwined up the shaft (fixed at creation) | `true` |
 | `tendrils` | whole number from 8 to 32: how many roots make the cradle (fixed at creation) | `18` |
