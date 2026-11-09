@@ -685,13 +685,8 @@ function weaponItems() {
   }));
 }
 
-const HUMAN_WEAPONS = [
-  ['none', 'Nothing'],
-  ['createKrystalSword', 'Krystal Sword'], ['createKrystalDagger', 'Krystal Dagger'],
-  ['createMadnessSword', 'Madness Sword'], ['createMadnessGreatsword', 'Madness Greatsword'], ['createMadnessMorningstar', 'Madness Morningstar'],
-  ['createMagicEggSword', 'Magic Egg Sword'], ['createBananaBroadsword', 'Banana Broadsword'], ['createGraniteSword', 'Granite Sword'],
-  ['createRegularSword', 'Regular Sword'], ['createRegularDagger', 'Regular Dagger'], ['createMarcsSword', "Marc's Sword"],
-];
+/** Everything on the weapons shelf, for the human to hold. */
+const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.factory, w.name])];
 
 /** The real-size, dressable human: his wardrobe, his look, his face and hands, and a weapon from the shelf to hold. */
 function humanItems() {
