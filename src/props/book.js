@@ -468,6 +468,7 @@ export function createBook(GFX, options = {}) {
       P[v * 3] = cx[u] - sn[u] * n; P[v * 3 + 1] = cy[u] + cs[u] * n; P[v * 3 + 2] = Z[v] + zShift;
     }
     coverGeometry.attributes.position.needsUpdate = true;
+    coverGeometry.boundingSphere = null; // the cover has moved: a pick must measure it where it is now
     vertexNormals(coverGeometry);
   };
 
@@ -527,6 +528,7 @@ export function createBook(GFX, options = {}) {
     }
     L.geometry.attributes.position.needsUpdate = true;
     L.geometry.attributes.normal.needsUpdate = true;
+    L.geometry.boundingSphere = null; // the page has moved: a pick must measure it where it is now
     L.dirty = false;
   };
 
