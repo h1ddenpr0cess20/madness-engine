@@ -42,7 +42,7 @@ function createMetalBallPommel(GFX, radius, material) {
  * Keep its transmissive glass and ray-marched vision mesh, but omit the brass
  * stand, lip and collar: the sword's hollow ferrule takes their place.
  */
-function createKrystalOrbPommel(GFX, radius) {
+export function createKrystalOrbPommel(GFX, radius) {
   const { ball, glass, vision, visionMaterial } = createBall(GFX);
   ball.remove(glass, vision);
 
@@ -124,7 +124,7 @@ function createMetalEggPommel(GFX, radius, metal) {
  * detached from the hero rig and fitted into the same 54 mm pommel envelope.
  * The broad end faces the grip, matching the stationary Metal Egg orientation.
  */
-function createMagicEggPommel(GFX, radius) {
+export function createMagicEggPommel(GFX, radius) {
   const asset = createGlassEgg({ GFX, mist: true });
   const glass = asset.glass;
   const mist = asset.mist;

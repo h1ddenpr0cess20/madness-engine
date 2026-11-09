@@ -17,6 +17,7 @@ import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
 import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
+import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
 import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
 import { dress, extraItems } from './extras.js';
 
@@ -685,6 +686,36 @@ function weaponItems() {
   }));
 }
 
+/** The wizard staff: wood, metal and topper are chosen from the viewer's option menus. */
+function staffItem() {
+  return {
+    id: 'weapons/wizard-staff',
+    category: 'Weapons',
+    group: 'Staff Set',
+    name: 'Wizard Staff',
+    source: 'weapons/staff',
+    kind: 'object',
+    options: {
+      topper: ['orb', 'egg', 'none'],
+      species: ['walnut', ...Object.keys(WOOD_SPECIES).filter((k) => k !== 'walnut')],
+      finish: ['lacquered', ...WOOD_FINISHES.filter((k) => k !== 'lacquered')],
+      vine: ['roots', 'none'],
+    },
+    async build({ topper = 'orb', species = 'walnut', finish = 'lacquered', vine = 'roots' } = {}) {
+      const [{ createStaff }, metals] = await Promise.all([
+        import('../../../src/weapons/staff.js'),
+        import('../../../src/props/metalglobe.js'),
+      ]);
+      const made = createStaff(GFX, { topper, species, finish, vine: vine === 'roots' });
+      return {
+        object: made.group,
+        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+        info: { Source: 'weapons/staff#createStaff', ...made.info, ...countOf(made.group) },
+      };
+    },
+  };
+}
+
 /** Walks the library and returns every item, in category order. */
 export async function loadCatalog(onProgress = () => {}) {
   const items = [];
@@ -730,7 +761,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
-  items.push(...weaponItems());
+  items.push(...weaponItems(), staffItem());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
