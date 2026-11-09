@@ -32,7 +32,7 @@ test('every kind, species, finish, seat, leg and back makes a chair, and what is
 });
 
 test('every chair holds together: no part floats free of the rest', () => {
-  for (const kind of KINDS) for (const seat of SEATS) for (const legs of LEGS) for (const back of BACKS) for (const arms of [false, true]) {
+  for (const kind of KINDS) for (const seat of SEATS) for (const legs of LEGS) for (const back of BACKS) for (const arms of back === 'bow' ? [false] : [false, true]) {
     assert.equal(pieces(createWoodChair(GFX, { kind, seat, legs, back, arms, stretchers: true }).group), 1, `${kind}/${seat}/${legs}/${back}/${arms}`);
   }
 });
@@ -101,4 +101,28 @@ test('a back can be arched: its middle rises above its ends, and it still holds 
   assert.ok(ymax(rail) > ymax(post) + 0.05, 'the rail arches above the posts');
   assert.throws(() => createWoodChair(GFX, { arch: 0.5 }), /arch/);
   assert.throws(() => createWoodChair(GFX, { arch: -0.1 }), /arch/);
+});
+
+test('a Windsor has a bow, arrow spindles, a saddle seat and splayed turned legs with turned stretchers', () => {
+  const w = createWoodChair(GFX, { kind: 'windsor' });
+  assert.equal(w.options.back, 'bow');
+  assert.equal(w.options.seat, 'saddle');
+  assert.equal(pieces(w.group), 1);
+  assert.equal(named(w, 'back bow').length, 1);
+  assert.equal(named(w, 'back spindle').length, 6);
+  assert.equal(named(w, 'stretcher').length, 3);
+  assert.equal(named(w, 'rail').length, 0);
+  // The legs stand out: each foot is further from the middle than the leg's top, and on the floor.
+  for (const leg of named(w, 'leg ')) {
+    leg.updateMatrixWorld(true);
+    const box = new GFX.Box3().setFromObject(leg);
+    assert.ok(Math.abs(box.min.y) < 0.02, 'the foot is on the floor');
+    assert.ok(Math.max(Math.abs(box.min.x), Math.abs(box.max.x)) > 0.14);
+  }
+  assert.equal(named(createWoodChair(GFX, { kind: 'windsor', spindles: 8 }), 'back spindle').length, 8);
+  assert.throws(() => createWoodChair(GFX, { kind: 'windsor', arms: true }), /arms/);
+  assert.throws(() => createWoodChair(GFX, { kind: 'windsor', splay: 40 }), /splay/);
+  assert.throws(() => createWoodChair(GFX, { kind: 'windsor', spindles: 2 }), /spindles/);
+  // Splay and a bow back come with any kind.
+  for (const kind of ['dining', 'stool', 'barstool']) assert.equal(pieces(createWoodChair(GFX, { kind, splay: 8, back: kind === 'dining' ? 'bow' : 'none' }).group), 1, kind);
 });

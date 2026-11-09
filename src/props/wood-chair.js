@@ -5,7 +5,9 @@
  * chair is one piece.
  *
  * `kind` picks a starting chair (dining, spindle, ladder, armchair, stool, barstool); `seat` (square, round),
- * `legs` (square, tapered, turned), `back` (slat, spindle, ladder, none), `curve` (how far the back bows out behind the
+ * `legs` (square, tapered, turned), `back` (slat, spindle, ladder, bow, none; a bow is the Windsor's steam-bent hoop with
+ * flat arrow spindles, `spindles` of them, leaning back `rake` metres), `splay` (degrees the legs stand out, with turned
+ * stretchers between them), `seat` (square, round, saddle: a dished, contoured Windsor seat), `curve` (how far the back bows out behind the
  * sitter, in metres, 0 for a flat back), `arch` (how far the middle of the back rises above its ends, in metres: an arched
  * top rail, with the slats and spindles following it, 0 for a straight one), `arms`, `stretchers` and every measure can be given to change it. `seatSurface` says where the seat is, so that a model can sit on it.
  *
@@ -17,10 +19,10 @@
 import { FINISHES, SPECIES, mulberry, woodMaterial, woodUV, WOOD_SOURCE } from './bookcase.js';
 
 export { FINISHES, SPECIES, WOOD_SOURCE };
-export const KINDS = Object.freeze(['dining', 'spindle', 'ladder', 'armchair', 'stool', 'barstool']);
-export const SEATS = Object.freeze(['square', 'round']);
+export const KINDS = Object.freeze(['dining', 'spindle', 'ladder', 'armchair', 'stool', 'barstool', 'windsor']);
+export const SEATS = Object.freeze(['square', 'round', 'saddle']);
 export const LEGS = Object.freeze(['square', 'tapered', 'turned']);
-export const BACKS = Object.freeze(['slat', 'spindle', 'ladder', 'none']);
+export const BACKS = Object.freeze(['slat', 'spindle', 'ladder', 'bow', 'none']);
 
 /** The starting measures of each kind, in metres: the seat's outside, its height from the floor, the back above it. */
 export const KIND_DEFAULTS = Object.freeze({
@@ -29,16 +31,67 @@ export const KIND_DEFAULTS = Object.freeze({
   ladder: { seat: 'square', legs: 'square', back: 'ladder', arms: false, stretchers: true, width: 0.42, depth: 0.4, height: 0.46, backHeight: 0.5 },
   armchair: { seat: 'square', legs: 'turned', back: 'slat', arms: true, stretchers: true, width: 0.58, depth: 0.52, height: 0.46, backHeight: 0.5 },
   stool: { seat: 'round', legs: 'tapered', back: 'none', arms: false, stretchers: true, width: 0.36, depth: 0.36, height: 0.46, backHeight: 0 },
+  windsor: { seat: 'saddle', legs: 'turned', back: 'bow', arms: false, stretchers: true, rails: false, width: 0.47, depth: 0.46, height: 0.46, backHeight: 0.58, splay: 6, rake: 0.06 },
   barstool: { seat: 'round', legs: 'turned', back: 'none', arms: false, stretchers: true, width: 0.38, depth: 0.38, height: 0.75, backHeight: 0 },
 });
 
-export const DEFAULTS = Object.freeze({ kind: 'dining', species: 'oak', finish: 'lacquered', seed: 1, curve: 0, arch: 0 });
+export const DEFAULTS = Object.freeze({ kind: 'dining', species: 'oak', finish: 'lacquered', seed: 1, curve: 0, arch: 0, splay: 0, rake: 0, spindles: 6, rails: true });
 export const MAX_CURVE = 0.15;
 export const MAX_ARCH = 0.15;
 
 const ST = 0.03;        // the seat's thickness
 const L = 0.04;         // a leg's thickness at the top
 const EPS = 0.002;      // how far a part runs into the one it joins
+
+/**
+ * A Windsor's saddle seat: the outline of a rounded rectangle, a little narrower at the back than the front, the top
+ * scooped into a dish (the middle `dish` below the rim), a rim that stands up at `top`, sides down to `top - thick`.
+ */
+function saddleSeat(GFX, width, depth, top, thick, dish = 0.014) {
+  const NR = 10, NA = 56, nExp = 3.4;
+  const edge = (th) => {
+    const c = Math.cos(th), s = Math.sin(th);
+    const px = (width / 2) * Math.sign(c) * Math.abs(c) ** (2 / nExp), pz = (depth / 2) * Math.sign(s) * Math.abs(s) ** (2 / nExp);
+    return [px * (1 - 0.14 * (1 - pz / (depth / 2)) / 2), pz];
+  };
+  const pos = [], idx = [];
+  const push = (x, y, z) => { pos.push(x, y, z); return pos.length / 3 - 1; };
+  const tri = (a, b, c, hint) => {
+    const P = (j) => [pos[3 * j], pos[3 * j + 1], pos[3 * j + 2]];
+    const p = P(a), q = P(b), r = P(c);
+    const u = [q[0] - p[0], q[1] - p[1], q[2] - p[2]], v = [r[0] - p[0], r[1] - p[1], r[2] - p[2]];
+    const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if (n[0] * hint[0] + n[1] * hint[1] + n[2] * hint[2] >= 0) idx.push(a, b, c); else idx.push(a, c, b);
+  };
+  // The dished top: a centre and NR rings out to the rim.
+  const centre = push(0, top - dish, 0);
+  const ring = [];
+  for (let r = 1; r <= NR; r++) {
+    const rho = r / NR, row = [];
+    for (let k = 0; k < NA; k++) { const [x, z] = edge(2 * Math.PI * k / NA); row.push(push(x * rho, top - dish * (1 - rho * rho), z * rho)); }
+    ring.push(row);
+  }
+  for (let k = 0; k < NA; k++) tri(centre, ring[0][k], ring[0][(k + 1) % NA], [0, 1, 0]);
+  for (let r = 0; r < NR - 1; r++) for (let k = 0; k < NA; k++) {
+    const a = ring[r][k], b = ring[r][(k + 1) % NA], c = ring[r + 1][(k + 1) % NA], d = ring[r + 1][k];
+    tri(a, b, c, [0, 1, 0]); tri(a, c, d, [0, 1, 0]);
+  }
+  // The sides, and the flat underside.
+  const wallTop = [], wallBottom = [];
+  for (let k = 0; k < NA; k++) { const [x, z] = edge(2 * Math.PI * k / NA); wallTop.push(push(x, top, z)); wallBottom.push(push(x, top - thick, z)); }
+  for (let k = 0; k < NA; k++) {
+    const k2 = (k + 1) % NA, o = [pos[3 * wallTop[k]], 0, pos[3 * wallTop[k] + 2]];
+    tri(wallTop[k], wallTop[k2], wallBottom[k2], o); tri(wallTop[k], wallBottom[k2], wallBottom[k], o);
+  }
+  const under = push(0, top - thick, 0), floor = [];
+  for (let k = 0; k < NA; k++) floor.push(push(pos[3 * wallBottom[k]], top - thick, pos[3 * wallBottom[k] + 2]));
+  for (let k = 0; k < NA; k++) tri(under, floor[k], floor[(k + 1) % NA], [0, -1, 0]);
+  const g = new GFX.BufferGeometry();
+  g.setAttribute('position', new GFX.BufferAttribute(new Float32Array(pos), 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
 
 export function createWoodChair(GFX, options = {}) {
   const kind = options.kind ?? DEFAULTS.kind;
@@ -51,6 +104,10 @@ export function createWoodChair(GFX, options = {}) {
   if (!BACKS.includes(o.back)) throw new Error(`wood chair: unknown back "${o.back}"`);
   if (!(Number.isFinite(o.curve) && o.curve >= 0 && o.curve <= MAX_CURVE)) throw new Error(`wood chair: curve must be 0 to ${MAX_CURVE} metres`);
   if (!(Number.isFinite(o.arch) && o.arch >= 0 && o.arch <= MAX_ARCH)) throw new Error(`wood chair: arch must be 0 to ${MAX_ARCH} metres`);
+  if (!(Number.isFinite(o.splay) && o.splay >= 0 && o.splay <= 15)) throw new Error('wood chair: splay must be 0 to 15 degrees');
+  if (!(Number.isFinite(o.rake) && o.rake >= 0 && o.rake <= 0.15)) throw new Error('wood chair: rake must be 0 to 0.15 metres');
+  if (!(Number.isInteger(o.spindles) && o.spindles >= 3 && o.spindles <= 9)) throw new Error('wood chair: spindles must be 3 to 9');
+  if (o.back === 'bow' && o.arms) throw new Error('wood chair: a bow back cannot have arms');
   if (!(o.width >= 0.25 && o.width <= 0.9 && o.depth >= 0.25 && o.depth <= 0.8 && o.height >= 0.3 && o.height <= 0.9 && o.backHeight >= 0 && o.backHeight <= 0.9)) throw new Error('wood chair: dimensions outside supported ranges');
   const { width, depth, height } = o;
   const backHeight = o.back === 'none' ? 0 : Math.max(o.backHeight, 0.2);
@@ -71,6 +128,91 @@ export function createWoodChair(GFX, options = {}) {
   };
   const board = (name, size, position, grain) => add(name, new GFX.BoxGeometry(...size), position, grain);
 
+  /**
+   * A solid swept along a path (points [x, y, z]): at each point the profile (a polygon in the plane square to the
+   * path, [side, thickness] pairs) is set down, and the stations are joined. `hard` keeps each edge of the profile
+   * sharp (a flat spindle); otherwise the surface is smooth round it (a rod). The ends are left open: they are always
+   * buried in what the part joins.
+   */
+  const sweep = (path, profileAt, hard = false) => {
+    const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const unit = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
+    const m = path.length;
+    const rings = path.map((c, i) => {
+      const T = unit(sub(path[Math.min(m - 1, i + 1)], path[Math.max(0, i - 1)]));
+      const S = unit(cross(T, [0, 0, 1])), Nn = cross(S, T);
+      return profileAt(i / (m - 1)).map(([u, v]) => [c[0] + u * S[0] + v * Nn[0], c[1] + u * S[1] + v * Nn[1], c[2] + u * S[2] + v * Nn[2]]);
+    });
+    const K = rings[0].length, per = hard ? 2 * K : K;
+    const pos = [];
+    for (const ring of rings) {
+      if (hard) for (let k = 0; k < K; k++) pos.push(...ring[k], ...ring[(k + 1) % K]);
+      else for (const p of ring) pos.push(...p);
+    }
+    const idx = [];
+    for (let i = 0; i < m - 1; i++) for (let k = 0; k < K; k++) {
+      const a = i * per + (hard ? 2 * k : k), b = i * per + (hard ? 2 * k + 1 : (k + 1) % K);
+      const c = (i + 1) * per + (hard ? 2 * k + 1 : (k + 1) % K), d = (i + 1) * per + (hard ? 2 * k : k);
+      idx.push(a, b, c, a, c, d);
+    }
+    // Wind every face outward: test the first, and turn them all if it looks in.
+    const P = (j) => [pos[3 * j], pos[3 * j + 1], pos[3 * j + 2]];
+    const face = cross(sub(P(idx[1]), P(idx[0])), sub(P(idx[2]), P(idx[0])));
+    const out = sub(P(idx[0]), path[0]);
+    if (face[0] * out[0] + face[1] * out[1] + face[2] * out[2] < 0) for (let t = 0; t < idx.length; t += 3) [idx[t + 1], idx[t + 2]] = [idx[t + 2], idx[t + 1]];
+    const g = new GFX.BufferGeometry();
+    g.setAttribute('position', new GFX.BufferAttribute(new Float32Array(pos), 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  };
+
+  /** A turned rod from p0 to p1 (Vector3s): rings and a swelling, its ends run on into whatever it joins. */
+  const turnedRod = (name, p0, p1, radius) => {
+    const dir = p1.clone().sub(p0), span = dir.length();
+    dir.normalize();
+    const a = p0.clone().addScaledVector(dir, -0.014), length = span + 0.028;
+    const prof = [[1, 0], [1, 0.1], [1.5, 0.13], [0.9, 0.17], [1.2, 0.2], [1, 0.25], [1, 0.38], [1.35, 0.46], [1.5, 0.5], [1.35, 0.54], [1, 0.62], [1, 0.75], [1.2, 0.8], [0.9, 0.83], [1.5, 0.87], [1, 0.9], [1, 1]]
+      .map(([r, t]) => new GFX.Vector2(r * radius, t * length));
+    const mesh = add(name, new GFX.LatheGeometry(prof, 16), [a.x, a.y, a.z], 'y');
+    mesh.quaternion.setFromUnitVectors(new GFX.Vector3(0, 1, 0), dir);
+    return mesh;
+  };
+
+  /**
+   * The Windsor back: a steam-bent bow, one rod of oval section standing from the seat's back edge up and over, and
+   * flat arrow spindles (thin at the seat, full in the middle, thin where they meet the bow) set in the seat and in
+   * the bow's underside, the whole thing leaning back `rake`.
+   */
+  function windsorBack() {
+    const a = width * 0.5 * 0.62, zb = -depth * 0.5 * 0.62;
+    const lean = (y) => zb - o.rake * Math.min(1, Math.max(0, (y - height) / backHeight));
+    const BOW_W = 0.032, BOW_T = 0.024;
+    const yBottom = height - 0.015, yTopC = backTop - BOW_W / 2;
+    const bowB = Math.min(backHeight * 0.72, a * 1.5), yc = yTopC - bowB;
+    const path = [];
+    for (let i = 0; i <= 6; i++) path.push([-a, yBottom + (yc - yBottom) * i / 6]);
+    for (let i = 1; i < 40; i++) { const th = Math.PI * (1 - i / 40); path.push([a * Math.cos(th), yc + bowB * Math.sin(th)]); }
+    for (let i = 0; i <= 6; i++) path.push([a, yc - (yc - yBottom) * i / 6]);
+    const pts = path.map(([x, y]) => [x, y, lean(y)]);
+    const oval = (w, t, n = 16) => Array.from({ length: n }, (_, i) => [Math.cos(2 * Math.PI * i / n) * w / 2, Math.sin(2 * Math.PI * i / n) * t / 2]);
+    add('back bow', sweep(pts, () => oval(BOW_W, BOW_T)), [0, 0, 0], 'y');
+    // The arrow spindles.
+    const n = o.spindles;
+    for (let i = 0; i < n; i++) {
+      const f = -0.82 + 1.64 * i / (n - 1);
+      const xb = f * a, xt = f * a * 0.9;
+      const underBow = (x) => yc + bowB * Math.sqrt(Math.max(0, 1 - (x / a) ** 2));
+      const yb0 = height - 0.012, yt = Math.min(underBow(xt) - BOW_W / 2 + 0.014, yTopC);
+      const N = 20, line = [];
+      for (let k = 0; k <= N; k++) { const t = k / N, y = yb0 + (yt - yb0) * t; line.push([xb + (xt - xb) * t, y, lean(y)]); }
+      const wide = 0.036 + 0.006 * Math.min(1, Math.abs(f) / 0.8), THICK = 0.013;
+      const section = (t) => { const w = 0.012 + (wide - 0.012) * Math.sin(Math.PI * t ** 0.78) ** 1.3; return [[-w / 2, -THICK / 2], [w / 2, -THICK / 2], [w / 2, THICK / 2], [-w / 2, THICK / 2]]; };
+      add(`back spindle ${i + 1}`, sweep(line, section, true), [0, 0, 0], 'y');
+    }
+  }
+
   /* ------------------------------- seat -------------------------------- */
 
   const yb = height - ST;                              // the seat's underside
@@ -79,6 +221,8 @@ export function createWoodChair(GFX, options = {}) {
     g.scale(width, 1, depth);
     g.computeVertexNormals();
     add('seat', g, [0, height - ST / 2, 0], 'x');
+  } else if (o.seat === 'saddle') {
+    add('seat', saddleSeat(GFX, width, depth, height, ST), [0, 0, 0], 'x');
   } else {
     board('seat', [width, ST, depth], [0, height - ST / 2, 0], 'x');
   }
@@ -107,28 +251,81 @@ export function createWoodChair(GFX, options = {}) {
     // Posts rising above the seat: a square post over a turned or tapered leg, from just inside the leg's top.
     if (tall && o.legs !== 'square') board(`${name} post`, [L * 0.85, tall - legLen + EPS * 2, L * 0.85], [x, legLen - EPS + (tall - legLen + EPS * 2) / 2, z], 'y');
   };
-  leg('leg front left', -lx, lz, o.arms ? armY : null);
-  leg('leg front right', lx, lz, o.arms ? armY : null);
-  leg('leg rear left', -lx, -lz, hasBack ? backTop : null);
-  leg('leg rear right', lx, -lz, hasBack ? backTop : null);
+  const splayed = o.splay > 0;
+  const posts = hasBack && o.back !== 'bow';           // a bow stands on the seat; the rear legs stop at it
+  const feet = [];                                     // where each splayed leg stands, for the stretchers
+  if (!splayed) {
+    leg('leg front left', -lx, lz, o.arms ? armY : null);
+    leg('leg front right', lx, lz, o.arms ? armY : null);
+    leg('leg rear left', -lx, -lz, posts ? backTop : null);
+    leg('leg rear right', lx, -lz, posts ? backTop : null);
+  } else {
+    // Legs set into the seat's underside and standing out from it, front legs forward, rear legs back, so each leg is
+    // made to its own length and tilted: the foot lands on the floor.
+    const k = Math.tan(o.splay * Math.PI / 180);
+    const tx = width * 0.31, tz = depth * 0.31, yTop = yb + 0.012;
+    for (const [name, sx, sz] of [['front left', -1, 1], ['front right', 1, 1], ['rear left', -1, -1], ['rear right', 1, -1]]) {
+      const up = new GFX.Vector3(-sx * k, 1, -sz * k).normalize();
+      const top = new GFX.Vector3(sx * tx, yTop, sz * tz);
+      const foot = top.clone().addScaledVector(up, -yTop / up.y);
+      const length = yTop / up.y;
+      let g;
+      if (o.legs === 'turned') {
+        // A turned Windsor leg, foot to top: a spade foot, a ball, a long neck swelling into a vase, a pair of rings,
+        // and the fuller block the leg is set into the seat by. Radii are fractions of R.
+        const R = 0.03;
+        const prof = [[0.55, 0], [0.72, 0.04], [0.6, 0.09], [0.6, 0.12], [0.95, 0.165], [0.62, 0.21], [0.7, 0.245], [0.56, 0.29], [0.7, 0.36], [0.9, 0.45], [1, 0.54], [0.9, 0.62], [0.62, 0.69], [0.8, 0.725], [0.62, 0.76], [0.9, 0.82], [1.05, 0.87], [1, 0.93], [1, 1]]
+          .map(([r, t]) => new GFX.Vector2(r * R, t * length));
+        g = new GFX.LatheGeometry(prof, 28);
+      } else if (o.legs === 'tapered') {
+        g = new GFX.CylinderGeometry(L * 0.707, L * 0.4, length, 4, 1);
+        g.rotateY(Math.PI / 4);
+        g.translate(0, length / 2, 0);
+      } else {
+        g = new GFX.BoxGeometry(L, length, L);
+        g.translate(0, length / 2, 0);
+      }
+      const mesh = add(`leg ${name}`, g, [foot.x, foot.y, foot.z], 'y');
+      mesh.quaternion.setFromUnitVectors(new GFX.Vector3(0, 1, 0), up);
+      feet.push({ sx, sz, foot, up });
+    }
+    // The legs stop at the seat, so a back with posts, and arms, are carried on posts of their own set into the seat.
+    const stand = (name, x, z, top) => board(name, [L * 0.85, top - (height - 0.012), L * 0.85], [x, (top + height - 0.012) / 2, z], 'y');
+    if (posts) { stand('back post left', -lx, -lz, backTop); stand('back post right', lx, -lz, backTop); }
+    if (o.arms) { stand('arm post left', -lx, lz, armY); stand('arm post right', lx, lz, armY); }
+  }
 
   /* ------------------------ rails and stretchers ----------------------- */
 
   const RH = 0.06, RT = 0.02;
-  board('rail front', [2 * lx, RH, RT], [0, yb - RH / 2 + EPS, lz], 'x');
-  board('rail rear', [2 * lx, RH, RT], [0, yb - RH / 2 + EPS, -lz], 'x');
-  board('rail left', [RT, RH, 2 * lz], [-lx, yb - RH / 2 + EPS, 0], 'y');
-  board('rail right', [RT, RH, 2 * lz], [lx, yb - RH / 2 + EPS, 0], 'y');
-  if (o.stretchers) {
+  if (o.rails !== false && !splayed) {
+    board('rail front', [2 * lx, RH, RT], [0, yb - RH / 2 + EPS, lz], 'x');
+    board('rail rear', [2 * lx, RH, RT], [0, yb - RH / 2 + EPS, -lz], 'x');
+    board('rail left', [RT, RH, 2 * lz], [-lx, yb - RH / 2 + EPS, 0], 'y');
+    board('rail right', [RT, RH, 2 * lz], [lx, yb - RH / 2 + EPS, 0], 'y');
+  }
+  if (o.stretchers && !splayed) {
     const ys = Math.min(0.2, yb * 0.35) + (kind === 'barstool' ? 0.1 : 0);
     board('stretcher left', [0.022, 0.022, 2 * lz], [-lx, ys, 0], 'y');
     board('stretcher right', [0.022, 0.022, 2 * lz], [lx, ys, 0], 'y');
     board('stretcher middle', [2 * lx, 0.022, 0.022], [0, ys, 0], 'x');
+  } else if (o.stretchers) {
+    // The H of turned stretchers: a rod down each side between the legs, one across between their middles. Each is
+    // run a little into the legs at both ends.
+    const ys = Math.min(0.2, yb * 0.35);
+    const onLeg = (f) => f.foot.clone().addScaledVector(f.up, ys / f.up.y);
+    const at = (sx, sz) => onLeg(feet.find((f) => f.sx === sx && f.sz === sz));
+    const ends = [];
+    for (const sx of [-1, 1]) ends.push([`stretcher ${sx < 0 ? 'left' : 'right'}`, at(sx, 1), at(sx, -1)]);
+    const mid = (a, b) => a.clone().add(b).multiplyScalar(0.5);
+    ends.push(['stretcher middle', mid(at(-1, 1), at(-1, -1)), mid(at(1, 1), at(1, -1))]);
+    for (const [name, p0, p1] of ends) turnedRod(name, p0, p1, 0.0125);
   }
 
   /* -------------------------------- back ------------------------------- */
 
-  if (hasBack) {
+  if (hasBack && o.back === 'bow') windsorBack();
+  else if (hasBack) {
     // The back is formed, not bent: a board of one thickness swept along a true circular arc, its ends cut plumb where
     // they meet the posts, as a bentwood or laminated part would come from the press. `curve` is the arc in plan (the middle
     // bowed out behind the sitter); `arch` the arc in elevation (the middle lifted), less for the boards lower on the back.
