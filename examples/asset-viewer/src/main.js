@@ -66,6 +66,8 @@ const rest = {
 };
 
 const controls = new OrbitControls(camera, renderer.domElement);
+// The near plane follows the camera to what it orbits, so a close look never cuts into a model.
+stage.focus = controls.target;
 controls.enableDamping = true;
 controls.autoRotateSpeed = 3;
 

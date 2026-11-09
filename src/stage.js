@@ -313,7 +313,21 @@ export async function createStage(host, {
   fit();
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(host);
 
-  stage.render = () => renderer.render(scene, camera);
+  /**
+   * The near plane follows the camera in: a fiftieth of the way to what it
+   * looks at (`stage.focus`, or `stage.target`), between 5 mm and 30 cm, so
+   * a close look never cuts into a model and a far one keeps its depth.
+   */
+  const fitNear = () => {
+    const focus = stage.focus ?? stage.target;
+    if (!focus) return;
+    const near = Math.min(0.3, Math.max(0.005, camera.position.distanceTo(focus) * 0.02));
+    if (Math.abs(near - camera.near) > camera.near * 0.05) {
+      camera.near = near;
+      camera.updateProjectionMatrix();
+    }
+  };
+  stage.render = () => { fitNear(); renderer.render(scene, camera); };
 
   /**
    * The game's loop: `update(dt)` once a frame (dt in seconds, never more
