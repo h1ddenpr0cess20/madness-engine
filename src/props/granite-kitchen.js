@@ -333,7 +333,7 @@ export function createGraniteCounter(GFX, {
   const topY = height;
   const DOOR = 0.038;                                     // the doors' thickness
   const frontZ = depth / 2 - 0.022;                       // the middle of a door
-  const cabinetDepth = frontZ - DOOR / 2 - z0;            // the carcass runs up to the back of the doors
+  const cabinetDepth = frontZ - DOOR / 2 - z0 + 0.002;           // the carcass runs up to the back of the doors
   const back = z0, front = z0 + cabinetDepth;
   const toeDepth = cabinetDepth - 0.04;                   // the toe kick is set back under the doors
 
@@ -346,15 +346,15 @@ export function createGraniteCounter(GFX, {
     const cx0 = cutout.x - cutout.width / 2, cx1 = cutout.x + cutout.width / 2;
     const cz0 = cutout.z - cutout.depth / 2, cz1 = cutout.z + cutout.depth / 2;
     const floorY = topY - BOWL_DEPTH;
-    carcass('raw lumber carcass, left', x0, cx0, PLINTH, cabinetTop, back, front);
-    carcass('raw lumber carcass, right', cx1, x1, PLINTH, cabinetTop, back, front);
-    carcass('raw lumber carcass, behind the sink', cx0, cx1, PLINTH, cabinetTop, back, cz0);
-    carcass('raw lumber carcass, in front of the sink', cx0, cx1, PLINTH, cabinetTop, cz1, front);
+    carcass('raw lumber carcass, left', x0, cx0, PLINTH, cabinetTop + 0.002, back, front);
+    carcass('raw lumber carcass, right', cx1, x1, PLINTH, cabinetTop + 0.002, back, front);
+    carcass('raw lumber carcass, behind the sink', cx0, cx1, PLINTH, cabinetTop + 0.002, back, cz0);
+    carcass('raw lumber carcass, in front of the sink', cx0, cx1, PLINTH, cabinetTop + 0.002, cz1, front);
     carcass('raw lumber carcass, under the sink', cx0, cx1, PLINTH, floorY, cz0, cz1);
   } else {
-    carcass('raw lumber cabinet carcass', x0, x1, PLINTH, cabinetTop, back, front);
+    carcass('raw lumber cabinet carcass', x0, x1, PLINTH, cabinetTop + 0.002, back, front);
   }
-  box(GFX, counter, 'finished hardwood toe kick', [length, PLINTH, toeDepth], [0, PLINTH / 2, back + toeDepth / 2], finishedMat);
+  box(GFX, counter, 'finished hardwood toe kick', [length, PLINTH + 0.002, toeDepth], [0, PLINTH / 2 + 0.001, back + toeDepth / 2], finishedMat);
 
   // Doors and drawers: about one to every 0.62 m of run, counted to the length; every other bay has a drawer on top.
   const bays = Math.max(2, Math.round(length / 0.62));
@@ -366,14 +366,33 @@ export function createGraniteCounter(GFX, {
     box(GFX, counter, `raised cabinet centre panel ${i + 1}`, [bayW - 0.13, cabinetTop - PLINTH - 0.14, 0.012], [x, (cabinetTop + PLINTH) / 2, frontZ + 0.024], finishedMat);
     const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayW * 0.38), 0.018, 0.022), hardware);
     pull.name = `brass cabinet pull ${i + 1}`;
-    pull.position.set(x, cabinetTop - 0.14, frontZ + 0.041);   // 4 mm into the panel face
+    pull.position.set(x, cabinetTop - 0.14, frontZ + 0.037);   // 4 mm into the panel face
     pull.castShadow = true;
     counter.add(pull);
     const mount = new GFX.Mesh(new GFX.CylinderGeometry(0.022, 0.022, 0.008, 24), hardware);
     mount.name = `brass pull mounts ${i + 1}`;
     mount.rotation.x = Math.PI / 2;
-    mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.034);
+    mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.031);
     counter.add(mount);
+    // Two brass butt hinges on the edge the door swings from (alternating bays swing from opposite edges): a barrel
+    // in the gap between doors and a leaf screwed to the door's face. The upper one sits under the drawer, if any.
+    const swing = i % 2 === 0 ? -1 : 1;
+    const edge = x + swing * (bayW - 0.024) / 2;
+    const faceZ = frontZ + DOOR / 2;
+    const doorBottom = PLINTH + 0.0175, doorTop = cabinetTop - 0.0175;
+    const upper = i % 2 === 1 ? cabinetTop - 0.11 - 0.07 : doorTop - 0.075;
+    [doorBottom + 0.075, upper].forEach((y, h) => {
+      const barrel = new GFX.Mesh(new GFX.CylinderGeometry(0.007, 0.007, 0.07, 16), hardware);
+      barrel.name = `brass cabinet hinge barrel ${i + 1}.${h + 1}`;
+      barrel.position.set(edge, y, faceZ + 0.0015);
+      barrel.castShadow = true;
+      counter.add(barrel);
+      const leaf = new GFX.Mesh(new GFX.BoxGeometry(0.03, 0.07, 0.003), hardware);
+      leaf.name = `brass cabinet hinge leaf ${i + 1}.${h + 1}`;
+      leaf.position.set(edge - swing * 0.015, y, faceZ + 0.001);
+      leaf.castShadow = true;
+      counter.add(leaf);
+    });
     if (i % 2 === 1) {
       box(GFX, counter, `finished top drawer ${i + 1}`, [bayW - 0.024, 0.09, 0.028], [x, cabinetTop - 0.065, frontZ + 0.008], finishedMat);
     }

@@ -34,7 +34,7 @@ test('measures can be changed, and the surface says where the top is', () => {
   assert.equal(made.surface.y, 0.72);
   assert.deepEqual(made.wood, { species: 'maple', finish: 'raw', source: made.wood.source });
   const top = named(made, 'top')[0];
-  assert.ok(Math.abs(top.position.y + 0.035 / 2 - 0.72) < 1e-9);
+  assert.ok(Math.abs(top.position.y + (0.035 + 0.002) / 2 - 0.72) < 1e-9);
 });
 
 test('models stand on the top or the lower shelf, and a table with no shelf refuses', () => {

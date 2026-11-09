@@ -76,12 +76,12 @@ export function createWoodTable(GFX, options = {}) {
 
   const yTop = height - T / 2;
   if (o.shape === 'rectangle') {
-    board('top', [width, T, depth], [0, yTop, 0], 'x');
+    board('top', [width, T + 0.002, depth], [0, yTop - 0.001, 0], 'x');   // 2 mm into what it sits on
   } else {
-    const g = new GFX.CylinderGeometry(0.5, 0.5, T, 64);
+    const g = new GFX.CylinderGeometry(0.5, 0.5, T + 0.002, 64);
     g.scale(width, 1, depth);                       // round when width = depth, an oval when not
     g.computeVertexNormals();
-    add('top', g, [0, yTop, 0], 'x');
+    add('top', g, [0, yTop - 0.001, 0], 'x');
   }
 
   /* ------------------------------ the legs ----------------------------- */
@@ -97,14 +97,14 @@ export function createWoodTable(GFX, options = {}) {
     // Two slab ends and a stretcher between them (a pedestal column and foot for a round top).
     if (o.shape === 'rectangle') {
       for (const s of [-1, 1]) {
-        board(`trestle ${s < 0 ? 'left' : 'right'}`, [0.045, legHeight, depth * 0.78], [s * lx, legHeight / 2, 0], 'y');
+        board(`trestle ${s < 0 ? 'left' : 'right'}`, [0.045, legHeight + 0.004, depth * 0.78], [s * lx, legHeight / 2 + 0.002, 0], 'y');
         board(`foot ${s < 0 ? 'left' : 'right'}`, [0.07, 0.06, depth * 0.92], [s * lx, 0.03, 0], 'y');
       }
       board('stretcher', [2 * lx, 0.07, 0.03], [0, legHeight * 0.72, 0], 'x');
     } else {
       const r = Math.min(width, depth) / 2;
-      const col = new GFX.CylinderGeometry(0.045, 0.06, legHeight - 0.05, 24);
-      add('pedestal', col, [0, 0.05 + (legHeight - 0.05) / 2, 0], 'y');
+      const col = new GFX.CylinderGeometry(0.045, 0.06, legHeight - 0.046, 24);
+      add('pedestal', col, [0, 0.046 + (legHeight - 0.046) / 2, 0], 'y');
       add('foot', new GFX.CylinderGeometry(r * 0.6, r * 0.65, 0.05, 48), [0, 0.025, 0], 'x');
     }
   } else {
