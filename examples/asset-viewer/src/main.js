@@ -264,7 +264,7 @@ function renderItemUi(specs) {
         syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
       } else if (sp.type === 'color') {
         input = el('input', { type: 'color', style: 'padding:0;width:34px;height:22px' });
-        input.oninput = () => sp.set(input.value);
+        input.onchange = () => sp.set(input.value);
         syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
       } else if (sp.type === 'text') {
         input = el('input', { type: 'text' });
