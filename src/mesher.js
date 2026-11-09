@@ -113,11 +113,16 @@ export class Mesher {
     let uvs = o.uv;
     if (!uvs) {
       const s = o.uvScale ?? UV_SCALE[mat] ?? 1;
-      const e1 = norm(sub(B, A));
-      let e2 = norm(cross(n, e1));
-      if (e2[1] < 0 && Math.abs(n[1]) < 0.9) e2 = [-e2[0], -e2[1], -e2[2]];
-      const ox = hash(A[0], A[1], A[2]), oy = hash(A[2], A[0], A[1]);
-      uvs = [A, B, C].map((P) => { const d = sub(P, A); return [dot(d, e1) * s + ox * 4, dot(d, e2) * s + oy * 4]; });
+      if (Math.abs(n[1]) >= 0.9) {
+        // Floors and ceilings: world x and z, the same for every tile (see quad).
+        uvs = [A, B, C].map((P) => [P[0] * s, P[2] * s]);
+      } else {
+        const e1 = norm(sub(B, A));
+        let e2 = norm(cross(n, e1));
+        if (e2[1] < 0) e2 = [-e2[0], -e2[1], -e2[2]];
+        const ox = hash(A[0], A[1], A[2]), oy = hash(A[2], A[0], A[1]);
+        uvs = [A, B, C].map((P) => { const d = sub(P, A); return [dot(d, e1) * s + ox * 4, dot(d, e2) * s + oy * 4]; });
+      }
     }
     const k = o.shade ?? 1;
     [A, B, C].forEach((P, i) => {
@@ -148,11 +153,17 @@ export class Mesher {
     if (!uv) {
       const s = o.uvScale ?? UV_SCALE[mat] ?? 1;
       const n = norm(cross(sub(B, A), sub(D, A)));
-      const e1 = norm(sub(B, A));
-      let e2 = norm(cross(n, e1));
-      if (e2[1] < 0 && Math.abs(n[1]) < 0.9) e2 = [-e2[0], -e2[1], -e2[2]];
-      const ox = hash(A[0], A[1], A[2]), oy = hash(A[2], A[0], A[1]);
-      uv = [a, b, c, d].map((P) => { const d2 = sub(this.tp(P), A); return [dot(d2, e1) * s + ox * 4, dot(d2, e2) * s + oy * 4]; });
+      if (Math.abs(n[1]) >= 0.9) {
+        // A floor or a ceiling: the texture runs on the world's own x and z, so every
+        // tile lines up with its neighbours whatever order its corners come in.
+        uv = [a, b, c, d].map((P) => { const W = this.tp(P); return [W[0] * s, W[2] * s]; });
+      } else {
+        const e1 = norm(sub(B, A));
+        let e2 = norm(cross(n, e1));
+        if (e2[1] < 0) e2 = [-e2[0], -e2[1], -e2[2]];
+        const ox = hash(A[0], A[1], A[2]), oy = hash(A[2], A[0], A[1]);
+        uv = [a, b, c, d].map((P) => { const d2 = sub(this.tp(P), A); return [dot(d2, e1) * s + ox * 4, dot(d2, e2) * s + oy * 4]; });
+      }
     }
     const cs = o.colors;
     const nr = o.normals;

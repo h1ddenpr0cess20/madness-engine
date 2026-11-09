@@ -1,4 +1,4 @@
-import { FLOORS, azulejo, belt, block, canvas, canvasWall, clapboard, cliff, corrugated, curtain, damask, fence, flats, foam, haussmann, hedge, hull, mix, none, plywood, random, sandstone, shoji, stone, stucco, texture, textures, timber, wallpaper } from './painters.js';
+import { FLOORS, azulejo, belt, block, canvas, canvasWall, clapboard, cliff, corrugated, curtain, damask, designed, fence, flats, foam, haussmann, hedge, hull, mix, none, plywood, random, sandstone, shoji, stone, stucco, texture, textures, timber, wallpaper } from './painters.js';
 export { copyOf, tiled } from './painters.js';
 export { FLOORS, canvas, mix, random, texture };
 
@@ -39,7 +39,7 @@ function brick(GFX, { posters = false } = {}) {
   const rnd = random(5);
   const tones = Array.from({ length: 40 }, () => rnd());
   const paint = (face, joint, vary, art) => {
-    const [c, ctx] = canvas(size);
+    const [c, ctx] = designed(size);
     ctx.fillStyle = joint;
     ctx.fillRect(0, 0, size, size);
     const rows = 4, per = 2, bh = size / rows, bw = size / per;
@@ -132,7 +132,7 @@ export function grilleTexture(GFX) {
   return cached('grille', () => {
     const size = 256;
     const paint = (relief) => {
-      const [c, ctx] = canvas(size);
+      const [c, ctx] = designed(size);
       ctx.fillStyle = relief ? '#808080' : '#18181b';
       ctx.fillRect(0, 0, size, size);
       const mid = size / 2;
@@ -163,7 +163,7 @@ export function gaffTexture(GFX) {
     const size = 256;
     const rnd = random(61);
     const paint = (relief) => {
-      const [c, ctx] = canvas(size);
+      const [c, ctx] = designed(size);
       ctx.fillStyle = relief ? '#909090' : '#1c1c20';
       ctx.fillRect(0, 0, size, size);
       for (let k = 0; k < 400; k++) {
@@ -192,7 +192,7 @@ export function shutterTexture(GFX) {
     const size = 256;
     const rnd = random(13);
     const paint = (relief) => {
-      const [c, ctx] = canvas(size);
+      const [c, ctx] = designed(size);
       ctx.fillStyle = relief ? '#808080' : '#8d939d';
       ctx.fillRect(0, 0, size, size);
       for (let y = 0; y < size; y += 16) {
@@ -235,7 +235,7 @@ export function panelTexture(GFX, look = 'flat') {
     const rnd = random(29);
     const base = { flat: '#34343a', drywall: '#c8c0b0', wood: '#8a6a48', curtain: '#5a1424', foam: '#2a2a30', steel: '#6a707a', canvas: '#c8b890', brick: '#9a5040', glass: '#b8d4e8', backdrop: '#3a5a98', stone: '#7a7068', snow: '#e4eef8' }[look] ?? '#34343a';
     const paint = (relief) => {
-      const [c, ctx] = canvas(size);
+      const [c, ctx] = designed(size);
       ctx.fillStyle = relief ? '#909090' : base;
       ctx.fillRect(0, 0, size, size);
       for (let k = 0; k < 300; k++) {

@@ -10,6 +10,7 @@ import * as works from './works.js';
 
 export { castleScaffold } from './castle.js';
 export { CALIFORNIA_FOOTPRINTS } from './california.js';
+export { createGraniteKitchen } from '../props/granite-kitchen.js';
 
 /**
  * The buildings of a medieval town, drawn from boxes, beams and rocks: the

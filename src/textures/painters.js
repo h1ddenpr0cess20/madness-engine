@@ -21,6 +21,13 @@ export function random(seed) {
   };
 }
 
+/** A canvas `w` by `h` device pixels, drawn in the painters' 256-unit design (`designed`): `ctx` takes design units. */
+export function designed(w, h = w) {
+  const [c, ctx] = canvas(w * K, h * K);
+  ctx.setTransform(K, 0, 0, K, 0, 0);
+  return [c, ctx];
+}
+
 export function canvas(w, h = w) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -82,26 +89,43 @@ export const smoothstep = (a, b, x) => {
 /** Value noise that wraps every `period` cells, so a texture painted with it tiles. */
 export function periodic(seed, period) {
   const rnd = random(seed);
-  const grid = Array.from({ length: period * period }, () => rnd());
-  const at = (i, j) => grid[(((j % period) + period) % period) * period + (((i % period) + period) % period)];
-  return (x, y) => {
-    const i = Math.floor(x), j = Math.floor(y);
-    const u = x - i, v = y - j;
-    const su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
-    const a = at(i, j) + (at(i + 1, j) - at(i, j)) * su;
-    const b = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * su;
-    return a + (b - a) * sv;
-  };
+  const grid = new Float64Array(period * period);
+  for (let k = 0; k < grid.length; k++) grid[k] = rnd();
+  return (x, y) => valueAt(grid, period, x, y);
 }
 
-/** Fractal noise over a few octaves of `periodic`, 0 to 1, tiling across `cells` cells. */
+/** Value noise on a `period`-square wrapping lattice (row-major `grid`), smoothly interpolated. */
+function valueAt(grid, period, x, y) {
+  const i = Math.floor(x), j = Math.floor(y);
+  const u = x - i, v = y - j;
+  const i0 = ((i % period) + period) % period, j0 = ((j % period) + period) % period;
+  const i1 = i0 + 1 === period ? 0 : i0 + 1, j1 = j0 + 1 === period ? 0 : j0 + 1;
+  const su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+  const r0 = j0 * period, r1 = j1 * period;
+  const a = grid[r0 + i0], b = grid[r0 + i1], c = grid[r1 + i0], d = grid[r1 + i1];
+  const top = a + (b - a) * su, bottom = c + (d - c) * su;
+  return top + (bottom - top) * sv;
+}
+
+/**
+ * Fractal noise over a few octaves of `periodic`, 0 to 1, tiling across `cells` cells. The
+ * lattices are made once, flat, so a megapixel of it is a few hundred milliseconds, not seconds.
+ */
 export function fractal(seed, cells = 4, octaves = 4) {
-  const layers = Array.from({ length: octaves }, (_, o) => periodic(seed + o * 101, cells * 2 ** o));
+  const lattices = Array.from({ length: octaves }, (_, o) => {
+    const period = cells * 2 ** o;
+    const rnd = random(seed + o * 101);
+    const grid = new Float64Array(period * period);
+    for (let k = 0; k < grid.length; k++) grid[k] = rnd();
+    return { grid, period, scale: cells * 2 ** o };
+  });
+  let total = 0;
+  for (let o = 0, amp = 0.5; o < octaves; o++, amp *= 0.5) total += amp;
   return (u, v) => {
-    let sum = 0, amp = 0.5, total = 0;
+    let sum = 0, amp = 0.5;
     for (let o = 0; o < octaves; o++) {
-      sum += layers[o](u * cells * 2 ** o, v * cells * 2 ** o) * amp;
-      total += amp;
+      const { grid, period, scale } = lattices[o];
+      sum += valueAt(grid, period, u * scale, v * scale) * amp;
       amp *= 0.5;
     }
     return sum / total;
@@ -125,9 +149,67 @@ export function pixels(size, shade) {
 
 export const grey = (v) => [v, v, v].map((x) => Math.max(0, Math.min(255, x)));
 
-/** A map and a bump map from one pair of painters. */
+/**
+ * The size every floor and wall is painted at, one tile across: the granite's
+ * resolution. Painters work in fractions of their canvas, so a painter that
+ * takes `size` paints at this size without further change.
+ */
+export const DETAIL = 1024;
+/** Device pixels per unit of a painter's 256-unit design. */
+export const K = DETAIL / 256;
+
+/** Fine grain over a painted map, shared with its bump, so the speckle in the colour and the speckle in the relief agree. */
+const GRAIN = { seed: 881 };
+
+/**
+ * The grain field for one texture: a soft haze at 256 cells a tile, the same on
+ * the map and the bump. It is faint on purpose: the look of each surface comes
+ * from its own painter, and the grain only takes the flatness off it. (The
+ * granite's mineral speckle is its own, in `heroes/rock-granite`.)
+ */
+export function grainFields(seed) {
+  return { haze: fractal(seed, 256, 2) };
+}
+
+/**
+ * Lays the haze over a painted canvas, in place: a little lighter and darker on
+ * a map, a little raised and sunk on a bump.
+ */
+export function laidGrain(c, grains, strength, bump) {
+  const ctx = c.getContext('2d');
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const { data } = img;
+  const W = c.width, H = c.height;
+  const { haze } = grains;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const h = haze(x / W, y / H) - 0.5;
+      const k = (y * W + x) * 4;
+      if (bump) {
+        const v = data[k] + h * strength * 255;
+        data[k] = data[k + 1] = data[k + 2] = Math.max(0, Math.min(255, v));
+      } else {
+        const m = 1 + h * strength * 1.4;
+        data[k] = Math.max(0, Math.min(255, data[k] * m));
+        data[k + 1] = Math.max(0, Math.min(255, data[k + 1] * m));
+        data[k + 2] = Math.max(0, Math.min(255, data[k + 2] * m));
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
+/**
+ * A map and a bump map from one pair of painters, with the fine grain laid
+ * over both from one field. `opts` goes to the textures (`wrap`, ...).
+ */
 export function pair(GFX, size, color, height, opts = {}) {
-  return { map: texture(GFX, color(size), opts), bump: texture(GFX, height(size), { srgb: false, ...opts }) };
+  GRAIN.seed += 17;
+  const grains = grainFields(GRAIN.seed);
+  const map = laidGrain(color(size), grains, 0.06, false);
+  const bump = laidGrain(height(size), grains, 0.05, true);
+  return { map: texture(GFX, map, opts), bump: texture(GFX, bump, { srgb: false, ...opts }) };
 }
 
 // ———————————————————————————————————————————————————————————— floors
@@ -155,7 +237,7 @@ export function concrete(GFX) {
     });
     const ctx = c.getContext('2d');
     ctx.strokeStyle = relief ? '#202020' : 'rgba(40,36,32,0.5)';
-    ctx.lineWidth = relief ? 2 : 1.2;
+    ctx.lineWidth = (relief ? 2 : 1.2) * K;
     for (const pts of cracks) {
       ctx.beginPath();
       pts.forEach(([x, y], i) => (i ? ctx.lineTo(x * size, y * size) : ctx.moveTo(x * size, y * size)));
@@ -163,48 +245,117 @@ export function concrete(GFX) {
     }
     return c;
   };
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Boards, three to the tile, laid end to end: each its own shade, a soft grain, dark thin seams and nail heads. Stage decks and barroom floors. */
+
+// ———————————————————————————————————————————————————————————— wood, from the photograph
+
+import { WALNUT_JPEG } from './wood/walnut-photo.js';
+
+let photoState = null;
+
+/**
+ * The walnut photograph as a DETAIL canvas, once its embedded JPEG has decoded:
+ * `{ canvas, ready }`, where `ready` resolves to the canvas. Null where there is
+ * no document (under node).
+ */
+export function woodPhoto() {
+  if (typeof document === 'undefined' || typeof Image === 'undefined') return null;
+  if (!photoState) {
+    const [canvasOut, ctx] = canvas(DETAIL);
+    const image = new Image();
+    image.src = `data:image/jpeg;base64,${WALNUT_JPEG}`;
+    const ready = image.decode().then(() => {
+      ctx.drawImage(image, 0, 0, DETAIL, DETAIL);
+      return canvasOut;
+    });
+    photoState = { canvas: canvasOut, ready };
+  }
+  return photoState;
+}
+
+/**
+ * A map and a bump painted from the walnut photograph by `paint(src, map, bump)`,
+ * where `src` is the photograph's pixels (see `sample`). Until the photograph has
+ * decoded the maps show `base`, a plain board colour; then they are painted again
+ * and the textures are marked changed. Under node both are null.
+ */
+export function photoPair(GFX, base, paint, opts = {}) {
+  const [mapC, mapCtx] = canvas(DETAIL);
+  const [bumpC, bumpCtx] = canvas(DETAIL);
+  mapCtx.fillStyle = base;
+  mapCtx.fillRect(0, 0, DETAIL, DETAIL);
+  bumpCtx.fillStyle = '#808080';
+  bumpCtx.fillRect(0, 0, DETAIL, DETAIL);
+  const map = texture(GFX, mapC, { wrap: true });
+  const bump = texture(GFX, bumpC, { srgb: false, wrap: true });
+  const photo = woodPhoto();
+  if (photo) {
+    photo.ready.then((src) => {
+      const pix = src.getContext('2d').getImageData(0, 0, DETAIL, DETAIL).data;
+      paint(pix, mapCtx, bumpCtx);
+      map.needsUpdate = true;
+      bump.needsUpdate = true;
+    }).catch(() => {});
+  }
+  return { map, bump, ...opts };
+}
+
+/** The photograph's colour at (x, y), wrapping, from its pixel data. */
+export function sample(pix, x, y) {
+  const i = ((((y % DETAIL) + DETAIL) % DETAIL) * DETAIL + (((x % DETAIL) + DETAIL) % DETAIL)) * 4;
+  return [pix[i], pix[i + 1], pix[i + 2]];
+}
+
+/** The photograph written into an ImageData of `DETAIL` pixels, shaded by `shade(u, v)` (a multiplier), and its luminance as the bump. */
+export function paintFromPhoto(pix, mapCtx, bumpCtx, shadeAt) {
+  const mapImg = mapCtx.createImageData(DETAIL, DETAIL);
+  const bumpImg = bumpCtx.createImageData(DETAIL, DETAIL);
+  const out = mapImg.data, bout = bumpImg.data;
+  for (let y = 0; y < DETAIL; y++) {
+    for (let x = 0; x < DETAIL; x++) {
+      const [sx, sy] = shadeAt.coords(x, y);
+      const [r, g, b] = sample(pix, sx, sy);
+      const m = shadeAt.tone(x / DETAIL, y / DETAIL);
+      const i = (y * DETAIL + x) * 4;
+      out[i] = clamp255(r * m.k); out[i + 1] = clamp255(g * m.k); out[i + 2] = clamp255(b * m.k); out[i + 3] = 255;
+      const lum = 0.3 * r + 0.59 * g + 0.11 * b;
+      const h = clamp255(128 + (lum - 120) * 0.9 * m.relief);
+      bout[i] = bout[i + 1] = bout[i + 2] = h; bout[i + 3] = 255;
+    }
+  }
+  mapCtx.putImageData(mapImg, 0, 0);
+  bumpCtx.putImageData(bumpImg, 0, 0);
+}
+
+const clamp255 = (x) => Math.max(0, Math.min(255, x));
+
 export function planks(GFX) {
+  // Three boards to the tile, running along v; each takes its own region of the photograph, its own tone, and its own butt joint.
   const rnd = random(23);
-  const boards = Array.from({ length: 3 }, () => ({ tone: 0.8 + rnd() * 0.2, offset: rnd() * 5, butt: 0.15 + rnd() * 0.7 }));
-  const grain = fractal(3, 2, 4);
-  const paint = (relief) => (size) => {
-    const [c, ctx] = canvas(size);
-    ctx.fillStyle = relief ? '#000' : '#1a1410';
-    ctx.fillRect(0, 0, size, size);
-    const w = size / boards.length;
-    const img = ctx.getImageData(0, 0, size, size);
-    boards.forEach((b, i) => {
-      for (let y = 0; y < size; y++) {
-        for (let x = Math.floor(i * w) + 1; x < Math.floor((i + 1) * w) - 1; x++) {
-          // Long soft figure along the board, with a faint fine grain across it.
-          const along = y / size, across = (x - i * w) / w;
-          const g = grain(across * 0.7 + i * 1.3, along * 0.25 + b.offset);
-          const fine = 0.5 + 0.5 * Math.sin((across * 9 + g * 6) * Math.PI);
-          const shade = relief ? 0.55 + g * 0.25 + fine * 0.08 : b.tone * (0.84 + g * 0.2 + fine * 0.04);
-          const edge = Math.min(across, 1 - across) < 0.03 ? 0.78 : 1;
-          const v = Math.round(255 * Math.min(1, shade * edge));
-          const k = (y * size + x) * 4;
-          img.data[k] = v; img.data[k + 1] = v; img.data[k + 2] = v; img.data[k + 3] = 255;
-        }
-      }
-    });
-    ctx.putImageData(img, 0, 0);
-    boards.forEach((b, i) => {
-      const x = i * w;
-      ctx.fillStyle = relief ? '#000' : '#14100c';
-      ctx.fillRect(x + 1, b.butt * size, w - 2, 2);
-      ctx.fillStyle = relief ? '#fff' : '#4a3a2c';
-      for (const y of [b.butt * size - 10, b.butt * size + 11]) {
-        ctx.beginPath(); ctx.arc(x + 9, y, 1.8, 0, 7); ctx.arc(x + w - 9, y, 1.8, 0, 7); ctx.fill();
-      }
-    });
-    return c;
-  };
-  return pair(GFX, 256, paint(false), paint(true));
+  const boards = Array.from({ length: 3 }, () => ({ tone: 0.86 + rnd() * 0.16, offX: Math.floor(rnd() * DETAIL), offY: Math.floor(rnd() * DETAIL), butt: 0.15 + rnd() * 0.7 }));
+  return photoPair(GFX, '#9a7448', (pix, mc, bc) => {
+    const w = DETAIL / boards.length;
+    const shadeAt = {
+      coords: (x, y) => {
+        const i = Math.min(boards.length - 1, Math.floor(x / w));
+        const b = boards[i];
+        // The grain runs along the board (along v): the photograph's grain is along its x, so x and y are swapped.
+        return [b.offX + y, b.offY + Math.floor(x - i * w) * 2];
+      },
+      tone: (u, v) => {
+        const i = Math.min(boards.length - 1, Math.floor(u * boards.length));
+        const b = boards[i];
+        const across = u * boards.length - i;
+        const butt = Math.abs(v - b.butt) < 0.0025 ? 0.45 : 1;
+        const seam = Math.min(across, 1 - across) < 0.02 ? 0.5 : 1;
+        return { k: b.tone * butt * seam, relief: 1 };
+      },
+    };
+    paintFromPhoto(pix, mc, bc, shadeAt);
+  });
 }
 
 /** Linoleum: two by two squares, light and dark, scuffed and worn at the edges. The dive bar. */
@@ -221,7 +372,7 @@ export function checker(GFX) {
     const k = relief ? 0.6 + wear * 0.3 - (edge < 0.012 ? 0.5 : 0) : (base - grime) * (0.84 + wear * 0.26) * (edge < 0.012 ? 0.45 : 1);
     return grey(Math.round(255 * k));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Carpet: a field of woven pile with a diamond pattern laid in it. The theatre. */
@@ -236,7 +387,7 @@ export function carpet(GFX) {
     const k = relief ? 0.5 + p * 0.5 : (0.7 + 0.18 * big + 0.28 * small + 0.3 * line) * (0.82 + p * 0.3) * (0.92 + cloud(u, v) * 0.14);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Diamond plate: raised lozenges in alternating directions. The loading dock. */
@@ -255,7 +406,7 @@ export function plate(GFX) {
     const k = relief ? 0.2 + raised * 0.8 : (0.58 + raised * 0.34) * (0.8 + w * 0.3);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Grass, trodden and thin in patches: a blotchy lawn with blades in it. The festival. */
@@ -266,7 +417,7 @@ export function grass(GFX) {
     const k = relief ? 0.4 + b * 0.6 : (0.62 + p * 0.38) * (0.74 + b * 0.4);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Dance-floor panels: two by two glossy squares in two shades, a bright bevel round each. The club. */
@@ -281,7 +432,7 @@ export function panels(GFX) {
     const k = relief ? 0.7 - gap * 0.7 - bevel * 0.1 : gap ? 0.25 : (alt ? 0.82 : 1) * (0.94 + bevel * 0.12);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Trodden mud: wet brown churned with the prints of a thousand boots. Sticky floors. */
@@ -293,23 +444,23 @@ export function mud(GFX) {
     const k = relief ? 0.35 + churn * 0.5 + rut * 0.2 : (0.7 + rut * 0.3) * (1 - puddle * 0.35);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** A belt: dark rubber with a chevron pointing along it (v), which the scenery scrolls. */
 export function belt(GFX) {
   const rub = fractal(61, 24, 2);
-  const [c, ctx] = canvas(256);
-  const image = ctx.createImageData(256, 256);
-  for (let y = 0; y < 256; y++) {
-    for (let x = 0; x < 256; x++) {
-      const u = x / 256, v = y / 256;
+  const [c, ctx] = canvas(DETAIL);
+  const image = ctx.createImageData(DETAIL, DETAIL);
+  for (let y = 0; y < DETAIL; y++) {
+    for (let x = 0; x < DETAIL; x++) {
+      const u = x / DETAIL, v = y / DETAIL;
       // The bright chevron: a V pointing up the texture (toward +v, which is the top row when flipped).
       const w = Math.abs(u - 0.5);
       const line = Math.abs(((1 - v) - 0.15 - w * 0.9) % 0.5);
       const chevron = smoothstep(0.05, 0.02, Math.min(line, 0.5 - line)) * (w < 0.42 ? 1 : 0);
       const k = (0.2 + rub(u, v) * 0.12) + chevron * 0.75;
-      const i = (y * 256 + x) * 4;
+      const i = (y * DETAIL + x) * 4;
       const val = Math.round(255 * Math.min(1, k));
       image.data[i] = val; image.data[i + 1] = val; image.data[i + 2] = Math.round(val * 0.9); image.data[i + 3] = 255;
     }
@@ -328,7 +479,7 @@ export function asphalt(GFX) {
     const k = relief ? 0.5 + (grit(u, v) - 0.5) * 0.5 * (1 - puddle) : (0.62 + n(u, v) * 0.16 + speck) * (1 - puddle * 0.45);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Packed dirt: ruts, hoofprints and pebbles. The bull pen and the stables. */
@@ -344,7 +495,7 @@ export function dirt(GFX) {
     }
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Steel grating: a grid of bars over the dark, a seam round the tile. Spaceship decks, catwalks. */
@@ -357,7 +508,7 @@ export function grate(GFX) {
     const k = relief ? (bar || edge ? 0.85 : 0.05) : bar || edge ? 0.72 + wear(u, v) * 0.25 : 0.12;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Cobbles: rounded setts in rows, each a little different, dark between. Old town streets all over Europe. */
@@ -375,7 +526,7 @@ export function cobble(GFX) {
     const k = relief ? (joint ? 0 : 0.3 + dome * 0.7) : joint ? 0.25 : tones[(r * 4 + c) % tones.length] * (0.8 + dome * 0.2) * (0.9 + n(u, v) * 0.15);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 // ——— the world tour's floors
@@ -388,7 +539,7 @@ export function snow(GFX) {
     const k = relief ? 0.35 + drift * 0.65 : 0.78 + drift * 0.16 + glint;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Sand, rippled by the wind: fine grain in long curving ripples. The desert, the beach. */
@@ -399,7 +550,7 @@ export function sand(GFX) {
     const k = relief ? 0.4 + ripple * 0.4 + (g(u, v) - 0.5) * 0.2 : 0.84 + ripple * 0.08 + (g(u, v) - 0.5) * 0.1;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Tatami: woven rush mats, the weave running one way, a dark cloth binding down two edges. Tokyo. */
@@ -411,7 +562,7 @@ export function tatami(GFX) {
     const k = relief ? (binding ? 0.55 : 0.4 + weave * 0.35) : binding ? 0.32 : 0.82 + weave * 0.08 + n(u, v) * 0.06;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Terracotta: square clay tiles, four to the tile, each its own fired shade, in grout. Spain, Italy, the piazzas. */
@@ -426,7 +577,7 @@ export function terracotta(GFX) {
     const k = relief ? (joint ? 0 : 0.6 + n(u, v) * 0.2) : joint ? 0.62 : t * (0.92 + n(u, v) * 0.1);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Marble: polished, with the veins running through it. Palaces, lobbies, St Mark's. */
@@ -438,7 +589,7 @@ export function marble(GFX) {
     const k = relief ? 0.7 : 0.94 - dark + n(u, v) * 0.04;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Copacabana's promenade: the black-and-white waves in little stones. Rio. */
@@ -454,7 +605,7 @@ export function mosaic(GFX) {
     const k = relief ? (joint ? 0.2 : 0.7) : joint ? 0.45 : wave ? 0.12 + j * 0.06 : 0.92 + j * 0.06;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** A mountain path: broken rock and grit, darker in the cracks. */
@@ -466,35 +617,27 @@ export function scree(GFX) {
     const k = relief ? 0.3 + facet * 0.6 : 0.7 + facet * 0.2 + (m(u, v) - 0.5) * 0.12 - crack;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 export const FLOORS = { concrete, planks, checker, carpet, plate, grass, panels, mud, asphalt, dirt, grate, cobble, snow, sand, tatami, terracotta, marble, mosaic, scree };
 
 /** Plywood: a sheet to the tile, screwed to the studs, with a stencilled mark. The garage. */
 export function plywood(GFX) {
-  const grain = fractal(43, 3, 4);
-  const rnd = random(9);
-  const knots = Array.from({ length: 4 }, () => [rnd(), rnd(), 0.015 + rnd() * 0.02]);
-  const paint = (relief) => (size) => {
-    const c = pixels(size, (u, v) => {
-      const g = grain(u * 0.5, v * 6);
-      const lines = 0.5 + 0.5 * Math.sin(v * 90 + g * 14);
-      let k = relief ? 0.5 + g * 0.3 + lines * 0.1 : 0.62 + g * 0.3 + lines * 0.07;
-      for (const [x, y, r] of knots) {
-        const d = Math.hypot((u - x) * 1.6, v - y) / r;
-        if (d < 1) k *= relief ? 0.7 : 0.62 + 0.38 * d;
-      }
-      const seam = Math.min(u, 1 - u) < 0.008 || v < 0.006 ? 0.35 : 1;
-      return grey(Math.round(255 * Math.min(1, k) * seam));
-    });
-    const ctx = c.getContext('2d');
-    // Screws along the studs.
-    ctx.fillStyle = relief ? '#fff' : '#403830';
-    for (const x of [16, 128, 240]) for (const y of [20, 100, 180, 240]) { ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill(); }
-    return c;
-  };
-  return pair(GFX, 256, paint(false), paint(true));
+  // A sheet to the tile: veneer grain across the sheet, the seams at its edges, and the screws along the studs.
+  return photoPair(GFX, '#b89a6e', (pix, mc, bc) => {
+    const shadeAt = {
+      coords: (x, y) => [x, y + 120],
+      tone: (u, v) => {
+        const seam = Math.min(u, 1 - u) < 0.008 || v < 0.006 ? 0.5 : 1;
+        return { k: 0.9 * seam, relief: 1 };
+      },
+    };
+    paintFromPhoto(pix, mc, bc, shadeAt);
+    const ctx = mc;
+    ctx.fillStyle = '#403830';
+    for (const x of [16, 128, 240]) for (const y of [20, 100, 180, 240]) { ctx.beginPath(); ctx.arc(x * K, y * K, 3 * K, 0, 7); ctx.fill(); }
+  });
 }
 
 /** Acoustic foam: wedges in a grid, each lit on one side. Practice rooms and studios. */
@@ -509,7 +652,7 @@ export function foam(GFX) {
     const k = relief ? h : (0.3 + h * 0.6 * light) * (0.85 + sp(u, v) * 0.25);
     return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Curtain: deep vertical folds, a tile wide. The stage drapes. */
@@ -521,7 +664,7 @@ export function curtain(GFX) {
     const k = relief ? 0.3 + fold * 0.7 : 0.45 + fold * 0.55 - v * 0.05;
     return grey(Math.round(255 * k));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Corrugated iron: vertical ribs. The dock, the tents. */
@@ -533,7 +676,7 @@ export function corrugated(GFX) {
     const k = relief ? 0.2 + rib * 0.8 : (0.5 + rib * 0.45) * (0.8 + r * 0.3);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Breeze block: three courses of hollow blocks. */
@@ -548,7 +691,7 @@ export function block(GFX) {
     const k = relief ? (joint ? 0 : 0.6 + n(u, v) * 0.3) : joint ? 0.28 : 0.74 + n(u, v) * 0.26;
     return grey(Math.round(255 * k));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Damask paper over panelling, with a gold rail: the theatre's walls. */
@@ -563,7 +706,7 @@ export function damask(GFX) {
     const k = relief ? 0.4 + motif * 0.5 + rail * 0.3 : (0.55 + motif * 0.45) * (0.9 + n(u, v) * 0.15) + rail * 0.3;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Tent canvas: wide taut stripes with a seam between, a little sag, stitched. The festival's tents. */
@@ -578,7 +721,7 @@ export function canvasWall(GFX) {
     const k = relief ? 0.55 + n(u, v) * 0.2 + weave * 0.15 - seam * 0.3 : (stripe ? 1 : 0.88) * sag * (0.94 + n(u, v) * 0.1 + weave * 0.04) * (1 - seam * 0.2);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Festival hoarding: upright painted slats, two rails, a row of sponsor blocks along the top third. */
@@ -592,26 +735,33 @@ export function fence(GFX) {
     const k = relief ? 0.5 + n(u, v) * 0.2 - gap * 0.4 + rail * 0.25 + block * 0.1 : (0.86 + n(u, v) * 0.16) * (1 - gap * 0.5) * (rail ? 0.72 : 1) * (block ? 0.6 : 1);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Clapboard: overlapping boards laid across, each shadowed under its lip, nailed at the studs. Huts and boathouses. */
 export function clapboard(GFX) {
-  const grain = fractal(181, 3, 4);
-  const paint = (relief) => (size) => {
-    const c = pixels(size, (u, v) => {
-      const boards = 6, f = (v * boards) % 1;
-      const lip = smoothstep(0.75, 1, f);
-      const g = grain(u * 0.6, v * 6 + Math.floor(v * boards) * 0.37);
-      const k = relief ? 0.25 + f * 0.7 : (0.78 + g * 0.2) * (1 - lip * 0.35) * (f < 0.04 ? 0.5 : 1);
-      return grey(Math.round(255 * Math.min(1, k)));
-    });
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = relief ? '#fff' : '#3a3028';
-    for (const x of [24, 232]) for (let b = 0; b < 6; b++) { ctx.beginPath(); ctx.arc(x, b * (size / 6) + 8, 1.6, 0, 7); ctx.fill(); }
-    return c;
-  };
-  return pair(GFX, 256, paint(false), paint(true));
+  // Six courses of siding to the tile, each its own board: the grain along each, the lip of each course in shadow.
+  const rnd = random(181);
+  const courses = Array.from({ length: 6 }, () => ({ tone: 0.82 + rnd() * 0.18, off: Math.floor(rnd() * DETAIL) }));
+  return photoPair(GFX, '#e6dccb', (pix, mc, bc) => {
+    const shadeAt = {
+      coords: (x, y) => {
+        const f = ((y / DETAIL) * courses.length) % 1;
+        const c = Math.min(courses.length - 1, Math.floor((y / DETAIL) * courses.length));
+        return [courses[c].off + x, Math.floor(f * DETAIL)];
+      },
+      tone: (u, v) => {
+        const f = (v * courses.length) % 1;
+        const c = Math.min(courses.length - 1, Math.floor(v * courses.length));
+        const lip = smoothstep(0.75, 1, f);
+        return { k: courses[c].tone * (1 - lip * 0.3) * (f < 0.04 ? 0.5 : 1), relief: 0.6 + f * 0.6 };
+      },
+    };
+    paintFromPhoto(pix, mc, bc, shadeAt);
+    const ctx = mc;
+    ctx.fillStyle = '#3a3028';
+    for (const x of [24, 232]) for (let b = 0; b < 6; b++) { ctx.beginPath(); ctx.arc(x * K, b * (DETAIL / 6) + 8 * K, 1.6 * K, 0, 7); ctx.fill(); }
+  });
 }
 
 /** Stucco: rough plaster, trowel marks, a hairline crack, a darker band at the foot. Paris and Seville, Venice and Rio. */
@@ -623,7 +773,7 @@ export function stucco(GFX) {
     const k = relief ? 0.35 + rough * 0.65 : (0.84 + rough * 0.12 + swirl * 0.06) * foot;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** A spaceship's hull: four plates to the tile, rivets round each, a vent and a stripe. The sci-fi set. */
@@ -639,14 +789,15 @@ export function hull(GFX) {
     });
     const ctx = c.getContext('2d');
     ctx.fillStyle = relief ? '#fff' : '#9aa0aa';
-    for (let x = 0; x < 4; x++) for (let y = 0; y < 4; y++) {
-      for (const [px, py] of [[10, 10], [118, 10], [10, 118], [118, 118]]) { ctx.beginPath(); ctx.arc(x * 128 + px, y * 128 + py, 2.4, 0, 7); ctx.fill(); }
+    // Four plates to the tile, each 128 units: rivets in the corner of every one.
+    for (let x = 0; x < 2; x++) for (let y = 0; y < 2; y++) {
+      for (const [px, py] of [[10, 10], [118, 10], [10, 118], [118, 118]]) { ctx.beginPath(); ctx.arc((x * 128 + px) * K, (y * 128 + py) * K, 2.4 * K, 0, 7); ctx.fill(); }
     }
     ctx.fillStyle = relief ? '#000' : '#1a1c22';
-    for (let k = 0; k < 5; k++) ctx.fillRect(152, 160 + k * 14, 80, 6);
+    for (let k = 0; k < 5; k++) ctx.fillRect(152 * K, (160 + k * 14) * K, 80 * K, 6 * K);
     return c;
   };
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Castle stone: big blocks, two courses, each its own size, deep joints, damp at the foot. The horror's halls. */
@@ -666,7 +817,7 @@ export function stone(GFX) {
     const k = relief ? (joint ? 0 : 0.45 + n(u, v) * 0.5) : joint ? 0.22 : tones[r * 2 + c] * (0.8 + n(u, v) * 0.25) * damp;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /**
@@ -703,7 +854,7 @@ export function ashlar(GFX) {
     const k = relief ? 0.35 + arris * 0.4 + p * 0.25 : (blk.tone * (0.9 + p * 0.12) * (0.82 + arris * 0.18)) * (0.92 + w * 0.12) * (1 - (blk.dv - 0.5) * fv * 0.06);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /**
@@ -740,7 +891,7 @@ export function rubble(GFX) {
     const t = best.cast * 0.08;
     return [Math.round(255 * Math.min(1, k * (1 + t))), Math.round(255 * Math.min(1, k)), Math.round(255 * Math.min(1, k * (1 - t)))];
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /**
@@ -762,7 +913,7 @@ export function bedrock(GFX) {
       : (0.74 + (b - 0.5) * 0.22 + (g - 0.5) * 0.16 + (f - 0.5) * 0.1 + (bed - 0.5) * 0.05) * (1 - line * 0.16);
     return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Striped wallpaper over dark wainscot, a dado rail between: hotel corridors and palazzo halls. */
@@ -780,7 +931,7 @@ export function wallpaper(GFX) {
       : rail ? 0.95 : panel ? (box ? 0.5 : 0.42) * (0.9 + n(u, v) * 0.15) : stripe * (0.92 + fine * 0.05) * (0.94 + n(u, v) * 0.08);
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** The back of the set: scenery flats from behind, canvas on a timber frame, braced, stencilled with the stage. */
@@ -798,15 +949,15 @@ export function flats(GFX) {
     if (!relief) {
       const ctx = c.getContext('2d');
       ctx.fillStyle = 'rgba(30,26,22,0.55)';
-      ctx.font = '700 22px "Anton", Impact, sans-serif';
+      ctx.font = `700 ${22 * K}px "Anton", Impact, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText('STAGE 7', size * 0.27, size * 0.3);
-      ctx.font = '700 14px "Anton", Impact, sans-serif';
+      ctx.font = `700 ${14 * K}px "Anton", Impact, sans-serif`;
       ctx.fillText('THIS SIDE AWAY', size * 0.27, size * 0.72);
     }
     return c;
   };
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 // ——— the world tour's walls
@@ -823,7 +974,7 @@ export function sandstone(GFX) {
     const k = relief ? (joint ? 0 : smoothstep(0.0, 0.08, edge) * (0.6 + n(u, v) * 0.3)) : joint ? 0.45 : 0.8 + strata * 0.08 + m(u, v) * 0.08;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** A cliff of mountain rock: strata slanting across, fissures, lichen and frost. The Alps. */
@@ -835,7 +986,7 @@ export function cliff(GFX) {
     const k = relief ? 0.25 + n(u, v) * 0.6 - fissure : 0.66 + n(u, v) * 0.22 + m(u, v) * 0.1 - fissure;
     return grey(Math.round(255 * Math.min(1, Math.max(0, k))));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Shoji: paper panels in a lattice of thin wooden bars, lit from behind. Tokyo. */
@@ -848,20 +999,26 @@ export function shoji(GFX) {
     const k = relief ? (bar || frame ? 0.9 : 0.45) : frame ? 0.35 : bar ? 0.5 : 0.96 + n(u, v) * 0.03;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** A chalet's timber: round-edged logs laid one on another, the grain along them. The Alps. */
 export function timber(GFX) {
-  const n = fractal(531, 2, 4);
-  const paint = (relief) => (size) => pixels(size, (u, v) => {
-    const fv = (v * 5) % 1;
-    const round = Math.sin(fv * Math.PI);
-    const grain = 0.5 + 0.5 * Math.sin((v * 5 + n(u, v) * 0.6) * Math.PI * 2 * 8 + u * 2);
-    const k = relief ? 0.2 + round * 0.7 : (0.62 + round * 0.22) * (0.88 + grain * 0.12);
-    return grey(Math.round(255 * Math.min(1, k)));
+  // Round logs laid one on another, five to the tile, the grain along each log.
+  return photoPair(GFX, '#8a6a48', (pix, mc, bc) => {
+    const shadeAt = {
+      coords: (x, y) => {
+        const r = Math.floor((y / DETAIL) * 5);
+        return [x + r * 97, Math.floor(((y / DETAIL) * 5) % 1 * DETAIL)];
+      },
+      tone: (u, v) => {
+        const fv = (v * 5) % 1;
+        const round = Math.sin(fv * Math.PI);
+        return { k: 0.5 + round * 0.4, relief: round };
+      },
+    };
+    paintFromPhoto(pix, mc, bc, shadeAt);
   });
-  return pair(GFX, 256, paint(false), paint(true));
 }
 
 /** Paris stone: pale ashlar, a tall window with its shutters and a wrought-iron balcony rail across. */
@@ -875,7 +1032,7 @@ export function haussmann(GFX) {
     const k = relief ? (win ? 0.1 : rail ? 0.9 : joint ? 0.3 : 0.65) : rail ? 0.15 : win ? 0.22 : shutter ? 0.55 : joint ? 0.7 : 0.9 + n(u, v) * 0.06;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Azulejos: glazed tiles, sixteen to the tile, each with a four-petalled pattern. Spain. */
@@ -889,7 +1046,7 @@ export function azulejo(GFX) {
     const k = relief ? (joint ? 0.2 : 0.75) : joint ? 0.8 : petal || corner ? 0.35 : 0.97;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** A hedge, clipped square: leaves on leaves. London's parks, a palace garden. */
@@ -900,5 +1057,5 @@ export function hedge(GFX) {
     const k = relief ? 0.2 + leaf * 0.8 : 0.55 + leaf * 0.35 + m(u, v) * 0.1;
     return grey(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
