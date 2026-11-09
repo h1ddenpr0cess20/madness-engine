@@ -1,6 +1,8 @@
-import { clamp, fbm, noise3, smooth } from './kit.js';
-import { almond, HEAD_SCALE, LIPS } from './head.js';
-import { COLLAR, HEM, jeansHeight, jeansPoint, shirtPoint, SHIRT_UV, SLEEVE_RANGE } from './clothes.js';
+import { bodyLevel } from './basemesh.js';
+import { zoneOf } from './body.js';
+import { clamp, cross, fbm, noise3, smooth } from './kit.js';
+import { EYE, FACE, FINGERS, JOINTS } from './skeleton.js';
+import { COLLAR, HEM, jeansHeight, jeansPoint, neckline, shirtPoint, SHIRT_UV, SLEEVE_RANGE } from './clothes.js';
 
 /**
  * The human's textures, painted when he is first built (in a browser; with
@@ -8,7 +10,9 @@ import { COLLAR, HEM, jeansHeight, jeansPoint, shirtPoint, SHIRT_UV, SLEEVE_RANG
  * their colours alone). Each painter works the way a texture artist's
  * projection does: every texel is taken back to the place on the body it
  * covers, and the colour there (a cheek's flush, an eyebrow's hair, a
- * jeans' seam) is worked out from that place.
+ * jeans' seam) is worked out from that place. The skin is painted onto the
+ * base mesh's own UV layout through a map of where on the body each texel
+ * is, so the paint runs on unbroken across its seams.
  */
 
 const G = (t) => Math.exp(-t * t);
@@ -46,130 +50,277 @@ function texture(GFX, canvas, { color = true, repeat = null } = {}) {
   return t;
 }
 
-/** Bilinear lookup of the head's grid at (u, v) of its texture: the head-local point there, at natural size. */
-function gridLookup(grid) {
-  const rows = grid.length - 1, cols = grid[0].length - 1;
-  return (u, v) => {
-    const fi = clamp((1 - v) * rows, 0, rows - 1e-6), fj = clamp(u * cols, 0, cols - 1e-6);
-    const i = Math.floor(fi), j = Math.floor(fj), a = fi - i, b = fj - j;
-    const p00 = grid[i][j], p01 = grid[i][j + 1], p10 = grid[i + 1][j], p11 = grid[i + 1][j + 1];
-    return [0, 1, 2].map((k) => ((p00[k] * (1 - b) + p01[k] * b) * (1 - a) + (p10[k] * (1 - b) + p11[k] * b) * a) / HEAD_SCALE);
+// ———————————————————————————————————————————————— skin
+
+/**
+ * Where on the body each texel of the skin's UV layout is: its rest
+ * position, normal and zone, by rasterising the body's quads in UV space.
+ * Texels no quad covers are left empty (zone 0).
+ */
+function positionMap(size) {
+  const { pos, uv, faces, uvFaces, weights } = bodyLevel(0);
+  const N = size * size;
+  const P = new Float32Array(N * 3), Nn = new Float32Array(N * 3), Z = new Uint8Array(N);
+  const ZONES = ['', 'head', 'neck', 'trunk', 'arm', 'hand', 'leg', 'foot'];
+  const vn = new Float32Array(pos.length), vz = new Uint8Array(pos.length / 3);
+  for (let f = 0; f < faces.length; f += 4) {
+    const v = [0, 1, 2, 3].map((k) => faces[f + k]);
+    const A = (i) => [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]];
+    const d1 = [0, 1, 2].map((a) => A(v[2])[a] - A(v[0])[a]), d2 = [0, 1, 2].map((a) => A(v[3])[a] - A(v[1])[a]);
+    const n = cross(d1, d2);
+    for (const i of v) { vn[i * 3] += n[0]; vn[i * 3 + 1] += n[1]; vn[i * 3 + 2] += n[2]; }
+  }
+  for (let i = 0; i < vz.length; i++) {
+    const l = Math.hypot(vn[i * 3], vn[i * 3 + 1], vn[i * 3 + 2]) || 1;
+    vn[i * 3] /= l; vn[i * 3 + 1] /= l; vn[i * 3 + 2] /= l;
+    if (weights[i] && Object.keys(weights[i]).length) vz[i] = ZONES.indexOf(zoneOf(weights[i], [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]]).zone);
+  }
+  const tri = (a, b, c) => {
+    const ua = uv[a[1] * 2] * size, va = (1 - uv[a[1] * 2 + 1]) * size;
+    const ub = uv[b[1] * 2] * size, vb = (1 - uv[b[1] * 2 + 1]) * size;
+    const uc = uv[c[1] * 2] * size, vc = (1 - uv[c[1] * 2 + 1]) * size;
+    const det = (vb - vc) * (ua - uc) + (uc - ub) * (va - vc);
+    if (Math.abs(det) < 1e-9) return;
+    const x0 = Math.max(0, Math.floor(Math.min(ua, ub, uc))), x1 = Math.min(size - 1, Math.ceil(Math.max(ua, ub, uc)));
+    const y0 = Math.max(0, Math.floor(Math.min(va, vb, vc))), y1 = Math.min(size - 1, Math.ceil(Math.max(va, vb, vc)));
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const px = x + 0.5, py = y + 0.5;
+        const l1 = ((vb - vc) * (px - uc) + (uc - ub) * (py - vc)) / det;
+        const l2 = ((vc - va) * (px - uc) + (ua - uc) * (py - vc)) / det;
+        const l3 = 1 - l1 - l2;
+        if (l1 < -1e-3 || l2 < -1e-3 || l3 < -1e-3) continue;
+        const o = y * size + x;
+        for (let k = 0; k < 3; k++) {
+          P[o * 3 + k] = pos[a[0] * 3 + k] * l1 + pos[b[0] * 3 + k] * l2 + pos[c[0] * 3 + k] * l3;
+          Nn[o * 3 + k] = vn[a[0] * 3 + k] * l1 + vn[b[0] * 3 + k] * l2 + vn[c[0] * 3 + k] * l3;
+        }
+        Z[o] = l1 >= l2 && l1 >= l3 ? vz[a[0]] : l2 >= l3 ? vz[b[0]] : vz[c[0]];
+      }
+    }
+  };
+  for (let f = 0; f < faces.length; f += 4) {
+    const c = [0, 1, 2, 3].map((k) => [faces[f + k], uvFaces[f + k]]);
+    tri(c[0], c[1], c[2]);
+    tri(c[0], c[2], c[3]);
+  }
+  return { P, N: Nn, Z, ZONES };
+}
+
+/** Spreads the painted islands a few texels into the empty space round them, so filtering never reaches the background. */
+function bleed(rgba, filled, size, passes = 4) {
+  let have = filled.slice();
+  for (let pass = 0; pass < passes; pass++) {
+    const next = have.slice();
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const o = y * size + x;
+        if (have[o]) continue;
+        let r = 0, g = 0, b = 0, n = 0;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const xx = x + dx, yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= size || yy >= size) continue;
+          const q = yy * size + xx;
+          if (!have[q]) continue;
+          r += rgba[q * 4]; g += rgba[q * 4 + 1]; b += rgba[q * 4 + 2]; n++;
+        }
+        if (n) { rgba[o * 4] = r / n; rgba[o * 4 + 1] = g / n; rgba[o * 4 + 2] = b / n; rgba[o * 4 + 3] = 255; next[o] = 1; }
+      }
+    }
+    have = next;
+  }
+}
+
+/** Landmarks of the face and hands the skin painter measures from. */
+function landmarks() {
+  const { pos, faces } = bodyLevel(0);
+  const E = EYE.center, M = FACE.mouth;
+  let nose = [0, 0, -1];
+  for (const v of faces) {
+    const p = [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]];
+    if (Math.abs(p[0]) < 0.006 && p[1] < E[1] - 0.01 && p[1] > M[1] + 0.01 && p[2] > nose[2]) nose = p;
+  }
+  // Each finger's tip, which way its nail faces, and the axis it runs along.
+  const nails = [];
+  for (const m of [1, -1]) {
+    for (const f of Object.values(FINGERS)) {
+      const j = f.joints.map((p) => [p[0] * m, p[1], p[2]]);
+      const dir = [j[3][0] - j[2][0], j[3][1] - j[2][1], j[3][2] - j[2][2]];
+      const l = Math.hypot(...dir);
+      const d = dir.map((v) => v / l);
+      const curl = m > 0 ? f.curl : [f.curl[0], -f.curl[1], -f.curl[2]];
+      const toward = cross(curl, d);
+      nails.push({ tip: j[3], base: j[2], dir: d, back: toward.map((v) => -v), len: l });
+    }
+  }
+  return { E, M, nose, nails, R: EYE.radius };
+}
+
+/**
+ * The skin's colour at a place `p` (rest, metres) with normal `n` in `zone`:
+ * the tone, mottled; flushed at the cheeks, nose, ears, knuckles, elbows
+ * and knees; the lips, the brows' hair, the lash line, a shaved man's
+ * shadow on the jaw and scalp, paler palms and soles, the nails.
+ */
+function skinColour(tone, L) {
+  const base = tone;
+  const red = [tone[0] * 1.0, tone[1] * 0.8, tone[2] * 0.8];
+  const lipC = [tone[0] * 0.9, tone[1] * 0.72, tone[2] * 0.72];
+  const hair = [72, 56, 46];
+  const shadow = [tone[0] * 0.8, tone[1] * 0.82, tone[2] * 0.88];
+  const pale = [Math.min(255, tone[0] * 1.08), Math.min(255, tone[1] * 1.02), Math.min(255, tone[2] * 1.0)];
+  const { E, M, nose, R } = L;
+  return (p, n, zone) => {
+    const x = p[0], y = p[1], z = p[2], s = Math.abs(x);
+    let c = base;
+    // Mottling: broad and fine.
+    const mott = fbm(x * 9, y * 9, z * 9, 3) * 0.6 + noise3(x * 70, y * 70, z * 70) * 0.25;
+    c = mixc(c, red, 0.05 + 0.08 * mott);
+    c = c.map((v) => v * (1 + 0.035 * fbm(x * 30 + 7, y * 30, z * 30, 2)));
+    if (zone === 'head' || zone === 'neck') {
+      const front = smooth(-0.2, 0.4, n[2]);
+      // Flush: cheeks, the nose (its tip most), the ears.
+      let flush = 0.12 * G(Math.hypot(s - 0.045, y - (E[1] - 0.03)) / 0.022) * front;
+      flush += 0.15 * G(Math.hypot(x - nose[0], (y - nose[1]) * 1.3, z - nose[2]) / 0.016);
+      flush += 0.18 * smooth(0.068, 0.078, s) * smooth(E[1] + 0.03, E[1] + 0.01, y) * smooth(M[1] - 0.03, M[1] - 0.01, y);
+      c = mixc(c, red, clamp(flush));
+      // Shaved: the beard's shadow on the jaw, chin and upper lip; and the scalp's.
+      const below = smooth(nose[1] + 0.004, nose[1] - 0.012, y) * smooth(0.07, 0.055, s);
+      const jaw = below * smooth(E[1] - 0.12, E[1] - 0.095, y) * (smooth(-0.6, 0.2, n[2]) + smooth(-0.3, -0.8, n[1]));
+      const cheekline = smooth(0.03, 0.05, s) * smooth(M[1] + 0.035, M[1] + 0.005, y);
+      let beard = clamp(jaw) * (s < 0.03 ? 1 : cheekline + smooth(0.05, 0.03, s) * (1 - smooth(nose[1] - 0.02, nose[1] - 0.004, y)));
+      const scalp = smooth(E[1] + 0.06, E[1] + 0.085, y + (0.06 - Math.min(0.06, z)) * 0.35) * smooth(E[1] - 0.04, E[1] - 0.01, y) * (1 - front * smooth(E[1] + 0.09, E[1] + 0.06, y));
+      const dots = 0.6 + 0.4 * noise3(x * 900, y * 900, z * 900);
+      c = mixc(c, shadow, clamp(beard * 0.55 + scalp * 0.22) * dots);
+      // The lips.
+      const lc = FACE.lipCorner[0] + 0.001;
+      const t = clamp(s / lc);
+      const slit = M[1] - (M[1] - FACE.lipCorner[1]) * t * t;
+      // The upper lip's border with its Cupid's bow; the fuller lower lip.
+      const up = slit + (0.0102 * Math.sqrt(1 - t * t) - 0.0016 * G(s / 0.0035) + 0.0008 * G((s - 0.006) / 0.003)) * smooth(1, 0.85, t) + 0.0006;
+      const low = slit - 0.0128 * Math.pow(1 - t * t, 0.55);
+      const lipFront = smooth(M[2] - 0.035, M[2] - 0.022, z);
+      const inLips = smooth(lc, lc - 0.004, s) * smooth(low - 0.0009, low + 0.0009, y) * smooth(up + 0.0009, up - 0.0009, y) * lipFront;
+      c = mixc(c, lipC, inLips * (0.45 + 0.1 * noise3(x * 300, y * 2000, z * 300)));
+      // Inside the mouth: dark, wet.
+      const inside = smooth(M[2] - 0.006, M[2] - 0.014, z) * smooth(M[2] - 0.07, M[2] - 0.06, z) * smooth(FACE.lipCorner[0] - 0.001, FACE.lipCorner[0] - 0.006, s) * G((y - M[1]) / 0.02) * smooth(0.5, 0.0, n[2]);
+      c = mixc(c, [70, 26, 28], inside);
+      // The brows: a band of short hairs over each eye, arched, thinning toward the tail.
+      const bx = (s - 0.008) / 0.05;
+      if (bx > -0.05 && bx < 1.05 && n[2] > 0) {
+        const mid = E[1] + 0.0205 + 0.006 * Math.sin(clamp(bx) * Math.PI * 0.85) - 0.004 * bx;
+        const half = 0.0036 * (1 - 0.5 * bx) + 0.0008;
+        const across = (y - mid) / half;
+        const ends = smooth(-0.05, 0.08, bx) * smooth(1.05, 0.85, bx);
+        const hairs = 0.5 + 0.5 * noise3(s * 700 + y * 500, y * 250, z * 300);
+        const b = smooth(1, 0.2, Math.abs(across)) * ends * (0.4 + 0.6 * hairs) * smooth(E[2] - 0.03, E[2] - 0.01, z);
+        c = mixc(c, hair, clamp(b) * 0.55);
+      }
+      // The lash line round each eye: the lids' rims, darkest along the upper.
+      const e = [E[0] * (x >= 0 ? 1 : -1), E[1], E[2]];
+      const de = Math.hypot(x - e[0], y - e[1], z - e[2]);
+      const rim = smooth(R + 0.0019, R + 0.0006, de) * smooth(e[2] - 0.006, e[2] + 0.002, z);
+      c = mixc(c, y > e[1] ? [70, 50, 42] : mixc(base, red, 0.3), clamp(rim * (y > e[1] ? 0.4 : 0.2)));
+      // The upper lid's crease, a little shadowed; under the eye, a little blue.
+      c = mixc(c, [base[0] * 0.82, base[1] * 0.78, base[2] * 0.8], 0.1 * G((de - R - 0.007) / 0.002) * smooth(e[1] + 0.002, e[1] + 0.007, y) * front);
+      c = mixc(c, [base[0] * 0.86, base[1] * 0.84, base[2] * 0.88], 0.1 * G((de - R - 0.008) / 0.004) * smooth(e[1] - 0.003, e[1] - 0.008, y) * front);
+    } else if (zone === 'hand') {
+      const m = x >= 0 ? 1 : -1;
+      // Paler palms; flushed knuckles and fingertips.
+      const palm = smooth(0.1, 0.6, -n[0] * m);
+      c = mixc(c, pale, palm * 0.6);
+      c = mixc(c, red, 0.15 * (1 - palm) * smooth(0.04, 0.0, Math.abs(y - (JOINTS.wrist[1] - 0.1))));
+      for (const nail of L.nails) {
+        if (nail.tip[0] * x <= 0) continue;
+        const rel = [x - nail.tip[0], y - nail.tip[1], z - nail.tip[2]];
+        const along = -(rel[0] * nail.dir[0] + rel[1] * nail.dir[1] + rel[2] * nail.dir[2]);
+        if (along < -0.002 || along > 0.016) continue;
+        const facing = n[0] * nail.back[0] + n[1] * nail.back[1] + n[2] * nail.back[2];
+        const side = Math.hypot(rel[0] + nail.dir[0] * along, rel[1] + nail.dir[1] * along, rel[2] + nail.dir[2] * along);
+        const plate = smooth(0.45, 0.75, facing) * smooth(0.013, 0.01, along) * smooth(0.0, 0.0015, along);
+        if (plate <= 0) continue;
+        const lunula = G((along - 0.0115) / 0.0015) * 0.5;
+        const free = smooth(0.0022, 0.0008, along);
+        c = mixc(c, mixc([238, 196, 186], [248, 236, 228], Math.max(lunula, free)), plate * 0.85 * (side < 0.02 ? 1 : 0));
+        c = mixc(c, [base[0] * 0.75, base[1] * 0.6, base[2] * 0.6], 0.5 * G((along - 0.0128) / 0.0007) * smooth(0.45, 0.75, facing));
+      }
+    } else if (zone === 'trunk') {
+      // The nipples.
+      for (const m of [1, -1]) {
+        const d = Math.hypot(x - 0.098 * m, (y - 1.287) * 1.1);
+        if (d < 0.03 && n[2] > 0.3) c = mixc(c, [tone[0] * 0.72, tone[1] * 0.52, tone[2] * 0.52], 0.75 * smooth(0.0125, 0.0095, d) + 0.25 * smooth(0.005, 0.003, d));
+      }
+      // The armpits, a little darker.
+      c = mixc(c, shadow, 0.2 * G((s - 0.17) / 0.03) * G((y - 1.34) / 0.04));
+    } else if (zone === 'arm' || zone === 'leg') {
+      // Elbows and knees, a little rough and red.
+      const m = x >= 0 ? 1 : -1;
+      if (zone === 'arm') c = mixc(c, red, 0.3 * G(Math.hypot(x - JOINTS.elbow[0] * m, y - JOINTS.elbow[1]) / 0.025) * smooth(0, -0.6, n[2]));
+      else c = mixc(c, red, 0.25 * G(Math.hypot(x - JOINTS.knee[0] * m, y - JOINTS.knee[1] - 0.01) / 0.035) * smooth(0, 0.6, n[2]));
+    } else if (zone === 'foot') {
+      c = mixc(c, pale, smooth(-0.3, -0.8, n[1]) * 0.6);
+      c = mixc(c, red, 0.25 * smooth(0.1, 0.18, z) * smooth(0, 0.6, n[1]));
+    }
+    return c;
   };
 }
 
-// ———————————————————————————————————————————————— skin
-
-/** How much of an eyebrow there is at (s, y), and the lie of its hairs. */
-function brow(s, y) {
-  const t = (s - 0.011) / 0.042;
-  if (t < -0.15 || t > 1.15) return 0;
-  const centre = 0.0213 + 0.0062 * Math.sin(Math.PI * clamp(t) * 0.82) - 0.0012 * t;
-  const thick = 0.0068 * (1 - 0.6 * clamp(t)) + 0.0006;
-  const body = smooth(thick / 2 + 0.0008, thick / 2 - 0.0008, Math.abs(y - centre)) * smooth(-0.12, 0.05, t) * smooth(1.12, 0.92, t);
-  // Hairs: fine streaks laid outward and a little up, broken by noise.
-  const hair = 0.5 + 0.5 * Math.sin((s * 0.9 - (y - centre) * 2.2) * 2600 + noise3(s * 900, y * 900, 1) * 5);
-  return body * (0.55 + 0.45 * hair);
+/** The skin's map, on the base mesh's own UVs, `size` square: RGBA bytes. */
+export function skinPixels(size, tone) {
+  const { P, N, Z, ZONES } = positionMap(size);
+  const colour = skinColour(hex(tone), landmarks());
+  const rgba = new Uint8ClampedArray(size * size * 4);
+  const filled = new Uint8Array(size * size);
+  const p = [0, 0, 0], n = [0, 0, 0];
+  for (let o = 0; o < size * size; o++) {
+    if (!Z[o]) continue;
+    for (let k = 0; k < 3; k++) { p[k] = P[o * 3 + k]; n[k] = N[o * 3 + k]; }
+    const l = Math.hypot(n[0], n[1], n[2]) || 1;
+    n[0] /= l; n[1] /= l; n[2] /= l;
+    const c = colour(p, n, ZONES[Z[o]]);
+    rgba[o * 4] = c[0]; rgba[o * 4 + 1] = c[1]; rgba[o * 4 + 2] = c[2]; rgba[o * 4 + 3] = 255;
+    filled[o] = 1;
+  }
+  bleed(rgba, filled, size);
+  for (let o = 0; o < size * size; o++) if (!rgba[o * 4 + 3]) { rgba[o * 4] = 180; rgba[o * 4 + 1] = 130; rgba[o * 4 + 2] = 110; rgba[o * 4 + 3] = 255; }
+  return rgba;
 }
 
-/** How much of the lips' red there is at (s, y) on the front of the face: inside the outline the geometry's lips have. */
-function lips(s, y) {
-  const bow = 0.0012 * G((s - 0.0058) / 0.004) - 0.0007 * G(s / 0.0022);
-  const top = LIPS.top + bow;
-  const v = smooth(top + 0.0005, top - 0.0005, y) * smooth(LIPS.bottom - 0.0005, LIPS.bottom + 0.0005, y);
-  return v * smooth(LIPS.half(y) + 0.0008, LIPS.half(y) - 0.0012, s);
+/** A canvas holding `rgba` (`size` square). */
+function canvasOf(rgba, size) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  img.data.set(rgba);
+  g.putImageData(img, 0, 0);
+  return c;
 }
 
-/** Paints the head's colour and its bump from its grid. `tone` is the skin's colour. */
-function headMaps(grid, tone) {
-  const at = gridLookup(grid);
-  const base = hex(tone), flush = hex('#c26652'), lipc = hex('#a95a52'), browc = hex('#3a281e'), shade = hex('#6f6672'), lashc = hex('#24181350'.slice(0, 7)), wet = hex('#8a4a46');
-  const W = 1024, H = 1024;
-  const pos = new Float32Array(W * H * 3);
-  const map = paint(W, H, (u, v, x, y) => {
-    const q = at(u, v);
-    const o = (y * W + x) * 3;
-    pos[o] = q[0]; pos[o + 1] = q[1]; pos[o + 2] = q[2];
-    const s = Math.abs(q[0]), Y = q[1], Z = q[2];
-    const front = smooth(0.0, 0.05, Z);
-    let c = base.slice();
-    // Broad variation: warmer and redder in the middle of the face and on the ears' side, a little sallow on the scalp.
-    const mottle = fbm(q[0] * 60, Y * 60, Z * 60, 3);
-    c = mixc(c, [c[0] * 1.04, c[1] * 0.98, c[2] * 0.95], 0.5 + mottle);
-    const red = 0.55 * G((s - 0.043) / 0.02) * G((Y + 0.028) / 0.02) * front + 0.7 * G(s / 0.012) * G((Y + 0.04) / 0.012) * front + 0.25 * G((Y - 0.035) / 0.03) * front * G(s / 0.05) + 0.3 * G((s - 0.032) / 0.016) * G((Y - 0.003) / 0.012) * front;
-    c = mixc(c, flush, clamp(red * 0.32));
-    // A shaved man's shadow: jaw, chin and upper lip, fading down the neck.
-    const lip = front > 0.5 ? lips(s, Y) : 0;
-    const beard = smooth(-0.04, -0.06, Y + 0.25 * Math.max(0, s - 0.03)) * smooth(-0.165, -0.13, Y) * smooth(0.0, 0.03, Z + 0.02) * (1 - lip)
-      + 0.8 * smooth(-0.054, -0.058, Y) * smooth(-0.064, -0.0615, Y) * smooth(0.028, 0.02, s) * (1 - lip);
-    c = mixc(c, shade, clamp(beard) * 0.2 * (0.8 + 0.4 * noise3(q[0] * 2000, Y * 2000, Z * 2000)));
-    if (front > 0.3) {
-      c = mixc(c, lipc, lip * 0.62);
-      // The eyes: a little shadow under them, the lash line along the upper lid, the wet inside of the lids.
-      const e = 0.0322;
-      c = mixc(c, hex('#8a6466'), 0.16 * G((s - e) / 0.011) * G((Y + 0.011) / 0.005));
-      const a = almond(q[0], Y);
-      const upper = Y > 0.0005 + 0.0016 * ((s - e) / 0.014);
-      c = mixc(c, lashc, (upper ? 0.92 : 0.35) * G(a / (upper ? 0.0009 : 0.0005)));
-      if (a < 0) c = mixc(c, wet, 0.8);
-      c = mixc(c, browc, brow(s, Y) * 0.9);
-      // Nostrils and the mouth's line.
-      c = mixc(c, hex('#3a1e1a'), 0.85 * G((s - 0.0072) / 0.0032) * G((Y + 0.0505) / 0.0019) * smooth(0.085, 0.095, Z));
-      c = mixc(c, hex('#4e2622'), 0.75 * G((Y + 0.0739 + 0.0032 * (s / 0.025) ** 2) / 0.0007) * smooth(0.0262, 0.0235, s));
-    }
-    return c;
-  });
-  const bump = paint(W, H, (u, v, x, y) => {
-    const o = (y * W + x) * 3;
-    const q = [pos[o], pos[o + 1], pos[o + 2]];
-    const s = Math.abs(q[0]), Y = q[1], Z = q[2];
-    const front = smooth(0.0, 0.05, Z);
-    let h = 128 + 18 * noise3(q[0] * 2600, Y * 2600, Z * 2600) + 10 * noise3(q[0] * 700, Y * 700, Z * 700);
-    if (front > 0.3) {
-      h += 60 * brow(s, Y);
-      const lip = lips(s, Y);
-      h -= 22 * lip * Math.max(0, Math.sin(s * 2400));
-      // Two faint lines across the forehead, and the fold over each upper lid.
-      h -= 26 * G((Y - 0.047 - 0.003 * Math.sin(s * 70)) / 0.0007) * G(s / 0.04) - 0 + 20 * G((Y - 0.058) / 0.0007) * G(s / 0.035) * -1;
-      h -= 40 * G((Y - 0.0085 - 0.002 * ((s - 0.032) / 0.014) ** 2) / 0.0008) * G((s - 0.032) / 0.013);
-      // The fold from the nose's wing toward the mouth's corner.
-      const t = clamp((-0.046 - Y) / 0.03);
-      h -= 30 * G((s - (0.024 + 0.008 * t)) / 0.0012) * (Y < -0.042 && Y > -0.079 ? 1 : 0) * (1 - t * 0.6);
-    }
-    return [h, h, h];
-  });
-  return { map, bump };
-}
-
-/** A tile of skin for the arms, hands and ears: the tone, a little mottling, and pores in its bump. */
-function bodySkin(tone) {
-  const base = hex(tone);
-  const N = 256, f = (x, y, s) => noise3(x * s, y * s, 3) ;
-  // Periodic noise: sampled on a torus so the tile repeats without a seam.
+/** Pores and fine lines, as a repeating tile for the skin's bump. */
+function poreTile() {
   const per = (u, v, s) => {
     const a = u * Math.PI * 2, b = v * Math.PI * 2;
     return noise3(Math.cos(a) * s, Math.sin(a) * s, Math.cos(b) * s + Math.sin(b) * s * 1.7);
   };
-  const map = paint(N, N, (u, v) => {
-    const m = per(u, v, 2) * 0.5 + per(u, v, 6) * 0.25;
-    return mixc(base, [base[0] * 1.06, base[1] * 0.96, base[2] * 0.93], 0.5 + m);
-  });
-  const bump = paint(N, N, (u, v) => {
-    const h = 128 + 30 * per(u, v, 40) + 14 * per(u, v, 14) + 0 * f(u, v, 1);
+  return paint(256, 256, (u, v) => {
+    const pores = Math.max(0, per(u, v, 34)) ** 2;
+    const h = 150 - 90 * pores + 18 * per(u, v, 9) + 10 * per(u, v + 0.3, 70);
     return [h, h, h];
   });
-  return { map, bump };
 }
 
 /** The eye: white, veined faintly toward the edges, the iris's fibres round a black pupil. */
 function eyeMap(iris) {
-  const ic = hex(iris), white = hex('#f2eee8'), pinkish = hex('#e2b8b0');
-  return paint(256, 256, (u, v) => {
+  const ic = hex(iris), white = hex('#e9e3dc'), pinkish = hex('#d9b2a8');
+  return paint(512, 512, (u, v) => {
     const dx = u - 0.5, dy = v - 0.5;
     const r = Math.hypot(dx, dy), ang = Math.atan2(dy, dx);
-    const a = r * 2 * Math.PI;
-    if (a < 0.17) return [8, 6, 6];
-    if (a < 0.47) {
-      const t = (a - 0.17) / 0.3;
+    // The eye's UVs put the angle from its front at radius √(a/π)/2.
+    const a = Math.PI * (2 * r) ** 2;
+    if (a < 0.13) return [8, 6, 6];
+    if (a < 0.38) {
+      const t = (a - 0.13) / 0.25;
       const fibres = 0.5 + 0.5 * Math.sin(ang * 70 + noise3(Math.cos(ang) * 4, Math.sin(ang) * 4, t * 3) * 4);
       let c = mixc(ic.map((x) => x * 0.55), ic.map((x) => Math.min(255, x * 1.35)), 0.35 + 0.4 * fibres * (1 - t));
       // A golden ring round the pupil, and the dark limbal ring at the edge.
@@ -177,7 +328,7 @@ function eyeMap(iris) {
       c = mixc(c, [20, 16, 14], smooth(0.8, 1, t) * 0.85);
       return c;
     }
-    let c = mixc(white, pinkish, smooth(0.9, 1.6, a) * 0.6);
+    let c = mixc(white, pinkish, smooth(0.8, 1.6, a) * 0.6);
     c = mixc(c, hex('#c86060'), 0.25 * smooth(1.0, 1.5, a) * Math.max(0, Math.sin(ang * 9 + noise3(ang, a * 6, 7) * 3)) ** 8);
     return c;
   });
@@ -188,20 +339,20 @@ function eyeMap(iris) {
 /** The shirt: off-white to be tinted, flecked like a heather jersey, with its seams and the hems' double stitching. */
 function shirtMaps() {
   const W = 1024, H = 1024;
-  const yOfT = (t) => HEM - 0.002 + (COLLAR - HEM) * (1 - Math.pow(1 - t, 1.25));
+  const yOfT = (t, th) => HEM - 0.002 + (neckline(th) - HEM) * (1 - Math.pow(1 - t, 1.2));
   const map = paint(W, H, (u, v) => {
     const th = u * Math.PI * 2;
     let c = 232 + 10 * noise3(u * 900, v * 600, 0) + 8 * noise3(u * 120, v * 80, 5);
     let seam = 0;
     if (v < SHIRT_UV.body) {
-      const y = yOfT(v / SHIRT_UV.body);
+      const y = yOfT(v / SHIRT_UV.body, th);
       const p = shirtPoint(Math.min(COLLAR, y), th);
       // Side seams, and the hem's two rows of stitching.
       const side = Math.min(Math.abs(Math.atan2(Math.sin(th - Math.PI / 2), Math.cos(th - Math.PI / 2))), Math.abs(Math.atan2(Math.sin(th + Math.PI / 2), Math.cos(th + Math.PI / 2))));
-      seam += G(side / 0.006) * smooth(1.33, 1.3, y) * 0.8;
+      seam += G(side / 0.006) * smooth(1.36, 1.33, y) * 0.8;
       for (const dy of [0.011, 0.0175]) seam += G((y - HEM - dy) / 0.0007) * (0.5 + 0.5 * Math.sign(Math.sin(u * 900)));
       // The shoulder seams: along the top of each shoulder, from the collar out.
-      if (y > 1.42) seam += G((p[2] + 0.03) / 0.0025) * smooth(0.09, 0.12, Math.abs(p[0])) * 0.8;
+      if (y > 1.44) seam += G((p[2] + 0.005) / 0.0025) * smooth(0.08, 0.11, Math.abs(p[0])) * 0.8;
     } else if (v < SHIRT_UV.collar) {
       const d = SLEEVE_RANGE[0] + (SLEEVE_RANGE[1] - SLEEVE_RANGE[0]) * clamp((v - SHIRT_UV.sleeve[0]) / (SHIRT_UV.sleeve[1] - SHIRT_UV.sleeve[0]));
       for (const dd of [0.011, 0.0165]) seam += G((SLEEVE_RANGE[1] - dd - d) / 0.0007) * (0.5 + 0.5 * Math.sign(Math.sin(u * 600)));
@@ -237,10 +388,10 @@ function denimMaps() {
     const front = Math.cos(th);
     // Wear: whiskers across the tops of the thighs, a pale knee, honeycombs behind it, lighter down the shins.
     let fade = 0.18 + 0.1 * fbm(x * 30, y * 30, z * 30, 3);
-    fade += 0.3 * smooth(0.2, 0.8, front) * G((y - 0.52) / 0.07);
-    fade += 0.25 * smooth(0.3, 0.9, front) * G((y - 0.75) / 0.06) * Math.max(0, Math.sin((y * 1.4 + (x - 0.05) * 3) * 70)) ** 3;
-    fade += 0.22 * smooth(-0.3, -0.9, front) * G((y - 0.47) / 0.025) * Math.max(0, Math.sin(th * 14)) ** 4;
-    fade += 0.12 * smooth(0.3, 0.9, front) * smooth(0.95, 0.75, y) * smooth(0.6, 0.8, y);
+    fade += 0.3 * smooth(0.2, 0.8, front) * G((y - 0.54) / 0.07);
+    fade += 0.25 * smooth(0.3, 0.9, front) * G((y - 0.8) / 0.06) * Math.max(0, Math.sin((y * 1.4 + (x - 0.05) * 3) * 70)) ** 3;
+    fade += 0.22 * smooth(-0.3, -0.9, front) * G((y - 0.49) / 0.025) * Math.max(0, Math.sin(th * 14)) ** 4;
+    fade += 0.12 * smooth(0.3, 0.9, front) * smooth(0.98, 0.8, y) * smooth(0.65, 0.85, y);
     let c = mixc(indigo, faded, clamp(fade));
     // Weft flecks.
     c = mixc(c, faded, 0.18 * Math.max(0, noise3(u * 1200, v * 900, 3)));
@@ -249,36 +400,36 @@ function denimMaps() {
     // The outseam (one row), the inseam (two), the hem (two).
     dark += G(ang(Math.PI / 2) / 0.01);
     st += G((ang(Math.PI / 2) - 0.03) / 0.0045) * smooth(0.95, 0.9, y);
-    dark += G(ang(3 * Math.PI / 2) / 0.01) * smooth(0.81, 0.79, y);
-    for (const k of [0.022, 0.05]) st += G((ang(3 * Math.PI / 2) - k) / 0.0045) * smooth(0.81, 0.79, y);
+    dark += G(ang(3 * Math.PI / 2) / 0.01) * smooth(0.88, 0.86, y);
+    for (const k of [0.022, 0.05]) st += G((ang(3 * Math.PI / 2) - k) / 0.0045) * smooth(0.88, 0.86, y);
     const hem = jeansHeight(0, th);
     for (const k of [0.012, 0.016]) st += G((y - hem - k) / 0.0008);
     if (front < -0.2) {
       // The yoke, and a back pocket under it with its stitched arcs.
-      const yoke = 0.955 - 0.05 * clamp(x / 0.17);
+      const yoke = 0.975 - 0.045 * clamp(x / 0.17);
       st += G((y - yoke) / 0.0009) + G((y - yoke + 0.007) / 0.0009);
       dark += G((y - yoke + 0.0035) / 0.002) * 0.6;
-      const px = (x - 0.092) / 0.06, top = 0.925;
-      const bottom = 0.815 - 0.022 * (1 - Math.abs(px));
+      const px = (x - 0.095) / 0.06, top = 0.945;
+      const bottom = 0.835 - 0.022 * (1 - Math.abs(px));
       const inside = Math.abs(px) < 1 && y < top && y > bottom;
       const edge = Math.min(Math.abs(Math.abs(px) - 1) * 0.06, Math.abs(y - top), Math.abs(y - bottom));
       if (Math.abs(px) < 1.08 && y < top + 0.004 && y > bottom - 0.004) {
         st += G((edge - 0.003) / 0.0007) + G((edge - 0.0055) / 0.0007) * 0.8;
         if (inside) dark += 0.12;
         dark += G(edge / 0.0014) * 0.7;
-        const arc = 0.88 - 0.012 * Math.cos(px * Math.PI);
+        const arc = 0.9 - 0.012 * Math.cos(px * Math.PI);
         if (inside) st += G((y - arc) / 0.0008) + G((y - arc + 0.006) / 0.0008);
       }
     }
     if (front > 0.2) {
       // The front pocket's opening, and the J of the fly.
       const t = clamp((x - 0.1) / 0.075);
-      const curve = 1.0 - 0.09 * Math.sin(t * Math.PI / 2);
+      const curve = 0.995 - 0.085 * Math.sin(t * Math.PI / 2);
       st += G((y - curve) / 0.0008) * smooth(0.098, 0.105, x) * smooth(0.178, 0.17, x);
       dark += G((y - curve - 0.003) / 0.002) * 0.6 * smooth(0.098, 0.105, x);
       const jx = 0.034, jr = 0.022;
-      const jd = y > 0.885 ? Math.abs(x - jx) : Math.abs(Math.hypot(x - (jx - jr), y - 0.885) - jr);
-      st += G((jd) / 0.0008) * smooth(0.005, 0.012, x) * smooth(0.86, 0.865, y);
+      const jd = y > 0.915 ? Math.abs(x - jx) : Math.abs(Math.hypot(x - (jx - jr), y - 0.915) - jr);
+      st += G((jd) / 0.0008) * smooth(0.005, 0.012, x) * smooth(0.89, 0.895, y);
     }
     c = mixc(c, deep, clamp(dark) * 0.7);
     // Stitches as dashes of gold thread.
@@ -324,26 +475,32 @@ function shoeMaps() {
 const cache = new WeakMap();
 
 /**
- * Every texture the human needs, for one look ({ skin, iris }), made once a
- * look and kept. Returns nulls where there is no document to paint on.
+ * Every texture the human needs, for one look ({ skin, iris }) and size of
+ * skin map, made once and kept. Returns null where there is no document to
+ * paint on.
  */
-export function humanTextures(GFX, headGrid, { skin = '#d29a78', iris = '#5a4632' } = {}) {
+export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048 } = {}) {
   if (typeof document === 'undefined') return null;
   let byGFX = cache.get(GFX);
   if (!byGFX) cache.set(GFX, (byGFX = new Map()));
-  const key = `${skin}|${iris}|${headGrid.length}x${headGrid[0].length}`;
+  const key = `${skin}|${iris}|${size}`;
   if (byGFX.has(key)) return byGFX.get(key);
-  const head = headMaps(headGrid, skin);
-  const body = bodySkin(skin);
-  const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps();
+  const garments = byGFX.get('garments') ?? (() => {
+    const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps();
+    const g = {
+      shirt: { map: texture(GFX, shirt.map), bump: texture(GFX, shirt.bump, { color: false, repeat: [70, 50] }) },
+      denim: { map: texture(GFX, denim.map), bump: texture(GFX, denim.bump, { color: false, repeat: [60, 90] }) },
+      shoe: texture(GFX, shoes.upper),
+      sole: texture(GFX, shoes.sole),
+      pores: texture(GFX, poreTile(), { color: false, repeat: [24, 24] }),
+    };
+    byGFX.set('garments', g);
+    return g;
+  })();
   const made = {
-    head: { map: texture(GFX, head.map), bump: texture(GFX, head.bump, { color: false }) },
-    skin: { map: texture(GFX, body.map, { repeat: [3, 3] }), bump: texture(GFX, body.bump, { color: false, repeat: [6, 6] }) },
+    ...garments,
+    skin: { map: texture(GFX, canvasOf(skinPixels(size, skin), size)), bump: garments.pores },
     eye: texture(GFX, eyeMap(iris)),
-    shirt: { map: texture(GFX, shirt.map), bump: texture(GFX, shirt.bump, { color: false, repeat: [70, 50] }) },
-    denim: { map: texture(GFX, denim.map), bump: texture(GFX, denim.bump, { color: false, repeat: [60, 90] }) },
-    shoe: texture(GFX, shoes.upper),
-    sole: texture(GFX, shoes.sole),
   };
   byGFX.set(key, made);
   return made;

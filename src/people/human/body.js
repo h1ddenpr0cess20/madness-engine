@@ -1,196 +1,199 @@
-import { clamp, Part, profile, smooth } from './kit.js';
-import { JOINTS, legWeights, mirror, torsoWeights } from './skeleton.js';
+import { bodyLevel } from './basemesh.js';
+import { BONES } from './data/base.js';
+import { armDistance, JOINTS, mirror } from './skeleton.js';
 
 /**
- * The bare body below the neck and between the arms: the trunk, the legs
- * and the feet, the base every garment is put on over. Stylised and
- * athletic (a broad chest, a narrow waist, the pecs, abs and shoulder
- * blades drawn in), and smooth where it has nothing to show.
+ * The bare body's surface, to measure clothes against: where a ray from
+ * inside the trunk, a leg or an arm leaves the skin, which part of the body
+ * each place is (for a garment to say what it covers), and how the skin
+ * there is weighted to the bones (so cloth over it moves with it).
  *
- * The legs each carry half the pelvis up to the waist, meeting on the
- * middle line, so the hips have no seam; the trunk rises out of them. Every
- * vertex is tagged with where on the body it is, so a garment can say which
- * of it it covers.
+ * All of it is read off the real anatomy in data/base.js, at rest.
  */
 
-const G = (t) => Math.exp(-t * t);
-const ad = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
-export const superK = (th, n) => Math.pow(Math.pow(Math.abs(Math.cos(th)), n) + Math.pow(Math.abs(Math.sin(th)), n), -1 / n);
+const GROUP = (name) => {
+  const n = name.replace(/[LR]$/, '');
+  if (['head', 'jaw', 'tongue', 'eye', 'lidUp', 'lidLow', 'brow', 'lipCorner'].includes(n)) return 'head';
+  if (n === 'neck') return 'neck';
+  if (['root', 'hips', 'spine', 'chest', 'clavicle'].includes(n)) return 'trunk';
+  if (n === 'arm' || n === 'fore') return 'arm';
+  if (n === 'thigh' || n === 'shin') return 'leg';
+  if (n === 'foot' || n === 'toes') return 'foot';
+  return 'hand';
+};
+const GROUPS = BONES.map(GROUP);
 
-// ———————————————————————————————————————————————— the trunk
-
-export const TRUNK = Object.freeze([0.985, 1.5]);
-// By height: half-width, half-depth, centre z, squareness.
-const TORSO = profile([
-  [0.985, [0.16, 0.109, -0.002, 2.3]],
-  [1.06, [0.146, 0.103, 0.0, 2.3]],
-  [1.12, [0.151, 0.107, 0.002, 2.4]],
-  [1.2, [0.166, 0.118, 0.006, 2.5]],
-  [1.28, [0.181, 0.126, 0.006, 2.6]],
-  [1.34, [0.192, 0.122, -0.004, 2.7]],
-  [1.39, [0.196, 0.111, -0.016, 2.8]],
-  [1.425, [0.178, 0.096, -0.024, 2.7]],
-  [1.455, [0.13, 0.079, -0.029, 2.4]],
-  [1.48, [0.075, 0.064, -0.03, 2.1]],
-  [1.5, [0.05, 0.05, -0.03, 2.0]],
-]);
-
-/** A point of the trunk at height `y`, angle `th` (0 ahead, π/2 to his left). */
-export function trunkPoint(y, th) {
-  const [a, b, cz, n] = TORSO(y);
-  const k = superK(th, n);
-  const s = Math.sin(th), c = Math.cos(th);
-  const x = s * a * k, ax = Math.abs(x);
-  const front = Math.max(0, c), back = Math.max(0, -c);
-  let bump = 0;
-  // The pecs, with a firm lower edge; the abs in rows down the middle with the line between them; the navel.
-  bump += 0.013 * G((ax - 0.072) / 0.05) * smooth(1.245, 1.275, y) * G((y - 1.315) / 0.05) * front ** 0.6;
-  bump += 0.0035 * G(ax / 0.045) * (0.5 + 0.5 * Math.cos(((y - 1.04) / 0.055) * Math.PI * 2)) * smooth(1.02, 1.05, y) * smooth(1.24, 1.21, y) * front;
-  bump -= 0.0028 * G(ax / 0.006) * smooth(1.02, 1.05, y) * smooth(1.26, 1.22, y) * front;
-  bump -= 0.007 * G(ax / 0.0065) * G((y - 1.083) / 0.0065) * front;
-  // The obliques over the hips; the shoulder blades and the groove of the spine behind.
-  bump += 0.006 * G((ax - 0.13) / 0.03) * G((y - 1.03) / 0.04) * (1 - back);
-  bump += 0.009 * G((ax - 0.075) / 0.04) * G((y - 1.33) / 0.06) * back;
-  bump -= 0.005 * G(ax / 0.011) * smooth(1.0, 1.06, y) * smooth(1.44, 1.38, y) * back;
-  // The muscle from the neck down to each shoulder, rising behind.
-  bump += 0.006 * G((ax - 0.08) / 0.04) * G((y - 1.44) / 0.025) * (0.4 + back);
-  const r = Math.hypot(a * k * s, b * k * c) || 1;
-  const f = 1 + bump / r;
-  return [x * f, y, cz + c * b * k * f];
+/** Which part of the body a vertex with weights `w` ({ boneIndex: weight }) at `p` is: { zone, y, d, x } (x: how far from the middle line). */
+export function zoneOf(w, p) {
+  const sum = {};
+  for (const [b, v] of Object.entries(w)) sum[GROUPS[b]] = (sum[GROUPS[b]] ?? 0) + v;
+  let zone = 'trunk', best = -1;
+  for (const [g, v] of Object.entries(sum)) if (v > best) { best = v; zone = g; }
+  const m = p[0] >= 0 ? 1 : -1;
+  let d = 0;
+  if (zone === 'arm' || zone === 'hand') d = armDistance(p, m);
+  if (zone === 'foot') d = p[2] - mirror(JOINTS.ankle, m)[2];
+  return { zone, y: p[1], d, x: Math.abs(p[0]) };
 }
 
-function trunk(part, detail) {
-  const rows = Math.round(52 * detail), around = Math.round(52 * detail);
-  const [y0, y1] = TRUNK;
-  part.grid(rows, around, (i, j) => {
-    const th = (j / around) * Math.PI * 2;
-    const y = y0 + (y1 - y0) * (i / rows);
-    const p = trunkPoint(y, th);
-    const pit = 1 - 0.3 * G((y - 1.32) / 0.04) * G(ad(Math.abs(ad(th, 0)), Math.PI / 2) / 0.3);
-    return { p, uv: [j / around, i / rows], w: torsoWeights(p), tint: pit * (1 - 0.2 * G((p[0]) / 0.006) * G((y - 1.083) / 0.007)), zone: { zone: 'trunk', y, d: 0 } };
-  }, { flip: true });
+let S = null;
+/** The body at rest, ready to be measured: its triangles by zone, a grid over them, and its vertices hashed. */
+function surface() {
+  if (S) return S;
+  const mesh = bodyLevel(0);
+  const P = mesh.pos, faces = mesh.faces;
+  const used = new Uint8Array(P.length / 3);
+  for (const v of faces) used[v] = 1;
+  const zones = mesh.weights.map((w, i) => zoneOf(w, [P[i * 3], P[i * 3 + 1], P[i * 3 + 2]]));
+  const tris = [];
+  for (let f = 0; f < faces.length; f += 4) {
+    const q = [faces[f], faces[f + 1], faces[f + 2], faces[f + 3]];
+    tris.push([q[0], q[1], q[2]], [q[0], q[2], q[3]]);
+  }
+  const CELL = 0.025;
+  const lo = [-0.8, -0.05, -0.4];
+  const dims = [64, 76, 32];
+  const cellOf = (x, y, z) => {
+    const i = Math.floor((x - lo[0]) / CELL), j = Math.floor((y - lo[1]) / CELL), k = Math.floor((z - lo[2]) / CELL);
+    if (i < 0 || j < 0 || k < 0 || i >= dims[0] || j >= dims[1] || k >= dims[2]) return -1;
+    return (i * dims[1] + j) * dims[2] + k;
+  };
+  const cells = new Map();
+  tris.forEach(([a, b, c], t) => {
+    const mn = [0, 1, 2].map((k) => Math.min(P[a * 3 + k], P[b * 3 + k], P[c * 3 + k]));
+    const mx = [0, 1, 2].map((k) => Math.max(P[a * 3 + k], P[b * 3 + k], P[c * 3 + k]));
+    for (let x = mn[0]; x <= mx[0] + CELL; x += CELL) for (let y = mn[1]; y <= mx[1] + CELL; y += CELL) for (let z = mn[2]; z <= mx[2] + CELL; z += CELL) {
+      const k = cellOf(Math.min(x, mx[0]), Math.min(y, mx[1]), Math.min(z, mx[2]));
+      if (k < 0) continue;
+      let list = cells.get(k);
+      if (!list) cells.set(k, (list = []));
+      if (list[list.length - 1] !== t) list.push(t);
+    }
+  });
+  // Each triangle's zone: the zone most of its corners are in.
+  const triZone = tris.map(([a, b, c]) => (zones[b].zone === zones[c].zone ? zones[b].zone : zones[a].zone));
+  // Vertices hashed for nearest lookups.
+  const H = 0.03, hash = new Map();
+  const hkey = (x, y, z) => `${Math.floor(x / H)},${Math.floor(y / H)},${Math.floor(z / H)}`;
+  for (let i = 0; i < used.length; i++) {
+    if (!used[i]) continue;
+    const k = hkey(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]);
+    if (!hash.has(k)) hash.set(k, []);
+    hash.get(k).push(i);
+  }
+  S = { P, tris, triZone, cells, cellOf, CELL, zones, weights: mesh.weights, hash, H };
+  return S;
 }
 
-// ———————————————————————————————————————————————— the legs
+/**
+ * How far from `o` along unit `d` the ray first crosses the skin, counting
+ * only the zones `only` allows (or all); null if it doesn't within `far`.
+ */
+export function castBody(o, d, { far = 0.45, only = null } = {}) {
+  const s = surface();
+  const { P, tris, cells, cellOf, CELL } = s;
+  let best = Infinity;
+  const seen = new Set();
+  for (let r = 0; r <= far + CELL; r += CELL * 0.5) {
+    if (r > best + CELL) break;
+    const k = cellOf(o[0] + d[0] * r, o[1] + d[1] * r, o[2] + d[2] * r);
+    if (k < 0) continue;
+    const list = cells.get(k);
+    if (!list) continue;
+    for (const t of list) {
+      if (seen.has(t)) continue;
+      seen.add(t);
+      if (only && !only(s.triZone[t])) continue;
+      const [a, b, c] = tris[t];
+      const ax = P[a * 3], ay = P[a * 3 + 1], az = P[a * 3 + 2];
+      const e1x = P[b * 3] - ax, e1y = P[b * 3 + 1] - ay, e1z = P[b * 3 + 2] - az;
+      const e2x = P[c * 3] - ax, e2y = P[c * 3 + 1] - ay, e2z = P[c * 3 + 2] - az;
+      const hx = d[1] * e2z - d[2] * e2y, hy = d[2] * e2x - d[0] * e2z, hz = d[0] * e2y - d[1] * e2x;
+      const det = e1x * hx + e1y * hy + e1z * hz;
+      if (Math.abs(det) < 1e-14) continue;
+      const f = 1 / det, sx = o[0] - ax, sy = o[1] - ay, sz = o[2] - az;
+      const u = f * (sx * hx + sy * hy + sz * hz);
+      if (u < 0 || u > 1) continue;
+      const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
+      const v = f * (d[0] * qx + d[1] * qy + d[2] * qz);
+      if (v < 0 || u + v > 1) continue;
+      const dist = f * (e2x * qx + e2y * qy + e2z * qz);
+      if (dist > 1e-5 && dist < best) best = dist;
+    }
+  }
+  return best <= far ? best : null;
+}
 
-export const CROTCH = 0.8;
-export const LEG_TOP = 1.06;
-// The pelvis, by height: half-width, half-depth, centre z.
-const PELVIS = profile([[0.74, [0.165, 0.118, -0.008]], [0.84, [0.174, 0.124, -0.012]], [0.92, [0.17, 0.12, -0.009]], [0.99, [0.162, 0.112, -0.003]], [1.035, [0.152, 0.106, 0.0]], [1.06, [0.13, 0.092, 0.0]]]);
-// A leg, by height: radius across, radius front to back, how far forward of the bones its middle is.
-const LEG = profile([[0.06, [0.034, 0.038, 0.004]], [0.12, [0.036, 0.04, 0.0]], [0.25, [0.044, 0.049, -0.006]], [0.36, [0.05, 0.056, -0.01]], [0.46, [0.048, 0.05, -0.002]], [0.5, [0.05, 0.052, 0.004]], [0.58, [0.059, 0.061, 0.004]], [0.68, [0.069, 0.071, 0.002]], [0.78, [0.079, 0.081, 0.0]], [0.86, [0.087, 0.087, -0.004]]]);
+/** The skin's bone weights near `p` ({ boneName: weight }), blended from the nearest few vertices of the body. */
+export function skinWeightsAt(p, { only = null } = {}) {
+  const s = surface();
+  const { P, hash, H } = s;
+  const near = [];
+  for (let reach = 1; reach <= 4 && near.length < 4; reach++) {
+    near.length = 0;
+    const cx = Math.floor(p[0] / H), cy = Math.floor(p[1] / H), cz = Math.floor(p[2] / H);
+    for (let i = -reach; i <= reach; i++) for (let j = -reach; j <= reach; j++) for (let k = -reach; k <= reach; k++) {
+      for (const v of hash.get(`${cx + i},${cy + j},${cz + k}`) ?? []) {
+        if (only && !only(s.zones[v].zone)) continue;
+        near.push([v, Math.hypot(P[v * 3] - p[0], P[v * 3 + 1] - p[1], P[v * 3 + 2] - p[2])]);
+      }
+    }
+  }
+  near.sort((a, b) => a[1] - b[1]);
+  const pick = near.slice(0, 4);
+  const out = {};
+  let total = 0;
+  for (const [v, dist] of pick) {
+    const k = 1 / (dist * dist + 1e-6);
+    total += k;
+    for (const [b, w] of Object.entries(s.weights[v])) out[BONES[b]] = (out[BONES[b]] ?? 0) + w * k;
+  }
+  for (const b of Object.keys(out)) out[b] /= total || 1;
+  return pick.length ? out : { hips: 1 };
+}
 
-/** The pelvis's half-width, half-depth and centre z at height `y`. */
-export const pelvisAt = (y) => PELVIS(y);
+// ———————————————————————————————————————————————— the legs and the feet
 
 /** Where the leg's middle is at height `y` (side `m`): down the line of hip, knee and ankle. */
 export function legAxis(y, m) {
-  const J = JOINTS;
-  const [hip, knee, ankle] = [J.hip, J.knee, J.ankle].map((p) => mirror(p, m));
-  if (y >= knee[1]) { const t = (y - knee[1]) / (hip[1] - knee[1]); return [knee[0] + (hip[0] - knee[0]) * t, y, knee[2] + (hip[2] - knee[2]) * t]; }
-  const t = clamp((y - ankle[1]) / (knee[1] - ankle[1]));
-  return [ankle[0] + (knee[0] - ankle[0]) * t, y, ankle[2] + (knee[2] - ankle[2]) * t];
+  const [hip, knee, ankle] = [JOINTS.hip, JOINTS.knee, JOINTS.ankle].map((p) => mirror(p, m));
+  const [a, b] = y >= knee[1] ? [knee, hip] : [ankle, knee];
+  const t = (y - a[1]) / (b[1] - a[1]);
+  return [a[0] + (b[0] - a[0]) * t, y, a[2] + (b[2] - a[2]) * t];
 }
 
 /**
- * A point round a leg at height `y` and angle `th` (0 forward, π/2 out),
- * side `m`, made `ease` bigger all round (for what is worn over it). Up in
- * the seat the leg is half the pelvis, out along the same ray to its
- * outline and flat on the middle line.
+ * A foot's measure (side `m`), for a shoe: how far back its heel and forward
+ * its toes are, and along it (by z) its middle across, half-width and top.
  */
-export function legPoint(y, th, m, { ease = 0, pelvis = PELVIS, leg = LEG, shape = true } = {}) {
-  const ax = legAxis(y, m);
-  const [rx, rz, fz] = leg(y);
-  const dir = [m * Math.sin(th), Math.cos(th)];
-  const k = superK(th, 2.15);
-  let bump = 0;
-  if (shape) {
-    const front = Math.max(0, Math.cos(th)), back = Math.max(0, -Math.cos(th)), inner = Math.max(0, -Math.sin(th));
-    bump += 0.0045 * G((y - 0.5) / 0.025) * front ** 2;
-    bump += 0.006 * G((y - 0.565) / 0.03) * G(ad(th, -0.6) / 0.6);
-    bump += 0.008 * G((y - 0.37) / 0.05) * back * (0.6 + 0.4 * inner);
-    bump -= 0.003 * G((y - 0.48) / 0.02) * back;
+export function footProfile(m) {
+  const s = surface();
+  const pts = [];
+  for (let i = 0; i < s.zones.length; i++) {
+    const p = [s.P[i * 3], s.P[i * 3 + 1], s.P[i * 3 + 2]];
+    if (p[0] * m <= 0.02 || p[1] > 0.13 || !['foot', 'leg'].includes(s.zones[i].zone)) continue;
+    if (!s.weights[i] || !Object.keys(s.weights[i]).length) continue;
+    pts.push(p);
   }
-  let p = [ax[0] + dir[0] * (rx * k + ease + bump), ax[2] + fz + dir[1] * (rz * k + ease + bump)];
-  const s = smooth(CROTCH - 0.07, CROTCH + 0.04, y);
-  if (s > 0) {
-    const [a0, b0, cz] = pelvis(y);
-    const a = a0 + ease, b = b0 + ease;
-    const glute = shape ? 0.012 * G((y - 0.9) / 0.05) * Math.max(0, -Math.cos(th)) ** 1.5 : 0;
-    let lo = 0, hi = 0.4;
-    const inside = (t) => {
-      const x = ax[0] + dir[0] * t, z = ax[2] + dir[1] * t;
-      return (x / a) ** 2 + ((z - cz) / (b + glute)) ** 2 < 1 && x * m >= -0.0004;
-    };
-    for (let i = 0; i < 26; i++) { const mid = (lo + hi) / 2; if (inside(mid)) lo = mid; else hi = mid; }
-    p = [p[0] + (ax[0] + dir[0] * lo - p[0]) * s, p[1] + (ax[2] + dir[1] * lo - p[1]) * s];
+  let back = Infinity, front = -Infinity;
+  for (const p of pts) { back = Math.min(back, p[2]); front = Math.max(front, p[2]); }
+  const N = 40, bins = Array.from({ length: N + 1 }, () => ({ lo: Infinity, hi: -Infinity, top: 0 }));
+  for (const p of pts) {
+    // Only the foot below the ankle's top counts toward its height.
+    const b = bins[Math.round(((p[2] - back) / (front - back)) * N)];
+    b.lo = Math.min(b.lo, p[0]); b.hi = Math.max(b.hi, p[0]);
+    if (p[1] < 0.12) b.top = Math.max(b.top, p[1]);
   }
-  return [p[0], y, p[1]];
-}
-
-function legs(part, detail) {
-  const rows = Math.round(70 * detail), around = Math.round(36 * detail);
-  for (const m of [1, -1]) {
-    part.grid(rows, around, (i, j) => {
-      const th = (j / around) * Math.PI * 2;
-      const y = 0.068 + (LEG_TOP - 0.068) * (i / rows);
-      const p = legPoint(y, th, m);
-      const tint = 1 - 0.28 * smooth(CROTCH + 0.02, CROTCH - 0.04, y) * G((m * Math.sin(th) + 1) / 0.45) - 0.15 * G((y - 0.48) / 0.02) * Math.max(0, -Math.cos(th));
-      return { p, uv: [j / around, i / rows], w: legWeights(p), tint, zone: { zone: 'leg', y, d: 0 } };
-    }, { flip: m > 0 });
-  }
-}
-
-// ———————————————————————————————————————————————— the feet
-
-const FOOT_BACK = -0.068, FOOT_LEN = 0.27;
-// Heel (0) to toes (1): half-width, height of the top, the sole's arch on the inside.
-const FOOT = profile([[0, [0.028, 0.065]], [0.12, [0.034, 0.095]], [0.3, [0.038, 0.1]], [0.5, [0.041, 0.062]], [0.68, [0.046, 0.042]], [0.82, [0.046, 0.03]], [0.93, [0.04, 0.024]], [1, [0.03, 0.018]]]);
-
-/** A point of the left (m 1) or right foot: `u` heel to toe, `a` round (0 the outer edge at the sole, π/2 over the top, π the inner edge, on round under the sole). */
-export function footPoint(u, a, m) {
-  const ankle = mirror(JOINTS.ankle, m);
-  const [hw, h] = FOOT(u);
-  // Rounded at the heel and at the toes' ends; five toes, each a rise over the top and a step in the outline.
-  const heel = Math.sqrt(clamp(1 - (Math.max(0, 0.08 - u) / 0.08) ** 2));
-  const tip = Math.sqrt(clamp(1 - (Math.max(0, u - 0.9) / 0.1) ** 2));
-  const across = Math.cos(a), up = Math.sin(a);
-  // Toes from the inside (big toe) out; where on the foot's width each one is.
-  let toes = 0;
-  if (u > 0.74) {
-    const w = (across * -1 + 1) / 2;
-    const centres = [0.86, 0.66, 0.48, 0.31, 0.15];
-    const sizes = [1.25, 0.95, 0.9, 0.82, 0.75];
-    let best = 0;
-    centres.forEach((c, i) => { best = Math.max(best, sizes[i] * G((w - c) / 0.075)); });
-    toes = best * smooth(0.74, 0.82, u);
-  }
-  const width = hw * heel * tip * (1 - 0.07 * smooth(0.8, 1, u) * (1 - toes));
-  // The sole: flat, the arch lifting the inside of the middle; the top: the instep falling to the toes.
-  const sole = 0.004 + 0.01 * G((u - 0.42) / 0.14) * smooth(0.0, -0.8, across) * Math.max(0, -up);
-  const top = h * (0.85 + 0.15 * toes * smooth(0.78, 0.86, u));
-  const y = up >= 0 ? sole + (top - sole) * Math.pow(up, 0.75) * heel * tip + 0.004 * (1 - heel * tip) : sole * (1 + up);
-  const lean = 0.006 * u;
-  return [ankle[0] + m * (lean + across * width * (up >= 0 ? 1 : 0.92)), Math.max(0, y), ankle[2] + FOOT_BACK + u * FOOT_LEN];
-}
-
-function feet(part, detail) {
-  const rows = Math.round(40 * detail), around = Math.round(28 * detail);
-  for (const m of [1, -1]) {
-    part.grid(rows, around, (i, j) => {
-      const u = i / rows, a = (j / around) * Math.PI * 2;
-      const p = footPoint(u, a, m);
-      // The upper part of the foot rises into the shin; the heel is the leg's, the toes their own.
-      return { p, uv: [j / around, u], w: legWeights(p), tint: Math.sin(a) < -0.2 ? 0.85 : 1, zone: { zone: 'foot', y: p[1], d: u } };
-    }, { flip: m > 0 });
-  }
-}
-
-/** The bare body's parts: trunk, legs and feet, all in the skin's material. */
-export function buildBody(detail = 1) {
-  const part = new Part('body', 'skin');
-  trunk(part, detail);
-  legs(part, detail);
-  feet(part, detail);
-  return part;
+  for (let i = 0; i <= N; i++) if (!Number.isFinite(bins[i].lo)) bins[i] = { ...bins[i - 1 >= 0 ? i - 1 : i + 1] };
+  const at = (z) => {
+    const f = Math.max(0, Math.min(N, ((z - back) / (front - back)) * N));
+    const i = Math.min(N - 1, Math.floor(f)), t = f - i;
+    // Smoothed over the neighbouring bins.
+    const pick = (k) => bins[Math.max(0, Math.min(N, k))];
+    const avg = (key, k) => (pick(k - 1)[key] + 2 * pick(k)[key] + pick(k + 1)[key]) / 4;
+    const lerp = (key) => avg(key, i) * (1 - t) + avg(key, i + 1) * t;
+    const lo = lerp('lo'), hi = lerp('hi');
+    return { x: (lo + hi) / 2, hw: (hi - lo) / 2, top: lerp('top') };
+  };
+  return { back, front, at };
 }

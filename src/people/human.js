@@ -1,10 +1,10 @@
 import { Skeleton, skin } from '../models/rig.js';
-import { assemble } from './human/kit.js';
-import { bones, FINGER_NAMES, HEIGHT, JOINTS, mirror, sideOf } from './human/skeleton.js';
-import { buildEyes, buildHead, buildMouth } from './human/head.js';
-import { buildEars } from './human/ears.js';
-import { buildArms } from './human/arms.js';
-import { buildBody } from './human/body.js';
+import { assemble, cross, len, Part, sub } from './human/kit.js';
+import { bones, FINGER_NAMES, FINGERS, HEIGHT, JOINTS, mirror, sideOf } from './human/skeleton.js';
+import { buildEyes, buildMouth, withLipCorners } from './human/head.js';
+import { bodyLevel } from './human/basemesh.js';
+import { zoneOf } from './human/body.js';
+import { BONES as BAKED_BONES } from './human/data/base.js';
 import { DEFAULT_OUTFIT, GARMENTS } from './human/clothes.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
@@ -38,17 +38,62 @@ import { CLIPS, moveHuman } from './human/motion.js';
 export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 
-const BODY_MATERIALS = ['skinHead', 'skin', 'eye', 'nail', 'mouth', 'teeth', 'tongue'];
+const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'tongue', 'lash'];
 const builds = new Map();
 const NAMES = bones().map(([n]) => n);
 
+/** Subdivision level for a detail: the baked quads below 0.8, smoothed once from there. */
+export const levelFor = (detail) => (detail >= 0.8 ? 1 : 0);
+
+/**
+ * The skin as a part: every quad of the body at `level`, split where its
+ * UVs are, its normals from the smooth surface, each vertex shaded by how
+ * much of the sky it sees, weighted as MakeHuman's artists weighted it (the
+ * mouth's corners given their own bones), and tagged with where on the body
+ * it is.
+ */
+function skinPart(level) {
+  const { pos, uv, faces, uvFaces, weights, occ } = bodyLevel(level);
+  const n = new Float32Array(pos.length);
+  const P = (i) => [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]];
+  for (let f = 0; f < faces.length; f += 4) {
+    const [a, b, c, d] = [faces[f], faces[f + 1], faces[f + 2], faces[f + 3]];
+    const q = cross(sub(P(c), P(a)), sub(P(d), P(b)));
+    for (const v of [a, b, c, d]) { n[v * 3] += q[0]; n[v * 3 + 1] += q[1]; n[v * 3 + 2] += q[2]; }
+  }
+  const part = new Part('body', 'skin');
+  const ids = new Map();
+  const corner = (v, t) => {
+    const key = v * 4194304 + t;
+    let id = ids.get(key);
+    if (id === undefined) {
+      const p = P(v);
+      const named = {};
+      for (const [b, w] of Object.entries(weights[v])) named[BAKED_BONES[b]] = (named[BAKED_BONES[b]] ?? 0) + w;
+      const l = Math.hypot(n[v * 3], n[v * 3 + 1], n[v * 3 + 2]) || 1;
+      const ao = occ[v];
+      id = part.vertex(p, [uv[t * 2], uv[t * 2 + 1]], withLipCorners(named, p), 0.3 + 0.7 * Math.pow(ao, 0.75), [n[v * 3] / l, n[v * 3 + 1] / l, n[v * 3 + 2] / l], zoneOf(weights[v], p));
+      ids.set(key, id);
+    }
+    return id;
+  };
+  for (let f = 0; f < faces.length; f += 4) {
+    const q = [0, 1, 2, 3].map((k) => corner(faces[f + k], uvFaces[f + k]));
+    const v = [0, 1, 2, 3].map((k) => P(faces[f + k]));
+    // Split each quad along its shorter diagonal.
+    if (len(sub(v[0], v[2])) <= len(sub(v[1], v[3]))) part.idx.push(q[0], q[1], q[2], q[0], q[2], q[3]);
+    else part.idx.push(q[0], q[1], q[3], q[1], q[2], q[3]);
+  }
+  return part;
+}
+
 /** The base body's mesh data at `detail`, made once and shared. */
 function bodyData(detail) {
-  const key = `body@${detail}`;
+  const level = levelFor(detail);
+  const key = `body@${level}`;
   if (!builds.has(key)) {
-    const { part: head, grid } = buildHead(detail);
-    const parts = [head, buildEyes(detail), buildEars(detail), ...buildArms(detail), buildBody(detail), ...buildMouth(detail)];
-    builds.set(key, { data: assemble(parts, NAMES, BODY_MATERIALS), grid });
+    const parts = [skinPart(level), buildEyes(detail), ...buildMouth()];
+    builds.set(key, { data: assemble(parts, NAMES, BODY_MATERIALS) });
   }
   return builds.get(key);
 }
@@ -63,25 +108,23 @@ function garmentData(name, garment, detail) {
 }
 
 const DEFAULT_LOOK = Object.freeze({
-  skin: '#d29a78', iris: '#5a4632',
+  skin: '#b98a70', iris: '#5a4632',
   shirt: '#8f9399', denim: '#ffffff', shoe: '#2c2c30', sole: '#efece6', briefs: '#2a2b30',
 });
 
 /** The materials, by name, for a look. Textures where there is a document to paint them on. */
 function makeMaterials(GFX, look, tex) {
-  const M = (name, o) => {
-    const m = new GFX.MeshPhysicalMaterial({ name: `human ${name}`, vertexColors: true, ...o });
-    return m;
-  };
-  const skinSheen = { sheen: 0.35, sheenColor: new GFX.Color('#ff9a7c'), sheenRoughness: 0.45 };
+  const M = (name, o) => new GFX.MeshPhysicalMaterial({ name: `human ${name}`, vertexColors: true, ...o });
   const mats = {
-    skinHead: M('head skin', { color: tex ? '#ffffff' : look.skin, map: tex?.head.map ?? null, bumpMap: tex?.head.bump ?? null, bumpScale: 0.0006, roughness: 0.52, ...skinSheen }),
-    skin: M('skin', { color: tex ? '#ffffff' : look.skin, map: tex?.skin.map ?? null, bumpMap: tex?.skin.bump ?? null, bumpScale: 0.0004, roughness: 0.55, ...skinSheen }),
+    skin: M('skin', {
+      color: tex ? '#ffffff' : look.skin, map: tex?.skin.map ?? null, bumpMap: tex?.skin.bump ?? null, bumpScale: 0.00035, roughness: 0.5,
+      // Light scattered back out of the skin, warm and soft at the edges.
+      sheen: 0.3, sheenColor: new GFX.Color('#e8a090'), sheenRoughness: 0.4, clearcoat: 0.06, clearcoatRoughness: 0.45,
+    }),
     eye: M('eyes', { color: '#ffffff', map: tex?.eye ?? null, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.03 }),
-    nail: M('nails', { color: '#e6b6a6', roughness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.2 }),
-    mouth: M('mouth', { color: '#5a2224', roughness: 0.6 }),
-    teeth: M('teeth', { color: '#efe8da', roughness: 0.25, clearcoat: 0.4 }),
-    tongue: M('tongue', { color: '#b35a5c', roughness: 0.45, clearcoat: 0.3 }),
+    teeth: M('teeth', { color: '#efe6d6', roughness: 0.25, clearcoat: 0.4 }),
+    tongue: M('tongue', { color: '#94504f', roughness: 0.45, clearcoat: 0.25 }),
+    lash: M('lashes', { color: '#1a1412', roughness: 0.7, side: GFX.DoubleSide }),
     briefs: M('briefs', { color: look.briefs, roughness: 0.8, sheen: 0.5, sheenColor: new GFX.Color('#9aa0aa'), sheenRoughness: 0.5 }),
     shirt: M('t-shirt', { color: look.shirt, map: tex?.shirt.map ?? null, bumpMap: tex?.shirt.bump ?? null, bumpScale: 0.0003, roughness: 0.9, sheen: 0.7, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.55, side: GFX.DoubleSide }),
     denim: M('denim', { color: tex ? look.denim : '#2c4a78', map: tex?.denim.map ?? null, bumpMap: tex?.denim.bump ?? null, bumpScale: 0.0004, roughness: 0.86, sheen: 0.35, sheenColor: new GFX.Color('#9db4d8'), sheenRoughness: 0.6, side: GFX.DoubleSide }),
@@ -123,23 +166,55 @@ export const HAND_POSES = Object.freeze({
   point: { curl: [1.05, 1.25, 0.9], thumb: 0.9, spread: 0, straight: ['index'] },
 });
 
+/** Euler angles (for Rz·Ry·Rx, as the rig turns) of the turn by `angle` about unit `axis`. */
+function eulerOf(R) {
+  return [Math.atan2(R[2][1], R[2][2]), Math.asin(Math.max(-1, Math.min(1, -R[2][0]))), Math.atan2(R[1][0], R[0][0])];
+}
+function axisTurn(axis, angle) {
+  const [x, y, z] = axis, c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
+  return [
+    [t * x * x + c, t * x * y - s * z, t * x * z + s * y],
+    [t * x * y + s * z, t * y * y + c, t * y * z - s * x],
+    [t * x * z - s * y, t * y * z + s * x, t * z * z + c],
+  ];
+}
+const mul3 = (A, B) => A.map((r) => [0, 1, 2].map((j) => r[0] * B[0][j] + r[1] * B[1][j] + r[2] * B[2][j]));
+/** A rest-frame axis of the left hand, for side `m` (a turn's axis mirrors as (x, −y, −z)). */
+const sideAxis = (a, m) => (m > 0 ? a : [a[0], -a[1], -a[2]]);
+
+// For each finger: its curl axis, and the axis that spreads it away from the middle finger.
+const HAND_AXES = Object.fromEntries(FINGER_NAMES.map((name) => {
+  const f = FINGERS[name];
+  const dir = sub(f.joints[3], f.joints[0]);
+  const away = sub(f.joints[0], FINGERS.middle.joints[0]);
+  const spread = name === 'middle' || name === 'thumb' ? [0, 0, 1] : cross(dir, away);
+  const l = len(spread) || 1;
+  return [name, { curl: f.curl, spread: spread.map((v) => v / l) }];
+}));
+
 /** Bends side `S`'s hand into `shape` ({ curl, thumb, spread, straight }), `k` of the way (0..1). */
 function poseHand(k, S, shape, amount = 1) {
   const m = S === 'L' ? 1 : -1;
-  const [c1, c2, c3] = shape.curl;
   const bend = [1.45, 1.6, 1.1];
-  const spreads = { index: 0.12, middle: 0.0, ring: -0.1, pinky: -0.22 };
+  const spreads = { index: 0.14, middle: 0.0, ring: 0.1, pinky: 0.24 };
+  const set = (bone, R) => { const r = k.bone(bone).rot; const e = eulerOf(R); r[0] += e[0]; r[1] += e[1]; r[2] += e[2]; };
   for (const name of FINGER_NAMES) {
     if (name === 'thumb') continue;
+    const ax = HAND_AXES[name];
     const straight = shape.straight?.includes(name) ? 0.08 : 1;
     // The little fingers curl a touch more than the index, as a hand does.
     const extra = name === 'pinky' ? 1.08 : name === 'ring' ? 1.04 : 1;
-    [c1, c2, c3].forEach((c, i) => k.turn(`${name}${i + 1}${S}`, spreads[name] * shape.spread * (i === 0 ? 1 : 0) * amount, 0, -m * c * bend[i] * straight * extra * amount));
+    shape.curl.forEach((c, i) => {
+      let R = axisTurn(sideAxis(ax.curl, m), c * bend[i] * straight * extra * amount);
+      if (i === 0) R = mul3(axisTurn(sideAxis(ax.spread, m), (spreads[name] * shape.spread - 0.05 * c) * amount), R);
+      set(`${name}${i + 1}${S}`, R);
+    });
   }
   const t = shape.thumb * amount;
-  k.turn(`thumb1${S}`, -0.35 * t, -m * 0.55 * t, -m * 0.25 * t);
-  k.turn(`thumb2${S}`, 0, 0, -m * 0.55 * t);
-  k.turn(`thumb3${S}`, 0, 0, -m * 0.75 * t);
+  const thumb = sideAxis(HAND_AXES.thumb.curl, m);
+  set(`thumb1${S}`, axisTurn(thumb, 0.45 * t));
+  set(`thumb2${S}`, axisTurn(thumb, 0.6 * t));
+  set(`thumb3${S}`, axisTurn(thumb, 0.8 * t));
 }
 
 /**
@@ -164,7 +239,8 @@ function poseFace(k, f, time) {
   }
   for (const S of ['L', 'R']) {
     const b = f[`blink${S}`] ?? blink;
-    k.turn(`lidUp${S}`, 0.62 * b - 0.08 * f.brows * (1 - b), 0, 0);
+    // At rest the upper lids are lifted a little off the iris: awake, not drowsy.
+    k.turn(`lidUp${S}`, 0.62 * b - (0.1 + 0.08 * f.brows) * (1 - b), 0, 0);
     k.turn(`lidLow${S}`, -0.18 * b - 0.04 * Math.max(0, f.smile), 0, 0);
     k.turn(`eye${S}`, -look[1], look[0], 0);
     const m = S === 'L' ? 1 : -1;
@@ -177,12 +253,12 @@ function poseFace(k, f, time) {
 }
 
 export function createHuman(GFX, options = {}) {
-  const { detail = 0.6, outfit = DEFAULT_OUTFIT, look: lookIn = {} } = options;
+  const { detail = 1, outfit = DEFAULT_OUTFIT, look: lookIn = {} } = options;
   const look = { ...DEFAULT_LOOK, ...lookIn };
   const group = new GFX.Group();
   group.name = 'human';
-  const { data: base, grid } = bodyData(detail);
-  let tex = humanTextures(GFX, grid, { skin: look.skin, iris: look.iris });
+  const { data: base } = bodyData(detail);
+  let tex = humanTextures(GFX, { skin: look.skin, iris: look.iris, size: levelFor(detail) ? 2048 : 1024 });
   let mats = makeMaterials(GFX, look, tex);
   const skeleton = new Skeleton(bones());
   const body = skinnedMesh(GFX, base, BODY_MATERIALS.map((n) => mats[n]), 'human body');
@@ -336,9 +412,9 @@ export function createHuman(GFX, options = {}) {
   function setLook(change) {
     Object.assign(look, change);
     if (change.skin || change.iris) {
-      tex = humanTextures(GFX, grid, { skin: look.skin, iris: look.iris });
+      tex = humanTextures(GFX, { skin: look.skin, iris: look.iris, size: levelFor(detail) ? 2048 : 1024 });
       const next = makeMaterials(GFX, look, tex);
-      for (const n of ['skinHead', 'skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
+      for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
     }
     for (const n of ['shirt', 'shoe', 'sole', 'briefs']) if (change[n]) mats[n].color.set(change[n]);
     if (change.denim) mats.denim.color.set(change.denim);

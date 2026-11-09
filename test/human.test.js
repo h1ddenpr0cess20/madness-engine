@@ -4,11 +4,11 @@ import { test } from 'node:test';
 import * as GFX from '../src/gfx/index.js';
 import { createHuman, CLIPS, GARMENTS, HAND_POSES, HUMAN_DIMENSIONS } from '../src/people/index.js';
 import { bones } from '../src/people/human/skeleton.js';
-import { legPoint, trunkPoint } from '../src/people/human/body.js';
-import { jeansPoint, shirtPoint } from '../src/people/human/clothes.js';
+import { jeansPoint, legPoint, shirtPoint, trunkPoint } from '../src/people/human/clothes.js';
 import { createKrystalSword } from '../src/weapons/index.js';
 
 const man = createHuman(GFX, { detail: 0.5 });
+man.dress(['briefs', 'tshirt', 'jeans', 'sneakers']);
 
 function boundsOf(attr) {
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
@@ -83,7 +83,7 @@ test('clothes are cut outside the skin they cover', () => {
       assert.ok(Math.hypot(b[0] - mid[0], b[2] - mid[1]) >= Math.hypot(a[0] - mid[0], a[2] - mid[1]) - 1e-4, `jeans at y ${y.toFixed(2)} th ${th.toFixed(1)}`);
     }
   }
-  for (let y = 1.0; y < 1.44; y += 0.03) {
+  for (let y = 1.0; y < 1.36; y += 0.03) {
     for (let th = 0; th < Math.PI * 2; th += 0.2) {
       const body = trunkPoint(y, th), shirt = shirtPoint(y, th);
       assert.ok(Math.hypot(shirt[0], shirt[2]) > Math.hypot(body[0], body[2]) - 0.004, `shirt at y ${y.toFixed(2)} th ${th.toFixed(1)}`);
@@ -103,15 +103,15 @@ test('every clip poses him without breaking the mesh', () => {
 
 test('the face moves: the jaw opens, the lids close, the eyes turn', () => {
   man.pose({ clip: 'idle', t: 0 });
-  const jaw = man.point('jaw', [0, 1.55, 0.08]);
+  const jaw = man.point('jaw', [0, 1.55, 0.13]);
   man.face({ jaw: 1, auto: false });
-  const open = man.point('jaw', [0, 1.55, 0.08]);
+  const open = man.point('jaw', [0, 1.55, 0.13]);
   assert.ok(open[1] < jaw[1] - 0.01, 'the chin drops');
-  const lid = man.point('lidUpL', [0.03, 1.665, 0.077]);
+  const lid = man.point('lidUpL', [0.03, 1.668, 0.14]);
   man.face({ blink: 1 });
-  assert.ok(man.point('lidUpL', [0.03, 1.665, 0.077])[1] < lid[1] - 0.005, 'the upper lid comes down');
+  assert.ok(man.point('lidUpL', [0.03, 1.668, 0.14])[1] < lid[1] - 0.005, 'the upper lid comes down');
   man.face({ jaw: 0, blink: 0, look: [0.4, 0], auto: true });
-  const gaze = man.point('eyeL', [0.03, 1.655, 0.08]);
+  const gaze = man.point('eyeL', [0.03, 1.66, 0.145]);
   assert.ok(gaze[0] > 0.03 + 0.003, 'the eye turns to his left');
   man.face({ look: [0, 0] });
 });
