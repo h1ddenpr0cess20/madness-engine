@@ -5,6 +5,7 @@ import { createBall } from '../heroes/krystal/model.js';
 import { createGraniteBoulder, GRANITES, GRANITE_TILE_SIZE } from '../heroes/rock-granite.js';
 import { createBladeMist, createCurvedBladeMist } from './blade-mist.js';
 import { bladeCentreline } from './blade-curve.js';
+import { assertHands, handlingInfo, handlingOf, reachOf } from './categories.js';
 
 /** Weapon geometry is expressed in metres: one engine unit equals one metre. */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
@@ -1778,6 +1779,8 @@ export function buildWeapon(GFX, spec, {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('buildWeapon requires the Madness Engine GFX module');
   }
+  // Every weapon says how many hands hold it: a spec without one is refused before any geometry is built.
+  assertHands(spec.hands);
   const graniteWeapon = spec.pommelStyle === 'granite';
   if (!graniteWeapon) {
     for (const name of [bladeMetal, hiltMetal]) {
@@ -1939,6 +1942,11 @@ export function buildWeapon(GFX, spec, {
       : createBladeMist(GFX, group, mistOptions);
   }
 
+  // How it is held, and how far it strikes beyond the hand (its overall length less its grip).
+  const overallLength = bladeRootY + bladeReach - lowestY;
+  const reach = reachOf({ overallLength, gripLength: spec.gripLength });
+  const handling = handlingOf({ hands: spec.hands, ranged: spec.ranged, reach });
+
   const api = {
     group,
     blade,
@@ -1957,8 +1965,9 @@ export function buildWeapon(GFX, spec, {
     bossSeat,
     bossSeatBounds,
     guardBoss,
+    handling,
     dimensions: Object.freeze({
-      overallLength: bladeRootY + bladeReach - lowestY,
+      overallLength,
       bladeLength: spec.bladeLength,
       bladeWidth: spec.bladeWidth,
       gripLength: spec.gripLength,
@@ -1972,7 +1981,8 @@ export function buildWeapon(GFX, spec, {
       unit: 'm',
     }),
     info: {
-      'Weapon length': `${(bladeRootY + bladeReach - lowestY).toFixed(3)} m`,
+      'Weapon length': `${overallLength.toFixed(3)} m`,
+      ...handlingInfo(handling, reach),
       'Blade length': `${spec.bladeLength.toFixed(3)} m`,
       'Blade width': `${(spec.bladeWidth * 1000).toFixed(0)} mm`,
       'Grip length': `${(spec.gripLength * 1000).toFixed(0)} mm`,

@@ -1,4 +1,5 @@
 import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
+import { HANDS } from './categories.js';
 
 /**
  * A broadsword-derived greatsword. It preserves the broadsword's blade profile,
@@ -20,6 +21,7 @@ export const GREATSWORD_DIMENSIONS = Object.freeze({
 
 export const GREATSWORD_SPEC = Object.freeze({
   name: 'greatsword',
+  hands: HANDS.TWO,
   ...GREATSWORD_DIMENSIONS,
 });
 

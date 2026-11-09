@@ -298,3 +298,5 @@ morningstar. The dagger and greatsword retain the broadsword's blade profile;
 the greatsword has a two-hand grip. The morningstar reuses the existing
 spiked head with a selectable metal haft, leather grip and marble pommel.
 See [docs/weapons.md](docs/weapons.md) for dimensions and construction.
+
+Every weapon also carries its `handling`: `hands` (`one-handed` or `two-handed`) and `range` (`short`, `medium` or `long` by striking reach, or `ranged`). The Weapons shelf is grouped by hands, and the ranged staff has its own shelf. See [Categories](docs/weapons.md#categories).

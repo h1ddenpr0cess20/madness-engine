@@ -20,6 +20,8 @@ import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
 import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
 import { dress, extraItems } from './extras.js';
+import { WEAPON_ASSETS, weaponShelf } from './weapon-assets.js';
+import { RANGE } from '../../../src/weapons/categories.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
 const proceduralProps = import.meta.glob(['../../../src/props/*.js', '../../../src/props/**/*.js']);
@@ -606,39 +608,15 @@ function bowlingPinItems() {
   }];
 }
 
-/** Dedicated shelf for measured, display-ready weapons. */
-const WEAPON_ASSETS = [
-  { id: 'weapons/madness-sword', factory: 'createMadnessSword', name: 'Madness Sword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar', metal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
-  { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
-  { id: 'weapons/magic-egg-sword', factory: 'createMagicEggSword', name: 'Magic Egg Sword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/magic-egg-dagger', factory: 'createMagicEggDagger', name: 'Magic Egg Dagger', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/magic-egg-greatsword', factory: 'createMagicEggGreatsword', name: 'Magic Egg Greatsword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/banana-dagger', factory: 'createBananaDagger', name: 'Banana Dagger', group: 'Banana Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'brass', metalGrip: true },
-  { id: 'weapons/banana-broadsword', factory: 'createBananaBroadsword', name: 'Banana Broadsword', group: 'Banana Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'brass', metalGrip: true },
-  { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/granite-sword', factory: 'createGraniteSword', name: 'Granite Sword', group: 'Granite Set', paletteKind: 'granite-weapon', grip: '#101010', granite: 'grey' },
-  { id: 'weapons/granite-dagger', factory: 'createGraniteDagger', name: 'Granite Dagger', group: 'Granite Set', paletteKind: 'granite-weapon', grip: '#101010', granite: 'grey' },
-  { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/regular-morningstar', factory: 'createRegularMorningstar', name: 'Regular Morningstar', group: 'Regular Set', paletteKind: 'morningstar' },
-  { id: 'weapons/marcs-sword', factory: 'createMarcsSword', name: "Marc's Sword", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-dagger', factory: 'createMarcsDagger', name: "Marc's Dagger", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-greatsword', factory: 'createMarcsGreatsword', name: "Marc's Greatsword", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-morningstar', factory: 'createMarcsMorningstar', name: "Marc's Morningstar", group: "Marc's Set", paletteKind: 'morningstar', metal: 'gold', grip: '#101010' },
-];
-
+/** The Weapons shelf's entries are in weapon-assets.js; each one is shelved by its hands, or as ranged. */
 function weaponItems() {
   return WEAPON_ASSETS.map(({
-    id, factory, name, group, paletteKind, grip, thread, metalGrip,
+    id, factory, name, set, hands, paletteKind, grip, thread, metalGrip,
     bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault, granite: graniteDefault,
   }) => ({
     id,
     category: 'Weapons',
-    group,
+    group: weaponShelf({ hands }),
     name,
     source: 'weapons/variants',
     factory,
@@ -680,7 +658,7 @@ function weaponItems() {
           get: () => made.bladeMist.visible,
           set: (on) => made.setBladeMist(on),
         } : null,
-        info: { Source: `weapons/variants#${factory}`, ...made.info, ...countOf(made.group) },
+        info: { Source: `weapons/variants#${factory}`, Set: set, ...made.info, ...countOf(made.group) },
       };
     },
   }));
@@ -691,7 +669,7 @@ function staffItem() {
   return {
     id: 'weapons/wizard-staff',
     category: 'Weapons',
-    group: 'Staff Set',
+    group: weaponShelf({ range: RANGE.RANGED }),
     name: 'Wizard Staff',
     source: 'weapons/staff',
     kind: 'object',
@@ -713,7 +691,7 @@ function staffItem() {
       return {
         object: made.group,
         environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
-        info: { Source: 'weapons/staff#createStaff', ...made.info, ...countOf(made.group) },
+        info: { Source: 'weapons/staff#createStaff', Set: 'Staff Set', ...made.info, ...countOf(made.group) },
       };
     },
   };

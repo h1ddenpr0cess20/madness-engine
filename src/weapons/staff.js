@@ -1,6 +1,7 @@
 import { WOOD_FINISHES, WOOD_SPECIES } from '../textures/wood.js';
 import { woodBoardMaterial } from '../props/wood-board.js';
 import { createKrystalOrbPommel, createMagicEggPommel } from './common.js';
+import { HANDS, handlingInfo, handlingOf } from './categories.js';
 
 /**
  * A gnarled wizard's staff carved entirely from the library's wood textures.
@@ -24,6 +25,12 @@ export const STAFF_DIMENSIONS = Object.freeze({
 });
 
 export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', 'none']);
+
+/**
+ * The staff's handling: held in one hand, as the engine's wizard and doomlord
+ * figures hold theirs, and ranged, a focus for spells rather than a melee reach.
+ */
+export const STAFF_HANDLING = handlingOf({ hands: HANDS.ONE, ranged: true });
 
 const GRIP_Y = [0.8, 1.1];
 const HEAD_Y = 1.55;
@@ -412,11 +419,13 @@ export function createStaff(GFX, {
     get vine() { return vine; },
     get tendrils() { return tendrils; },
     get seed() { return seed; },
+    handling: STAFF_HANDLING,
     get dimensions() {
       return Object.freeze({ ...STAFF_DIMENSIONS, overallLength: dims(), tendrils, unit: 'm' });
     },
     get info() {
       return {
+        ...handlingInfo(STAFF_HANDLING),
         'Staff length': `${dims().toFixed(2)} m`,
         Wood: `${woodSpecies} (${woodFinish})`,
         Topper: topperKind === 'orb' ? 'Krystal crystal orb' : topperKind === 'egg' ? 'Glass egg' : 'none',
