@@ -348,6 +348,8 @@ function poseFace(k, f, time, said = null) {
     k.turn(`eye${S}`, -look[1], look[0], 0);
     const m = S === 'L' ? 1 : -1;
     k.move(`brow${S}`, 0, 0.004 * f.brows, 0.001 * Math.max(0, f.brows));
+    // Raised, they lift well up, the inner ends a little more (surprise, worry).
+    if (f.brows > 0) { k.move(`brow${S}`, 0, 0.0045 * f.brows, 0.0008 * f.brows); k.turn(`brow${S}`, 0, 0, m * 0.18 * f.brows); }
     // Frowning, they knit: drawn in and down, the inner ends lowest.
     if (f.brows < 0) { k.move(`brow${S}`, m * 0.0035 * f.brows, 0.0025 * f.brows, 0); k.turn(`brow${S}`, 0, 0, -m * 0.45 * f.brows); }
     k.move(`lipCorner${S}`, m * (0.0035 * f.smile + 0.0055 * f.wide - 0.0045 * f.pucker), 0.004 * f.smile - 0.004 * f.wide * f.lipDown, -0.002 * Math.abs(f.smile) + 0.0025 * f.pucker - 0.0015 * f.wide);
