@@ -430,7 +430,8 @@ export function paintCover(g, mode) {
       ctx.fillRect(a === 0 ? 0 : b - 14, 0, 14, H);
       ctx.fillRect(a, 0, b - a, 14); ctx.fillRect(a, H - 14, b - a, 14);
     }
-    // The bookplate (mirrored: this face lies the other way up when it is open).
+    // The bookplate (mirrored: this face lies the other way up when it is open); `g.bookplate: false` leaves the endpaper plain.
+    if (g.bookplate !== false) {
     ctx.save();
     ctx.translate(mid(front), 0); ctx.scale(-1, 1);
     ctx.strokeStyle = '#3a2a1c'; ctx.fillStyle = '#3a2a1c';
@@ -443,6 +444,7 @@ export function paintCover(g, mode) {
     ctx.font = `italic 8.5px ${TITLE_FONT}`;
     ctx.fillText('(if found, do not return me.', 0, 252); ctx.fillText('do not read after dark.)', 0, 264);
     ctx.restore();
+    }
   }
   ctx.restore();
   return canvas;
