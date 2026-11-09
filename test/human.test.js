@@ -144,3 +144,26 @@ test('every garment in the wardrobe can be worn on its own', () => {
   }
   man.dress(['briefs', 'tshirt', 'jeans', 'sneakers']);
 });
+
+test('talking moves the mouth through its shapes, and a yell opens it wide', async () => {
+  const { speech, yelling } = await import('../src/people/human.js');
+  const jaws = [], shapes = new Set();
+  for (let t = 0; t < 2.5; t += 0.05) {
+    const s = speech(t);
+    jaws.push(s.jaw);
+    shapes.add(s.pucker > 0.3 ? 'round' : s.wide > 0.3 ? 'wide' : s.jaw > 0.25 ? 'open' : 'closed');
+  }
+  assert.ok(Math.max(...jaws) > 0.3 && Math.min(...jaws) < 0.1, 'the jaw opens and closes as he speaks');
+  assert.ok(shapes.size >= 3, `the lips change shape (${[...shapes]})`);
+  const shout = speech(0.5, { loud: 1 }), said = speech(0.5);
+  assert.ok(shout.jaw >= said.jaw && shout.brows < 0 && shout.lipUp > 0.5, 'shouting is wider, scowling, the teeth bared');
+  const y = yelling(0.8);
+  assert.ok(y.jaw > 0.7 && y.brows < -0.5, 'a yell is a wide mouth and a scowl');
+  assert.ok(CLIPS.includes('yell'));
+  const mouth = () => { const p = man.body.geometry.attributes.position; let lo = Infinity; for (let i = 0; i < p.count; i++) { const x = p.getX(i), yy = p.getY(i), z = p.getZ(i); if (Math.abs(x) < 0.01 && z > 0.12 && yy > 1.5 && yy < 1.6) lo = Math.min(lo, yy); } return lo; };
+  man.pose({ clip: 'idle', t: 0, time: 0.8 });
+  const shut = mouth();
+  man.pose({ clip: 'yell', t: 0, time: 0.8 });
+  assert.ok(mouth() < shut - 0.02, 'the chin drops when he yells');
+  man.pose({ clip: 'idle', t: 0, time: 0 });
+});

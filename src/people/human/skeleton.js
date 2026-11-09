@@ -50,6 +50,9 @@ export function bones() {
     ['head', 'neck', J.head],
     ['jaw', 'head', FACE.jaw],
     ['tongue', 'jaw', FACE.tongue],
+    // The lips: the upper on the head, the lower riding on the jaw.
+    ['lipUpper', 'head', FACE.mouth],
+    ['lipLower', 'jaw', FACE.mouth],
   ];
   for (const m of [1, -1]) {
     const S = sideOf(m);

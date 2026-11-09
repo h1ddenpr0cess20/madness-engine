@@ -11,17 +11,29 @@ import { EYE, FACE } from './skeleton.js';
 
 const G = (t) => Math.exp(-t * t);
 
-/** Moves some of a face vertex's head and jaw share to the mouth's corner it is near, so a smile pulls it. */
+/**
+ * Gives the mouth bones of its own: some of a face vertex's head and jaw
+ * share goes to the corner it is near (so a smile pulls it), and to the lip
+ * it is on (the upper lip on the head, the lower on the jaw), so the lips can
+ * lift off the teeth, curl and round.
+ */
 export function withLipCorners(w, p) {
   const m = p[0] >= 0 ? 1 : -1, S = m > 0 ? 'L' : 'R';
-  const c = FACE.lipCorner;
-  const d = Math.hypot(p[0] - c[0] * m, (p[1] - c[1]) * 1.3, (p[2] - c[2]) * 1.5);
-  const k = 0.85 * G(d / 0.013) * smooth(0.06, 0.1, p[2]);
-  if (k < 1e-3) return w;
+  const c = FACE.lipCorner, M = FACE.mouth;
   const out = { ...w };
-  let moved = 0;
-  for (const b of ['head', 'jaw']) if (out[b]) { const take = out[b] * k; out[b] -= take; moved += take; }
-  if (moved > 0) out[`lipCorner${S}`] = (out[`lipCorner${S}`] ?? 0) + moved;
+  const take = (from, to, k) => {
+    if (k < 1e-3) return;
+    let moved = 0;
+    for (const b of from) if (out[b]) { const x = out[b] * k; out[b] -= x; moved += x; }
+    if (moved > 0) out[to] = (out[to] ?? 0) + moved;
+  };
+  // The lips: in from the corners, up or down from the slit, on the front of the face.
+  const front = smooth(M[2] - 0.028, M[2] - 0.012, p[2]);
+  const across = G(p[0] / 0.019) * smooth(c[0] + 0.004, c[0] - 0.004, Math.abs(p[0]));
+  take(['head'], 'lipUpper', 0.9 * across * front * G((p[1] - M[1] - 0.0055) / 0.0075) * smooth(M[1] - 0.001, M[1] + 0.001, p[1]));
+  take(['jaw'], 'lipLower', 0.9 * across * front * G((p[1] - M[1] + 0.0065) / 0.008) * smooth(M[1] + 0.001, M[1] - 0.001, p[1]));
+  const d = Math.hypot(p[0] - c[0] * m, (p[1] - c[1]) * 1.3, (p[2] - c[2]) * 1.5);
+  take(['head', 'jaw', 'lipUpper', 'lipLower'], `lipCorner${S}`, 0.85 * G(d / 0.013) * smooth(0.06, 0.1, p[2]));
   return out;
 }
 

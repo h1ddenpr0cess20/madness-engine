@@ -13,7 +13,7 @@ import { armDistance, JOINTS, mirror } from './skeleton.js';
 
 const GROUP = (name) => {
   const n = name.replace(/[LR]$/, '');
-  if (['head', 'jaw', 'tongue', 'eye', 'lidUp', 'lidLow', 'brow', 'lipCorner'].includes(n)) return 'head';
+  if (['head', 'jaw', 'tongue', 'eye', 'lidUp', 'lidLow', 'brow', 'lipCorner', 'lipUpper', 'lipLower'].includes(n)) return 'head';
   if (n === 'neck') return 'neck';
   if (['root', 'hips', 'spine', 'chest', 'clavicle'].includes(n)) return 'trunk';
   if (n === 'arm' || n === 'fore') return 'arm';

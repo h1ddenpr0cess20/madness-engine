@@ -246,12 +246,77 @@ function poseHand(k, S, shape, amount = 1) {
  * The face, set by `face(...)` and held until changed: `jaw` 0 shut to 1
  * wide open, `blink` (or `blinkL`, `blinkR`) 0 open to 1 shut, `look`
  * [yaw, pitch] in radians (+yaw to his left, +pitch up), `smile` −1..1,
- * `brows` −1 (a frown) .. 1 (raised), `tongue` 0..1 out. With `auto` (the
- * default) he blinks on his own and his eyes wander a little.
+ * `brows` −1 (a frown) .. 1 (raised), `tongue` 0..1 out, and the lips:
+ * `lipUp` (the upper lifted off the teeth), `lipDown` (the lower pulled
+ * down), `pucker` (rounded and pushed out, as for "oo"), `wide` (stretched,
+ * as for "ee"), each 0..1. With `auto` (the default) he blinks on his own
+ * and his eyes wander a little.
  */
-const FACE_DEFAULT = Object.freeze({ jaw: 0, blink: 0, blinkL: null, blinkR: null, look: [0, 0], smile: 0, brows: 0, tongue: 0, auto: true });
+const FACE_DEFAULT = Object.freeze({ jaw: 0, blink: 0, blinkL: null, blinkR: null, look: [0, 0], smile: 0, brows: 0, tongue: 0, lipUp: 0, lipDown: 0, pucker: 0, wide: 0, auto: true });
 
-function poseFace(k, f, time) {
+const hash = (n, k) => { const x = Math.sin(n * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
+const ease01 = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+
+/** The mouth's shapes for the sounds of speech: open vowels, spread, rounded, and closed lips. */
+const SOUNDS = [
+  { jaw: 0.45, wide: 0.15 }, // "ah"
+  { jaw: 0.2, wide: 0.6, lipUp: 0.15 }, // "ee"
+  { jaw: 0.25, pucker: 0.85 }, // "oo"
+  { jaw: 0.3, wide: 0.3 }, // "eh"
+  { jaw: 0.02, pucker: 0.15 }, // "m", "b", "p"
+  { jaw: 0.12, lipUp: 0.25, lipDown: 0.2 }, // "f", "s", "t"
+];
+
+/**
+ * What speech does to the face at `time`: syllables at a talking pace, each
+ * a sound from SOUNDS, run into one another, in phrases with breaths between,
+ * and the brows lifting on the stressed ones. `loud` (0..1) shouts it: the
+ * mouth opened wide and squared, the lips off the teeth, the brows down.
+ */
+export function speech(time, { amount = 1, loud = 0 } = {}) {
+  const rate = 4.4 + loud * 0.6;
+  const phrase = 3.1, gap = 0.45 + loud * 0.15;
+  const into = ((time % phrase) + phrase) % phrase;
+  const on = ease01(into / 0.12) * ease01((phrase - gap - into) / 0.15);
+  const x = time * rate, n = Math.floor(x), f = x - n;
+  const shape = (i) => SOUNDS[Math.floor(hash(i, 1) * SOUNDS.length)];
+  const a = shape(n), b = shape(n + 1);
+  // Into the next sound over the last third of this one.
+  const blend = ease01((f - 0.66) / 0.34);
+  const size = (i) => 0.7 + 0.6 * hash(i, 2);
+  const open = 0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, f * 1.15));
+  const out = {};
+  for (const key of ['jaw', 'wide', 'pucker', 'lipUp', 'lipDown']) {
+    const v = (a[key] ?? 0) * size(n) * (1 - blend) + (b[key] ?? 0) * size(n + 1) * blend;
+    out[key] = v * (key === 'jaw' ? open : 1) * on * amount;
+  }
+  const stress = hash(n, 3) > 0.78 ? Math.sin(Math.PI * f) : 0;
+  out.brows = 0.35 * stress * on * amount;
+  if (loud > 0) {
+    out.jaw = Math.min(1, out.jaw * (1 + 1.1 * loud) + 0.25 * loud * on);
+    out.lipUp = Math.min(1, out.lipUp + 0.85 * loud * on);
+    out.lipDown = Math.min(1, out.lipDown + 0.7 * loud * on);
+    out.wide = Math.min(1, out.wide + 0.45 * loud * on);
+    out.pucker *= 1 - 0.6 * loud;
+    out.brows = out.brows * (1 - loud) - 0.85 * loud;
+    out.smile = -0.25 * loud * on;
+  }
+  return out;
+}
+
+/** A sustained shout at `time`: the mouth wide and squared, shaking with it, in breaths. */
+export function yelling(time) {
+  const cycle = 2.2, into = ((time % cycle) + cycle) % cycle;
+  const on = ease01(into / 0.15) * ease01((cycle - 0.45 - into) / 0.2);
+  const shake = 0.05 * Math.sin(time * 31) + 0.03 * Math.sin(time * 47 + 1);
+  return { jaw: (0.82 + shake) * on, lipUp: on, lipDown: 0.9 * on, wide: 0.55 * on, brows: -0.95, smile: -0.3 * on, pucker: 0 };
+}
+
+function poseFace(k, f, time, said = null) {
+  if (said) {
+    f = { ...f };
+    for (const [key, v] of Object.entries(said)) f[key] = key === 'brows' || key === 'smile' ? f[key] + v : Math.max(f[key], v);
+  }
   let blink = f.blink;
   let look = f.look;
   if (f.auto && time !== undefined) {
@@ -262,17 +327,24 @@ function poseFace(k, f, time) {
     const r = (n) => Math.sin(step * 12.9898 + n * 78.233) * 43758.5453 % 1;
     look = [look[0] + r(1) * 0.12, look[1] + r(2) * 0.05];
   }
+  // Scowling, the eyes open wider; the lids follow.
+  const glare = Math.max(0, -f.brows) * Math.max(0, f.jaw - 0.3);
   for (const S of ['L', 'R']) {
     const b = f[`blink${S}`] ?? blink;
     // At rest the upper lids are lifted a little off the iris: awake, not drowsy.
-    k.turn(`lidUp${S}`, 0.62 * b - (0.1 + 0.08 * f.brows) * (1 - b), 0, 0);
+    k.turn(`lidUp${S}`, 0.62 * b - (0.1 + 0.08 * f.brows + 0.12 * glare) * (1 - b), 0, 0);
     k.turn(`lidLow${S}`, -0.18 * b - 0.04 * Math.max(0, f.smile), 0, 0);
     k.turn(`eye${S}`, -look[1], look[0], 0);
     const m = S === 'L' ? 1 : -1;
     k.move(`brow${S}`, 0, 0.004 * f.brows, 0.001 * Math.max(0, f.brows));
-    if (f.brows < 0) k.move(`brow${S}`, -m * 0.0025 * f.brows, 0, 0);
-    k.move(`lipCorner${S}`, m * 0.0035 * f.smile, 0.004 * f.smile, -0.002 * Math.abs(f.smile));
+    // Frowning, they knit: drawn in and down, the inner ends lowest.
+    if (f.brows < 0) { k.move(`brow${S}`, m * 0.0035 * f.brows, 0.0025 * f.brows, 0); k.turn(`brow${S}`, 0, 0, -m * 0.45 * f.brows); }
+    k.move(`lipCorner${S}`, m * (0.0035 * f.smile + 0.0055 * f.wide - 0.0045 * f.pucker), 0.004 * f.smile - 0.004 * f.wide * f.lipDown, -0.002 * Math.abs(f.smile) + 0.0025 * f.pucker - 0.0015 * f.wide);
   }
+  k.move('lipUpper', 0, 0.0065 * f.lipUp, 0.0018 * f.lipUp + 0.0035 * f.pucker);
+  k.turn('lipUpper', -0.18 * f.lipUp, 0, 0);
+  k.move('lipLower', 0, -0.0045 * f.lipDown, 0.0012 * f.lipDown + 0.0035 * f.pucker);
+  k.turn('lipLower', 0.18 * f.lipDown, 0, 0);
   k.turn('jaw', 0.36 * f.jaw, 0, 0);
   k.move('tongue', 0, 0, 0.03 * f.tongue);
 }
@@ -377,10 +449,14 @@ export function createHuman(GFX, options = {}) {
     shrug(skeleton);
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
-      const shape = held[S] ? HAND_POSES.grip : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
+      const shape = held[S] ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
       poseHand(skeleton, S, shape, held[S] ? 1 : hands[S].amount);
     }
-    poseFace(skeleton, face, state.time);
+    // Speech, when he is talking (or shouting) and his face has not been told otherwise.
+    const said = state.clip === 'yell' ? yelling(state.time ?? 0)
+      : state.clip === 'talk' || state.speaking ? speech(state.time ?? 0, { amount: state.talk ?? 1, loud: state.yell ? 1 : state.loud ?? 0 })
+      : null;
+    poseFace(skeleton, face, state.time, said);
     skeleton.compute();
     skin(body.data, skeleton.matrices, body.position.array, body.normal.array);
     body.position.needsUpdate = true;

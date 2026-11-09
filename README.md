@@ -306,8 +306,8 @@ built to be dressed, posed and animated, and to carry the weapons:
 `createHuman(GFX)` from `madness-engine/people`. A whole base body with
 garments worn over it as their own meshes (briefs, t-shirt, jeans,
 sneakers; or your own), which hide what they cover so nothing shows
-through. 64 bones: the engine's movement clips, plus collarbones, three
-bones a finger, toes, jaw and tongue, eyes, lids, brows and the mouth's
-corners. `man.hold(sword)` puts a weapon in his hand. See
+through. 66 bones: the engine's movement clips (plus `yell`), and
+collarbones, three bones a finger, toes, jaw and tongue, eyes, lids, brows,
+lips and the mouth's corners; he talks and shouts with his mouth. `man.hold(sword)` puts a weapon in his hand. See
 [docs/people.md](docs/people.md).
 

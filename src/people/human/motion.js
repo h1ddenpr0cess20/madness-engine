@@ -2,7 +2,7 @@ import { JOINTS } from './skeleton.js';
 
 /**
  * How the human moves: the engine's movement clips (idle, walk, run, jump,
- * leap, attack, cast, hit, ko, win, sit, talk), driven the same way the
+ * leap, attack, cast, hit, ko, win, sit, talk, yell), driven the same way the
  * cast is driven ({ clip, t, time, seed, speed }) and with the same
  * cadences, so a game that moves one moves the other in step, but worked
  * out for a man of real size: every rise, fall and step is in metres, the
@@ -14,7 +14,7 @@ import { JOINTS } from './skeleton.js';
  * `heavy` (0..1, slower and deeper).
  */
 
-export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'talk']);
+export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'talk', 'yell']);
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
@@ -265,6 +265,28 @@ export function moveHuman(k, state = {}, style = {}) {
       idle(k, T, armed);
       talking(k, T, state, armed);
       break;
+    case 'yell': {
+      // Shouting: planted wide, the chest thrown out and the head driven forward with each breath of it, fists clenched by the hips.
+      const cycle = 2.2, into = ((T % cycle) + cycle) % cycle;
+      const on = win(into, 0, 0.15) * (1 - win(into, cycle - 0.45, cycle - 0.25));
+      const shake = 0.012 * Math.sin(T * 31);
+      k.move('hips', 0, -0.03, 0);
+      k.turn('thighL', -0.08, 0, 0.1); k.turn('thighR', 0.06, 0, -0.1);
+      k.turn('shinL', 0.14, 0, 0); k.turn('shinR', 0.12, 0, 0);
+      k.turn('footL', -0.06, 0, -0.1); k.turn('footR', -0.06, 0, 0.1);
+      k.turn('spine', 0.1 + 0.06 * on, 0, 0);
+      k.turn('chest', -0.12 * on - 0.04, 0, 0);
+      k.scale('chest', 1 + 0.02 * on, 1 + 0.015 * on, 1 + 0.03 * on);
+      k.turn('neck', 0.25 * on + shake, 0, 0);
+      k.turn('head', -0.32 * on - shake, 0, 0);
+      for (const [S, m] of [['L', 1], ['R', -1]]) {
+        if (armed === S) { ready(k, S, 1); continue; }
+        k.turn(`arm${S}`, 0.22 + 0.12 * on, 0, m * 0.04);
+        k.turn(`fore${S}`, -0.35 - 0.2 * on, m * 0.3, 0);
+        k.turn(`clavicle${S}`, 0, 0, m * 0.05 * on);
+      }
+      break;
+    }
     case 'walk': walk(k, T, speed, heavy, armed); break;
     case 'run': run(k, T, speed, heavy, armed); break;
     case 'jump': case 'leap': jump(k, t, clip === 'leap', armed); break;
