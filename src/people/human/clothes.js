@@ -1,5 +1,5 @@
 import { add, clamp, cross, dot, len, norm, Part, scale, smooth, sub } from './kit.js';
-import { castBody, footProfile, legAxis, skinWeightsAt } from './body.js';
+import { castBody, footPoints, legAxis, skinWeightsAt } from './body.js';
 import { JOINTS, mirror } from './skeleton.js';
 
 /**
@@ -352,71 +352,169 @@ function jeans(detail) {
 
 // ———————————————————————————————————————————————— the sneakers
 
-/** A shoe's shape (side `m`), measured off the foot: its footprint, height and toe spring along it, heel (0) to toe (1). */
-function shoeShape(m) {
-  const foot = footProfile(m);
-  const back = foot.back - 0.012, length = foot.front - foot.back + 0.03;
-  const at = (u) => {
-    const z = back + u * length;
-    const f = foot.at(z);
-    const cap = Math.sqrt(clamp(1 - (Math.max(0, u - 0.9) / 0.1) ** 2)) * Math.sqrt(clamp(1 - (Math.max(0, 0.07 - u) / 0.07) ** 2));
-    return {
-      z, x: f.x, cap,
-      hw: Math.max(f.hw + 0.009, 0.028) * (0.35 + 0.65 * cap),
-      h: Math.max(f.top + 0.012, 0.045 + 0.04 * smooth(0.75, 0.3, u)),
-      spring: 0.012 * smooth(0.82, 1, u),
-    };
+/** Where along the shoe (heel 0, toe 1) its top closes over the foot: behind it, the opening for the ankle. */
+export const THROAT = 0.44;
+/** The sole's thickness, its toe's spring off the ground, and the collar's height round the ankle, along the shoe. */
+const soleAt = (u) => 0.027 - 0.007 * u;
+const springAt = (u) => 0.016 * smooth(0.76, 1.02, u) + 0.004 * smooth(0.07, 0, u);
+const collarAt = (u) => 0.074 + 0.02 * smooth(0.2, 0, u);
+
+/**
+ * A shoe's last (side `m`), measured off the foot: along it (heel 0 to toe 1)
+ * its middle across, half-width at the sole, and the height its top must
+ * clear; each read off the foot's skin over a short window, then smoothed so
+ * the shoe is fair.
+ */
+function shoeLast(m) {
+  const pts = footPoints(m, 0.17);
+  let lo = Infinity, hi = -Infinity;
+  for (const p of pts) { lo = Math.min(lo, p[2]); hi = Math.max(hi, p[2]); }
+  const back = lo - 0.012, length = hi + 0.018 - back;
+  const N = 48;
+  let cx = [], hw = [], top = [];
+  for (let i = 0; i <= N; i++) {
+    const z = back + (i / N) * length;
+    let a = Infinity, b = -Infinity, t = 0;
+    for (const p of pts) {
+      if (Math.abs(p[2] - z) > 0.016) continue;
+      if (p[1] < 0.075) { a = Math.min(a, p[0]); b = Math.max(b, p[0]); }
+      t = Math.max(t, p[1]);
+    }
+    cx.push(Number.isFinite(a) ? (a + b) / 2 : null);
+    hw.push(Number.isFinite(a) ? (b - a) / 2 : null);
+    top.push(t || null);
+  }
+  const filled = (arr) => arr.map((v, i) => {
+    if (v !== null) return v;
+    for (let k = 1; k <= N; k++) { const x = arr[i - k] ?? arr[i + k]; if (x !== null && x !== undefined) return x; }
+    return 0;
+  });
+  const fair = (arr, passes) => {
+    let a = filled(arr);
+    for (let p = 0; p < passes; p++) a = a.map((v, i) => (a[Math.max(0, i - 1)] + 2 * v + a[Math.min(N, i + 1)]) / 4);
+    return a;
   };
-  return { at, back, length };
+  cx = fair(cx, 6); hw = fair(hw, 4); top = fair(top, 4);
+  // A roomy toe box: no narrower toward the toes than most of the foot's width.
+  const widest = Math.max(...hw);
+  hw = hw.map((v, i) => Math.max(v, widest * 0.8 * smooth(0.35, 0.55, i / N)));
+  // The tongue no higher than the instep needs.
+  top = top.map((v, i) => Math.min(v, 0.075 + 0.05 * smooth(0.6, 0.3, i / N)));
+  const lerp = (arr, u) => {
+    const f = clamp(u) * N, i = Math.min(N - 1, Math.floor(f)), t = f - i;
+    return arr[i] * (1 - t) + arr[i + 1] * t;
+  };
+  return (u) => {
+    // Rounded at the heel and the toe.
+    const cap = Math.pow(clamp(1 - (Math.max(0, u - 0.84) / 0.16) ** 2.4), 0.5) * Math.sqrt(clamp(1 - (Math.max(0, 0.12 - u) / 0.12) ** 2));
+    return { z: back + u * length, x: lerp(cx, u), hw: (lerp(hw, u) + 0.008) * cap, top: Math.max(lerp(top, u) + 0.01, 0.05), sole: soleAt(u), spring: springAt(u) };
+  };
 }
 
-const SOLE = 0.024;
 const shoeWeights = clothWeights(zoneIs('foot', 'leg'));
 
 function shoe(upper, sole, laces, m, detail) {
-  const rows = Math.round(34 * detail), around = Math.round(28 * detail);
-  const S = shoeShape(m);
-  // The upper: a loft from heel to toe, each section a rounded arch over the sole; the collar dips at the ankle.
-  upper.grid(rows, around, (i, j) => {
-    const u = i / rows;
-    const s = S.at(u);
-    const a = (j / around) * Math.PI; // 0 the outer edge, π the inner, over the top
-    const ca = Math.cos(a), sa = Math.sin(a);
-    const collar = 0.012 * G((u - 0.18) / 0.12) * Math.abs(ca);
-    const top = s.h - collar;
-    const y = SOLE + s.spring + (top - SOLE - s.spring) * Math.pow(sa, 0.6) * (0.25 + 0.75 * s.cap);
-    const x = s.x + m * ca * s.hw * (1 + 0.06 * Math.max(0, ca) * G((u - 0.62) / 0.15));
-    const z = s.z + (u < 0.5 ? -1 : 1) * (1 - s.cap) * 0.004;
-    const p = [x, y, z];
-    return { p, uv: [j / around, u], w: shoeWeights(p), tint: 1 - 0.25 * smooth(0.2, 0, sa) };
-  }, { flip: m < 0 });
-  // The sole: a slab under it all, its edge proud of the upper, the toe sprung up.
-  const srows = Math.round(34 * detail), saround = Math.round(32 * detail);
-  sole.grid(srows, saround, (i, j) => {
-    const u = i / srows;
-    const s = S.at(u);
-    const a = (j / saround) * TAU;
-    const ca = Math.cos(a), sa = Math.sin(a);
-    const k = Math.pow(Math.abs(ca) ** 4 + Math.abs(sa) ** 4, -0.25);
-    const x = s.x + m * ca * k * (s.hw + 0.004);
-    const y = s.spring + SOLE / 2 + sa * k * (SOLE / 2 + 0.001);
-    const z = s.z + (u < 0.5 ? -1 : 1) * (1 - s.cap) * 0.006;
-    const p = [x, Math.max(0, y), z];
-    return { p, uv: [j / saround, u], w: shoeWeights(p), tint: sa < -0.3 ? 0.8 : 1 };
-  }, { flip: m > 0 });
-  // Laces: five crossings over the instep, each a little tube.
-  for (let k = 0; k < 5; k++) {
-    const u = 0.4 + k * 0.07;
-    const s = S.at(u);
-    const span = s.hw * 0.5;
-    laces.grid(3, 6, (i, j) => {
-      const t = i / 3;
-      const x = s.x + (t * 2 - 1) * span;
-      const arc = s.h + 0.003 - 0.002 * (2 * t - 1) ** 2;
+  const last = shoeLast(m);
+  const K = Math.round(40 * detail), R = Math.round(14 * detail);
+  // Round the outline, heel to toe on each side, ends close together.
+  const uOf = (k) => (1 - Math.cos((k / K) * Math.PI)) / 2;
+  // The outline at the sole, and its outward normal across the ground.
+  const outline = (u, s) => { const a = last(u); return [a.x + m * s * a.hw, a.z]; };
+  const normalAt = (u, s) => {
+    const e = 1e-3, p = outline(Math.max(0, u - e), s), q = outline(Math.min(1, u + e), s);
+    let n = [q[1] - p[1], -(q[0] - p[0])];
+    const l = Math.hypot(n[0], n[1]) || 1;
+    n = [n[0] / l, n[1] / l];
+    const a = last(u), out = [outline(u, s)[0] - a.x, outline(u, s)[1] - (a.z + (u < 0.5 ? 0.04 : -0.04))];
+    return n[0] * out[0] + n[1] * out[1] < 0 ? [-n[0], -n[1]] : n;
+  };
+  // The ring the collar makes round the ankle: out from the leg's middle as far as the skin, and a little more.
+  const ring = new Map();
+  const ringAt = (k, s) => {
+    const key = `${k},${s}`;
+    if (ring.has(key)) return ring.get(key);
+    const u = uOf(k), y = collarAt(u);
+    const C = legAxis(y, m), O = outline(u, s);
+    let d = [O[0] - C[0], O[1] - C[2]];
+    const full = Math.hypot(d[0], d[1]) || 1;
+    d = [d[0] / full, d[1] / full];
+    const r = castBody([C[0], y, C[2]], [d[0], 0, d[1]], { far: 0.2, only: zoneIs('foot', 'leg') }) ?? full;
+    const at = Math.min(full, r + 0.007);
+    const v = { p: [C[0] + d[0] * at, y, C[2] + d[1] * at], in: [-d[0], -d[1]] };
+    ring.set(key, v);
+    return v;
+  };
+  // A point of the upper: column k round the outline on side s, t up its profile from the sole (0) to the rim (1), then the collar's lip and lining.
+  const upperPoint = (k, s, i) => {
+    const u = uOf(k), a = last(u);
+    const O = outline(u, s), base = a.spring + a.sole;
+    const w = smooth(THROAT - 0.06, THROAT + 0.03, u);
+    const R1 = ringAt(k, s);
+    const b = last(Math.min(u, 0.84));
+    const R2 = [b.x, b.top, b.z];
+    const rim = [R1.p[0] + (R2[0] - R1.p[0]) * w, R1.p[1] + (R2[1] - R1.p[1]) * w, R1.p[2] + (R2[2] - R1.p[2]) * w];
+    if (i > R) {
+      // The collar rolled over and lined: in and down, only where it is open.
+      const open = 1 - w, j = i - R;
+      const inward = j === 1 ? 0.004 : 0.008, drop = j === 1 ? -0.003 : 0.016;
+      return [rim[0] + R1.in[0] * inward * open, rim[1] - drop * open, rim[2] + R1.in[1] * inward * open];
+    }
+    const t = (i / R) * (Math.PI / 2);
+    const e = 2 / 3.2;
+    const c = Math.pow(Math.cos(t), e), sn = Math.pow(Math.sin(t), e);
+    return [rim[0] + (O[0] - rim[0]) * c, base + (rim[1] - base) * sn, rim[2] + (O[1] - rim[2]) * c];
+  };
+  const facing = (part, fn, rows, cols, out) => {
+    // Which winding faces out: (c - a) × (b - a) against the way out.
+    const a = fn(Math.floor(rows / 2), Math.floor(cols / 2)), c = fn(Math.floor(rows / 2) + 1, Math.floor(cols / 2)), b = fn(Math.floor(rows / 2), Math.floor(cols / 2) + 1);
+    const n = cross(sub(c, a), sub(b, a));
+    return dot(n, out(a)) < 0;
+  };
+  for (const s of [1, -1]) {
+    const pt = (i, k) => upperPoint(k, s, i);
+    const out = (p) => [p[0] - last(0.5).x, 0, 0];
+    const flip = facing(upper, pt, R + 2, K, out);
+    upper.grid(R + 2, K, (i, k) => {
+      const p = pt(i, k);
+      const tv = Math.min(1, i / R);
+      return { p, uv: [s > 0 ? 0.5 * tv : 1 - 0.5 * tv, uOf(k)], w: shoeWeights(p), tint: i > R ? 0.55 : 1 - 0.2 * smooth(0.25, 0, tv) };
+    }, { flip });
+    // The sole: under the foot, round its wall, and back in over its top.
+    const PROFILE = [[0, 0, 0], [0.9, 0, 0.25], [1, 0.12, 0.36], [1.03, 0.4, 0.46], [1.04, 0.62, 0.6], [1.03, 0.86, 0.72], [0.98, 1, 0.84], [0, 1, 1]];
+    const solePt = (i, k) => {
+      const u = uOf(k), a = last(u);
+      const O = outline(u, s), n = normalAt(u, s);
+      const c = last(clamp(u, 0.1, 0.88));
+      const [f, h] = PROFILE[i];
+      const edge = [O[0] + n[0] * 0.004, O[1] + n[1] * 0.004];
+      return [c.x + (edge[0] - c.x) * f, Math.max(0, a.spring + a.sole * h), c.z + (edge[1] - c.z) * f];
+    };
+    const sflip = facing(sole, solePt, PROFILE.length - 1, K, (p) => [p[0] - last(0.5).x, 0, 0]);
+    sole.grid(PROFILE.length - 1, K, (i, k) => {
+      const p = solePt(i, k);
+      return { p, uv: [PROFILE[i][2], uOf(k)], w: shoeWeights(p), tint: 1 };
+    }, { flip: sflip });
+  }
+  // Laces: crossing over the tongue, each a little tube lying on the upper.
+  const onTop = (u, dx) => {
+    const a = last(u), H = a.top - (a.spring + a.sole);
+    const c = Math.pow(clamp(Math.abs(dx) / a.hw), 3.2 / 2);
+    return a.spring + a.sole + H * Math.pow(Math.sqrt(clamp(1 - c * c)), 2 / 3.2);
+  };
+  const tube = (u0, x0, u1, x1) => {
+    laces.grid(4, 6, (i, j) => {
+      const t = i / 4;
+      const u = u0 + (u1 - u0) * t, a = last(u);
+      const dx = (x0 + (x1 - x0) * t) * a.hw;
       const b = (j / 6) * TAU;
-      const p = [x, arc + Math.sin(b) * 0.002, s.z + Math.cos(b) * 0.0028];
-      return { p, uv: [t, j / 6], w: shoeWeights(p), tint: 0.9 };
+      const p = [a.x + dx, onTop(u, dx) + 0.0028 + Math.sin(b) * 0.0022, a.z + Math.cos(b) * 0.0024];
+      return { p, uv: [0.8, u], w: shoeWeights(p), tint: 0.95 };
     });
+  };
+  for (let k = 0; k < 5; k++) {
+    const u = THROAT + 0.03 + k * 0.05;
+    tube(u, -0.42, u + 0.04, 0.42);
+    tube(u, 0.42, u + 0.04, -0.42);
   }
 }
 
@@ -460,12 +558,15 @@ function tag(parts, name) {
  * tagged { zone, y, d }, is hidden while it is worn. A garment of your own
  * is an object of the same shape (see `human.wear`).
  */
+/** How far inside a garment's openings the skin under it is kept, so looking in at a collar, cuff or hem never shows a hole. */
+const OPEN = 0.06;
+
 export const GARMENTS = Object.freeze({
   briefs: {
     layer: 1,
     materials: ['briefs'],
     build: (detail) => tag(briefs(detail), 'briefs'),
-    covers: ({ zone, y }) => (zone === 'leg' || zone === 'trunk') && y > BRIEFS.legs + 0.014 && y < BRIEFS.waist - 0.008,
+    covers: ({ zone, y }) => (zone === 'leg' || zone === 'trunk') && y > BRIEFS.legs + OPEN && y < BRIEFS.waist - OPEN,
   },
   sneakers: {
     layer: 2,
@@ -475,13 +576,13 @@ export const GARMENTS = Object.freeze({
       for (const m of [1, -1]) shoe(upper, sole, laces, m, detail);
       return tag([upper, sole, laces], 'sneakers');
     },
-    covers: ({ zone, y }) => zone === 'foot' || (zone === 'leg' && y < 0.085),
+    covers: ({ zone, y, d }) => (zone === 'foot' && (y < 0.05 || d > 0.05)) || (zone === 'leg' && y < 0.04),
   },
   jeans: {
     layer: 3,
     materials: ['denim'],
     build: (detail) => tag([jeans(detail)], 'jeans'),
-    covers: ({ zone, y }) => ((zone === 'leg' || zone === 'trunk') && y > HEM_FRONT + 0.012 && y < WAIST - 0.01) || zone === 'briefs' || (zone === 'sneakers' && y > 0.1),
+    covers: ({ zone, y }) => ((zone === 'leg' || zone === 'trunk') && y > HEM_FRONT + 0.1 && y < WAIST - OPEN) || (zone === 'briefs' && y < WAIST - OPEN) || (zone === 'sneakers' && y > 0.12),
   },
   tshirt: {
     layer: 4,
@@ -492,7 +593,7 @@ export const GARMENTS = Object.freeze({
       for (const m of [1, -1]) sleeve(sleeves, m, detail);
       return tag([body, rib, sleeves], 'tshirt');
     },
-    covers: ({ zone, y, d, x = 1 }) => (zone === 'trunk' && y > HEM + 0.02 && (y < COLLAR - 0.03 || x > 0.075)) || (zone === 'neck' && y < COLLAR - 0.035) || (zone === 'arm' && d < SLEEVE_RANGE[1] - 0.015) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + 0.008),
+    covers: ({ zone, y, d, x = 1 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || x > 0.1)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN),
   },
 });
 

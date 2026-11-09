@@ -162,6 +162,19 @@ export function legAxis(y, m) {
   return [a[0] + (b[0] - a[0]) * t, y, a[2] + (b[2] - a[2]) * t];
 }
 
+/** The rest positions of a foot's skin (side `m`): the foot, and the leg below `top`. */
+export function footPoints(m, top = 0.16) {
+  const s = surface();
+  const pts = [];
+  for (let i = 0; i < s.zones.length; i++) {
+    const p = [s.P[i * 3], s.P[i * 3 + 1], s.P[i * 3 + 2]];
+    if (p[0] * m <= 0.02 || p[1] > top || !['foot', 'leg'].includes(s.zones[i].zone)) continue;
+    if (!s.weights[i] || !Object.keys(s.weights[i]).length) continue;
+    pts.push(p);
+  }
+  return pts;
+}
+
 /**
  * A foot's measure (side `m`), for a shoe: how far back its heel and forward
  * its toes are, and along it (by z) its middle across, half-width and top.

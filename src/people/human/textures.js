@@ -462,12 +462,18 @@ function shoeMaps() {
     return [c, c, c];
   });
   const sole = paint(256, 256, (u, v) => {
-    let c = 238 + 8 * noise3(u * 200, v * 200, 4);
-    // Underneath: a tread of crossing grooves; round the sidewall, one coloured stripe.
-    if (u > 0.55 && u < 0.95) c -= 50 * Math.max(0, Math.sin(v * 180)) ** 6 + 20;
-    const wall = Math.min(Math.abs(u - 0.0), Math.abs(u - 0.5), Math.abs(u - 1));
-    if (wall < 0.03) return [190, 70, 60].map((k) => k + 0 * c);
-    return [c, c, c - 6];
+    // u across the sole: under it (0), round its edge and wall, back in over its top (1); v heel to toe.
+    let c = 236 + 8 * noise3(u * 200, v * 200, 4);
+    if (u < 0.3) {
+      // The tread: rows of grooves across, darker rubber.
+      const groove = Math.max(0, Math.sin(v * 140)) ** 8;
+      return [c - 70 - 40 * groove, c - 72 - 40 * groove, c - 76 - 40 * groove];
+    }
+    // Round the wall, one coloured stripe and a fine rib either side.
+    const stripe = G((u - 0.53) / 0.02);
+    const rib = 0.5 * (G((u - 0.42) / 0.006) + G((u - 0.66) / 0.006));
+    c -= 30 * rib;
+    return [c + (190 - c) * stripe, c + (70 - c) * stripe, c - 6 + (60 - c) * stripe];
   });
   return { upper, sole };
 }
