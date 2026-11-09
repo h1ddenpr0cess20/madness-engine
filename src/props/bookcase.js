@@ -62,7 +62,7 @@ const CROWN = 0.03;     // the top board's
 const PLINTH = 0.09;
 const BACK = 0.008;
 
-function mulberry(seed) {
+export function mulberry(seed) {
   let a = seed | 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -73,7 +73,7 @@ function mulberry(seed) {
 }
 
 /** A board's material: the species in the finish, from the library's maps (or a plain colour). */
-function woodMaterial(GFX, species, finish) {
+export function woodMaterial(GFX, species, finish) {
   const maps = library ? library.woodTexture(GFX, species, finish) : { map: null, bump: null };
   const material = new GFX.MeshPhysicalMaterial({
     name: `${finish} ${species}`,
@@ -91,7 +91,7 @@ function woodMaterial(GFX, species, finish) {
  * metre, the grain running along `grain` ('x' for a shelf, 'y' for a side),
  * with `jitter` so that two boards of one species are not the same board.
  */
-function woodUV(GFX, geometry, offset, grain) {
+export function woodUV(GFX, geometry, offset, grain) {
   const p = geometry.attributes.position, n = geometry.attributes.normal;
   const uv = new Float32Array(p.count * 2);
   for (let i = 0; i < p.count; i++) {
