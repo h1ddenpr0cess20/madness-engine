@@ -83,7 +83,7 @@ there is no skin under the shirt to push through it. Skin is kept 6 cm
 inside every opening (collar, cuffs, hems), so looking in never shows a
 hole.
 
-The t-shirt and jeans are cut from the skin itself (`people/human/shell.js`):
+The briefs, t-shirt and jeans are cut from the skin itself (`people/human/shell.js`):
 the part of the body they cover, cut along a clean outline, lifted off by
 an ease and hung as cloth hangs (off the chest and shoulder blades, straight
 down from the seat and thighs), with turned edges at the hems, cuffs, collar
@@ -123,7 +123,11 @@ Colours change live: `setSkin`, `setEyeColor`, `setShirtColor`,
   blink), `browL/R`, `lipCornerL/R`, `lipUpper`, `lipLower` (on the jaw).
 
 The collarbones follow the arms on their own: as an arm goes past level
-they lift, and as it reaches forward they come forward.
+they lift, and as it reaches forward they come forward. The skin is moved
+by dual-quaternion skinning (`skinDual` in models/rig.js), which keeps a
+joint's volume where it bends far: the shoulders stay round with the arms
+overhead, and the elbows and knees don't pinch thin. The weights round the
+armpits are smoothed over the mesh, so the skin there stretches evenly.
 
 `man.skeleton` is the engine's `Skeleton` (models/rig.js); turn any bone
 yourself in `style.after(skeleton, state)`, which runs after the clip.

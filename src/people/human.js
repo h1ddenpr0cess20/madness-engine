@@ -1,4 +1,4 @@
-import { Skeleton, skin } from '../models/rig.js';
+import { Skeleton, skinDual } from '../models/rig.js';
 import { assemble, cross, len, Part, sub } from './human/kit.js';
 import { bones, FINGER_NAMES, FINGERS, HEIGHT, JOINTS, mirror, sideOf } from './human/skeleton.js';
 import { buildEyes, buildMouth, withLipCorners } from './human/head.js';
@@ -213,7 +213,7 @@ function shrug(k) {
     [x, z] = [x * cy + z * sy, -x * sy + z * cy];
     y = x * sz + y * cz;
     const up = Math.acos(Math.max(-1, Math.min(1, -y)));
-    const lift = 0.32 * Math.max(0, Math.min(1, (up - 1.1) / 1.7));
+    const lift = 0.5 * Math.max(0, Math.min(1, (up - 1.0) / 1.9));
     const reach = 0.22 * Math.max(0, z) * Math.max(0, Math.min(1, up / 1.2));
     k.turn(`clavicle${S}`, 0, -m * reach, m * lift);
     k.turn(`arm${S}`, 0, m * reach, -m * lift);
@@ -462,11 +462,11 @@ export function createHuman(GFX, options = {}) {
       : null;
     poseFace(skeleton, face, state.time, said);
     skeleton.compute();
-    skin(body.data, skeleton.matrices, body.position.array, body.normal.array);
+    skinDual(body.data, skeleton, body.position.array, body.normal.array);
     body.position.needsUpdate = true;
     body.normal.needsUpdate = true;
     for (const { mesh: m } of worn.values()) {
-      skin(m.data, skeleton.matrices, m.position.array, m.normal.array);
+      skinDual(m.data, skeleton, m.position.array, m.normal.array);
       m.position.needsUpdate = true;
       m.normal.needsUpdate = true;
     }

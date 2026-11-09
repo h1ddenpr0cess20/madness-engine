@@ -226,7 +226,10 @@ function sleeveDrape(p, q) {
   const r = len(radial);
   const want = Math.max(cloth.at(clamp(d, D0, D1 + 0.02), th), 0.05 - 0.003 * smooth(0.04, D1, d)) * smooth(D0 - 0.03, D0 + 0.02, d) + r * (1 - smooth(D0 - 0.03, D0 + 0.02, d));
   if (want <= r) return q;
-  return add(add(sh, scale(t, d)), scale(radial, want / (r || 1)));
+  // Under the arm, near the armpit, it lies close: hung loose there it folds out in a flap as the arm goes up.
+  const under = smooth(-0.1, 0.5, -Math.sin(th)) * smooth(D0 + 0.09, D0 + 0.02, d);
+  const loose = add(add(sh, scale(t, d)), scale(radial, want / (r || 1)));
+  return add(q, scale(sub(loose, q), 1 - under));
 }
 
 /** How the shirt's body hangs at skin point `p`: off the chest and the shoulder blades, across the hollows. */
@@ -249,10 +252,13 @@ function shirt(detail) {
     field: (p, z) => shirtCut(p, z).f,
     ease: (p, z) => (z.zone === 'arm' ? 0.006 : 0.0065 + 0.011 * smooth(1.09, 1.0, p[1])),
     drape: (p, q, z, w) => {
-      if (z.zone === 'arm') return sleeveDrape(p, q);
-      if (z.zone !== 'trunk' && z.zone !== 'leg') return q;
-      // Where the skin goes with the arm (round the armpit), the cloth keeps close to it, or the arm swings it out in a fin.
+      // Round the armpit, where the skin is pulled between the arm and the chest, the cloth keeps close to it, or folds out in flaps as the arm moves.
       const arm = (w.armL ?? 0) + (w.armR ?? 0) + (w.foreL ?? 0) + (w.foreR ?? 0);
+      if (z.zone === 'arm') {
+        const k = 1 - smooth(0.15, 0.5, 1 - arm), d = sleeveDrape(p, q);
+        return [q[0] + (d[0] - q[0]) * k, q[1] + (d[1] - q[1]) * k, q[2] + (d[2] - q[2]) * k];
+      }
+      if (z.zone !== 'trunk' && z.zone !== 'leg') return q;
       const k = 1 - smooth(0.02, 0.25, arm), d = bodyDrape(p, q);
       return [q[0] + (d[0] - q[0]) * k, q[1] + (d[1] - q[1]) * k, q[2] + (d[2] - q[2]) * k];
     },

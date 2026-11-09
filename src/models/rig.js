@@ -153,3 +153,110 @@ export function skin(rest, M, position, normal) {
     normal[v3] = nx * l; normal[v3 + 1] = ny * l; normal[v3 + 2] = nz * l;
   }
 }
+
+/**
+ * Moves the skin as `skin` does, but blends each vertex's bones as dual
+ * quaternions (their turns and moves, not their matrices), so a joint bent
+ * far, or twisted, keeps its volume instead of pinching thin: shoulders
+ * and elbows stay round. Any squash or stretch a bone has (its matrix less
+ * its turn) is added on as `skin` would. `skeleton`: the Skeleton whose
+ * matrices (already computed) move it.
+ */
+export function skinDual(rest, skeleton, position, normal) {
+  const { position: P, normal: N, skinIndex: I, skinWeight: W } = rest;
+  const M = skeleton.matrices, n = skeleton.pivots.length;
+  // Each bone: its turn as a quaternion (x, y, z, w), its move as the dual part, and what is left of its matrix.
+  const Q = new Float64Array(n * 8), D = new Float64Array(n * 12), scaled = new Uint8Array(n);
+  for (let b = 0; b < n; b++) {
+    const o = b * 12;
+    // The turn: the matrix's columns made unit length and square (enough for the slight squashes bones are given).
+    let c0 = [M[o], M[o + 4], M[o + 8]], c1 = [M[o + 1], M[o + 5], M[o + 9]];
+    const l0 = Math.hypot(...c0), l1 = Math.hypot(...c1), l2 = Math.hypot(M[o + 2], M[o + 6], M[o + 10]);
+    c0 = c0.map((x) => x / l0);
+    const d01 = c0[0] * c1[0] + c0[1] * c1[1] + c0[2] * c1[2];
+    c1 = [c1[0] - c0[0] * d01, c1[1] - c0[1] * d01, c1[2] - c0[2] * d01];
+    const l1b = Math.hypot(...c1);
+    c1 = c1.map((x) => x / l1b);
+    const c2 = [c0[1] * c1[2] - c0[2] * c1[1], c0[2] * c1[0] - c0[0] * c1[2], c0[0] * c1[1] - c0[1] * c1[0]];
+    const r00 = c0[0], r10 = c0[1], r20 = c0[2], r01 = c1[0], r11 = c1[1], r21 = c1[2], r02 = c2[0], r12 = c2[1], r22 = c2[2];
+    let qx, qy, qz, qw;
+    const tr = r00 + r11 + r22;
+    if (tr > 0) {
+      const s = Math.sqrt(tr + 1) * 2;
+      qw = s / 4; qx = (r21 - r12) / s; qy = (r02 - r20) / s; qz = (r10 - r01) / s;
+    } else if (r00 > r11 && r00 > r22) {
+      const s = Math.sqrt(1 + r00 - r11 - r22) * 2;
+      qw = (r21 - r12) / s; qx = s / 4; qy = (r01 + r10) / s; qz = (r02 + r20) / s;
+    } else if (r11 > r22) {
+      const s = Math.sqrt(1 + r11 - r00 - r22) * 2;
+      qw = (r02 - r20) / s; qx = (r01 + r10) / s; qy = s / 4; qz = (r12 + r21) / s;
+    } else {
+      const s = Math.sqrt(1 + r22 - r00 - r11) * 2;
+      qw = (r10 - r01) / s; qx = (r02 + r20) / s; qy = (r12 + r21) / s; qz = s / 4;
+    }
+    // The move, taken so the bone's pivot lands where its matrix puts it.
+    const [px, py, pz] = skeleton.pivots[b];
+    const tx = M[o] * px + M[o + 1] * py + M[o + 2] * pz + M[o + 3] - (r00 * px + r01 * py + r02 * pz);
+    const ty = M[o + 4] * px + M[o + 5] * py + M[o + 6] * pz + M[o + 7] - (r10 * px + r11 * py + r12 * pz);
+    const tz = M[o + 8] * px + M[o + 9] * py + M[o + 10] * pz + M[o + 11] - (r20 * px + r21 * py + r22 * pz);
+    const q = b * 8;
+    Q[q] = qx; Q[q + 1] = qy; Q[q + 2] = qz; Q[q + 3] = qw;
+    // Dual part: ½ (t, 0) · r.
+    Q[q + 4] = 0.5 * (tx * qw + ty * qz - tz * qy);
+    Q[q + 5] = 0.5 * (-tx * qz + ty * qw + tz * qx);
+    Q[q + 6] = 0.5 * (tx * qy - ty * qx + tz * qw);
+    Q[q + 7] = -0.5 * (tx * qx + ty * qy + tz * qz);
+    // The squash left over (the matrix less its turn), about the pivot.
+    if (Math.abs(l0 - 1) > 1e-5 || Math.abs(l1 - 1) > 1e-5 || Math.abs(l2 - 1) > 1e-5 || Math.abs(d01) > 1e-5) {
+      scaled[b] = 1;
+      const R = [r00, r01, r02, r10, r11, r12, r20, r21, r22];
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) D[b * 12 + r * 3 + c] = M[o + r * 4 + c] - R[r * 3 + c];
+      D[b * 12 + 9] = px; D[b * 12 + 10] = py; D[b * 12 + 11] = pz;
+    }
+  }
+  const count = P.length / 3;
+  for (let v = 0; v < count; v++) {
+    const i4 = v * 4;
+    let b = I[i4] * 8;
+    const sx = Q[b], sy = Q[b + 1], sz = Q[b + 2], sw = Q[b + 3];
+    let x0 = 0, y0 = 0, z0 = 0, w0 = 0, x1 = 0, y1 = 0, z1 = 0, w1 = 0;
+    for (let k = 0; k < 4; k++) {
+      let w = W[i4 + k];
+      if (w <= 0) break;
+      b = I[i4 + k] * 8;
+      // The shorter way round, as the first bone turns.
+      if (Q[b] * sx + Q[b + 1] * sy + Q[b + 2] * sz + Q[b + 3] * sw < 0) w = -w;
+      x0 += Q[b] * w; y0 += Q[b + 1] * w; z0 += Q[b + 2] * w; w0 += Q[b + 3] * w;
+      x1 += Q[b + 4] * w; y1 += Q[b + 5] * w; z1 += Q[b + 6] * w; w1 += Q[b + 7] * w;
+    }
+    const l = 1 / (Math.sqrt(x0 * x0 + y0 * y0 + z0 * z0 + w0 * w0) || 1);
+    x0 *= l; y0 *= l; z0 *= l; w0 *= l; x1 *= l; y1 *= l; z1 *= l; w1 *= l;
+    // Translation: 2 · dual · conj(real).
+    const tx = 2 * (-w1 * x0 + x1 * w0 - y1 * z0 + z1 * y0);
+    const ty = 2 * (-w1 * y0 + x1 * z0 + y1 * w0 - z1 * x0);
+    const tz = 2 * (-w1 * z0 - x1 * y0 + y1 * x0 + z1 * w0);
+    // The rotation as a matrix.
+    const xx = x0 * x0, yy = y0 * y0, zz = z0 * z0, xy = x0 * y0, xz = x0 * z0, yz = y0 * z0, wx = w0 * x0, wy = w0 * y0, wz = w0 * z0;
+    const a00 = 1 - 2 * (yy + zz), a01 = 2 * (xy - wz), a02 = 2 * (xz + wy);
+    const a10 = 2 * (xy + wz), a11 = 1 - 2 * (xx + zz), a12 = 2 * (yz - wx);
+    const a20 = 2 * (xz - wy), a21 = 2 * (yz + wx), a22 = 1 - 2 * (xx + yy);
+    const v3 = v * 3;
+    const px = P[v3], py = P[v3 + 1], pz = P[v3 + 2];
+    let ox = a00 * px + a01 * py + a02 * pz + tx, oy = a10 * px + a11 * py + a12 * pz + ty, oz = a20 * px + a21 * py + a22 * pz + tz;
+    for (let k = 0; k < 4; k++) {
+      const w = W[i4 + k];
+      if (w <= 0) break;
+      const s = I[i4 + k];
+      if (!scaled[s]) continue;
+      const d = s * 12, qx = px - D[d + 9], qy = py - D[d + 10], qz = pz - D[d + 11];
+      ox += w * (D[d] * qx + D[d + 1] * qy + D[d + 2] * qz);
+      oy += w * (D[d + 3] * qx + D[d + 4] * qy + D[d + 5] * qz);
+      oz += w * (D[d + 6] * qx + D[d + 7] * qy + D[d + 8] * qz);
+    }
+    position[v3] = ox; position[v3 + 1] = oy; position[v3 + 2] = oz;
+    const na = N[v3], nb = N[v3 + 1], nc = N[v3 + 2];
+    normal[v3] = a00 * na + a01 * nb + a02 * nc;
+    normal[v3 + 1] = a10 * na + a11 * nb + a12 * nc;
+    normal[v3 + 2] = a20 * na + a21 * nb + a22 * nc;
+  }
+}

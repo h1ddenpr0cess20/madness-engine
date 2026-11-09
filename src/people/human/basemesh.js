@@ -1,4 +1,4 @@
-import { BONE, BONES, COUNT, OCCLUSION, POSITION, SURFACES, UV, WEIGHT } from './data/base.js';
+import { BONE, BONES, COUNT, JOINTS, OCCLUSION, POSITION, SURFACES, UV, WEIGHT } from './data/base.js';
 
 /**
  * The base body: a real man's anatomy, from the MakeHuman project's base
@@ -149,6 +149,42 @@ function subdivide(mesh) {
   return { pos: Float32Array.from(outPos), uv: Float32Array.from(outUV), faces: Uint32Array.from(outFaces), uvFaces: Uint32Array.from(outUVFaces), weights: outW, occ: Float32Array.from(outO) };
 }
 
+/**
+ * Smooths the weights round each armpit over the mesh, so how much the skin
+ * follows the arm changes evenly across it: where it changed sharply, skin
+ * (and the cloth over it) sheared into a flap as the arm went up.
+ */
+function easeArmpits(pos, faces, weights) {
+  const V = pos.length / 3;
+  const near = new Float32Array(V);
+  for (const m of [1, -1]) {
+    const sh = [JOINTS.shoulder[0] * m, JOINTS.shoulder[1] - 0.05, JOINTS.shoulder[2]];
+    for (let v = 0; v < V; v++) {
+      const d = Math.hypot(pos[v * 3] - sh[0], pos[v * 3 + 1] - sh[1], pos[v * 3 + 2] - sh[2]);
+      near[v] = Math.max(near[v], 1 - Math.min(1, Math.max(0, (d - 0.09) / 0.07)));
+    }
+  }
+  const nbr = Array.from({ length: V }, () => new Set());
+  for (let f = 0; f < faces.length; f += 4) {
+    for (let k = 0; k < 4; k++) {
+      const a = faces[f + k], b = faces[f + ((k + 1) % 4)];
+      if (near[a] > 0 || near[b] > 0) { nbr[a].add(b); nbr[b].add(a); }
+    }
+  }
+  let W = weights;
+  for (let pass = 0; pass < 12; pass++) {
+    W = W.map((w, v) => {
+      const k = 0.5 * near[v];
+      if (!k || !nbr[v].size) return w;
+      const out = {};
+      for (const [b, x] of Object.entries(w)) out[b] = x * (1 - k);
+      for (const u of nbr[v]) for (const [b, x] of Object.entries(W[u])) out[b] = (out[b] ?? 0) + (x * k) / nbr[v].size;
+      return out;
+    });
+  }
+  W.forEach((w, v) => { weights[v] = w; });
+}
+
 const levels = new Map();
 /**
  * The body's surface at `level` of subdivision (0 as baked, about 27k
@@ -159,6 +195,7 @@ export function bodyLevel(level) {
   if (levels.has(level)) return levels.get(level);
   const m = baseMesh();
   const weights = Array.from({ length: m.count }, (_, i) => weightsOf(m, i));
+  easeArmpits(m.position, m.surfaces.body.v, weights);
   let mesh = { pos: m.position, uv: m.uv, faces: m.surfaces.body.v, uvFaces: m.surfaces.body.t, weights, occ: m.occlusion };
   for (let l = 0; l < level; l++) mesh = subdivide(mesh);
   levels.set(level, mesh);
