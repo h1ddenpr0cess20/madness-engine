@@ -164,7 +164,7 @@ const EMBLEM = {
     ctx.beginPath(); ctx.moveTo(cx, ey + r * 0.4); ctx.quadraticCurveTo(cx - r * 0.07, ey + r * 0.52, cx, ey + r * 0.58); ctx.quadraticCurveTo(cx + r * 0.07, ey + r * 0.52, cx, ey + r * 0.4); ctx.fill();
   },
 
-  kraken(ctx, F, cx, cy, r, rand) {
+  kraken(ctx, F, cx, cy, r) {
     F.set(cx - r, cy - r, cx + r, cy + r);
     ctx.lineCap = ctx.lineJoin = 'round';
     const lw = r * 0.024;
@@ -211,7 +211,7 @@ const EMBLEM = {
     }
   },
 
-  skull(ctx, F, cx, cy, r, rand) {
+  skull(ctx, F, cx, cy, r) {
     F.set(cx - r, cy - r, cx + r, cy + r);
     ctx.lineCap = ctx.lineJoin = 'round';
     const lw = r * 0.03;

@@ -36,7 +36,7 @@
  */
 
 import {
-  CLOTHS, DEFAULT_SUBTITLE, DEFAULT_TITLE, EMBLEMS, FOILS, PAGE_H, PAGE_W, PAPERS, TRIMS,
+  CLOTHS, DEFAULT_SUBTITLE, DEFAULT_TITLE, EMBLEMS, FOILS, PAPERS, TRIMS,
   flowPages, madnessPage, openingPages, paintCover, paintLeaf,
 } from './book-art.js';
 
