@@ -166,6 +166,11 @@ async function show(item) {
   resetDress();
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
+  // The options are shared from one item to the next (a chair's kind "windsor" is not a table's): any value this item
+  // does not offer goes back to its default before it is built, not only when its menu is drawn.
+  for (const [name, values] of Object.entries(item.options ?? {})) {
+    if (!values.includes(options[name])) options[name] = values.default ?? values[0];
+  }
   try {
     const built = await item.build({ ...options, colours: view.colours, lights: stage.fixtureLights, stage });
     if (token !== view.token) return;
@@ -375,6 +380,12 @@ function colourRows(item) {
     ]);
     return rows;
   }
+  if (pal.kind === 'staff') {
+    return [
+      ['Leather wrap', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
+      ['Wrap thread', pal.thread, c.threadColor, (v) => { c.threadColor = v; }, () => { delete c.threadColor; }],
+    ];
+  }
   if (pal.kind === 'morningstar') {
     return [
       ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
@@ -461,7 +472,8 @@ function colourGroup(item) {
   const isWeapon = item.palette.kind === 'weapon';
   const isGraniteWeapon = item.palette.kind === 'granite-weapon';
   const isMorningstar = item.palette.kind === 'morningstar';
-  $('colourdiverse').style.display = isDice || isWeapon || isGraniteWeapon || isMorningstar ? 'none' : '';
+  const isStaff = item.palette.kind === 'staff';
+  $('colourdiverse').style.display = isStaff || isDice || isWeapon || isGraniteWeapon || isMorningstar ? 'none' : '';
   if (isWeapon || isMorningstar) {
     const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
     for (const [key, label] of metalOptions) {
@@ -504,7 +516,9 @@ function colourGroup(item) {
     row.style.justifyContent = 'space-between'; row.style.width = '100%';
     $('weaponmetalrows').append(row); $('weaponmetalrows').style.display = 'grid';
   }
-  $('colourhint').textContent = isGraniteWeapon
+  $('colourhint').textContent = isStaff
+    ? 'Choose the colour of the leather wrap on the grip and of its crossed thread, then press Apply. Wood, finish and topper are in the options above.'
+    : isGraniteWeapon
     ? 'The blade, guard and fused handle are granite; choose its granite colourway and the leather wrap colour.'
     : isWeapon
     ? (item.palette.thread
@@ -575,6 +589,11 @@ $('colourcopy').onclick = async () => {
       + "const " + variable + " = " + factory + "(GFX, { metal: '"
       + (options.metal ?? 'steel') + "', gripColor: '"
       + (view.colours.gripColor ?? '#633b2c') + "' });";
+  } else if (view.item.palette?.kind === 'staff') {
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { createStaff } from 'madness-engine/weapons';\n\n"
+      + "const staff = createStaff(GFX, { gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip) + "', threadColor: '"
+      + (view.colours.threadColor ?? view.item.palette.thread) + "' });";
   } else if (view.item.palette?.kind === 'granite-weapon') {
     const factory = view.item.factory;
     const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');

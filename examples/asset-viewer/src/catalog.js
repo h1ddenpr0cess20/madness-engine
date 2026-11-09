@@ -17,6 +17,7 @@ import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
 import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
+import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
 import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
 import { dress, extraItems } from './extras.js';
 
@@ -739,6 +740,39 @@ function humanItems() {
   }];
 }
 
+/** The wizard staff: wood, metal and topper are chosen from the viewer's option menus. */
+function staffItem() {
+  return {
+    id: 'weapons/wizard-staff',
+    category: 'Weapons',
+    group: 'Staff Set',
+    name: 'Wizard Staff',
+    source: 'weapons/staff',
+    kind: 'object',
+    palette: { kind: 'staff', grip: '#3a2418', thread: '#e2b857' },
+    options: {
+      topper: ['orb', 'egg', 'none'],
+      species: ['walnut', ...Object.keys(WOOD_SPECIES).filter((k) => k !== 'walnut')],
+      finish: ['lacquered', ...WOOD_FINISHES.filter((k) => k !== 'lacquered')],
+      wrap: ['on', 'off'],
+      vine: ['roots', 'none'],
+    },
+    async build({ topper = 'orb', species = 'walnut', finish = 'lacquered', vine = 'roots', wrap = 'on', colours = {} } = {}) {
+      const [{ createStaff }, metals] = await Promise.all([
+        import('../../../src/weapons/staff.js'),
+        import('../../../src/props/metalglobe.js'),
+      ]);
+      const made = createStaff(GFX, { topper, species, finish, vine: vine === 'roots', wrap: wrap === 'on',
+        gripColor: colours.gripColor ?? '#3a2418', threadColor: colours.threadColor ?? '#e2b857' });
+      return {
+        object: made.group,
+        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+        info: { Source: 'weapons/staff#createStaff', ...made.info, ...countOf(made.group) },
+      };
+    },
+  };
+}
+
 /** Walks the library and returns every item, in category order. */
 export async function loadCatalog(onProgress = () => {}) {
   const items = [];
@@ -784,7 +818,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
-  items.push(...weaponItems());
+  items.push(...weaponItems(), staffItem());
   items.push(...humanItems());
   items.push(...buildingItems());
 
