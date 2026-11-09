@@ -361,11 +361,16 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
   assert.equal(weapon.pommelAsset.asset.mist, weapon.pommelAsset.mist);
   assert.equal(weapon.pommelAsset.mist.material.uniforms.uDuo.value, 1);
   const eggMistUniforms = weapon.pommelAsset.mist.material.uniforms;
-  assert.deepEqual(eggMistUniforms.uShape.value.toArray(), [
-    0.032 * 0.84,
-    (0.027 / 1.03) * 1.03,
-    0.032 * 0.84,
-  ], 'the ray-marched ellipsoid matches the fitted egg shell dimensions');
+  assert.equal(eggMistUniforms.uLocal.value, 1, 'the egg mist is marched in its own frame, so it turns with the sword');
+  assert.deepEqual(eggMistUniforms.uShape.value.toArray(), [0.84, 1.03, 0.84],
+    'the ray-marched ellipsoid matches the egg shell, in the shell mesh units');
+  // Turned and moved (as in a hand), the mist's frame follows the egg.
+  weapon.group.rotation.z = 1.1;
+  weapon.group.position.set(0.3, 1.2, -0.4);
+  weapon.group.updateMatrixWorld(true);
+  weapon.pommelAsset.mist.onBeforeRender();
+  const centre = new GFX.Vector3().setFromMatrixPosition(weapon.pommelAsset.mist.matrixWorld).applyMatrix4(eggMistUniforms.uInverse.value);
+  assert.ok(centre.length() < 1e-6, 'the inverse takes the egg back to its own middle');
   assert.equal(eggMistUniforms.uGlow.value, 1.15,
     'the internal egg mist has enough radiance to read through the glass');
   assert.deepEqual(eggMistUniforms.uDuoC.value.toArray(), [1, 0.82, 0.38],

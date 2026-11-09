@@ -371,9 +371,8 @@ export function createStaff(GFX, {
         asset.group.position.y = -STAFF_DIMENSIONS.eggHalfHeight / STAFF_DIMENSIONS.eggScale;
         holder.add(asset.group);
         holder.rotation.z = Math.PI;
-        // Enlarge the egg and the world-space volume its mist is marched through, together.
+        // Enlarge the egg (its mist is marched in its own frame, so it grows with it).
         holder.scale.setScalar(STAFF_DIMENSIONS.eggScale);
-        asset.mist.material.uniforms.uShape.value.multiplyScalar(STAFF_DIMENSIONS.eggScale);
         asset.glass.material.thickness *= STAFF_DIMENSIONS.eggScale;
         asset.glass.material.attenuationDistance *= STAFF_DIMENSIONS.eggScale;
         toppers.egg = { asset, object: holder };

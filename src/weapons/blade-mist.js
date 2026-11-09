@@ -46,7 +46,10 @@ function mistMaterial(GFX, palette) {
 function mistMesh(GFX, parent, material, { name, position, axes, visible }) {
   const uniforms = material.uniforms;
   uniforms.uRadius.value = 1;
-  uniforms.uShape.value.set(axes.x, axes.y, axes.z);
+  // Marched in the mesh's own frame, where it is the unit sphere the mesh is scaled from: it turns
+  // and scales with the blade however the blade is held.
+  uniforms.uLocal.value = 1;
+  uniforms.uShape.value.set(1, 1, 1);
 
   const mesh = new GFX.Mesh(new GFX.SphereGeometry(1, 88, 64), material);
   mesh.name = name;
@@ -68,6 +71,7 @@ function mistMesh(GFX, parent, material, { name, position, axes, visible }) {
     uniforms.uFlow.value += Math.min(timer.getDelta(), 0.05) * 0.28;
     mesh.updateWorldMatrix?.(true, false);
     uniforms.uCenter.value.setFromMatrixPosition(mesh.matrixWorld);
+    uniforms.uInverse.value.copy(mesh.matrixWorld).invert();
   };
   return mesh;
 }

@@ -61,7 +61,10 @@ export function createKrystalOrbPommel(GFX, radius) {
   vision.castShadow = false;
   vision.receiveShadow = false;
   vision.visible = true;
-  visionMaterial.uniforms.uShape.value.set(scale, scale, scale);
+  // Marched in the vision mesh's own frame (the orb's original units), so it turns and scales with
+  // the sword however it is held.
+  visionMaterial.uniforms.uLocal.value = 1;
+  visionMaterial.uniforms.uShape.value.set(1, 1, 1);
 
   const timer = new GFX.Timer();
   glass.onBeforeRender = () => {
@@ -69,6 +72,7 @@ export function createKrystalOrbPommel(GFX, radius) {
     visionMaterial.uniforms.uFlow.value += Math.min(timer.getDelta(), 0.05) * 0.18;
     vision.updateWorldMatrix?.(true, false);
     visionMaterial.uniforms.uCenter.value.setFromMatrixPosition(vision.matrixWorld);
+    visionMaterial.uniforms.uInverse.value.copy(vision.matrixWorld).invert();
   };
 
   return {
@@ -151,15 +155,17 @@ export function createMagicEggPommel(GFX, radius) {
 
   glass.material.thickness *= radialScale;
   glass.material.attenuationDistance *= radialScale;
-  // The vision shader marches through a world-space ellipsoid. Once the
-  // original hero egg is fitted into the pommel, its default unit-sphere axes
-  // are no longer valid: describe the actual transformed egg volume here.
-  // shapeEgg narrows the horizontal radius to about 0.84 and stretches y 1.03.
-  mist.material.uniforms.uShape.value.set(
-    radialScale * 0.84,
-    verticalScale * 1.03,
-    radialScale * 0.84,
-  );
+  // The vision shader marches the egg's volume in the mist mesh's own frame, so it stays inside the
+  // glass however the weapon is turned or scaled (held in a swinging hand): there the egg is the unit
+  // sphere, narrowed by shapeEgg to about 0.84 across and stretched 1.03 up.
+  mist.material.uniforms.uLocal.value = 1;
+  mist.material.uniforms.uShape.value.set(0.84, 1.03, 0.84);
+  const flow = mist.onBeforeRender;
+  mist.onBeforeRender = (...args) => {
+    flow?.(...args);
+    mist.updateWorldMatrix?.(true, false);
+    mist.material.uniforms.uInverse.value.copy(mist.matrixWorld).invert();
+  };
   mist.material.uniforms.uRadius.value = 1.02;
   mist.material.uniforms.uGlow.value = 1.15;
   mist.material.uniforms.uDuoA.value.set(0.96, 0.98, 1.0);
