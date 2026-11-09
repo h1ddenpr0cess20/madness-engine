@@ -267,7 +267,7 @@ function makeFaucet(GFX, parent, brass, x, y, z, scale = 1) {
   tap.add(foot);
   const lever = new GFX.Mesh(new GFX.BoxGeometry(0.09, 0.014, 0.025), brass);
   lever.name = 'brass mixer lever';
-  lever.position.set(0.075, 0.055, 0);
+  lever.position.set(0.05, 0.055, 0);   // through the riser
   tap.add(lever);
   return tap;
 }
@@ -331,8 +331,11 @@ export function createGraniteCounter(GFX, {
 
   const cabinetTop = height - SLAB;
   const topY = height;
-  const cabinetDepth = depth - 0.08;
+  const DOOR = 0.038;                                     // the doors' thickness
+  const frontZ = depth / 2 - 0.022;                       // the middle of a door
+  const cabinetDepth = frontZ - DOOR / 2 - z0;            // the carcass runs up to the back of the doors
   const back = z0, front = z0 + cabinetDepth;
+  const toeDepth = cabinetDepth - 0.04;                   // the toe kick is set back under the doors
 
   // The carcass: raw lumber, cut round the aperture when there is one, so the sink's bowl has room.
   const carcass = (name, xa, xb, ya, yb, za, zb) => {
@@ -351,26 +354,25 @@ export function createGraniteCounter(GFX, {
   } else {
     carcass('raw lumber cabinet carcass', x0, x1, PLINTH, cabinetTop, back, front);
   }
-  box(GFX, counter, 'finished hardwood toe kick', [length, PLINTH, cabinetDepth], [0, PLINTH / 2, (back + front) / 2], finishedMat);
+  box(GFX, counter, 'finished hardwood toe kick', [length, PLINTH, toeDepth], [0, PLINTH / 2, back + toeDepth / 2], finishedMat);
 
   // Doors and drawers: about one to every 0.62 m of run, counted to the length; every other bay has a drawer on top.
   const bays = Math.max(2, Math.round(length / 0.62));
   const bayW = length / bays;
-  const frontZ = depth / 2 - 0.022;
   for (let i = 0; i < bays; i++) {
     const x = x0 + bayW * (i + 0.5);
     const doorH = cabinetTop - PLINTH - 0.035;
-    box(GFX, counter, `finished hardwood cabinet door ${i + 1}`, [bayW - 0.024, doorH, 0.038], [x, (cabinetTop + PLINTH) / 2, frontZ], finishedMat);
+    box(GFX, counter, `finished hardwood cabinet door ${i + 1}`, [bayW - 0.024, doorH, DOOR], [x, (cabinetTop + PLINTH) / 2, frontZ], finishedMat);
     box(GFX, counter, `raised cabinet centre panel ${i + 1}`, [bayW - 0.13, cabinetTop - PLINTH - 0.14, 0.012], [x, (cabinetTop + PLINTH) / 2, frontZ + 0.024], finishedMat);
     const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayW * 0.38), 0.018, 0.022), hardware);
     pull.name = `brass cabinet pull ${i + 1}`;
-    pull.position.set(x, cabinetTop - 0.14, frontZ + 0.047);
+    pull.position.set(x, cabinetTop - 0.14, frontZ + 0.041);   // 4 mm into the panel face
     pull.castShadow = true;
     counter.add(pull);
     const mount = new GFX.Mesh(new GFX.CylinderGeometry(0.022, 0.022, 0.008, 24), hardware);
     mount.name = `brass pull mounts ${i + 1}`;
     mount.rotation.x = Math.PI / 2;
-    mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.047);
+    mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.034);
     counter.add(mount);
     if (i % 2 === 1) {
       box(GFX, counter, `finished top drawer ${i + 1}`, [bayW - 0.024, 0.09, 0.028], [x, cabinetTop - 0.065, frontZ + 0.008], finishedMat);

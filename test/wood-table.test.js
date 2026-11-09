@@ -59,3 +59,23 @@ test('the set lines the kinds up without overlap', () => {
     assert.ok(b.group.position.x - b.dimensions.width / 2 > a.group.position.x + a.dimensions.width / 2);
   }
 });
+
+/** Pieces whose bounding boxes touch, joined up: a model that holds together is one. */
+const pieces = (root) => {
+  root.updateMatrixWorld(true);
+  const boxes = [];
+  root.traverse((m) => { if (m.isMesh) boxes.push(new GFX.Box3().setFromObject(m)); });
+  const seen = new Set(); let count = 0;
+  boxes.forEach((_, i) => {
+    if (seen.has(i)) return;
+    count++; const st = [i]; seen.add(i);
+    while (st.length) { const k = st.pop(); boxes.forEach((b, j) => { if (!seen.has(j) && boxes[k].intersectsBox(b)) { seen.add(j); st.push(j); } }); }
+  });
+  return count;
+};
+
+test('every table holds together: no part floats free of the rest', () => {
+  for (const kind of KINDS) for (const shape of SHAPES) for (const legs of LEGS) {
+    assert.equal(pieces(createWoodTable(GFX, { kind, shape, legs, apron: true, shelf: true, drawer: true }).group), 1, `${kind}/${shape}/${legs}`);
+  }
+});

@@ -113,3 +113,14 @@ test('the bowl outline reaches the rim at every angle: no pinch at the sink corn
   assert.ok(Math.abs(radialOnRect(1, 0, hx, hz, rr) - hx) < 1e-6);
   assert.ok(Math.abs(radialOnRect(0, 1, hx, hz, rr) - hz) < 1e-6);
 });
+
+test('the counter holds together: doors, drawers, pulls and the faucet lever all touch the rest', async () => {
+  const { Box3 } = GFX;
+  const kitchen = createGraniteKitchen(GFX, {});
+  kitchen.group.updateMatrixWorld(true);
+  const boxes = [];
+  kitchen.group.traverse((m) => { if (m.isMesh) boxes.push(new Box3().setFromObject(m)); });
+  const seen = new Set([0]), st = [0];
+  while (st.length) { const k = st.pop(); boxes.forEach((b, j) => { if (!seen.has(j) && boxes[k].intersectsBox(b)) { seen.add(j); st.push(j); } }); }
+  assert.equal(seen.size, boxes.length);
+});

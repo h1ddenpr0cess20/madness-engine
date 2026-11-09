@@ -139,7 +139,7 @@ export function createWoodTable(GFX, options = {}) {
   let shelfY = null;
   if (o.shelf && o.legs !== 'trestle') {
     shelfY = Math.min(0.18, legHeight * 0.3);
-    board('shelf', [2 * lx - LEG, SHELF, 2 * lz - LEG], [0, shelfY, 0], 'x');
+    board('shelf', [2 * lx, SHELF, 2 * lz], [0, shelfY, 0], 'x');
   }
 
   if (o.drawer && o.apron && o.legs !== 'trestle') {
@@ -164,7 +164,7 @@ export function createWoodTable(GFX, options = {}) {
     /** The top's upper face: its height and extent (a half-width and half-depth of the board or ellipse). */
     surface: { y: height, halfWidth: width / 2, halfDepth: depth / 2, shape: o.shape },
     /** The lower shelf's upper face, or null. */
-    lowerShelf: shelfY === null ? null : { y: shelfY + SHELF / 2, halfWidth: lx - LEG / 2, halfDepth: lz - LEG / 2 },
+    lowerShelf: shelfY === null ? null : { y: shelfY + SHELF / 2, halfWidth: lx, halfDepth: lz },
     frame: { center: [0, height / 2, 0], radius: Math.hypot(width, height, depth) / 2 * 1.1 },
     get placed() { return placed.slice(); },
 
