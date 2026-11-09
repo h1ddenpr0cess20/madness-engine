@@ -10,6 +10,7 @@ import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
 import { checkFeatures, CUSTOMIZATION, DEFAULT_FEATURES } from './human/features.js';
 import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
+import { buildGlasses, SUNGLASSES } from './human/glasses.js';
 
 /**
  * A human, at real size (1.76 m, one world unit a metre, as the weapons
@@ -37,7 +38,7 @@ import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYL
  * `hands` set the rest, and `pose` takes them on every frame.
  */
 
-export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, CUSTOMIZATION, DEFAULT_FEATURES };
+export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, DEFAULT_FEATURES };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 
 const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'gums', 'tongue', 'lash'];
@@ -108,11 +109,30 @@ function hairData(kind, name, detail) {
   return builds.get(key);
 }
 
-/** A garment's mesh data at `detail`, made once and shared. */
-function garmentData(name, garment, detail) {
-  const key = garment === GARMENTS[name] ? `${name}@${detail}` : null;
+/** A pair of sunglasses' mesh data at `detail`, made once and shared. */
+function glassesData(name, detail) {
+  const key = `glasses:${name}@${levelFor(detail)}`;
+  if (!builds.has(key)) builds.set(key, assemble(buildGlasses(name, detail), NAMES, ['lens', 'frameMetal', 'frameAcetate']));
+  return builds.get(key);
+}
+
+/**
+ * A garment's mesh data at `detail`, made once and shared. One that is
+ * fitted over what is under it (`fits`) is made for each set of garments
+ * under it: `below` is those, as { names, lift }.
+ */
+function garmentData(name, garment, detail, below) {
+  const fitted = garment.fits && below.names.length;
+  const key = garment === GARMENTS[name] ? `${name}@${detail}${fitted ? `/${below.names.join('+')}` : ''}` : null;
   if (key && builds.has(key)) return builds.get(key);
-  const data = assemble(garment.build(detail), NAMES, garment.materials);
+  const parts = garment.build(detail, { under: fitted ? below.lift : null });
+  const data = assemble(parts, NAMES, garment.materials);
+  // How far off the skin it stands, by skin vertex, for what goes over it.
+  for (const part of parts) {
+    if (!part.lift) continue;
+    data.lift ??= new Float32Array(part.lift.length);
+    for (let v = 0; v < part.lift.length; v++) data.lift[v] = Math.max(data.lift[v], part.lift[v]);
+  }
   if (key) builds.set(key, data);
   return data;
 }
@@ -120,6 +140,7 @@ function garmentData(name, garment, detail) {
 const DEFAULT_LOOK = Object.freeze({
   skin: '#b98a70', iris: '#5a4632', hair: '#3b2a1f',
   shirt: '#8f9399', denim: '#ffffff', shoe: '#2c2c30', sole: '#efece6', briefs: '#2a2b30',
+  socks: '#e9e7e1', jacket: '#3a2a22', rib: '#232224',
 });
 
 /** The hair's sheen: its own colour, a third of the way to white. */
@@ -134,6 +155,14 @@ function hairLook(GFX, look, tex, more) {
   return {
     color: look.hair, map: tex ? hairTexture(GFX) : null, side: GFX.DoubleSide, roughness: 0.6, strands: true,
     specularIntensity: 0.15, sheen: 0.15, sheenColor: sheenOf(GFX, look.hair), sheenRoughness: 0.5, ...more,
+  };
+}
+
+/** What the jacket's two leathers share. */
+function leather(GFX, look, tex, more) {
+  return {
+    color: look.jacket, bumpMap: tex?.leather.bump ?? null, bumpScale: 0.0012, roughness: 0.58, clearcoat: 0.22, clearcoatRoughness: 0.5,
+    sheen: 0.25, sheenColor: new GFX.Color('#8a7a70'), sheenRoughness: 0.5, side: GFX.DoubleSide, ...more,
   };
 }
 
@@ -161,6 +190,18 @@ function makeMaterials(GFX, look, tex) {
     denim: M('denim', { color: tex ? look.denim : '#2c4a78', map: tex?.denim.map ?? null, bumpMap: tex?.denim.bump ?? null, bumpScale: 0.0004, roughness: 0.86, sheen: 0.35, sheenColor: new GFX.Color('#9db4d8'), sheenRoughness: 0.6, side: GFX.DoubleSide }),
     shoe: M('sneakers', { color: look.shoe, map: tex?.shoe ?? null, roughness: 0.62, clearcoat: 0.04 }),
     sole: M('soles', { color: look.sole, map: tex?.sole ?? null, roughness: 0.65 }),
+    sock: M('socks', { color: look.socks, map: tex?.sock.map ?? null, bumpMap: tex?.sock.bump ?? null, bumpScale: 0.0004, roughness: 0.95, sheen: 0.8, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.6, side: GFX.DoubleSide }),
+    // Leather: dark, a soft gloss worn into it, its grain in the bump; the trims the same hide without the panels' seams.
+    leather: M('leather', leather(GFX, look, tex, { map: tex?.leather.map ?? null })),
+    leatherTrim: M('leather trims', leather(GFX, look, tex, {})),
+    // The knit rib of the collar, cuffs and waistband: matte, a soft sheen across its ribs.
+    rib: M('rib knit', { color: look.rib, map: tex?.rib.map ?? null, roughness: 0.92, sheen: 0.6, sheenColor: new GFX.Color('#8a8a90'), sheenRoughness: 0.6, side: GFX.DoubleSide }),
+    ribTrim: M('rib knit collar', { color: look.rib, map: tex?.rib.tile ?? null, roughness: 0.92, sheen: 0.6, sheenColor: new GFX.Color('#8a8a90'), sheenRoughness: 0.6, side: GFX.DoubleSide }),
+    // Sunglasses: the lenses dark and mirror-smooth, seen through dimly; a gold wire frame or a glossy black one.
+    lens: M('lenses', { color: '#1b2026', roughness: 0.03, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.02, specularIntensity: 1, transparent: true, opacity: 0.86, depthWrite: false, side: GFX.DoubleSide }),
+    frameMetal: M('frame', { color: '#cfae63', metalness: 1, roughness: 0.22 }),
+    frameAcetate: M('frame', { color: '#121214', roughness: 0.18, clearcoat: 0.9, clearcoatRoughness: 0.1 }),
+    metal: M('hardware', { color: '#c4c6ca', metalness: 1, roughness: 0.26, clearcoat: 0.2 }),
   };
   return mats;
 }
@@ -441,6 +482,21 @@ export function createHuman(GFX, options = {}) {
   }
   groom(grooming);
 
+  // His sunglasses, carried by the head as the hair is.
+  let glasses = null;
+  function wearGlasses(name) {
+    if ((glasses?.name ?? null) === (name ?? null)) return;
+    if (glasses) group.remove(glasses.mesh.mesh);
+    glasses = null;
+    if (!name) return;
+    const m = skinnedMesh(GFX, glassesData(name, detail), [mats.lens, mats.frameMetal, mats.frameAcetate], 'human sunglasses');
+    m.mesh.matrixAutoUpdate = false;
+    m.mesh.receiveShadow = true;
+    group.add(m.mesh);
+    glasses = { name, mesh: m };
+  }
+  wearGlasses(options.glasses === undefined ? none(features.glasses) : options.glasses);
+
   // What he has on, by name: { garment, mesh, layer }.
   const worn = new Map();
   const custom = new Map();
@@ -477,28 +533,71 @@ export function createHuman(GFX, options = {}) {
     }
   }
 
+  /** What is worn under layer `layer`: their names, and how far off the skin the outermost of them stands at each skin vertex. */
+  function below(layer) {
+    const under = [...worn].filter(([, w]) => w.garment.layer < layer && w.mesh.data.lift).sort(([a], [b]) => (a < b ? -1 : 1));
+    let lift = null;
+    for (const [, w] of under) {
+      lift ??= new Float32Array(w.mesh.data.lift.length);
+      const l = w.mesh.data.lift;
+      for (let v = 0; v < l.length; v++) if (l[v] > lift[v]) lift[v] = l[v];
+    }
+    return { names: under.map(([n]) => n), lift };
+  }
+
+  /** Makes the mesh for garment `g` as it fits over what he has on under it. */
+  function make(name, g, data = garmentData(name, g, detail, below(g.layer))) {
+    const materials = g.materials.map((n) => mats[n] ?? g.materialFor?.(GFX, n) ?? mats.shirt);
+    const m = skinnedMesh(GFX, data, materials, `human ${name}`);
+    group.add(m.mesh);
+    return m;
+  }
+
+  /** Takes a garment's mesh off him. */
+  function drop(m) {
+    group.remove(m.mesh);
+    m.geometry.dispose?.();
+  }
+
+  /** Remakes each fitted garment over layer `layer`, outward, so each fits what is now under it. */
+  function refitOver(layer) {
+    const over = [...worn].filter(([, w]) => w.garment.fits && w.garment.layer > layer).sort(([, a], [, b]) => a.garment.layer - b.garment.layer);
+    for (const [name, w] of over) {
+      const data = garmentData(name, w.garment, detail, below(w.garment.layer));
+      if (data === w.mesh.data) continue;
+      drop(w.mesh);
+      w.mesh = make(name, w.garment, data);
+    }
+  }
+
   function wear(nameOrGarment, garment = null) {
     const name = typeof nameOrGarment === 'string' ? nameOrGarment : nameOrGarment.name;
     const g = garment ?? (typeof nameOrGarment === 'object' ? nameOrGarment : GARMENTS[name] ?? custom.get(name));
     if (!g) throw new Error(`human: no garment called ${name}; choose ${Object.keys(GARMENTS).join(', ')} or pass one of your own`);
     if (worn.has(name)) return api;
     if (g !== GARMENTS[name]) custom.set(name, g);
-    const data = garmentData(name, g, detail);
-    const materials = g.materials.map((n) => mats[n] ?? g.materialFor?.(GFX, n) ?? mats.shirt);
-    const m = skinnedMesh(GFX, data, materials, `human ${name}`);
-    group.add(m.mesh);
-    worn.set(name, { garment: g, mesh: m });
+    // One thing in each slot: a jacket worn open takes the place of one worn closed.
+    if (g.slot) for (const [other, w] of [...worn]) if (w.garment.slot === g.slot) unwear(other);
+    worn.set(name, { garment: g, mesh: make(name, g) });
+    refitOver(g.layer);
     refit();
+    if (last) pose(last);
     return api;
   }
 
-  function remove(name) {
+  function unwear(name) {
     const w = worn.get(name);
-    if (!w) return api;
-    group.remove(w.mesh.mesh);
-    w.mesh.geometry.dispose?.();
+    if (!w) return false;
+    drop(w.mesh);
     worn.delete(name);
+    refitOver(w.garment.layer);
+    return true;
+  }
+
+  function remove(name) {
+    if (!unwear(name)) return api;
     refit();
+    if (last) pose(last);
     return api;
   }
 
@@ -617,9 +716,9 @@ export function createHuman(GFX, options = {}) {
       m.position.needsUpdate = true;
       m.normal.needsUpdate = true;
     }
-    if (groomed.hair) {
+    if (groomed.hair || glasses) {
       const o = skeleton.index.get('head') * 12, B = skeleton.matrices;
-      for (const mesh of [groomed.hair.mesh.mesh, groomed.hair.edges]) {
+      for (const mesh of [groomed.hair?.mesh.mesh, groomed.hair?.edges, glasses?.mesh.mesh].filter(Boolean)) {
         mesh.matrix.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
         mesh.matrixWorldNeedsUpdate = true;
       }
@@ -679,6 +778,9 @@ export function createHuman(GFX, options = {}) {
       for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
     }
     for (const n of ['shirt', 'shoe', 'sole', 'briefs']) if (change[n]) mats[n].color.set(change[n]);
+    if (change.socks) mats.sock.color.set(change.socks);
+    if (change.jacket) for (const n of ['leather', 'leatherTrim']) mats[n].color.set(change.jacket);
+    if (change.rib) for (const n of ['rib', 'ribTrim']) mats[n].color.set(change.rib);
     if (change.denim) mats.denim.color.set(change.denim);
     if (change.hair) {
       for (const m of [mats.hair, mats.hairEdge]) {
@@ -712,7 +814,7 @@ export function createHuman(GFX, options = {}) {
     /** Puts on exactly these (by name), taking off the rest. */
     dress(names) {
       for (const n of [...worn.keys()]) if (!names.includes(n)) remove(n);
-      for (const n of names) wear(n);
+      for (const n of [...names].sort((a, b) => layerOf(a) - layerOf(b))) wear(n);
       return api;
     },
     pose,
@@ -733,6 +835,9 @@ export function createHuman(GFX, options = {}) {
     get look() { return { ...look }; },
     setHair,
     get hair() { return { ...grooming }; },
+    /** Puts on the sunglasses `name` (one of `SUNGLASSES`), or takes them off (null). */
+    setGlasses(name) { wearGlasses(name); if (last) pose(last); return api; },
+    get glasses() { return glasses?.name ?? null; },
     /**
      * The character creator's choices (see `CUSTOMIZATION`): every slot, those he shows yet read
      * from him as he is (his colours, his hair), the rest as they were last set.
@@ -740,7 +845,7 @@ export function createHuman(GFX, options = {}) {
     get features() {
       return {
         ...features, skin: look.skin, iris: look.iris, hairColour: look.hair,
-        hair: grooming.hair ?? 'none', beard: grooming.beard ?? 'none', brows: grooming.brows ?? 'none',
+        hair: grooming.hair ?? 'none', beard: grooming.beard ?? 'none', brows: grooming.brows ?? 'none', glasses: glasses?.name ?? 'none',
       };
     },
     /** Sets any of the creator's choices: `{ noseShape: 'aquiline', hair: 'sidePart', eyeSize: 0.3 }`. */
@@ -755,18 +860,23 @@ export function createHuman(GFX, options = {}) {
       const groom = {};
       for (const k of ['hair', 'beard', 'brows']) if (k in change) groom[k] = none(change[k]);
       if (Object.keys(groom).length) setHair(groom);
+      if ('glasses' in change) api.setGlasses(none(change.glasses));
       return api;
     },
     setHairColor: (c) => setLook({ hair: c }),
     setShirtColor: (c) => setLook({ shirt: c }),
     setJeansColor: (c) => setLook({ denim: c }),
     setShoeColor: (c) => setLook({ shoe: c }),
+    setSockColor: (c) => setLook({ socks: c }),
+    setJacketColor: (c) => setLook({ jacket: c }),
     setSkin: (c) => setLook({ skin: c }),
     setEyeColor: (c) => setLook({ iris: c }),
     /** Where bone `name` takes the rest-pose point `p` now (after `pose`). */
     point: (name, p) => skeleton.point(name, p),
   };
-  for (const name of outfit) wear(name);
+  // Put on from the inside out, so nothing is fitted twice.
+  const layerOf = (n) => (GARMENTS[n]?.layer ?? 0);
+  for (const name of [...outfit].sort((a, b) => layerOf(a) - layerOf(b))) wear(name);
   pose({ clip: 'idle', t: 0, time: 0 });
   return api;
 }

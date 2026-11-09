@@ -259,3 +259,59 @@ export function profile(list) {
     return array ? out : out[0];
   };
 }
+
+/**
+ * Rays against a part as it stands (its rest positions): where one first
+ * meets it, the facet's normal there, and the bone weights of that place,
+ * blended from its triangle's corners. For laying one thing on another (a
+ * collar on a jacket, a zip down its front).
+ */
+export function caster(part) {
+  const P = part.pos, T = part.idx, CELL = 0.02;
+  const cells = new Map();
+  const key = (i, j, k) => `${i},${j},${k}`;
+  for (let t = 0; t < T.length; t += 3) {
+    const a = T[t] * 3, b = T[t + 1] * 3, c = T[t + 2] * 3;
+    const lo = [0, 1, 2].map((k) => Math.floor(Math.min(P[a + k], P[b + k], P[c + k]) / CELL));
+    const hi = [0, 1, 2].map((k) => Math.floor(Math.max(P[a + k], P[b + k], P[c + k]) / CELL));
+    for (let i = lo[0]; i <= hi[0]; i++) for (let j = lo[1]; j <= hi[1]; j++) for (let k = lo[2]; k <= hi[2]; k++) {
+      const id = key(i, j, k);
+      let list = cells.get(id);
+      if (!list) cells.set(id, (list = []));
+      list.push(t);
+    }
+  }
+  /** The first hit from `o` along unit `d` within `far`: { dist, p, n, w }, or null. */
+  return (o, d, far = 0.6) => {
+    let best = Infinity, hit = null;
+    const seen = new Set();
+    for (let r = 0; r <= far + CELL; r += CELL * 0.5) {
+      if (r > best + CELL) break;
+      const list = cells.get(key(Math.floor((o[0] + d[0] * r) / CELL), Math.floor((o[1] + d[1] * r) / CELL), Math.floor((o[2] + d[2] * r) / CELL)));
+      if (!list) continue;
+      for (const t of list) {
+        if (seen.has(t)) continue;
+        seen.add(t);
+        const A = [P[T[t] * 3], P[T[t] * 3 + 1], P[T[t] * 3 + 2]];
+        const e1 = sub([P[T[t + 1] * 3], P[T[t + 1] * 3 + 1], P[T[t + 1] * 3 + 2]], A);
+        const e2 = sub([P[T[t + 2] * 3], P[T[t + 2] * 3 + 1], P[T[t + 2] * 3 + 2]], A);
+        const h = cross(d, e2), det = dot(e1, h);
+        if (Math.abs(det) < 1e-14) continue;
+        const f = 1 / det, s = sub(o, A), u = f * dot(s, h);
+        if (u < 0 || u > 1) continue;
+        const q = cross(s, e1), v = f * dot(d, q);
+        if (v < 0 || u + v > 1) continue;
+        const dist = f * dot(e2, q);
+        if (dist > 1e-5 && dist < best) { best = dist; hit = { t, u, v, e1, e2 }; }
+      }
+    }
+    if (!hit || best > far) return null;
+    let n = norm(cross(hit.e1, hit.e2));
+    if (dot(n, d) > 0) n = scale(n, -1);
+    const w = {};
+    [[T[hit.t], 1 - hit.u - hit.v], [T[hit.t + 1], hit.u], [T[hit.t + 2], hit.v]].forEach(([vtx, k]) => {
+      for (const [b, x] of Object.entries(part.weights[vtx])) w[b] = (w[b] ?? 0) + x * k;
+    });
+    return { dist: best, p: add(o, scale(d, best)), n, w };
+  };
+}

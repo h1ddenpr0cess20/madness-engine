@@ -25,9 +25,24 @@ import { Part } from './kit.js';
  * - `edge(p, zone)`: the turned edge at a cut there: { thick, turn } (the
  *   cloth's doubled thickness, and how far the turn-up goes inside).
  * - `smooth`: passes of smoothing over how far the cloth stands off the skin.
+ * - `under`: for a garment worn over others, how far off the skin the
+ *   garments under it already stand, by skin vertex (see `part.lift`); it
+ *   keeps `gap` beyond them, bridging their edges (a sleeve's end, a hem)
+ *   over `bridge` rings of the skin rather than stepping down at them.
+ * - `thick`: the cloth's own thickness, for what is worn over it.
+ * - `shade`: how much of the skin's shading in its creases the cloth keeps
+ *   (1 all of it, as cloth lying on them does; less for one standing off).
+ * - `stiff`: passes of smoothing over the cloth's shape itself, for a stiff
+ *   one (leather) that rounds over the body's forms instead of showing them.
+ *
+ * The part it returns carries `lift`: how far off the skin its outside is,
+ * by skin vertex (0 where it does not go), for the garments over it.
  */
 export function skinShell(name, material, spec) {
   const { level = 1, field, ease, drape = (p, q) => q, folds = () => 0, edge = () => ({ thick: 0.003, turn: 0.015 }), smooth: passes = 4 } = spec;
+  const { under = null, gap = 0.003, bridge = 8, thick: cloth = 0.0015, stiff = 0, shade = 1 } = spec;
+  // The skin's shading in its creases, carried onto the cloth only as far as the cloth follows them.
+  const tintOf = (o) => 1 - shade * (1 - (0.45 + 0.55 * Math.pow(o, 0.6)));
   const mesh = bodyLevel(level);
   const { pos, uv, faces, uvFaces, weights, occ } = mesh;
   const V = pos.length / 3;
@@ -88,7 +103,7 @@ export function skinShell(name, material, spec) {
   // A vertex's weights by bone name.
   const named = (w) => {
     const out = {};
-    for (const [b, x] of Object.entries(w)) out[BONES[b]] = (out[BONES[b]] ?? 0) + x;
+    for (const [b, x] of Object.entries(w)) if (x >= 0.01) out[BONES[b]] = (out[BONES[b]] ?? 0) + x;
     return out;
   };
   // Each vertex it uses: lifted off the skin, hung, and smoothed.
@@ -119,15 +134,44 @@ export function skinShell(name, material, spec) {
       return list.length ? [0, 1, 2].map((a) => o[a] * 0.4 + avg[a] * 0.6) : o;
     });
   }
+  // How near the skin each may come: its ease, and beyond whatever is worn under it, that floor
+  // spread out over its neighbours (never lowered), so over an edge underneath it slopes down gently.
+  let floor = verts.map((v, i) => {
+    const want = ease(B[i].p, zone[v]) + folds(B[i].p, zone[v]);
+    return under && under[v] > 0 ? Math.max(want, under[v] + gap) : want;
+  });
+  if (under) {
+    const own = floor.slice();
+    for (let pass = 0; pass < bridge; pass++) {
+      floor = floor.map((f, i) => {
+        let s = 0, c = 0;
+        for (const j of nbr[i]) { s += floor[j]; c++; }
+        return c ? Math.max(own[i], f * 0.3 + (s / c) * 0.7) : f;
+      });
+    }
+  }
   const at = verts.map((v, i) => {
-    const b = B[i], z = zone[v];
+    const b = B[i];
     const o = off[i];
-    // Never closer to the skin than its ease, along the skin's normal.
+    // Never closer to the skin than that, along the skin's normal.
     const along = o[0] * b.n[0] + o[1] * b.n[1] + o[2] * b.n[2];
-    const want = ease(b.p, z) + folds(b.p, z);
-    const k = Math.max(0, want - along);
+    const k = Math.max(0, floor[i] - along);
     return [b.p[0] + o[0] + b.n[0] * k, b.p[1] + o[1] + b.n[1] * k, b.p[2] + o[2] + b.n[2] * k];
   });
+
+  // A stiff cloth's shape smoothed, never coming closer to the skin than its floor.
+  for (let pass = 0; pass < stiff; pass++) {
+    const next = at.map((q, i) => {
+      let x = 0, y = 0, z = 0, c = 0;
+      for (const j of nbr[i]) { x += at[j][0]; y += at[j][1]; z += at[j][2]; c++; }
+      return c ? [q[0] * 0.5 + (x / c) * 0.5, q[1] * 0.5 + (y / c) * 0.5, q[2] * 0.5 + (z / c) * 0.5] : q;
+    });
+    for (let i = 0; i < at.length; i++) {
+      const b = B[i], q = next[i];
+      const k = Math.max(0, floor[i] - ((q[0] - b.p[0]) * b.n[0] + (q[1] - b.p[1]) * b.n[1] + (q[2] - b.p[2]) * b.n[2]));
+      at[i] = [q[0] + b.n[0] * k, q[1] + b.n[1] * k, q[2] + b.n[2] * k];
+    }
+  }
 
   // The cut, made fair: each vertex on it eased toward the middle of its two neighbours along it.
   const cutEdges = new Map();
@@ -164,7 +208,7 @@ export function skinShell(name, material, spec) {
     let id = ids.get(key);
     if (id === undefined) {
       const i = used.get(v);
-      id = part.vertex(at[i], [uv[t * 2], uv[t * 2 + 1]], named(B[i].w), 0.45 + 0.55 * Math.pow(B[i].occ, 0.6), null, zone[v]);
+      id = part.vertex(at[i], [uv[t * 2], uv[t * 2 + 1]], named(B[i].w), tintOf(B[i].occ), null, zone[v]);
       ids.set(key, id);
     }
     return id;
@@ -230,7 +274,7 @@ export function skinShell(name, material, spec) {
     const i = used.get(v), p = at[i], { into, out: nn } = inward.get(v), z = zone[v];
     const { thick, turn } = edge(B[i].p, z);
     const w = named(B[i].w), u = [uv[t * 2], uv[t * 2 + 1]];
-    const tint = 0.45 + 0.55 * Math.pow(B[i].occ, 0.6);
+    const tint = tintOf(B[i].occ);
     const pt = (o, d) => [p[0] - into[0] * o - nn[0] * d, p[1] - into[1] * o - nn[1] * d, p[2] - into[2] * o - nn[2] * d];
     const ids3 = [
       part.vertex(pt(thick * 0.45, thick * 0.35), u, w, tint * 0.95, null, z),
@@ -251,5 +295,12 @@ export function skinShell(name, material, spec) {
       part.idx.push(b0, a0, a1, b0, a1, b1);
     }
   }
+  // How far off the skin its outside is, for what is worn over it.
+  const lift = new Float32Array(V);
+  verts.forEach((v, i) => {
+    const b = B[i], q = at[i];
+    lift[v] = Math.max(0.0005, (q[0] - b.p[0]) * b.n[0] + (q[1] - b.p[1]) * b.n[1] + (q[2] - b.p[2]) * b.n[2] + cloth);
+  });
+  part.lift = lift;
   return part;
 }

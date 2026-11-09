@@ -1,4 +1,4 @@
-import { add, clamp, cross, dot, len, norm, Part, scale, smooth, sub } from './kit.js';
+import { add, caster, clamp, cross, dot, len, norm, Part, scale, smooth, sub } from './kit.js';
 import { castBody, footPoints, legAxis, skinWeightsAt } from './body.js';
 import { armDistance, JOINTS, mirror } from './skeleton.js';
 import { skinShell } from './shell.js';
@@ -246,8 +246,9 @@ function bodyDrape(p, q) {
   return [q[0] + (q[0] / r) * k, y, q[2] + ((q[2] - SHIRT_Z) / r) * k];
 }
 
-function shirt(detail) {
+function shirt(detail, under = null) {
   const part = skinShell('shirt', 'shirt', {
+    under,
     level: detail >= 0.8 ? 1 : 0,
     field: (p, z) => shirtCut(p, z).f,
     ease: (p, z) => (z.zone === 'arm' ? 0.006 : 0.0065 + 0.011 * smooth(1.09, 1.0, p[1])),
@@ -344,8 +345,9 @@ function jeansCut(p, z) {
   return waist < hem ? { f: waist, at: 'waist' } : { f: hem, at: 'hem' };
 }
 
-function jeans(detail) {
+function jeans(detail, under = null) {
   const part = skinShell('jeans', 'denim', {
+    under,
     level: detail >= 0.8 ? 1 : 0,
     field: (p, z) => jeansCut(p, z).f,
     ease: (p) => 0.005 + 0.0025 * smooth(WAIST - 0.06, WAIST - 0.03, p[1]),
@@ -570,10 +572,41 @@ function briefs(detail) {
   });
 }
 
-/** Tags every vertex of `parts` as part of the garment `name` (for the garments over it to know what they cover). */
+/**
+ * Tags every vertex of `parts` as part of the garment `name` (for the
+ * garments over it to know what they cover), keeping where on the body it
+ * lies: `on` the body's zone under it, and its `d`, `x` and `z`.
+ */
 function tag(parts, name) {
-  for (const part of parts) part.zones = part.zones.map((z, v) => ({ zone: name, y: part.pos[v * 3 + 1], d: 0 }));
+  for (const part of parts) part.zones = part.zones.map((z, v) => ({ d: 0, ...z, zone: name, on: z?.zone === part.name ? null : z?.zone ?? null, y: part.pos[v * 3 + 1], sx: part.pos[v * 3], z: part.pos[v * 3 + 2] }));
   return parts;
+}
+
+// ———————————————————————————————————————————————— the socks
+
+/** Crew socks: up the shin to here, the cuff's rib this deep. */
+export const SOCKS = Object.freeze({ top: 0.205, rib: 0.035 });
+
+/** The socks' outline: all of each foot, up the leg to the cuff. */
+function socksCut(p, z) {
+  if (z.zone !== 'foot' && z.zone !== 'leg') return -1;
+  if (z.zone === 'leg' && p[1] > SOCKS.top + 0.1) return -1;
+  return SOCKS.top - p[1];
+}
+
+/** Crew socks: close knit over each foot and up the shin, a ribbed cuff that grips a touch looser. */
+function socks(detail, under) {
+  return skinShell('socks', 'sock', {
+    level: detail >= 0.8 ? 1 : 0,
+    field: socksCut,
+    ease: (p) => 0.0011 + 0.0007 * smooth(SOCKS.top - SOCKS.rib - 0.004, SOCKS.top - SOCKS.rib, p[1]),
+    edge: () => ({ thick: 0.0022, turn: 0.012 }),
+    smooth: detail >= 0.8 ? 3 : 2,
+    // Knit stretched over the toes, rounding them off rather than following each.
+    stiff: detail >= 0.8 ? 14 : 7,
+    under,
+    thick: 0.0012,
+  });
 }
 
 /**
@@ -583,8 +616,344 @@ function tag(parts, name) {
  * tagged { zone, y, d }, is hidden while it is worn. A garment of your own
  * is an object of the same shape (see `human.wear`).
  */
+// ———————————————————————————————————————————————— the leather bomber
+
+const ELBOW_D = armDistance(JOINTS.elbow, 1), WRIST_D = armDistance(JOINTS.wrist, 1);
+/**
+ * A leather bomber: blousing down to a knit rib at the waist and the wrists,
+ * a rib collar standing round the neck, zipped up the middle (or worn open,
+ * its fronts hanging apart).
+ * - `hem`, `band`: the waistband's bottom, and its height.
+ * - `cuff`, `cuffBand`: how far down the arm (from the shoulder) the sleeves
+ *   end, and their cuffs' depth.
+ * - `collar`: how high the collar stands.
+ * - `gap`: half the space between its fronts, open.
+ * - `over`: how far it hangs out from the t-shirt's shape.
+ */
+export const JACKET = Object.freeze({ hem: 0.955, band: 0.065, cuff: WRIST_D - 0.008, cuffBand: 0.06, collar: 0.036, gap: 0.05, over: 0.011 });
+/** Where the leather ends over the waistband, tucked into it. */
+const LEATHER_HEM = JACKET.hem + JACKET.band - 0.025;
+/** The jacket's neckline: at the base of the neck, a little under the t-shirt's. */
+const jacketNeck = (th) => neckline(th) - 0.006;
+/** Half the space between the open fronts at height `y`: a little wider at the top, where the collar parts. */
+const frontGap = (y) => JACKET.gap + 0.02 * smooth(1.3, 1.46, y);
+
+/** The jacket's outline on the body (by part: the leather, the waistband, the cuffs), and which edge is nearest. */
+function jacketCut(p, z, open, part) {
+  if (z.zone === 'hand' || z.zone === 'foot' || z.zone === 'head' || p[1] > 1.6) return { f: -1, at: null };
+  if (z.zone === 'arm') {
+    const d = armDistance(p, p[0] >= 0 ? 1 : -1);
+    if (part === 'band') return { f: -1, at: null };
+    if (part === 'cuffs') {
+      const top = d - (JACKET.cuff - JACKET.cuffBand), end = JACKET.cuff - d;
+      return top < end ? { f: top, at: 'top' } : { f: end, at: 'cuff' };
+    }
+    return { f: JACKET.cuff - JACKET.cuffBand + 0.022 - d, at: 'cuff' };
+  }
+  if (part === 'cuffs') return { f: -1, at: null };
+  const th = Math.atan2(p[0], p[2] - SHIRT_Z);
+  const terms = part === 'band'
+    ? [['hem', p[1] - JACKET.hem], ['top', JACKET.hem + JACKET.band - p[1]]]
+    : [['hem', p[1] - LEATHER_HEM], ['collar', jacketNeck(th) - p[1]]];
+  if (open && Math.cos(th) > 0.2) terms.push(['front', (Math.abs(p[0]) - frontGap(p[1])) * 0.94]);
+  let best = terms[0];
+  for (const t of terms) if (t[1] < best[1]) best = t;
+  return { f: best[1], at: best[0] };
+}
+
+/** Where the leather gathers: over the elbows' crooks, bloused above the cuffs and the waistband. */
+function jacketFolds(p, z) {
+  if (z.zone === 'arm') {
+    const m = p[0] >= 0 ? 1 : -1, d = armDistance(p, m);
+    const { sh, t, fwd } = armFrame(m);
+    const r = sub(sub(p, sh), scale(t, dot(sub(p, sh), t)));
+    const crook = smooth(-0.3, 0.7, dot(norm(r), fwd));
+    let f = 0.0034 * (0.5 + 0.5 * Math.sin(d * 150 + 1.3 * Math.sin(dot(r, fwd) * 90))) * G((d - ELBOW_D) / 0.045) * (0.35 + 0.65 * crook);
+    // Bloused over the cuff: fuller just above it, gathered in folds round the arm.
+    const above = d - (JACKET.cuff - JACKET.cuffBand);
+    // (Full down to its end, where it is tucked over the knit.)
+    f += (0.004 + 0.002 * Math.sin(Math.atan2(dot(r, fwd), dot(r, cross(t, fwd))) * 6)) * (above < -0.03 ? G((above + 0.03) / 0.025) : 1);
+    return f;
+  }
+  // Bloused over the waistband: fuller above it, in soft folds round the body.
+  const y = p[1], th = Math.atan2(p[0], p[2] - SHIRT_Z);
+  const above = y - LEATHER_HEM;
+  return (0.009 + 0.003 * Math.sin(th * 9 + 1.5 * Math.sin(th * 2))) * (above > 0.03 ? G((above - 0.03) / 0.03) : 1);
+}
+
+let jacketTable = null;
+/** The leather's hang round the body: stiffer than the t-shirt's, straight down off the chest and shoulder blades. */
+function jacketCloth() {
+  if (jacketTable) return jacketTable;
+  const { body, cloth } = shirtShape();
+  const hung = drape(convex(table(body.y0, body.y1, body.rows, body.cols, (y, th) => body.at(y, th))), { reach: 0.5, slope: (th) => 0.06 + 1.6 * Math.abs(Math.sin(th)) ** 4, ease: 0 });
+  jacketTable = table(body.y0, body.y1, body.rows, body.cols, (y, th) => Math.max(hung.at(y, th), cloth.at(y, th)));
+  return jacketTable;
+}
+
+/** How the jacket's body hangs at skin point `p`: out from the t-shirt's shape, closing in on the neck at the top. */
+function jacketDrape(p, q, z) {
+  const cloth = jacketCloth();
+  const y = q[1];
+  if (y < cloth.y0 || y > cloth.y1) return q;
+  const th = Math.atan2(q[0], q[2] - SHIRT_Z);
+  const r = Math.hypot(q[0], q[2] - SHIRT_Z);
+  const want = cloth.at(y, th) + shirtFolds(y, th) * 0.3 + JACKET.over + jacketFolds(p, z);
+  if (want <= r) return q;
+  const k = (want - r) * smooth(COLLAR - 0.012, 1.42, y);
+  return [q[0] + (q[0] / r) * k, y, q[2] + ((q[2] - SHIRT_Z) / r) * k];
+}
+
+/** A segment of arm, from joint `a` to `b` (side `m`): where it starts, which way it runs, and out and forward square to it. */
+function segFrame(a, b, m) {
+  const t = norm(sub(b, a));
+  const out = norm(sub([m, 0, 0], scale(t, m * t[0])));
+  let fwd = cross(t, out);
+  if (fwd[2] < 0) fwd = scale(fwd, -1);
+  return { o: a, t, out, fwd, L: len(sub(b, a)) };
+}
+
+/** Hung from a table's high points either way along it (a stiff tube bridging the narrows between muscles). */
+const both = (t, reach, slope) => drape(drape(t, { reach, slope: () => slope, ease: 0 }), { reach, slope: () => slope, ease: 0, up: -1 });
+
+const jacketSleeves = new Map();
+/** A leather sleeve's tube (side `m`): round each ring of the arm, convex, its narrows bridged, for the upper arm and the forearm. */
+function jacketSleeve(m) {
+  if (jacketSleeves.has(m)) return jacketSleeves.get(m);
+  const sh = mirror(JOINTS.shoulder, m), el = mirror(JOINTS.elbow, m), wr = mirror(JOINTS.wrist, m);
+  const segs = [segFrame(sh, el, m), segFrame(el, wr, m)].map((f) => {
+    const dir = (th) => add(scale(f.fwd, Math.cos(th)), scale(f.out, Math.sin(th)));
+    const body = fill(table(-0.04, f.L + 0.04, 48, 48, (d, th) => castBody(add(f.o, scale(f.t, d)), dir(th), { only: zoneIs('arm'), far: 0.12 }) ?? NaN));
+    return { ...f, dir, tube: both(convex(body), 0.07, 0.25) };
+  });
+  const v = { segs };
+  jacketSleeves.set(m, v);
+  return v;
+}
+
+/** Where the sleeve's tube puts arm point `q` (lifted `ease` off it): out to the tube, whichever segment it is on, blended at the elbow. */
+function sleeveTube(q, ease) {
+  const m = q[0] >= 0 ? 1 : -1;
+  const { segs } = jacketSleeve(m);
+  const at = (f) => {
+    const r0 = sub(q, f.o), d = dot(r0, f.t);
+    const radial = sub(r0, scale(f.t, d));
+    const r = len(radial) || 1e-6;
+    const th = Math.atan2(dot(radial, f.out), dot(radial, f.fwd));
+    const want = f.tube.at(clamp(d, -0.04, f.L + 0.04), th) + ease;
+    return want > r ? add(add(f.o, scale(f.t, d)), scale(radial, want / r)) : q;
+  };
+  const d = armDistance(q, m), k = smooth(ELBOW_D - 0.03, ELBOW_D + 0.03, d);
+  const a = at(segs[0]), b = at(segs[1]);
+  // Over the shoulder's cap it is the body's drape that shapes it, not the tube.
+  const on = smooth(0.03, 0.09, d);
+  return [0, 1, 2].map((i) => q[i] + (a[i] + (b[i] - a[i]) * k - q[i]) * on);
+}
+
+/** The jacket's leather: the body and sleeves, cut from the skin and hung over the t-shirt. */
+function jacketShell(detail, under, open) {
+  return skinShell('jacket', 'leather', {
+    level: detail >= 0.8 ? 1 : 0,
+    field: (p, z) => jacketCut(p, z, open, 'leather').f,
+    ease: (p, z) => {
+      if (z.zone !== 'arm') return 0.007;
+      const d = armDistance(p, p[0] >= 0 ? 1 : -1);
+      // Roomy over the shoulder and upper arm, closer down the forearm.
+      return 0.009 - 0.002 * smooth(ELBOW_D - 0.05, ELBOW_D + 0.1, d);
+    },
+    folds: (p, z) => (z.zone === 'arm' ? jacketFolds(p, z) : 0),
+    drape: (p, q, z, w) => {
+      const arm = (w.armL ?? 0) + (w.armR ?? 0) + (w.foreL ?? 0) + (w.foreR ?? 0);
+      if (z.zone === 'arm') {
+        // Round the armpit it keeps close, as the t-shirt's sleeve does.
+        const k = 1 - smooth(0.15, 0.5, 1 - arm), d = sleeveTube(q, 0.007 + jacketFolds(p, z));
+        return [q[0] + (d[0] - q[0]) * k, q[1] + (d[1] - q[1]) * k, q[2] + (d[2] - q[2]) * k];
+      }
+      if (z.zone !== 'trunk' && z.zone !== 'leg') return q;
+      const k = 1 - smooth(0.02, 0.25, arm), d = jacketDrape(p, q, z);
+      return [q[0] + (d[0] - q[0]) * k, q[1] + (d[1] - q[1]) * k, q[2] + (d[2] - q[2]) * k];
+    },
+    edge: (p, z) => {
+      const at = jacketCut(p, z, open, 'leather').at;
+      // Tucked into the knit at the waist and wrists; faced with leather down the open fronts.
+      return at === 'hem' || at === 'cuff' ? { thick: 0.007, turn: 0.012 } : { thick: 0.005, turn: 0.025 };
+    },
+    smooth: detail >= 0.8 ? 7 : 4,
+    stiff: detail >= 0.8 ? 16 : 8,
+    shade: 0.3,
+    under,
+    gap: 0.0035,
+    bridge: 10,
+    thick: 0.0025,
+  });
+}
+
+/** The knit rib at the waist (`band`) or the wrists (`cuffs`): snug, a few millimetres thick. */
+function ribShell(detail, under, open, part) {
+  return skinShell(part === 'band' ? 'waistband' : 'cuffs', 'rib', {
+    level: detail >= 0.8 ? 1 : 0,
+    field: (p, z) => jacketCut(p, z, open, part).f,
+    ease: (p, z) => (z.zone === 'arm' ? 0.0045 : 0.004),
+    drape: (p, q, z) => {
+      if (z.zone === 'arm') return sleeveTube(q, 0.0035);
+      // Round the body over the t-shirt, drawn in at its bottom edge.
+      const { cloth } = shirtShape();
+      const th = Math.atan2(q[0], q[2] - SHIRT_Z), r = Math.hypot(q[0], q[2] - SHIRT_Z);
+      const want = cloth.at(q[1], th) + 0.001 - 0.002 * smooth(JACKET.hem + 0.02, JACKET.hem, q[1]);
+      return want > r ? [q[0] * want / r, q[1], SHIRT_Z + (q[2] - SHIRT_Z) * want / r] : q;
+    },
+    edge: () => ({ thick: 0.0035, turn: 0.015 }),
+    smooth: 3,
+    stiff: 4,
+    under,
+    gap: 0.0015,
+    thick: 0.003,
+  });
+}
+
+/** A strip laid along `path` (points on a surface, each { p, n, w }), `width` across, raised by `rise(s, across)`; its UVs run along it. */
+function strip(part, path, width, rise, { tint = 1 } = {}) {
+  const C = 4;
+  const L = [0];
+  for (let i = 1; i < path.length; i++) L.push(L[i - 1] + len(sub(path[i].p, path[i - 1].p)));
+  part.grid(path.length - 1, C, (i, j) => {
+    const a = path[i], b = path[Math.min(path.length - 1, i + 1)], c = path[Math.max(0, i - 1)];
+    const t = norm(sub(b.p, c.p));
+    const side = norm(cross(a.n, t));
+    const x = (j / C - 0.5) * 2;
+    const p = add(add(a.p, scale(side, x * width / 2)), scale(a.n, rise(L[i], x)));
+    return { p, uv: [j / C, L[i] * 20], w: a.w, tint };
+  }, { flip: true });
+}
+
+/** A zip's teeth along `path`: a ridged metal chain on its dark tape, and its slider at the top. */
+function zip(tape, teeth, path, { pull = true } = {}) {
+  if (path.length < 4) return;
+  // The path made fair first: the surface it was read off is not.
+  for (let pass = 0; pass < 6; pass++) {
+    path = path.map((q, i) => (i === 0 || i === path.length - 1 ? q : { ...q, p: [0, 1, 2].map((a) => (path[i - 1].p[a] + 2 * q.p[a] + path[i + 1].p[a]) / 4), n: norm([0, 1, 2].map((a) => path[i - 1].n[a] + 2 * q.n[a] + path[i + 1].n[a])) }));
+  }
+  strip(tape, path, 0.013, (s, x) => 0.0007 * (1 - x * x), { tint: 0.6 });
+  strip(teeth, path, 0.0072, (s, x) => (0.0014 + 0.0013 * Math.abs(Math.sin(s * Math.PI / 0.0019))) * Math.sqrt(Math.max(0, 1 - x * x * 0.8)));
+  if (!pull) return;
+  // The slider, sitting on the teeth at the top, and its tab hanging from it.
+  const top = path[path.length - 1], below = path[Math.max(0, path.length - 4)];
+  const down = norm(sub(below.p, top.p));
+  const side = norm(cross(top.n, down));
+  const at = (u, v, h) => add(add(add(top.p, scale(side, u)), scale(down, v)), scale(top.n, h));
+  box(teeth, at(0, 0.004, 0.003), side, down, top.n, [0.0045, 0.0055, 0.0018], top.w);
+  box(teeth, at(0, 0.021, 0.0042), side, down, top.n, [0.0034, 0.011, 0.0008], top.w);
+}
+
+/** A rounded box: centre `c`, axes `u`, `v`, `n`, half-sizes `h`. */
+function box(part, c, u, v, n, h, w) {
+  part.grid(8, 16, (i, j) => {
+    const lat = (i / 8 - 0.5) * Math.PI, lon = (j / 16) * Math.PI * 2;
+    // A superellipsoid: flat faces, soft edges.
+    const sp = (x, e) => Math.sign(x) * Math.abs(x) ** e;
+    const x = sp(Math.cos(lat), 0.3) * sp(Math.cos(lon), 0.3), y = sp(Math.cos(lat), 0.3) * sp(Math.sin(lon), 0.3), z = sp(Math.sin(lat), 0.3);
+    return { p: add(add(add(c, scale(u, x * h[0])), scale(v, y * h[1])), scale(n, z * h[2])), uv: [j / 16, i / 8], w };
+  });
+}
+
+/**
+ * The jacket's trims, laid on its leather: the rib collar standing round
+ * the neck, the zip (up the middle, or down each open front with its slider
+ * at the bottom), and the welts of the two slanting hip pockets.
+ */
+function jacketTrims(shell, open) {
+  const cast = caster(shell);
+  const collar = new Part('collar', 'ribTrim'), tape = new Part('zip tapes', 'leatherTrim'), metal = new Part('jacket hardware', 'metal'), welts = new Part('welts', 'leatherTrim');
+  const front = (x, y) => cast([x, y, 0.6], [0, 0, -1], 0.6);
+  const along = (n, fn) => Array.from({ length: n + 1 }, (_, i) => fn(i / n)).filter(Boolean);
+
+  // The collar: round the neckline from one front to the other, standing up the neck, its top rolled.
+  const a0 = open ? Math.asin(clamp(frontGap(1.47) / 0.07)) : 0, ring = [];
+  const N = 96;
+  for (let i = 0; i <= N; i++) {
+    const th = a0 + (i / N) * (Math.PI * 2 - 2 * a0);
+    // On the neck's skin at the neckline, out past the t-shirt's collar and the leather.
+    const y = jacketNeck(th), out = [Math.sin(th), 0, Math.cos(th)];
+    const r = castBody([0, y, SHIRT_Z], out, { only: zoneIs('neck', 'trunk'), far: 0.2 });
+    if (r === null) continue;
+    const p = [out[0] * (r + 0.011), y, SHIRT_Z + out[2] * (r + 0.011)];
+    // Its top closes on the neck itself, a finger's width off it.
+    const rt = castBody([0, y + JACKET.collar, SHIRT_Z], out, { only: zoneIs('neck', 'head'), far: 0.2 }) ?? r;
+    const top = [out[0] * (rt + 0.009), y + JACKET.collar, SHIRT_Z + out[2] * (rt + 0.009)];
+    ring.push({ p, top, n: out, w: clothWeights(zoneIs('neck', 'trunk'))(p), th, out });
+  }
+  if (!open && ring.length) ring.push(ring[0]);
+  const profile = (q) => {
+    // From the neckline up to the neck, its outside a little full, rounded over the top, and back down inside.
+    const at = (k, o) => add(add(q.p, scale(sub(q.top, q.p), k)), scale(q.out, o + 0.003 * Math.sin(Math.PI * k) * (o > 0 ? 1 : 0)));
+    return [at(-0.12, 0.004), at(0.08, 0.005), at(0.5, 0.0045), at(0.9, 0.0038), at(1, 0.0005), at(0.9, -0.0032), at(0.5, -0.0035), at(0.04, -0.003)];
+  };
+  const rows = ring.map(profile);
+  const C = rows[0]?.length - 1;
+  if (rows.length > 1) {
+    let L = 0;
+    collar.grid(rows.length - 1, C, (i, j) => {
+      if (j === 0 && i > 0) L += len(sub(ring[i].p, ring[i - 1].p));
+      return { p: rows[i][j], uv: [j / C, L * 260], w: ring[i].w, tint: j >= 5 ? 0.6 : 1 };
+    }, { flip: true });
+  }
+
+  // The zip.
+  if (!open) {
+    const fz = along(220, (t) => front(0, JACKET.hem + 0.004 + (jacketNeck(0) - JACKET.hem - 0.006) * t));
+    zip(tape, metal, fz);
+  } else {
+    for (const s of [-1, 1]) {
+      // Down the edge of each front, the slider left at the bottom on his left.
+      const fz = along(200, (t) => {
+        const y = jacketNeck(0.4) - 0.01 - (jacketNeck(0.4) - 0.01 - JACKET.hem - 0.004) * t;
+        for (let e = 0.012; e < 0.035; e += 0.004) {
+          const h = front(s * (frontGap(y) + e), y);
+          if (h && h.p[2] > SHIRT_Z) return h;
+        }
+        return null;
+      });
+      zip(tape, metal, fz, { pull: s > 0 });
+    }
+  }
+  // The hip pockets: a slanting welt each side, a lip of leather with the opening's shadow above it.
+  for (const s of [-1, 1]) {
+    const a = [s * 0.075, LEATHER_HEM + 0.025], b = [s * 0.125, LEATHER_HEM + 0.15];
+    const pts = along(30, (t) => front(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t));
+    strip(welts, pts.map((h) => ({ ...h, p: add(h.p, scale(h.n, 0.001)) })), 0.016, (u, x) => 0.0035 * Math.sqrt(Math.max(0, 1 - x ** 6)));
+  }
+  return [collar, tape, metal, welts];
+}
+
+function jacket(detail, under, open) {
+  const shell = jacketShell(detail, under, open);
+  return [shell, ribShell(detail, under, open, 'band'), ribShell(detail, under, open, 'cuffs'), ...jacketTrims(shell, open)];
+}
+
 /** How far inside a garment's openings the skin under it is kept, so looking in at a collar, cuff or hem never shows a hole. */
 const OPEN = 0.06;
+
+/** The leather bomber, worn open or zipped: either is worn in the one `outer` slot. */
+function bomber(open) {
+  const inside = ({ y, sx = 0, z = 0 }, margin) => {
+    const th = Math.atan2(sx, z - SHIRT_Z);
+    const shut = !open || Math.cos(th) < 0.2 || Math.abs(sx) - frontGap(y) > margin;
+    return y > JACKET.hem + margin && y < jacketNeck(th) - margin * 0.5 && shut;
+  };
+  return {
+    layer: 5,
+    slot: 'outer',
+    materials: ['leather', 'rib', 'ribTrim', 'leatherTrim', 'metal'],
+    fits: true,
+    build: (detail, { under } = {}) => tag(jacket(detail, under, open), open ? 'jacket' : 'jacketZipped'),
+    covers: (z) => {
+      const on = z.on ?? z.zone;
+      if (on === 'arm') return z.d < JACKET.cuff - OPEN;
+      if (z.zone === 'trunk' || z.zone === 'tshirt' || z.zone === 'leg' || z.zone === 'jeans' || z.zone === 'briefs') return (on === 'trunk' || on === 'leg' || on === null) && inside(z, OPEN);
+      return false;
+    },
+  };
+}
 
 export const GARMENTS = Object.freeze({
   briefs: {
@@ -592,6 +961,13 @@ export const GARMENTS = Object.freeze({
     materials: ['briefs'],
     build: (detail) => tag([briefs(detail)], 'briefs'),
     covers: ({ zone, y }) => (zone === 'leg' || zone === 'trunk') && y > BRIEFS.legs + OPEN && y < BRIEFS.waist - OPEN,
+  },
+  socks: {
+    layer: 1,
+    materials: ['sock'],
+    fits: true,
+    build: (detail, { under } = {}) => tag([socks(detail, under)], 'socks'),
+    covers: ({ zone, y }) => zone === 'foot' || (zone === 'leg' && y < SOCKS.top - OPEN * 0.5),
   },
   sneakers: {
     layer: 2,
@@ -601,23 +977,27 @@ export const GARMENTS = Object.freeze({
       for (const m of [1, -1]) shoe(upper, sole, laces, m, detail);
       return tag([upper, sole, laces], 'sneakers');
     },
-    covers: ({ zone, y, d }) => (zone === 'foot' && (y < 0.05 || d > 0.05)) || (zone === 'leg' && y < 0.04),
+    covers: ({ zone, on, y, d }) => ((zone === 'foot' || on === 'foot') && (y < 0.05 || d > 0.05)) || ((zone === 'leg' || on === 'leg') && y < 0.04),
   },
   jeans: {
     layer: 3,
     materials: ['denim'],
-    build: (detail) => tag([jeans(detail)], 'jeans'),
+    fits: true,
+    build: (detail, { under } = {}) => tag([jeans(detail, under)], 'jeans'),
     covers: ({ zone, y }) => ((zone === 'leg' || zone === 'trunk') && y > HEM_FRONT + 0.1 && y < WAIST - OPEN) || (zone === 'briefs' && y < WAIST - OPEN) || (zone === 'sneakers' && y > 0.12),
   },
   tshirt: {
     layer: 4,
     materials: ['shirt'],
-    build: (detail) => tag(shirt(detail), 'tshirt'),
+    fits: true,
+    build: (detail, { under } = {}) => tag(shirt(detail, under), 'tshirt'),
     covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN),
   },
+  jacket: bomber(true),
+  jacketZipped: bomber(false),
 });
 
 /** The outfit he is built in, unless told otherwise. */
-export const DEFAULT_OUTFIT = Object.freeze(['briefs', 'tshirt', 'jeans', 'sneakers']);
+export const DEFAULT_OUTFIT = Object.freeze(['briefs', 'socks', 'tshirt', 'jeans', 'sneakers', 'jacket']);
 
 export { len, dot };

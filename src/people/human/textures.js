@@ -3,7 +3,7 @@ import { zoneOf } from './body.js';
 import { clamp, cross, fbm, noise3, smooth } from './kit.js';
 import { armDistance, EYE, FACE, FINGERS, JOINTS } from './skeleton.js';
 import { hairPaint } from './hair.js';
-import { HEM, jeansHeight, legAngle, neckline, SHIRT_Z, SLEEVE_RANGE } from './clothes.js';
+import { HEM, JACKET, jeansHeight, legAngle, neckline, SHIRT_Z, SLEEVE_RANGE, SOCKS } from './clothes.js';
 
 /**
  * The human's textures, painted when he is first built (in a browser; with
@@ -474,6 +474,109 @@ function denimMaps() {
   return { map, bump };
 }
 
+// ———————————————————————————————————————————————— the socks
+
+/** Crew socks: a fine knit, the cuff ribbed, the heel and toe knit denser and a shade darker. */
+function sockMaps() {
+  const map = canvasOf(bodyPixels(1024, (p, n, zone) => {
+    let c = 236 + 8 * noise3(p[0] * 400, p[1] * 400, p[2] * 400);
+    const { th } = legAngle(p);
+    if (zone === 'leg') {
+      // The cuff's rib, and the line where it is knit on.
+      const rib = smooth(SOCKS.top - SOCKS.rib - 0.002, SOCKS.top - SOCKS.rib + 0.002, p[1]);
+      c -= rib * 40 * Math.max(0, Math.sin(th * 32)) ** 1.5;
+      c -= 22 * G((p[1] - SOCKS.top + SOCKS.rib) / 0.0015);
+    }
+    if (zone === 'foot') {
+      const ankle = JOINTS.ankle[2];
+      const heel = smooth(ankle - 0.02, ankle - 0.04, p[2]) * smooth(0.09, 0.07, p[1]);
+      const toe = smooth(0.13, 0.16, p[2] - ankle);
+      c -= 26 * Math.max(heel, toe);
+    }
+    return [c, c, c];
+  }, [236, 236, 236]), 1024);
+  const bump = paint(64, 64, (u, v) => {
+    const cu = (u * 8) % 1, cv = (v * 8) % 1;
+    const h = 128 + 60 * Math.cos((cv + Math.abs(cu - 0.5)) * Math.PI * 2) * 0.5 - 40 * G((cu - 0.5) / 0.1);
+    return [h, h, h];
+  });
+  return { map, bump };
+}
+
+// ———————————————————————————————————————————————— the leather jacket
+
+/**
+ * The jacket's hide: tinted by its colour, mottled as leather is, paler where
+ * it wears (over the shoulders, the elbows, its edges), every panel's seam a
+ * groove with a row of stitching beside it.
+ */
+function leatherMaps() {
+  const size = 1024;
+  const dash = (p, k) => 0.5 + 0.5 * Math.sign(Math.sin((p[0] * 0.7 + p[1] + p[2] * 0.8) * k));
+  // A seam `d` away: the groove, and the stitching a few millimetres to one side.
+  const seam = (d, p) => ({ groove: G(d / 0.0011), stitch: G((Math.abs(d) - 0.0042) / 0.0006) * dash(p, 700) });
+  const map = canvasOf(bodyPixels(size, (p, n, zone) => {
+    let c = 220 + 14 * fbm(p[0] * 60, p[1] * 60, p[2] * 60, 3) + 6 * noise3(p[0] * 500, p[1] * 500, p[2] * 500);
+    let wear = 0, groove = 0, stitch = 0;
+    const add = ({ groove: g, stitch: st }) => { groove = Math.max(groove, g); stitch = Math.max(stitch, st); };
+    const th = Math.atan2(p[0], p[2] - SHIRT_Z), r = Math.hypot(p[0], p[2] - SHIRT_Z);
+    if (zone === 'arm') {
+      const m = p[0] >= 0 ? 1 : -1, d = armDistance(p, m);
+      const el = armDistance(JOINTS.elbow, 1);
+      add(seam(d - 0.03, p));
+      // A seam down the back of the sleeve, and the panel over the elbow.
+      const back = Math.atan2(p[0] - JOINTS.elbow[0] * m, p[2] - JOINTS.elbow[2]);
+      add(seam((Math.abs(back) - 2.6) * 0.04, p));
+      wear += 0.5 * G((d - el) / 0.05) * smooth(0.6, 1, -Math.cos(back));
+      add(seam(d - JACKET.cuff + 0.035, p));
+      wear += 0.6 * smooth(JACKET.cuff - 0.012, JACKET.cuff, d);
+    } else {
+      const band = JACKET.hem + JACKET.band;
+      add(seam(p[1] - band, p));
+      wear += 0.5 * smooth(JACKET.hem + 0.008, JACKET.hem, p[1]);
+      // The yoke across the back, dipping to a point between the shoulder blades.
+      if (Math.cos(th) < -0.2) add(seam(p[1] - (1.37 - 0.03 * G(p[0] / 0.06)), p));
+      // The side seams, and a seam down each front from the shoulder to the band.
+      const side = Math.min(Math.abs(th - Math.PI / 2), Math.abs(th + Math.PI / 2)) * r;
+      if (p[1] < 1.34) add(seam(side, p));
+      if (p[1] > 1.42) add(seam(p[2] + 0.005, p));
+      wear += 0.45 * smooth(1.42, 1.48, p[1]);
+    }
+    c += 26 * clamp(wear) - 70 * groove - 45 * stitch;
+    return [c, c * 0.985, c * 0.97];
+  }, [220, 216, 212]), size);
+  // The grain: a fine pebbling, and the faint creases of hide.
+  const bump = paint(256, 256, (u, v) => {
+    const per = (s, k) => noise3(Math.cos(u * Math.PI * 2) * s, Math.sin(u * Math.PI * 2) * s, Math.cos(v * Math.PI * 2) * s + Math.sin(v * Math.PI * 2) * s * 1.7 + k);
+    const pebble = Math.abs(per(22, 0)) ** 0.6;
+    const h = 150 - 70 * (1 - pebble) + 25 * per(6, 3) - 30 * Math.max(0, 1 - Math.abs(per(3, 7)) * 9);
+    return [h, h, h];
+  });
+  return { map, bump };
+}
+
+// ———————————————————————————————————————————————— the rib knit
+
+/**
+ * The bomber's rib: ribs running across the waistband and the cuffs (painted
+ * on the body's layout, by the angle round the body or the arm), and the same
+ * as a tile for the collar, whose UVs run along it.
+ */
+function ribMaps() {
+  const rib = (a) => 205 + 32 * Math.cos(a) - 10 * Math.max(0, Math.cos(a)) ** 6;
+  const map = canvasOf(bodyPixels(1024, (p, n, zone) => {
+    let a;
+    if (zone === 'arm') {
+      const m = p[0] >= 0 ? 1 : -1, el = [JOINTS.elbow[0] * m, JOINTS.elbow[1], JOINTS.elbow[2]];
+      a = Math.atan2(p[0] - el[0], p[2] - el[2]) * 34;
+    } else a = Math.atan2(p[0], p[2] - SHIRT_Z) * 150;
+    const c = rib(a) + 8 * noise3(p[0] * 600, p[1] * 600, p[2] * 600);
+    return [c, c, c];
+  }, [200, 200, 200]), 1024);
+  const tile = paint(64, 64, (u, v) => { const c = rib(v * Math.PI * 2 * 4); return [c, c, c]; });
+  return { map, tile };
+}
+
 // ———————————————————————————————————————————————— the sneakers
 
 function shoeMaps() {
@@ -522,10 +625,13 @@ export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 
   const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}`;
   if (byGFX.has(key)) return byGFX.get(key);
   const garments = byGFX.get('garments') ?? (() => {
-    const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps();
+    const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps(), sock = sockMaps(), hide = leatherMaps(), ribs = ribMaps();
     const g = {
       shirt: { map: texture(GFX, shirt.map), bump: texture(GFX, shirt.bump, { color: false, repeat: [140, 140] }) },
       denim: { map: texture(GFX, denim.map), bump: texture(GFX, denim.bump, { color: false, repeat: [150, 150] }) },
+      sock: { map: texture(GFX, sock.map), bump: texture(GFX, sock.bump, { color: false, repeat: [160, 160] }) },
+      leather: { map: texture(GFX, hide.map), bump: texture(GFX, hide.bump, { color: false, repeat: [24, 24] }) },
+      rib: { map: texture(GFX, ribs.map), tile: texture(GFX, ribs.tile, { repeat: [1, 1] }) },
       shoe: texture(GFX, shoes.upper),
       sole: texture(GFX, shoes.sole),
       pores: texture(GFX, poreTile(), { color: false, repeat: [24, 24] }),

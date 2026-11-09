@@ -1,4 +1,5 @@
 import { BEARDS, BROWS, HAIRSTYLES } from './hair.js';
+import { SUNGLASSES } from './glasses.js';
 
 /**
  * Everything about a person a character creator lets a player choose, in the
@@ -81,6 +82,9 @@ export const CUSTOMIZATION = Object.freeze([
     choice('beard', 'Beard', ['none', ...Object.keys(BEARDS)], { ready: true, value: 'none' }),
     choice('moustache', 'Moustache', ['with beard', 'none', 'chevron', 'handlebar', 'pencil', 'walrus']),
     slider('stubble', 'Stubble', { min: 0, max: 1, value: 0.5 }),
+  ] },
+  { group: 'Accessories', slots: [
+    choice('glasses', 'Sunglasses', ['none', ...Object.keys(SUNGLASSES)], { ready: true, value: 'aviator' }),
   ] },
 ]);
 

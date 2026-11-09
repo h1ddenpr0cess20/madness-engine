@@ -207,3 +207,52 @@ test('the character creator: every slot has a default, the built ones change him
   assert.throws(() => him.customize({ eyeSize: 3 }), /runs -1 to 1/);
   assert.throws(() => him.customize({ tail: 'long' }), /no feature called tail/);
 });
+
+test('layers: a garment is fitted over what is worn under it, and refitted when that changes', () => {
+  const him = createHuman(GFX, { detail: 0.5, outfit: ['briefs', 'tshirt', 'jeans', 'jacket'], glasses: null });
+  assert.deepEqual(him.outfit, ['briefs', 'jeans', 'tshirt', 'jacket'], 'put on from the inside out');
+  const radius = (mesh, y0, y1) => {
+    const p = mesh.geometry.attributes.position;
+    let r = 0;
+    for (let i = 0; i < p.count; i++) if (p.getY(i) > y0 && p.getY(i) < y1 && Math.abs(p.getX(i) - 0.1) < 0.015 && p.getZ(i) > 0) r = Math.max(r, p.getZ(i));
+    return r;
+  };
+  him.pose({ clip: 'idle', t: 0, time: 0 });
+  const tee = radius(him.garment('tshirt'), 1.15, 1.25), jacket = radius(him.garment('jacket'), 1.15, 1.25);
+  assert.ok(jacket > tee + 0.004, `the jacket stands out from the t-shirt (${jacket} over ${tee})`);
+  // Take the t-shirt off and the jacket is made again for what is under it now.
+  const before = him.garment('jacket');
+  him.remove('tshirt');
+  assert.notEqual(him.garment('jacket'), before, 'refitted');
+  // One thing in each slot: zipping it up takes the place of wearing it open.
+  him.wear('jacketZipped');
+  assert.ok(!him.outfit.includes('jacket') && him.outfit.includes('jacketZipped'));
+  // A shirt worn under it is hidden where the jacket covers it, so it never shows through.
+  him.wear('tshirt');
+  const shown = him.garment('tshirt').geometry.index.count;
+  him.remove('jacketZipped');
+  assert.ok(him.garment('tshirt').geometry.index.count > shown * 1.5, 'more of the shirt shows without the jacket');
+});
+
+test('socks are under the sneakers, and the shoes hide them', () => {
+  const him = createHuman(GFX, { detail: 0.5, outfit: ['socks'], glasses: null });
+  const bare = him.garment('socks').geometry.index.count;
+  him.wear('sneakers');
+  assert.ok(him.garment('socks').geometry.index.count < bare * 0.6, 'the shoes cover the feet of the socks');
+  assert.ok(him.garment('socks').geometry.index.count > 0, 'their cuffs show above the shoes');
+});
+
+test('sunglasses sit on his face and move with his head', async () => {
+  const { SUNGLASSES } = await import('../src/people/index.js');
+  const him = createHuman(GFX, { detail: 0.5 });
+  assert.equal(him.glasses, 'aviator', 'he wears aviators unless told otherwise');
+  const mesh = () => him.group.children.find((c) => c.name === 'human sunglasses');
+  const b = boundsOf(mesh().geometry.attributes.position);
+  assert.ok(b.min[1] > 1.58 && b.max[1] < 1.72, 'at the height of his eyes');
+  assert.ok(b.max[2] > 0.16 && b.max[2] < 0.2, 'just in front of his face');
+  assert.ok(b.max[0] > 0.07 && b.min[0] < -0.07, 'the temples reach back past his eyes');
+  for (const name of Object.keys(SUNGLASSES)) { him.setGlasses(name); assert.equal(him.glasses, name); }
+  him.customize({ glasses: 'none' });
+  assert.equal(mesh(), undefined);
+  assert.equal(him.features.glasses, 'none');
+});
