@@ -31,7 +31,7 @@
  * foil, emblem and title, and a madman's hand on every page, which the
  * caller can replace. Lying flat, spine along z, up is +y, the back board on y = 0; centered on
  * its spine when open. `createBook(GFX, options)` gives
- * { group, cover, leaves, pose(), open(), close(), turnTo(), next(), prev(),
+ * { group, cover, leaves, pose(), open(), close({ instant }), turnTo(), next(), prev(),
  *   update(dt), ... }.
  */
 
@@ -595,7 +595,21 @@ export function createBook(GFX, options = {}) {
       return api;
     },
     open() { go(); wantOpen = true; return api; },
-    close() { go(); wantOpen = false; spread = 0; return api; },
+    /**
+     * Shut the cover. It swings shut over about a second; `{ instant: true }` shuts it at once, leaves and all,
+     * for a book going back on a shelf, where nobody should watch it close.
+     */
+    close({ instant = false } = {}) {
+      go();
+      wantOpen = false;
+      spread = 0;
+      if (instant) {
+        a = 0;
+        for (const L of leaves) setLeaf(L, 0);
+        refresh();
+      }
+      return api;
+    },
     turnTo(n) { go(); spread = clamp(Math.round(n), 0, N); if (spread > 0) wantOpen = true; return api; },
     next() { return api.turnTo((held ? api.turned : spread) + 1); },
     prev() { return api.turnTo((held ? api.turned : spread) - 1); },
