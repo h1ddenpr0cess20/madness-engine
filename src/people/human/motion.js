@@ -281,30 +281,34 @@ export function moveHuman(k, state = {}, style = {}) {
       break;
     }
     case 'hit': {
-      const h = Math.sin(Math.min(1, t / 0.4) * Math.PI);
-      k.move('root', 0, 0, -0.1 * h);
-      k.turn('spine', -0.25 * h, 0, 0.1 * h);
-      k.turn('head', -0.3 * h, 0.2 * h, 0);
-      k.turn('armL', -0.6 * h, 0, 0.5 * h);
-      k.turn('armR', -0.6 * h, 0, -0.5 * h);
-      k.turn('thighL', -0.2 * h, 0, 0); k.turn('shinL', 0.3 * h, 0, 0);
-      if (armed) ready(k, armed, 1 - h);
+      // Struck: snapped back from the waist, a step back to catch it, the free arm up to guard; then square again.
+      const keys = [
+        [0, {}],
+        [0.08, { spine: [-0.3, 0.12, 0.08], chest: [-0.15, 0.1, 0], neck: [-0.15, 0, 0], head: [-0.3, 0.25, 0.1], armL: [-0.9, 0, 0.15], foreL: [-1.7, -0.3, 0], thighR: [0.25, 0, 0], shinR: [0.3, 0, 0], thighL: [-0.12, 0, 0], shinL: [0.25, 0, 0], ...(armed ? {} : { armR: [-0.7, 0, -0.1], foreR: [-1.6, 0.3, 0] }) }],
+        [0.3, { spine: [-0.12, 0.05, 0.03], chest: [-0.05, 0.05, 0], head: [-0.1, 0.1, 0.05], armL: [-0.45, 0, 0.1], foreL: [-1.0, -0.2, 0], thighR: [0.12, 0, 0], shinR: [0.2, 0, 0], shinL: [0.12, 0, 0], ...(armed ? {} : { armR: [-0.3, 0, 0], foreR: [-0.8, 0.2, 0] }) }],
+        [0.7, {}],
+        [1, {}],
+      ];
+      keyed(k, t, keys);
+      const back = win(t, 0, 0.08) * (1 - win(t, 0.3, 0.7));
+      k.move('root', 0, 0, -0.08 * back);
+      k.move('hips', 0, -0.025 * back, 0);
+      if (armed) ready(k, armed, 1 - 0.3 * back);
       break;
     }
     case 'ko': {
-      // Down onto one knee, then over onto his back.
-      const kneel = win(t, 0, 0.3), fall = win(t, 0.3, 0.75), up = kneel * (1 - fall);
-      k.move('hips', 0, -0.33 * up - 0.82 * fall, -0.05 * up - 0.25 * fall);
-      k.turn('hips', -1.5 * fall, 0, 0);
-      k.turn('thighL', -1.2 * up + 0.25 * fall, 0, 0.12 * fall);
-      k.turn('shinL', 1.5 * up + 0.15 * fall, 0, 0);
-      k.turn('thighR', 0.2 * up + 0.2 * fall, 0, -0.18 * fall);
-      k.turn('shinR', 2.0 * up + 0.35 * fall, 0, 0);
-      k.turn('footL', 0.4 * fall, 0, 0); k.turn('footR', 0.4 * fall, 0, 0);
-      k.turn('spine', 0.4 * up + 0.05 * fall, 0, 0);
-      k.turn('head', 0.5 * up - 0.1 * fall, 0.5 * fall, 0);
-      k.turn('armL', -0.4 * up, 0, 1.1 * fall);
-      k.turn('armR', -0.4 * up, 0, -1.1 * fall);
+      // The knees go, down onto them; then over backward onto his back, one knee up.
+      const keys = [
+        [0, {}],
+        [0.3, { thighL: [-0.25, 0, 0.05], shinL: [1.6, 0, 0], footL: [0.5, 0, 0], thighR: [-0.1, 0, -0.05], shinR: [1.75, 0, 0], footR: [0.5, 0, 0], spine: [0.35, 0, 0.05], chest: [0.15, 0, 0], head: [0.45, 0.1, 0], armL: [-0.15, 0, 0.05], armR: [-0.15, 0, -0.05], foreL: [-0.3, 0, 0], foreR: [-0.3, 0, 0] }],
+        [0.75, { hips: [-1.52, 0, 0], thighL: [-0.08, 0, 0.08], shinL: [0.12, 0, 0], footL: [0.35, 0, 0], thighR: [-0.75, 0, -0.06], shinR: [1.3, 0, 0], footR: [-0.2, 0, 0], spine: [0.05, 0, 0], head: [-0.15, 0.6, 0], armL: [0.2, 0, 1.05], foreL: [-0.05, 0, 0], armR: [0.2, 0, -0.95], foreR: [-0.1, 0, 0] }],
+        [1, { hips: [-1.52, 0, 0], thighL: [-0.08, 0, 0.08], shinL: [0.12, 0, 0], footL: [0.35, 0, 0], thighR: [-0.75, 0, -0.06], shinR: [1.3, 0, 0], footR: [-0.2, 0, 0], spine: [0.05, 0, 0], head: [-0.15, 0.6, 0], armL: [0.2, 0, 1.05], foreL: [-0.05, 0, 0], armR: [0.2, 0, -0.95], foreR: [-0.1, 0, 0] }],
+      ];
+      keyed(k, t, keys);
+      // Kneeling: the hips down as far as the shins are long; lying: the back of the pelvis on the ground.
+      const kneel = win(t, 0, 0.3), fall = win(t, 0.3, 0.75);
+      const kneelDrop = THIGH + 0.02;
+      k.move('hips', 0, -kneelDrop * kneel * (1 - fall) - (JOINTS.hips[1] - 0.11) * fall, -0.06 * kneel * (1 - fall) - 0.35 * fall);
       break;
     }
     case 'sit': {

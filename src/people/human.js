@@ -192,6 +192,31 @@ const HAND_AXES = Object.fromEntries(FINGER_NAMES.map((name) => {
   return [name, { curl: f.curl, spread: spread.map((v) => v / l) }];
 }));
 
+/**
+ * The shoulders follow the arms, as the collarbone and shoulder blade do: as
+ * an arm goes up past level the collarbone lifts, and as it reaches forward
+ * it comes forward, so the shoulder keeps its shape instead of folding. The
+ * arm is turned back by as much, so the hand stays where it was put.
+ */
+function shrug(k) {
+  for (const [S, m] of [['L', 1], ['R', -1]]) {
+    const r = k.bone(`arm${S}`).rot;
+    const rest = sub(mirror(JOINTS.elbow, m), mirror(JOINTS.shoulder, m));
+    const l = len(rest);
+    // R = Rz·Ry·Rx applied to the rest direction.
+    let [x, y, z] = [rest[0] / l, rest[1] / l, rest[2] / l];
+    const cx = Math.cos(r[0]), sx = Math.sin(r[0]), cy = Math.cos(r[1]), sy = Math.sin(r[1]), cz = Math.cos(r[2]), sz = Math.sin(r[2]);
+    [y, z] = [y * cx - z * sx, y * sx + z * cx];
+    [x, z] = [x * cy + z * sy, -x * sy + z * cy];
+    y = x * sz + y * cz;
+    const up = Math.acos(Math.max(-1, Math.min(1, -y)));
+    const lift = 0.32 * Math.max(0, Math.min(1, (up - 1.1) / 1.7));
+    const reach = 0.22 * Math.max(0, z) * Math.max(0, Math.min(1, up / 1.2));
+    k.turn(`clavicle${S}`, 0, -m * reach, m * lift);
+    k.turn(`arm${S}`, 0, m * reach, -m * lift);
+  }
+}
+
 /** Bends side `S`'s hand into `shape` ({ curl, thumb, spread, straight }), `k` of the way (0..1). */
 function poseHand(k, S, shape, amount = 1) {
   const m = S === 'L' ? 1 : -1;
@@ -349,6 +374,7 @@ export function createHuman(GFX, options = {}) {
     skeleton.reset();
     const armed = held.R ? 'R' : null;
     moveHuman(skeleton, state, { ...style, armed, heavy: style.heavy ?? 0 });
+    shrug(skeleton);
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
       const shape = held[S] ? HAND_POSES.grip : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
