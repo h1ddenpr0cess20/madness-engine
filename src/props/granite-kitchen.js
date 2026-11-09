@@ -267,7 +267,7 @@ function makeFaucet(GFX, parent, brass, x, y, z, scale = 1) {
   tap.add(foot);
   const lever = new GFX.Mesh(new GFX.BoxGeometry(0.09, 0.014, 0.025), brass);
   lever.name = 'brass mixer lever';
-  lever.position.set(0.075, 0.055, 0);
+  lever.position.set(0.05, 0.055, 0);   // through the riser
   tap.add(lever);
   return tap;
 }
@@ -331,8 +331,11 @@ export function createGraniteCounter(GFX, {
 
   const cabinetTop = height - SLAB;
   const topY = height;
-  const cabinetDepth = depth - 0.08;
+  const DOOR = 0.038;                                     // the doors' thickness
+  const frontZ = depth / 2 - 0.022;                       // the middle of a door
+  const cabinetDepth = frontZ - DOOR / 2 - z0 + 0.002;           // the carcass runs up to the back of the doors
   const back = z0, front = z0 + cabinetDepth;
+  const toeDepth = cabinetDepth - 0.04;                   // the toe kick is set back under the doors
 
   // The carcass: raw lumber, cut round the aperture when there is one, so the sink's bowl has room.
   const carcass = (name, xa, xb, ya, yb, za, zb) => {
@@ -343,37 +346,72 @@ export function createGraniteCounter(GFX, {
     const cx0 = cutout.x - cutout.width / 2, cx1 = cutout.x + cutout.width / 2;
     const cz0 = cutout.z - cutout.depth / 2, cz1 = cutout.z + cutout.depth / 2;
     const floorY = topY - BOWL_DEPTH;
-    carcass('raw lumber carcass, left', x0, cx0, PLINTH, cabinetTop, back, front);
-    carcass('raw lumber carcass, right', cx1, x1, PLINTH, cabinetTop, back, front);
-    carcass('raw lumber carcass, behind the sink', cx0, cx1, PLINTH, cabinetTop, back, cz0);
-    carcass('raw lumber carcass, in front of the sink', cx0, cx1, PLINTH, cabinetTop, cz1, front);
+    carcass('raw lumber carcass, left', x0, cx0, PLINTH, cabinetTop + 0.002, back, front);
+    carcass('raw lumber carcass, right', cx1, x1, PLINTH, cabinetTop + 0.002, back, front);
+    carcass('raw lumber carcass, behind the sink', cx0, cx1, PLINTH, cabinetTop + 0.002, back, cz0);
+    carcass('raw lumber carcass, in front of the sink', cx0, cx1, PLINTH, cabinetTop + 0.002, cz1, front);
     carcass('raw lumber carcass, under the sink', cx0, cx1, PLINTH, floorY, cz0, cz1);
   } else {
-    carcass('raw lumber cabinet carcass', x0, x1, PLINTH, cabinetTop, back, front);
+    carcass('raw lumber cabinet carcass', x0, x1, PLINTH, cabinetTop + 0.002, back, front);
   }
-  box(GFX, counter, 'finished hardwood toe kick', [length, PLINTH, cabinetDepth], [0, PLINTH / 2, (back + front) / 2], finishedMat);
+  box(GFX, counter, 'finished hardwood toe kick', [length, PLINTH + 0.002, toeDepth], [0, PLINTH / 2 + 0.001, back + toeDepth / 2], finishedMat);
 
   // Doors and drawers: about one to every 0.62 m of run, counted to the length; every other bay has a drawer on top.
   const bays = Math.max(2, Math.round(length / 0.62));
   const bayW = length / bays;
-  const frontZ = depth / 2 - 0.022;
+  // A face frame: a stile between every two doors (and at each end), in the doors' own plane, so that each hinge has
+  // a frame to be screwed to as well as a door. A door stands GAP clear of the stile beside it.
+  const STILE = 0.024, GAP = 0.012;
+  const doorW = bayW - 2 * STILE - 2 * GAP;
+  const stileH = cabinetTop - PLINTH - 0.035;
+  for (let i = 0; i <= bays; i++) {
+    const end = i === 0 || i === bays;
+    const w = end ? STILE : 2 * STILE;
+    const sx = i === 0 ? x0 + STILE / 2 : i === bays ? x1 - STILE / 2 : x0 + bayW * i;
+    box(GFX, counter, `finished hardwood face frame stile ${i + 1}`, [w, stileH, DOOR], [sx, (cabinetTop + PLINTH) / 2, frontZ], finishedMat);
+  }
   for (let i = 0; i < bays; i++) {
     const x = x0 + bayW * (i + 0.5);
     const doorH = cabinetTop - PLINTH - 0.035;
-    box(GFX, counter, `finished hardwood cabinet door ${i + 1}`, [bayW - 0.024, doorH, 0.038], [x, (cabinetTop + PLINTH) / 2, frontZ], finishedMat);
+    box(GFX, counter, `finished hardwood cabinet door ${i + 1}`, [doorW, doorH, DOOR], [x, (cabinetTop + PLINTH) / 2, frontZ], finishedMat);
     box(GFX, counter, `raised cabinet centre panel ${i + 1}`, [bayW - 0.13, cabinetTop - PLINTH - 0.14, 0.012], [x, (cabinetTop + PLINTH) / 2, frontZ + 0.024], finishedMat);
     const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayW * 0.38), 0.018, 0.022), hardware);
     pull.name = `brass cabinet pull ${i + 1}`;
-    pull.position.set(x, cabinetTop - 0.14, frontZ + 0.047);
+    pull.position.set(x, cabinetTop - 0.14, frontZ + 0.037);   // 4 mm into the panel face
     pull.castShadow = true;
     counter.add(pull);
     const mount = new GFX.Mesh(new GFX.CylinderGeometry(0.022, 0.022, 0.008, 24), hardware);
     mount.name = `brass pull mounts ${i + 1}`;
     mount.rotation.x = Math.PI / 2;
-    mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.047);
+    mount.position.set(x - Math.min(0.12, bayW * 0.22), cabinetTop - 0.14, frontZ + 0.031);
     counter.add(mount);
+    // Two brass hinges on the edge the door swings from (every door swings from its left edge, the pairs at the same
+    // heights), fitted on the inside: only the barrel shows, in the gap where door and frame meet. Behind it a web
+    // runs back through the gap to a leaf on the back of the door and a leaf on the back of the frame.
+    const swing = -1;
+    const edge = x + swing * doorW / 2 + swing * GAP / 2;   // the middle of the gap beside the door
+    const faceZ = frontZ + DOOR / 2, backZ = frontZ - DOOR / 2;
+    const doorBottom = PLINTH + 0.0175;
+    const upper = cabinetTop - 0.11 - 0.07;
+    [doorBottom + 0.075, upper].forEach((y, h) => {
+      const tag = `${i + 1}.${h + 1}`;
+      const part = (mesh, name, px, py, pz) => {
+        mesh.name = `brass cabinet hinge ${name} ${tag}`;
+        mesh.position.set(px, py, pz);
+        mesh.castShadow = true;
+        counter.add(mesh);
+      };
+      const R = 0.0045, KNUCKLE = 0.0135, PITCH = 0.0145, barrelZ = faceZ - 0.0035;   // the barrel's front a little proud of the face
+      for (let k = 0; k < 5; k++) {
+        part(new GFX.Mesh(new GFX.CylinderGeometry(R, R, KNUCKLE, 16), hardware), `knuckle ${k + 1}`, edge, y + (k - 2) * PITCH, barrelZ);
+      }
+      for (const end of [-1, 1]) part(new GFX.Mesh(new GFX.SphereGeometry(R * 0.85, 12, 8), hardware), end < 0 ? 'foot cap' : 'head cap', edge, y + end * 2.5 * PITCH, barrelZ);
+      part(new GFX.Mesh(new GFX.BoxGeometry(0.003, 0.068, faceZ - backZ - 0.004), hardware), 'web', edge, y, (backZ + barrelZ) / 2);
+      part(new GFX.Mesh(new GFX.BoxGeometry(0.03, 0.068, 0.002), hardware), 'leaf on the door', edge - swing * 0.015, y, backZ + 0.0015);
+      part(new GFX.Mesh(new GFX.BoxGeometry(0.03, 0.068, 0.002), hardware), 'leaf on the frame', edge + swing * 0.015, y, backZ + 0.0015);
+    });
     if (i % 2 === 1) {
-      box(GFX, counter, `finished top drawer ${i + 1}`, [bayW - 0.024, 0.09, 0.028], [x, cabinetTop - 0.065, frontZ + 0.008], finishedMat);
+      box(GFX, counter, `finished top drawer ${i + 1}`, [doorW, 0.09, 0.028], [x, cabinetTop - 0.065, frontZ + 0.008], finishedMat);
     }
   }
 

@@ -164,6 +164,11 @@ async function show(item) {
   resetDress();
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
+  // The options are shared from one item to the next (a chair's kind "windsor" is not a table's): any value this item
+  // does not offer goes back to its default before it is built, not only when its menu is drawn.
+  for (const [name, values] of Object.entries(item.options ?? {})) {
+    if (!values.includes(options[name])) options[name] = values.default ?? values[0];
+  }
   try {
     const built = await item.build({ ...options, colours: view.colours, lights: stage.fixtureLights, stage });
     if (token !== view.token) return;
