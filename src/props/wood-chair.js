@@ -5,8 +5,8 @@
  * chair is one piece.
  *
  * `kind` picks a starting chair (dining, spindle, ladder, armchair, stool, barstool); `seat` (square, round),
- * `legs` (square, tapered, turned), `back` (slat, spindle, ladder, none), `arms`, `stretchers` and every measure can be
- * given to change it. `seatSurface` says where the seat is, so that a model can sit on it.
+ * `legs` (square, tapered, turned), `back` (slat, spindle, ladder, none), `curve` (how far the back bows out behind the
+ * sitter, in metres, 0 for a flat back), `arms`, `stretchers` and every measure can be given to change it. `seatSurface` says where the seat is, so that a model can sit on it.
  *
  * Coordinates are metres: the middle of the seat on the floor, the front facing +z, the back at -z.
  *
@@ -31,7 +31,8 @@ export const KIND_DEFAULTS = Object.freeze({
   barstool: { seat: 'round', legs: 'turned', back: 'none', arms: false, stretchers: true, width: 0.38, depth: 0.38, height: 0.75, backHeight: 0 },
 });
 
-export const DEFAULTS = Object.freeze({ kind: 'dining', species: 'oak', finish: 'lacquered', seed: 1 });
+export const DEFAULTS = Object.freeze({ kind: 'dining', species: 'oak', finish: 'lacquered', seed: 1, curve: 0 });
+export const MAX_CURVE = 0.15;
 
 const ST = 0.03;        // the seat's thickness
 const L = 0.04;         // a leg's thickness at the top
@@ -46,6 +47,7 @@ export function createWoodChair(GFX, options = {}) {
   if (!SEATS.includes(o.seat)) throw new Error(`wood chair: unknown seat "${o.seat}"`);
   if (!LEGS.includes(o.legs)) throw new Error(`wood chair: unknown legs "${o.legs}"`);
   if (!BACKS.includes(o.back)) throw new Error(`wood chair: unknown back "${o.back}"`);
+  if (!(Number.isFinite(o.curve) && o.curve >= 0 && o.curve <= MAX_CURVE)) throw new Error(`wood chair: curve must be 0 to ${MAX_CURVE} metres`);
   if (!(o.width >= 0.25 && o.width <= 0.9 && o.depth >= 0.25 && o.depth <= 0.8 && o.height >= 0.3 && o.height <= 0.9 && o.backHeight >= 0 && o.backHeight <= 0.9)) throw new Error('wood chair: dimensions outside supported ranges');
   const { width, depth, height } = o;
   const backHeight = o.back === 'none' ? 0 : Math.max(o.backHeight, 0.2);
@@ -124,23 +126,35 @@ export function createWoodChair(GFX, options = {}) {
   /* -------------------------------- back ------------------------------- */
 
   if (hasBack) {
-    const topRail = (h) => board('back top rail', [2 * lx, h, 0.024], [0, backTop - h / 2, -lz], 'x');
+    // The back bows out behind the sitter by `curve` at its middle, and meets the posts at its ends. A board is cut
+    // into strips along x and each strip's z follows the arc, so it is one curved board.
+    const bow = (x) => -o.curve * (1 - (x / lx) ** 2);
+    const backBoard = (name, h, t, y) => {
+      const g = new GFX.BoxGeometry(2 * lx, h, t, o.curve > 0 ? 24 : 1, 1, 1);
+      if (o.curve > 0) {
+        const P = g.attributes.position;
+        for (let i = 0; i < P.count; i++) P.setZ(i, P.getZ(i) + bow(P.getX(i)));
+        g.computeVertexNormals();
+      }
+      add(name, g, [0, y, -lz], 'x');
+    };
+    const topRail = (h) => backBoard('back top rail', h, 0.024, backTop - h / 2);
     if (o.back === 'slat') {
       topRail(0.1);
-      for (let i = 0; i < 2; i++) board(`back slat ${i + 1}`, [2 * lx, 0.07, 0.02], [0, height + 0.1 + i * (backHeight - 0.28) / 1, -lz], 'x');
+      for (let i = 0; i < 2; i++) backBoard(`back slat ${i + 1}`, 0.07, 0.02, height + 0.1 + i * (backHeight - 0.28));
     } else if (o.back === 'ladder') {
       topRail(0.07);
       const n = 3, y0 = height + 0.1, y1 = backTop - 0.16;
-      for (let i = 0; i < n; i++) board(`back slat ${i + 1}`, [2 * lx, 0.045, 0.02], [0, y0 + (y1 - y0) * i / (n - 1), -lz], 'x');
+      for (let i = 0; i < n; i++) backBoard(`back slat ${i + 1}`, 0.045, 0.02, y0 + (y1 - y0) * i / (n - 1));
     } else {
       topRail(0.06);
       const n = 5, bottom = height - 0.01, top = backTop - 0.06 + EPS;
       for (let i = 0; i < n; i++) {
         const x = -lx + (2 * lx) * (i + 1) / (n + 1);
-        add(`back spindle ${i + 1}`, new GFX.CylinderGeometry(0.009, 0.009, top - bottom, 12), [x, (top + bottom) / 2, -lz], 'y');
+        add(`back spindle ${i + 1}`, new GFX.CylinderGeometry(0.009, 0.009, top - bottom, 12), [x, (top + bottom) / 2, -lz + bow(x)], 'y');
       }
       // a low rail the spindles stand in
-      board('back base rail', [2 * lx, 0.03, 0.024], [0, height + 0.015, -lz], 'x');
+      backBoard('back base rail', 0.03, 0.024, height + 0.015);
     }
   }
 
@@ -154,7 +168,7 @@ export function createWoodChair(GFX, options = {}) {
     group,
     material: wood,
     wood: { species: o.species, finish: o.finish, source: WOOD_SOURCE },
-    options: { kind, seat: o.seat, legs: o.legs, back: o.back, arms: !!o.arms, stretchers: !!o.stretchers },
+    options: { kind, seat: o.seat, legs: o.legs, back: o.back, curve: o.curve, arms: !!o.arms, stretchers: !!o.stretchers },
     dimensions: { width, depth, height, backHeight },
     /** Where a model sits: the seat's upper face. */
     seatSurface: { y: height, halfWidth: width / 2, halfDepth: depth / 2, shape: o.seat },
@@ -201,9 +215,10 @@ export const assetViewer = Object.freeze({
     legs: choices([OWN, ...LEGS], OWN),
     back: choices([OWN, ...BACKS], OWN),
     seat: choices([OWN, ...SEATS], OWN),
+    curve: choices([0, 0.04, 0.08, 0.12], 0),
   },
-  build({ GFX, kind = 'dining', species = 'oak', finish = 'lacquered', legs, back, seat }) {
+  build({ GFX, kind = 'dining', species = 'oak', finish = 'lacquered', legs, back, seat, curve = 0 }) {
     const own = (v) => (v && v !== OWN ? v : undefined);
-    return createWoodChair(GFX, { kind, species, finish, legs: own(legs), back: own(back), seat: own(seat) });
+    return createWoodChair(GFX, { kind, species, finish, legs: own(legs), back: own(back), seat: own(seat), curve: Number(curve) });
   },
 });

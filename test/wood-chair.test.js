@@ -66,3 +66,21 @@ test('the set lines the kinds up without overlap', () => {
     assert.ok(b.group.position.x - b.dimensions.width / 2 > a.group.position.x + a.dimensions.width / 2);
   }
 });
+
+test('a back can be curved: it bows out behind the sitter and still holds together', () => {
+  for (const back of ['slat', 'spindle', 'ladder']) {
+    const flat = createWoodChair(GFX, { kind: 'dining', back });
+    const bowed = createWoodChair(GFX, { kind: 'dining', back, curve: 0.1 });
+    assert.equal(bowed.options.curve, 0.1);
+    assert.equal(pieces(bowed.group), 1, back);
+    const rear = (m) => new GFX.Box3().setFromObject(m.group).min.z;
+    assert.ok(rear(bowed) < rear(flat) - 0.05, `${back} bows backward`);
+    // The middle spindle or slat is further back than the post it is joined to.
+  }
+  const s = createWoodChair(GFX, { kind: 'spindle', curve: 0.1 });
+  const z = (n) => s.group.children.find((c) => c.name === n).position.z;
+  const mid = s.group.children.find((c) => c.name === 'back spindle 3');
+  assert.ok(mid.position.z < z('leg rear left') - 0.09);
+  assert.throws(() => createWoodChair(GFX, { curve: 0.5 }), /curve/);
+  assert.throws(() => createWoodChair(GFX, { curve: -1 }), /curve/);
+});
