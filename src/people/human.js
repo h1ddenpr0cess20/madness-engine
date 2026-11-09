@@ -1,0 +1,394 @@
+import { Skeleton, skin } from '../models/rig.js';
+import { assemble } from './human/kit.js';
+import { bones, FINGER_NAMES, HEIGHT, JOINTS, mirror, sideOf } from './human/skeleton.js';
+import { buildEyes, buildHead, buildMouth } from './human/head.js';
+import { buildEars } from './human/ears.js';
+import { buildArms } from './human/arms.js';
+import { buildBody } from './human/body.js';
+import { DEFAULT_OUTFIT, GARMENTS } from './human/clothes.js';
+import { humanTextures } from './human/textures.js';
+import { CLIPS, moveHuman } from './human/motion.js';
+
+/**
+ * A human, at real size (1.76 m, one world unit a metre, as the weapons
+ * are), built to be dressed, posed and animated.
+ *
+ *     import * as GFX from 'madness-engine/gfx';
+ *     import { createHuman } from 'madness-engine/people/human';
+ *     import { createKrystalSword } from 'madness-engine/weapons';
+ *
+ *     const man = createHuman(GFX);                 // briefs, t-shirt, jeans, sneakers
+ *     scene.add(man.group);
+ *     man.hold(createKrystalSword(GFX));            // in his right hand
+ *     stage.run((dt, time) => man.pose({ clip: 'walk', t, time }));
+ *
+ * The base body is a mesh of its own; every garment is another, worn over
+ * it. A garment hides what it covers (skin, and the garments under it), so
+ * nothing shows through however he moves. `wear`, `remove` and `dress`
+ * change what he has on; a garment of your own is an object shaped like
+ * those in `GARMENTS`.
+ *
+ * Everything that moves on a person has a bone: the trunk, neck and head,
+ * a collarbone over each arm, three bones a finger, the toes, the jaw and
+ * tongue, each eye and its two lids, the brows and the mouth's corners. The
+ * body clips (`CLIPS`) use the engine's movement vocabulary; `face` and
+ * `hands` set the rest, and `pose` takes them on every frame.
+ */
+
+export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT };
+export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
+
+const BODY_MATERIALS = ['skinHead', 'skin', 'eye', 'nail', 'mouth', 'teeth', 'tongue'];
+const builds = new Map();
+const NAMES = bones().map(([n]) => n);
+
+/** The base body's mesh data at `detail`, made once and shared. */
+function bodyData(detail) {
+  const key = `body@${detail}`;
+  if (!builds.has(key)) {
+    const { part: head, grid } = buildHead(detail);
+    const parts = [head, buildEyes(detail), buildEars(detail), ...buildArms(detail), buildBody(detail), ...buildMouth(detail)];
+    builds.set(key, { data: assemble(parts, NAMES, BODY_MATERIALS), grid });
+  }
+  return builds.get(key);
+}
+
+/** A garment's mesh data at `detail`, made once and shared. */
+function garmentData(name, garment, detail) {
+  const key = garment === GARMENTS[name] ? `${name}@${detail}` : null;
+  if (key && builds.has(key)) return builds.get(key);
+  const data = assemble(garment.build(detail), NAMES, garment.materials);
+  if (key) builds.set(key, data);
+  return data;
+}
+
+const DEFAULT_LOOK = Object.freeze({
+  skin: '#d29a78', iris: '#5a4632',
+  shirt: '#8f9399', denim: '#ffffff', shoe: '#2c2c30', sole: '#efece6', briefs: '#2a2b30',
+});
+
+/** The materials, by name, for a look. Textures where there is a document to paint them on. */
+function makeMaterials(GFX, look, tex) {
+  const M = (name, o) => {
+    const m = new GFX.MeshPhysicalMaterial({ name: `human ${name}`, vertexColors: true, ...o });
+    return m;
+  };
+  const skinSheen = { sheen: 0.35, sheenColor: new GFX.Color('#ff9a7c'), sheenRoughness: 0.45 };
+  const mats = {
+    skinHead: M('head skin', { color: tex ? '#ffffff' : look.skin, map: tex?.head.map ?? null, bumpMap: tex?.head.bump ?? null, bumpScale: 0.0006, roughness: 0.52, ...skinSheen }),
+    skin: M('skin', { color: tex ? '#ffffff' : look.skin, map: tex?.skin.map ?? null, bumpMap: tex?.skin.bump ?? null, bumpScale: 0.0004, roughness: 0.55, ...skinSheen }),
+    eye: M('eyes', { color: '#ffffff', map: tex?.eye ?? null, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.03 }),
+    nail: M('nails', { color: '#e6b6a6', roughness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.2 }),
+    mouth: M('mouth', { color: '#5a2224', roughness: 0.6 }),
+    teeth: M('teeth', { color: '#efe8da', roughness: 0.25, clearcoat: 0.4 }),
+    tongue: M('tongue', { color: '#b35a5c', roughness: 0.45, clearcoat: 0.3 }),
+    briefs: M('briefs', { color: look.briefs, roughness: 0.8, sheen: 0.5, sheenColor: new GFX.Color('#9aa0aa'), sheenRoughness: 0.5 }),
+    shirt: M('t-shirt', { color: look.shirt, map: tex?.shirt.map ?? null, bumpMap: tex?.shirt.bump ?? null, bumpScale: 0.0003, roughness: 0.9, sheen: 0.7, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.55, side: GFX.DoubleSide }),
+    denim: M('denim', { color: tex ? look.denim : '#2c4a78', map: tex?.denim.map ?? null, bumpMap: tex?.denim.bump ?? null, bumpScale: 0.0004, roughness: 0.86, sheen: 0.35, sheenColor: new GFX.Color('#9db4d8'), sheenRoughness: 0.6, side: GFX.DoubleSide }),
+    shoe: M('sneakers', { color: look.shoe, map: tex?.shoe ?? null, roughness: 0.5, clearcoat: 0.15 }),
+    sole: M('soles', { color: look.sole, map: tex?.sole ?? null, roughness: 0.65 }),
+  };
+  return mats;
+}
+
+/** A skinned mesh over `data`, drawn in `materials` (one per draw group). */
+function skinnedMesh(GFX, data, materials, name) {
+  const geometry = new GFX.BufferGeometry();
+  const position = new GFX.BufferAttribute(data.position.slice(), 3);
+  const normal = new GFX.BufferAttribute(data.normal.slice(), 3);
+  geometry.setAttribute('position', position);
+  geometry.setAttribute('normal', normal);
+  geometry.setAttribute('uv', new GFX.BufferAttribute(data.uv, 2));
+  geometry.setAttribute('color', new GFX.BufferAttribute(data.color, 3));
+  geometry.setIndex(new GFX.BufferAttribute(data.index.slice(), 1));
+  for (const g of data.groups) geometry.addGroup(g.start, g.count, g.materialIndex);
+  geometry.computeBoundingSphere();
+  geometry.boundingSphere.radius *= 1.6;
+  const mesh = new GFX.Mesh(geometry, materials);
+  mesh.name = name;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return { mesh, geometry, position, normal, data };
+}
+
+/**
+ * Hand shapes: how far each finger curls at its three joints (0 straight,
+ * 1 fully), how the thumb lies, and the fingers' spread.
+ */
+export const HAND_POSES = Object.freeze({
+  relaxed: { curl: [0.22, 0.3, 0.2], thumb: 0.15, spread: 0.1 },
+  open: { curl: [0, 0.04, 0.02], thumb: 0, spread: 0.6 },
+  grip: { curl: [0.95, 1.0, 0.65], thumb: 0.85, spread: 0 },
+  fist: { curl: [1.05, 1.25, 0.9], thumb: 1, spread: 0 },
+  point: { curl: [1.05, 1.25, 0.9], thumb: 0.9, spread: 0, straight: ['index'] },
+});
+
+/** Bends side `S`'s hand into `shape` ({ curl, thumb, spread, straight }), `k` of the way (0..1). */
+function poseHand(k, S, shape, amount = 1) {
+  const m = S === 'L' ? 1 : -1;
+  const [c1, c2, c3] = shape.curl;
+  const bend = [1.45, 1.6, 1.1];
+  const spreads = { index: 0.12, middle: 0.0, ring: -0.1, pinky: -0.22 };
+  for (const name of FINGER_NAMES) {
+    if (name === 'thumb') continue;
+    const straight = shape.straight?.includes(name) ? 0.08 : 1;
+    // The little fingers curl a touch more than the index, as a hand does.
+    const extra = name === 'pinky' ? 1.08 : name === 'ring' ? 1.04 : 1;
+    [c1, c2, c3].forEach((c, i) => k.turn(`${name}${i + 1}${S}`, spreads[name] * shape.spread * (i === 0 ? 1 : 0) * amount, 0, -m * c * bend[i] * straight * extra * amount));
+  }
+  const t = shape.thumb * amount;
+  k.turn(`thumb1${S}`, -0.35 * t, -m * 0.55 * t, -m * 0.25 * t);
+  k.turn(`thumb2${S}`, 0, 0, -m * 0.55 * t);
+  k.turn(`thumb3${S}`, 0, 0, -m * 0.75 * t);
+}
+
+/**
+ * The face, set by `face(...)` and held until changed: `jaw` 0 shut to 1
+ * wide open, `blink` (or `blinkL`, `blinkR`) 0 open to 1 shut, `look`
+ * [yaw, pitch] in radians (+yaw to his left, +pitch up), `smile` −1..1,
+ * `brows` −1 (a frown) .. 1 (raised), `tongue` 0..1 out. With `auto` (the
+ * default) he blinks on his own and his eyes wander a little.
+ */
+const FACE_DEFAULT = Object.freeze({ jaw: 0, blink: 0, blinkL: null, blinkR: null, look: [0, 0], smile: 0, brows: 0, tongue: 0, auto: true });
+
+function poseFace(k, f, time) {
+  let blink = f.blink;
+  let look = f.look;
+  if (f.auto && time !== undefined) {
+    // A blink every few seconds, a tenth of a second long; the eyes settling on a new spot now and then.
+    const cycle = 3.7, ph = (time % cycle) / cycle;
+    blink = Math.max(blink, Math.max(0, 1 - Math.abs(ph - 0.5) * 2 * cycle / 0.12));
+    const step = Math.floor(time / 1.9);
+    const r = (n) => Math.sin(step * 12.9898 + n * 78.233) * 43758.5453 % 1;
+    look = [look[0] + r(1) * 0.12, look[1] + r(2) * 0.05];
+  }
+  for (const S of ['L', 'R']) {
+    const b = f[`blink${S}`] ?? blink;
+    k.turn(`lidUp${S}`, 0.62 * b - 0.08 * f.brows * (1 - b), 0, 0);
+    k.turn(`lidLow${S}`, -0.18 * b - 0.04 * Math.max(0, f.smile), 0, 0);
+    k.turn(`eye${S}`, -look[1], look[0], 0);
+    const m = S === 'L' ? 1 : -1;
+    k.move(`brow${S}`, 0, 0.004 * f.brows, 0.001 * Math.max(0, f.brows));
+    if (f.brows < 0) k.move(`brow${S}`, -m * 0.0025 * f.brows, 0, 0);
+    k.move(`lipCorner${S}`, m * 0.0035 * f.smile, 0.004 * f.smile, -0.002 * Math.abs(f.smile));
+  }
+  k.turn('jaw', 0.36 * f.jaw, 0, 0);
+  k.move('tongue', 0, 0, 0.03 * f.tongue);
+}
+
+export function createHuman(GFX, options = {}) {
+  const { detail = 0.6, outfit = DEFAULT_OUTFIT, look: lookIn = {} } = options;
+  const look = { ...DEFAULT_LOOK, ...lookIn };
+  const group = new GFX.Group();
+  group.name = 'human';
+  const { data: base, grid } = bodyData(detail);
+  let tex = humanTextures(GFX, grid, { skin: look.skin, iris: look.iris });
+  let mats = makeMaterials(GFX, look, tex);
+  const skeleton = new Skeleton(bones());
+  const body = skinnedMesh(GFX, base, BODY_MATERIALS.map((n) => mats[n]), 'human body');
+  group.add(body.mesh);
+
+  // What he has on, by name: { garment, mesh, layer }.
+  const worn = new Map();
+  const custom = new Map();
+  const coverage = new WeakMap();
+
+  /** Which of `data`'s vertices `garment` covers, worked out once. */
+  function covered(data, garment) {
+    let byGarment = coverage.get(data);
+    if (!byGarment) coverage.set(data, (byGarment = new Map()));
+    if (!byGarment.has(garment)) byGarment.set(garment, Uint8Array.from(data.zones, (z) => (garment.covers(z) ? 1 : 0)));
+    return byGarment.get(garment);
+  }
+
+  /** Rebuilds each mesh's triangles: those every one of whose corners is covered by something worn over it are left out. */
+  function refit() {
+    const meshes = [{ m: body, layer: 0 }, ...[...worn.values()].map((w) => ({ m: w.mesh, layer: w.garment.layer }))];
+    for (const { m, layer } of meshes) {
+      const over = [...worn.values()].filter((w) => w.garment.layer > layer).map((w) => covered(m.data, w.garment));
+      const out = [];
+      const groups = [];
+      m.data.triangles.forEach((tris, materialIndex) => {
+        const start = out.length;
+        for (let t = 0; t < tris.length; t += 3) {
+          const a = tris[t], b = tris[t + 1], c = tris[t + 2];
+          if (over.some((cv) => cv[a] && cv[b] && cv[c])) continue;
+          out.push(a, b, c);
+        }
+        if (out.length > start) groups.push({ start, count: out.length - start, materialIndex });
+      });
+      m.geometry.setIndex(new GFX.BufferAttribute(Uint32Array.from(out), 1));
+      m.geometry.clearGroups?.();
+      if (!m.geometry.clearGroups) m.geometry.groups = [];
+      for (const g of groups) m.geometry.addGroup(g.start, g.count, g.materialIndex);
+    }
+  }
+
+  function wear(nameOrGarment, garment = null) {
+    const name = typeof nameOrGarment === 'string' ? nameOrGarment : nameOrGarment.name;
+    const g = garment ?? (typeof nameOrGarment === 'object' ? nameOrGarment : GARMENTS[name] ?? custom.get(name));
+    if (!g) throw new Error(`human: no garment called ${name}; choose ${Object.keys(GARMENTS).join(', ')} or pass one of your own`);
+    if (worn.has(name)) return api;
+    if (g !== GARMENTS[name]) custom.set(name, g);
+    const data = garmentData(name, g, detail);
+    const materials = g.materials.map((n) => mats[n] ?? g.materialFor?.(GFX, n) ?? mats.shirt);
+    const m = skinnedMesh(GFX, data, materials, `human ${name}`);
+    group.add(m.mesh);
+    worn.set(name, { garment: g, mesh: m });
+    refit();
+    return api;
+  }
+
+  function remove(name) {
+    const w = worn.get(name);
+    if (!w) return api;
+    group.remove(w.mesh.mesh);
+    w.mesh.geometry.dispose?.();
+    worn.delete(name);
+    refit();
+    return api;
+  }
+
+  let face = { ...FACE_DEFAULT };
+  let style = { ...(options.style ?? {}) };
+  const hands = { L: { shape: 'relaxed', amount: 1 }, R: { shape: 'relaxed', amount: 1 } };
+  const held = { L: null, R: null };
+  let last = null;
+  const M4 = new GFX.Matrix4();
+
+  /** Puts a held thing where its hand is now. */
+  function placeHeld() {
+    for (const S of ['L', 'R']) {
+      const h = held[S];
+      if (!h) continue;
+      const o = skeleton.index.get(`hand${S}`) * 12, B = skeleton.matrices;
+      M4.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
+      h.object.matrix.multiplyMatrices(M4, h.rest);
+      h.object.matrixWorldNeedsUpdate = true;
+    }
+  }
+
+  function pose(state = {}) {
+    last = state;
+    skeleton.reset();
+    const armed = held.R ? 'R' : null;
+    moveHuman(skeleton, state, { ...style, armed, heavy: style.heavy ?? 0 });
+    for (const S of ['L', 'R']) {
+      const want = hands[S].shape;
+      const shape = held[S] ? HAND_POSES.grip : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
+      poseHand(skeleton, S, shape, held[S] ? 1 : hands[S].amount);
+    }
+    poseFace(skeleton, face, state.time);
+    skeleton.compute();
+    skin(body.data, skeleton.matrices, body.position.array, body.normal.array);
+    body.position.needsUpdate = true;
+    body.normal.needsUpdate = true;
+    for (const { mesh: m } of worn.values()) {
+      skin(m.data, skeleton.matrices, m.position.array, m.normal.array);
+      m.position.needsUpdate = true;
+      m.normal.needsUpdate = true;
+    }
+    placeHeld();
+    return api;
+  }
+
+  /**
+   * Puts `thing` (a weapon from madness-engine/weapons, or any object) in
+   * a hand ('R' by default). A weapon is taken by its grip, just under the
+   * guard; anything else at `grip` along its own y. Its own +y points the
+   * way the thumb does out of the fist.
+   */
+  function hold(thing, { hand = 'R', grip = null } = {}) {
+    const S = hand === 'L' || hand === 'left' ? 'L' : 'R';
+    release(S);
+    const object = thing.group ?? thing;
+    const bounds = thing.gripBounds;
+    const y = grip ?? (bounds ? Math.max((bounds.bottom + bounds.top) / 2, bounds.top - 0.05) : 0);
+    const m = S === 'L' ? 1 : -1;
+    // The fist's middle, at rest: down the hand from the wrist and in front of the palm; its axis runs forward.
+    const wrist = mirror(JOINTS.wrist, m), elbow = mirror(JOINTS.elbow, m);
+    const down = new GFX.Vector3(wrist[0] - elbow[0], wrist[1] - elbow[1], wrist[2] - elbow[2]).normalize();
+    const centre = new GFX.Vector3(...wrist).addScaledVector(down, 0.068).add(new GFX.Vector3(-m * 0.024, 0, 0.012));
+    // The object's +y along the fist; its +x (a blade's width) in the plane the wrist bends in, edge leading.
+    const along = new GFX.Vector3(0, 0.12, 1).normalize();
+    const side = new GFX.Vector3().crossVectors(along, down).normalize();
+    const width = new GFX.Vector3().crossVectors(side, along).normalize();
+    const rest = new GFX.Matrix4().makeBasis(width, along, side.negate());
+    rest.setPosition(centre);
+    rest.multiply(new GFX.Matrix4().makeTranslation(0, -y, 0));
+    object.matrixAutoUpdate = false;
+    group.add(object);
+    held[S] = { thing, object, rest };
+    if (last) pose(last);
+    return api;
+  }
+
+  function release(hand = 'R') {
+    const S = hand === 'L' || hand === 'left' ? 'L' : 'R';
+    const h = held[S];
+    if (!h) return null;
+    group.remove(h.object);
+    h.object.matrixAutoUpdate = true;
+    held[S] = null;
+    return h.thing;
+  }
+
+  function setLook(change) {
+    Object.assign(look, change);
+    if (change.skin || change.iris) {
+      tex = humanTextures(GFX, grid, { skin: look.skin, iris: look.iris });
+      const next = makeMaterials(GFX, look, tex);
+      for (const n of ['skinHead', 'skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
+    }
+    for (const n of ['shirt', 'shoe', 'sole', 'briefs']) if (change[n]) mats[n].color.set(change[n]);
+    if (change.denim) mats.denim.color.set(change.denim);
+    return api;
+  }
+
+  const api = {
+    group,
+    body: body.mesh,
+    skeleton,
+    materials: mats,
+    clips: CLIPS,
+    dimensions: HUMAN_DIMENSIONS,
+    get outfit() { return [...worn.keys()]; },
+    garment: (name) => worn.get(name)?.mesh.mesh ?? null,
+    wear,
+    remove,
+    /** Puts on exactly these (by name), taking off the rest. */
+    dress(names) {
+      for (const n of [...worn.keys()]) if (!names.includes(n)) remove(n);
+      for (const n of names) wear(n);
+      return api;
+    },
+    pose,
+    /** How he moves: { attack: 'slash' | 'chop' | 'thrust' | 'smite' | 'punch' | 'shove', heavy: 0..1, after(skeleton, state) }. */
+    setStyle(next) { style = next; return api; },
+    face(change) { face = { ...face, ...change }; if (last) pose(last); return api; },
+    get faceState() { return { ...face }; },
+    /** Shapes a hand ('L', 'R' or 'both') as one of `HAND_POSES` (or a shape of your own), `amount` of the way. */
+    hands(shape, { hand = 'both', amount = 1 } = {}) {
+      for (const S of hand === 'both' ? ['L', 'R'] : [hand === 'left' ? 'L' : hand === 'right' ? 'R' : hand]) hands[S] = { shape, amount };
+      if (last) pose(last);
+      return api;
+    },
+    hold,
+    release,
+    held: (hand = 'R') => held[hand === 'L' || hand === 'left' ? 'L' : 'R']?.thing ?? null,
+    setLook,
+    get look() { return { ...look }; },
+    setShirtColor: (c) => setLook({ shirt: c }),
+    setJeansColor: (c) => setLook({ denim: c }),
+    setShoeColor: (c) => setLook({ shoe: c }),
+    setSkin: (c) => setLook({ skin: c }),
+    setEyeColor: (c) => setLook({ iris: c }),
+    /** Where bone `name` takes the rest-pose point `p` now (after `pose`). */
+    point: (name, p) => skeleton.point(name, p),
+  };
+  for (const name of outfit) wear(name);
+  pose({ clip: 'idle', t: 0, time: 0 });
+  return api;
+}
+
+export { sideOf };

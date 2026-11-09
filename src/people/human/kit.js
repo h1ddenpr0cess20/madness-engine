@@ -95,11 +95,14 @@ export class Part {
     this.weights = [];
     this.idx = [];
     this.given = [];
+    this.zones = [];
   }
 
   get count() { return this.pos.length / 3; }
 
-  vertex(p, uv = [0, 0], weights = { root: 1 }, tint = 1, normal = null) {
+  /** `zone`: which region of the body the vertex belongs to, { zone, y, d }, for clothes to know what they cover. */
+  vertex(p, uv = [0, 0], weights = { root: 1 }, tint = 1, normal = null, zone = null) {
+    this.zones.push(zone ?? { zone: this.name, y: p[1], d: 0 });
     this.given.push(normal);
     this.pos.push(p[0], p[1], p[2]);
     this.uv.push(uv[0], uv[1]);
@@ -117,7 +120,7 @@ export class Part {
     for (let i = 0; i <= rows; i++) {
       for (let j = 0; j <= cols; j++) {
         const v = fn(i, j);
-        this.vertex(v.p, v.uv ?? [j / cols, i / rows], v.w, v.tint ?? 1, v.n ?? null);
+        this.vertex(v.p, v.uv ?? [j / cols, i / rows], v.w, v.tint ?? 1, v.n ?? null, v.zone ?? null);
       }
     }
     const row = cols + 1;
@@ -190,6 +193,7 @@ export function assemble(parts, boneNames, materialOrder) {
   const uv = new Float32Array(total * 2), color = new Float32Array(total * 3);
   const skinIndex = new Uint16Array(total * 4), skinWeight = new Float32Array(total * 4);
   const buckets = materialOrder.map(() => []);
+  const zones = [];
   let base = 0;
   for (const part of parts) {
     const mi = materialOrder.indexOf(part.material);
@@ -205,6 +209,7 @@ export function assemble(parts, boneNames, materialOrder) {
         skinWeight[(base + v) * 4 + k] = w;
       });
     }
+    zones.push(...part.zones);
     for (const i of part.idx) buckets[mi].push(i + base);
     base += part.count;
   }
@@ -217,5 +222,40 @@ export function assemble(parts, boneNames, materialOrder) {
     groups.push({ start, count: b.length, materialIndex });
     start += b.length;
   });
-  return { position, normal, uv, color, skinIndex, skinWeight, index, groups, count: total };
+  // Each material's triangles, kept apart so a garment can hide some of them later.
+  const triangles = buckets.map((b) => Uint32Array.from(b));
+  return { position, normal, uv, color, skinIndex, skinWeight, index, groups, triangles, zones, count: total };
+}
+
+/**
+ * A smooth curve through [[x, value], ...] knots (x ascending; values numbers
+ * or arrays): cubic Hermite with Catmull-Rom tangents, so a profile drawn as
+ * a few measurements has no flats or kinks at them.
+ */
+export function profile(list) {
+  const n = list.length;
+  const xs = list.map((k) => k[0]);
+  const vs = list.map((k) => (Array.isArray(k[1]) ? k[1] : [k[1]]));
+  const array = Array.isArray(list[0][1]);
+  const dims = vs[0].length;
+  const tangent = (i, d) => {
+    if (i === 0) return (vs[1][d] - vs[0][d]) / (xs[1] - xs[0]);
+    if (i === n - 1) return (vs[n - 1][d] - vs[n - 2][d]) / (xs[n - 1] - xs[n - 2]);
+    return (vs[i + 1][d] - vs[i - 1][d]) / (xs[i + 1] - xs[i - 1]);
+  };
+  return (x) => {
+    let i = 0;
+    if (x <= xs[0]) i = 0;
+    else if (x >= xs[n - 1]) i = n - 2;
+    else while (i < n - 2 && x > xs[i + 1]) i++;
+    const h = xs[i + 1] - xs[i];
+    const t = Math.min(1, Math.max(0, (x - xs[i]) / h));
+    const t2 = t * t, t3 = t2 * t;
+    const out = [];
+    for (let d = 0; d < dims; d++) {
+      const v = (2 * t3 - 3 * t2 + 1) * vs[i][d] + (t3 - 2 * t2 + t) * h * tangent(i, d) + (-2 * t3 + 3 * t2) * vs[i + 1][d] + (t3 - t2) * h * tangent(i + 1, d);
+      out.push(v);
+    }
+    return array ? out : out[0];
+  };
 }

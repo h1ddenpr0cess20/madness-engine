@@ -75,7 +75,7 @@ export function buildEars(detail = 1) {
       const x = ox * r * k * S, y = oy * r * k * S, z = w * S;
       const q = frameAt(center, f, up, out, x, y, z);
       const tint = t < 0.6 ? clamp(0.72 + relief(r, a) * 60, 0.55, 1) : t > 0.85 ? 0.7 : 0.92;
-      return { p: toWorld(q), uv: [j / around, t], w: { head: 1 }, tint };
+      return { p: toWorld(q), uv: [j / around, t], w: { head: 1 }, tint, zone: { zone: 'head', y: 0, d: 0 } };
     }, { flip: m > 0 });
   }
   return part;

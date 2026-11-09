@@ -685,6 +685,65 @@ function weaponItems() {
   }));
 }
 
+const HUMAN_WEAPONS = [
+  ['none', 'Nothing'],
+  ['createKrystalSword', 'Krystal Sword'], ['createKrystalDagger', 'Krystal Dagger'],
+  ['createMadnessSword', 'Madness Sword'], ['createMadnessGreatsword', 'Madness Greatsword'], ['createMadnessMorningstar', 'Madness Morningstar'],
+  ['createMagicEggSword', 'Magic Egg Sword'], ['createBananaBroadsword', 'Banana Broadsword'], ['createGraniteSword', 'Granite Sword'],
+  ['createRegularSword', 'Regular Sword'], ['createRegularDagger', 'Regular Dagger'], ['createMarcsSword', "Marc's Sword"],
+];
+
+/** The real-size, dressable human: his wardrobe, his look, his face and hands, and a weapon from the shelf to hold. */
+function humanItems() {
+  return [{
+    id: 'people/human',
+    category: 'People',
+    group: 'people',
+    name: 'Human (dressable base)',
+    source: 'people/human',
+    kind: 'object',
+    async build() {
+      const [{ createHuman, CLIPS: clips, GARMENTS, HAND_POSES }, weapons, metals] = await Promise.all([
+        import('../../../src/people/human.js'),
+        import('../../../src/weapons/variants.js'),
+        import('../../../src/props/metalglobe.js'),
+      ]);
+      const man = createHuman(GFX);
+      let weapon = 'none', attack = 'slash', handL = 'relaxed';
+      const style = {};
+      const rearm = () => {
+        man.release('R');
+        if (weapon !== 'none') man.hold(weapons[weapon](GFX, {}));
+      };
+      const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
+      const ui = [
+        ...Object.keys(GARMENTS).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
+        { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm(); } },
+        { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove'], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
+        { type: 'select', label: 'Left hand', options: Object.keys(HAND_POSES), get: () => handL, set: (v) => { handL = v; man.hands(v, { hand: 'L' }); } },
+        { type: 'color', label: 'Skin', get: () => man.look.skin, set: (c) => man.setSkin(c) },
+        { type: 'color', label: 'Eyes', get: () => man.look.iris, set: (c) => man.setEyeColor(c) },
+        { type: 'color', label: 'T-shirt', get: () => man.look.shirt, set: (c) => man.setShirtColor(c) },
+        { type: 'color', label: 'Jeans tint', get: () => man.look.denim, set: (c) => man.setJeansColor(c) },
+        { type: 'color', label: 'Sneakers', get: () => man.look.shoe, set: (c) => man.setShoeColor(c) },
+        face('jaw'), face('blink'), face('smile'), face('brows'),
+        { type: 'range', label: 'Look', min: -0.6, max: 0.6, step: 0.01, get: () => man.faceState.look[0], set: (v) => man.face({ look: [v, man.faceState.look[1]] }) },
+      ];
+      // The weapon's ready stance and swing come from the style the human is posed with.
+      const pose = (s) => man.pose(s);
+      man.setStyle(style);
+      return {
+        object: man.group,
+        pose,
+        clips,
+        ui,
+        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+        info: { Source: 'people/human', Height: '1.76 m', Outfit: man.outfit.join(', '), Bones: man.skeleton.names.length, ...countOf(man.group) },
+      };
+    },
+  }];
+}
+
 /** Walks the library and returns every item, in category order. */
 export async function loadCatalog(onProgress = () => {}) {
   const items = [];
@@ -731,6 +790,7 @@ export async function loadCatalog(onProgress = () => {}) {
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
   items.push(...weaponItems());
+  items.push(...humanItems());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
@@ -754,7 +814,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Weapons', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['People', 'Characters', 'Props', 'Weapons', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   // By category, and within one by shelf, so that each shelf's things are together under its heading.
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }

@@ -1,5 +1,7 @@
 import { clamp, cross, dot, frameAt, len, norm, Part, smooth, sub } from './kit.js';
-import { trunkWeights } from './skeleton.js';
+import { EYE, HEAD_CENTER, HEAD_SCALE, trunkWeights } from './skeleton.js';
+
+export { EYE, HEAD_CENTER, HEAD_SCALE };
 
 /**
  * The head and neck, built the way a head is blocked out from drawings: the
@@ -14,14 +16,13 @@ import { trunkWeights } from './skeleton.js';
  * shapes are drawn at a man's natural size and scaled to a 22 cm head.
  */
 
-export const HEAD_CENTER = [0, 1.654, 0.004];
-export const HEAD_SCALE = 0.92;
-const EYE_RAW = { center: [0.0322, 0.0008, 0.0645], radius: 0.0128 };
-export const EYE = Object.freeze({ center: EYE_RAW.center.map((v) => v * HEAD_SCALE), radius: EYE_RAW.radius * HEAD_SCALE });
+const EYE_RAW = { center: EYE.center.map((v) => v / HEAD_SCALE), radius: EYE.radius / HEAD_SCALE };
 
 const sq = (x) => x * x;
 const G = (t) => Math.exp(-t * t);
-const mx = (q) => [Math.abs(q[0]), q[1], q[2]];
+/** |x|, rounded over the middle line so mirrored shapes meet there without a crease. */
+const sabs = (x) => Math.sqrt(x * x + 0.000016);
+const mx = (q) => [sabs(q[0]), q[1], q[2]];
 
 function ellipsoid(q, c, r) {
   const x = (q[0] - c[0]) / r[0], y = (q[1] - c[1]) / r[1], z = (q[2] - c[2]) / r[2];
@@ -53,14 +54,14 @@ export function baseField(q) {
   const s = mx(q);
   let d = ellipsoid(q, [0, 0.014, -0.014], [0.0785, 0.0955, 0.0985]);
   d = smin(d, ellipsoid(q, [0, 0.028, -0.045], [0.074, 0.078, 0.075]), 0.02);
-  const taper = 1 - 0.36 * smooth(-0.02, -0.112, q[1]);
+  const taper = 1 - 0.42 * smooth(-0.03, -0.112, q[1]);
   const f = [q[0] / taper, q[1], q[2] + 5.5 * q[0] * q[0] + 0.12 * Math.max(0, q[1] - 0.03)];
   d = smin(d, roundBox(f, [0, -0.031, 0.034], [0.04, 0.0615, 0.031], 0.024) * Math.min(1, taper + 0.1), 0.03);
   d = smin(d, ellipsoid(s, [0.05, -0.016, 0.044], [0.02, 0.017, 0.028]), 0.025);
-  d = smin(d, capsule(s, [0.056, -0.07, -0.002], [0.024, -0.102, 0.06], 0.0185), 0.026);
-  const nk = Math.max(Math.hypot(q[0] / 0.98, q[2] + 0.024) - 0.061 - 0.004 * smooth(-0.2, -0.3, q[1]), q[1] + 0.035);
+  d = smin(d, capsule(s, [0.053, -0.07, -0.004], [0.022, -0.103, 0.058], 0.0175), 0.026);
+  const nk = Math.max(Math.hypot(q[0] / 0.97, q[2] + 0.024) - 0.071 - 0.006 * smooth(-0.2, -0.3, q[1]), q[1] + 0.035);
   d = smin(d, nk, 0.04);
-  d = smin(d, capsule(s, [0.05, -0.05, -0.012], [0.015, -0.27, 0.055], 0.0115), 0.02);
+  d = smin(d, capsule(s, [0.05, -0.05, -0.012], [0.017, -0.27, 0.055], 0.0105), 0.03);
   d = smin(d, ellipsoid(q, [0, -0.142, 0.043], [0.0085, 0.012, 0.0075]), 0.012);
   return d;
 }
@@ -84,12 +85,18 @@ function table(points) {
 const NOSE_RISE = table([[0.014, 0], [0.004, 0.0035], [-0.015, 0.0105], [-0.03, 0.0185], [-0.039, 0.0235], [-0.0445, 0.0225], [-0.049, 0.015], [-0.0525, 0.004], [-0.055, 0]]);
 const NOSE_WIDTH = table([[0.014, 0.0062], [0.0, 0.0066], [-0.018, 0.0078], [-0.032, 0.0098], [-0.041, 0.0125], [-0.05, 0.0118], [-0.056, 0.009]]);
 // The lips from the side: the upper from under the nose to where they meet, then the lower.
-const UPPER_LIP = table([[-0.053, 0], [-0.059, 0.0022], [-0.0645, 0.0072], [-0.0685, 0.0085], [-0.0722, 0.006], [-0.0738, 0.0035]]);
-const LOWER_LIP = table([[-0.0738, 0.0035], [-0.0758, 0.0072], [-0.0795, 0.0092], [-0.0845, 0.0062], [-0.0895, 0]]);
+const UPPER_LIP = table([[-0.053, 0], [-0.06, 0.0018], [-0.0648, 0.0058], [-0.0688, 0.0068], [-0.0724, 0.005], [-0.0739, 0.003]]);
+const LOWER_LIP = table([[-0.0739, 0.003], [-0.0762, 0.0062], [-0.0798, 0.0076], [-0.0845, 0.0048], [-0.0895, 0]]);
+
+/** The lips' outline: the vermilion's top and bottom, and how far either side of the middle it reaches at height `y`. */
+export const LIPS = Object.freeze({
+  top: -0.0645, bottom: -0.0858,
+  half: (y) => (y > -0.0739 ? 0.0232 - 0.0045 * smooth(-0.071, -0.062, y) : 0.0218 - 0.006 * smooth(-0.078, -0.087, y)),
+});
 
 /** How far each point of the face stands out from the planes: brow, nose, lips, chin, cheekbones, and the sockets. */
 export function features(x, y) {
-  const s = Math.abs(x);
+  const s = sabs(x);
   let h = 0;
   h += 0.0042 * G((y - 0.0235) / 0.0075) * (0.55 + 0.45 * G((s - 0.026) / 0.016)) * G(s / 0.058);
   h -= 0.0028 * G((y - 0.0095) / 0.0075) * G(s / 0.011);
@@ -100,9 +107,8 @@ export function features(x, y) {
   h += 0.0058 * G((s - 0.0122) / 0.0052) * G((y + 0.0455) / 0.0052);
   // The lips, each as wide as the mouth at its line and rounding off toward its ends; the mouth's muzzle under them.
   h += 0.0045 * G(s / 0.032) * G((y + 0.072) / 0.022);
-  const upper = y > -0.0738;
-  const half = upper ? 0.0255 - 0.004 * smooth(-0.072, -0.058, y) : 0.0245 - 0.006 * smooth(-0.076, -0.088, y);
-  h += (upper ? UPPER_LIP(y) : LOWER_LIP(y)) * Math.exp(-((s / half) ** 4)) * (1 - 0.35 * sq(s / half));
+  const half = LIPS.half(y) + 0.003;
+  h += (y > -0.0739 ? UPPER_LIP(y) : LOWER_LIP(y)) * Math.exp(-((s / half) ** 3)) * (1 - 0.3 * sq(s / half));
   h += 0.0007 * G((s - 0.0045) / 0.0017) * smooth(-0.066, -0.06, y) * smooth(-0.052, -0.056, y);
   h -= 0.0016 * G(s / 0.016) * G((y + 0.0888) / 0.0042);
   h += 0.0042 * G(s / 0.017) * G((y + 0.1) / 0.011);
@@ -113,7 +119,7 @@ export function features(x, y) {
 export function almond(x, y) {
   const e = EYE_RAW.center;
   const u = Math.abs(x) - e[0], v = y - e[1] - 0.0016 * (u / 0.014) - 0.0006;
-  const a = 0.0158, hu = 0.0071, hl = 0.0049;
+  const a = 0.0156, hu = 0.0059, hl = 0.0047;
   const Ru = (a * a + hu * hu) / (2 * hu), Rl = (a * a + hl * hl) / (2 * hl);
   return Math.max(Math.hypot(u * 0.97, v - (hu - Ru)) - Ru, Math.hypot(u, v + hl - Rl) - Rl);
 }
@@ -213,28 +219,135 @@ export function headGrid({ around = 112, down = 96, neckRows = 8 } = {}) {
 
 export const toWorld = (q) => [q[0] + HEAD_CENTER[0], q[1] + HEAD_CENTER[1], q[2] + HEAD_CENTER[2]];
 
+/** The mouth's line (where the lips part), head-local at natural size: its height at `s` across, and its half-width. */
+export const MOUTH = Object.freeze({ y: (s) => -0.0739 - 0.0032 * (s / 0.025) ** 2, half: 0.0252 });
+
+/**
+ * How the face's moving parts share a head vertex at `q` (head-local,
+ * natural size), given what the trunk's rules gave it (`w`): of its head
+ * share, the jaw takes the chin, the jaw's line and the lower lip; each lid
+ * the shell over its eye above or below the opening; the brows their arch;
+ * the mouth's corners the flesh round them.
+ */
+export function faceWeights(q, w, { lowerLip = false } = {}) {
+  const head = w.head ?? 0;
+  if (head <= 0) return w;
+  const s = Math.abs(q[0]), y = q[1], z = q[2], S = q[0] >= 0 ? 'L' : 'R';
+  const front = smooth(-0.01, 0.03, z);
+  const out = { ...w };
+  delete out.head;
+  // The jaw: below the mouth's line, rising toward the ear behind the corner of the mouth, fading into the neck.
+  const line = MOUTH.y(Math.min(s, MOUTH.half)) + 0.04 * smooth(MOUTH.half, 0.065, s);
+  let jaw = lowerLip ? 1 : smooth(line + 0.001, line - 0.007, y) * smooth(-0.035, -0.005, z) * (1 - smooth(-0.125, -0.155, y) * 0.6);
+  // The lids: inside the shell round each eye, above the opening's middle or below it.
+  const e = EYE_RAW.center;
+  const dx = s - e[0], dy = y - e[1] - 0.0016 * (dx / 0.014) - 0.0006;
+  const shell = smooth(0.0185, 0.0142, Math.hypot(dx, dy)) * smooth(e[2] - 0.012, e[2] - 0.004, z);
+  const up = shell * smooth(-0.0012, 0.0012, dy), low = shell * smooth(0.0012, -0.0012, dy) * 0.9;
+  const brow = 0.9 * G((s - 0.026) / 0.018) * G((y - 0.027) / 0.012) * front;
+  const corner = 0.85 * G(Math.hypot(s - 0.026, y + 0.0745) / 0.011) * front * (1 - shell);
+  let total = jaw + up + low + brow + corner;
+  if (total > 1) { jaw /= total; total = 1; }
+  const k = total > 1 ? 1 / total : 1;
+  out.head = head * (1 - Math.min(1, total));
+  const add = (name, v) => { if (v > 1e-4) out[name] = (out[name] ?? 0) + head * v * k; };
+  add('jaw', jaw);
+  add(`lidUp${S}`, up);
+  add(`lidLow${S}`, low);
+  add(`brow${S}`, brow);
+  add(`lipCorner${S}`, corner);
+  return out;
+}
+
 /**
  * The head and neck as a part, and the grid it was made from (for painting
- * its skin). Each vertex is shaded by how far it sits in from its
- * neighbours: the corners of the eyes, under the nose, the lips' line.
+ * its skin). The lips are parted along the mouth's line, the lower lip's
+ * edge its own vertices on the jaw, so the mouth can open. Each vertex is
+ * shaded by how far it sits in from its neighbours.
  */
 export function buildHead(detail = 1) {
   const around = Math.round(112 * detail / 2) * 2, down = Math.round(96 * detail), neckRows = Math.max(6, Math.round(8 * detail));
   const grid = headGrid({ around, down, neckRows });
   const rows = grid.length - 1;
+  const S = HEAD_SCALE;
+  // The row that runs closest along the mouth's line, and the columns between its corners.
+  const mid = around / 2;
+  let lipRow = 0;
+  for (let i = 0; i <= rows; i++) if (Math.abs(grid[i][mid][1] / S - MOUTH.y(0)) < Math.abs(grid[lipRow][mid][1] / S - MOUTH.y(0))) lipRow = i;
+  const parted = (j) => grid[lipRow][j][2] > 0 && Math.abs(grid[lipRow][j][0] / S) < MOUTH.half - 0.0015;
+  for (let j = 0; j <= around; j++) {
+    if (Math.abs(grid[lipRow][j][0] / S) < MOUTH.half + 0.003 && grid[lipRow][j][2] > 0) grid[lipRow][j][1] = MOUTH.y(Math.abs(grid[lipRow][j][0] / S)) * S;
+  }
   const part = new Part('head', 'skinHead');
-  part.grid(rows, around, (i, j) => {
+  const tintAt = (i, j) => {
+    if (i === 0 || i === rows) return 1;
     const q = grid[i][j];
-    let tint = 1;
-    if (i > 0 && i < rows) {
-      const jl = j === 0 ? around - 1 : j - 1, jr = j === around ? 1 : j + 1;
-      const avg = [0, 1, 2].map((a) => (grid[i - 1][j][a] + grid[i + 1][j][a] + grid[i][jl][a] + grid[i][jr][a]) / 4);
-      const n = norm(cross(sub(grid[i][jr], grid[i][jl]), sub(grid[i - 1][j], grid[i + 1][j])));
-      tint = clamp(1 - Math.max(0, dot(sub(avg, q), n)) * 650, 0.55, 1);
+    const jl = j === 0 ? around - 1 : j - 1, jr = j === around ? 1 : j + 1;
+    const avg = [0, 1, 2].map((a) => (grid[i - 1][j][a] + grid[i + 1][j][a] + grid[i][jl][a] + grid[i][jr][a]) / 4);
+    const n = norm(cross(sub(grid[i][jr], grid[i][jl]), sub(grid[i - 1][j], grid[i + 1][j])));
+    return clamp(1 - Math.max(0, dot(sub(avg, q), n)) * 650, 0.55, 1);
+  };
+  const vertexAt = (i, j, lowerLip = false) => {
+    const q = grid[i][j];
+    const natural = [q[0] / S, q[1] / S, q[2] / S];
+    return part.vertex(toWorld(q), [j / around, 1 - i / rows], faceWeights(natural, trunkWeights(toWorld(q)), { lowerLip }), tintAt(i, j) * (lowerLip ? 0.8 : 1), null, { zone: 'head', y: toWorld(q)[1], d: 0 });
+  };
+  const ids = grid.map((row, i) => row.map((_, j) => vertexAt(i, j)));
+  const lower = new Map();
+  for (let j = 0; j <= around; j++) if (parted(j)) lower.set(j, vertexAt(lipRow, j, true));
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < around; j++) {
+      // Below the parted row, its corners are the lower lip's.
+      const top = (jj) => (i === lipRow && lower.has(jj) ? lower.get(jj) : ids[i][jj]);
+      const a = top(j), b = top(j + 1), c = ids[i + 1][j], d = ids[i + 1][j + 1];
+      part.idx.push(a, c, b, b, c, d);
     }
-    return { p: toWorld(q), uv: [j / around, 1 - i / rows], w: trunkWeights(toWorld(q)), tint };
-  });
+  }
   return { part, grid };
+}
+
+/**
+ * Inside the mouth, seen only when it opens: its dark hollow, the teeth of
+ * each jaw along the curve of the gums, and the tongue.
+ */
+export function buildMouth(detail = 1) {
+  const S = HEAD_SCALE;
+  const hollow = new Part('mouth', 'mouth'), teeth = new Part('teeth', 'teeth');
+  const w = (q, upper) => (upper ? { head: 1 } : { jaw: 1 });
+  const at = (q) => toWorld([q[0] * S, q[1] * S, q[2] * S]);
+  // The hollow: an egg behind the lips, seen from inside (its faces turned in).
+  const rows = Math.round(14 * detail), cols = Math.round(20 * detail);
+  hollow.grid(rows, cols, (i, j) => {
+    const a = (i / rows) * Math.PI, b = (j / cols) * Math.PI * 2;
+    const q = [Math.sin(a) * Math.cos(b) * 0.025, -0.075 + Math.cos(a) * 0.013, 0.058 + Math.sin(a) * Math.sin(b) * 0.026];
+    return { p: at(q), uv: [j / cols, i / rows], w: w(q, q[1] > -0.0745), tint: 0.5 + 0.5 * smooth(-0.09, -0.06, q[1]), zone: { zone: 'mouth', y: 0, d: 0 } };
+  });
+  // The teeth: for each jaw a band round the arch, rounded at the edge, each tooth a little rise.
+  for (const upper of [true, false]) {
+    const n = Math.round(24 * detail), m = 6;
+    teeth.grid(m, n, (i, j) => {
+      const u = j / n * 2 - 1;
+      const x = u * 0.0215;
+      const zf = 0.0835 - 32 * x * x;
+      const toothBump = 0.0004 * Math.abs(Math.cos(u * Math.PI * 4));
+      const a = (i / m) * Math.PI;
+      const edge = upper ? -0.0742 : -0.0748;
+      const len = upper ? 0.0085 : 0.0075;
+      const yy = upper ? edge + len * (1 - Math.cos(a)) / 2 * 1 : edge - len * (1 - Math.cos(a)) / 2;
+      const depth = 0.0028 * Math.sin(a) + toothBump;
+      const nz = Math.cos(Math.atan(64 * x));
+      const nx = Math.sin(Math.atan(64 * x));
+      const q = [x + nx * depth, upper ? Math.min(yy, -0.064) : Math.max(yy, -0.085), zf - 0.002 + nz * depth];
+      return { p: at(q), uv: [j / n, i / m], w: w(q, upper), tint: 0.75 + 0.25 * Math.sin(a), zone: { zone: 'mouth', y: 0, d: 0 } };
+    }, { flip: !upper });
+  }
+  const tongue = new Part('tongue', 'tongue');
+  tongue.grid(10, 16, (i, j) => {
+    const a = (i / 10) * Math.PI, b = (j / 16) * Math.PI * 2;
+    const q = [Math.sin(a) * Math.cos(b) * 0.0165, -0.0795 + Math.sin(a) * Math.sin(b) * 0.0045, 0.06 + Math.cos(a) * 0.022];
+    return { p: at(q), uv: [j / 16, i / 10], w: { tongue: 1 }, tint: 0.85, zone: { zone: 'mouth', y: 0, d: 0 } };
+  }, { flip: true });
+  return [hollow, teeth, tongue];
 }
 
 /** The eyes: spheres looking down +z with the cornea's bulge over the iris, mapped so the iris is a disc in the middle of the texture. */
@@ -249,7 +362,7 @@ export function buildEyes(detail = 1) {
       const a = (i / rows) * Math.PI, b = (j / cols) * Math.PI * 2;
       const r = R + 0.0007 * smooth(0.52, 0.2, a);
       const p = frameAt(c, right, up, fwd, Math.sin(a) * Math.cos(b) * r, Math.sin(a) * Math.sin(b) * r, Math.cos(a) * r);
-      return { p, uv: [0.5 + 0.5 * (a / Math.PI) * Math.cos(b), 0.5 + 0.5 * (a / Math.PI) * Math.sin(b)], w: { head: 1 } };
+      return { p, uv: [0.5 + 0.5 * (a / Math.PI) * Math.cos(b), 0.5 + 0.5 * (a / Math.PI) * Math.sin(b)], w: { [m > 0 ? 'eyeL' : 'eyeR']: 1 }, zone: { zone: 'head', y: p[1], d: 0 } };
     });
   }
   return part;

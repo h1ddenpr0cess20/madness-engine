@@ -298,3 +298,16 @@ morningstar. The dagger and greatsword retain the broadsword's blade profile;
 the greatsword has a two-hand grip. The morningstar reuses the existing
 spiked head with a selectable metal haft, leather grip and marble pommel.
 See [docs/weapons.md](docs/weapons.md) for dimensions and construction.
+
+## People
+
+A real-size human (1.76 m; one world unit a metre, as the weapons are),
+built to be dressed, posed and animated, and to carry the weapons:
+`createHuman(GFX)` from `madness-engine/people`. A whole base body with
+garments worn over it as their own meshes (briefs, t-shirt, jeans,
+sneakers; or your own), which hide what they cover so nothing shows
+through. 64 bones: the engine's movement clips, plus collarbones, three
+bones a finger, toes, jaw and tongue, eyes, lids, brows and the mouth's
+corners. `man.hold(sword)` puts a weapon in his hand. See
+[docs/people.md](docs/people.md).
+

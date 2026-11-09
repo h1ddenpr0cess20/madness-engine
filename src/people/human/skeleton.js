@@ -13,6 +13,20 @@ import { add, dot, norm, smooth, sub } from './kit.js';
 
 export const HEIGHT = 1.76;
 
+/** The head: its centre (world, at rest), the scale its shapes are drawn at, and the eye (head-local, scaled). */
+export const HEAD_CENTER = Object.freeze([0, 1.654, 0.004]);
+export const HEAD_SCALE = 0.92;
+export const EYE = Object.freeze({ center: Object.freeze([0.0322 * 0.92, 0.0008 * 0.92, 0.0645 * 0.92]), radius: 0.0128 * 0.92 });
+/** A head-local point drawn at natural size, in the world at rest. */
+export const headPoint = (q) => [HEAD_CENTER[0] + q[0] * HEAD_SCALE, HEAD_CENTER[1] + q[1] * HEAD_SCALE, HEAD_CENTER[2] + q[2] * HEAD_SCALE];
+/** Where the face's moving parts turn, head-local at natural size (left side; the right mirrors it). */
+export const FACE = Object.freeze({
+  jaw: [0, -0.028, -0.012],
+  tongue: [0, -0.072, 0.045],
+  brow: [0.026, 0.024, 0.078],
+  lipCorner: [0.026, -0.0745, 0.084],
+});
+
 /**
  * Proportions (a stylised, game-ready adult man): 176 cm tall, a 22 cm head
  * (about 7.75 heads), 46 cm across the shoulders, chest, waist and hips 100,
@@ -26,6 +40,7 @@ export const JOINTS = Object.freeze({
   chest: [0, 1.24, -0.02],
   neck: [0, 1.45, -0.03],
   head: [0, 1.565, -0.015],
+  clavicle: [0.025, 1.43, 0.0],
   shoulder: [0.185, 1.43, -0.03],
   elbow: [0.249, 1.127, -0.052],
   wrist: [0.296, 0.861, -0.02],
@@ -41,11 +56,11 @@ export const JOINTS = Object.freeze({
  * hangs with its palm toward −x and its thumb forward (+z).
  */
 export const FINGERS = Object.freeze({
-  index: { knuckle: [0.003, -0.094, 0.03], dir: [0, -1, 0.07], lengths: [0.041, 0.024, 0.021], width: 0.0185, depth: 0.016 },
-  middle: { knuckle: [0.005, -0.098, 0.0105], dir: [0, -1, 0.0], lengths: [0.046, 0.028, 0.022], width: 0.0185, depth: 0.0165 },
-  ring: { knuckle: [0.004, -0.093, -0.0085], dir: [0, -1, -0.06], lengths: [0.043, 0.026, 0.021], width: 0.0172, depth: 0.0155 },
-  pinky: { knuckle: [0.001, -0.083, -0.0255], dir: [0, -1, -0.14], lengths: [0.033, 0.02, 0.019], width: 0.0152, depth: 0.0138 },
-  thumb: { knuckle: [-0.009, -0.024, 0.021], dir: [-0.42, -0.5, 0.76], lengths: [0.044, 0.033, 0.028], width: 0.021, depth: 0.0185 },
+  index: { knuckle: [0.003, -0.094, 0.03], dir: [0, -1, 0.07], lengths: [0.041, 0.024, 0.021], width: 0.0205, depth: 0.0178 },
+  middle: { knuckle: [0.005, -0.098, 0.0102], dir: [0, -1, 0.0], lengths: [0.046, 0.028, 0.022], width: 0.0205, depth: 0.0183 },
+  ring: { knuckle: [0.004, -0.093, -0.0095], dir: [0, -1, -0.06], lengths: [0.043, 0.026, 0.021], width: 0.019, depth: 0.0172 },
+  pinky: { knuckle: [0.001, -0.083, -0.0275], dir: [0, -1, -0.14], lengths: [0.033, 0.02, 0.019], width: 0.017, depth: 0.0155 },
+  thumb: { knuckle: [-0.006, -0.03, 0.02], dir: [-0.3, -0.78, 0.55], lengths: [0.04, 0.032, 0.028], width: 0.0225, depth: 0.019 },
 });
 export const FINGER_NAMES = Object.freeze(Object.keys(FINGERS));
 
@@ -68,9 +83,15 @@ export function fingerJoints(name, m) {
   return points.map((p) => mirror(p, m));
 }
 
-/** [name, parent, pivot], parents first. */
+/**
+ * [name, parent, pivot], parents first. Beyond the engine's movement
+ * vocabulary: the jaw (and the tongue on it), each eye and its two lids,
+ * the brows and the mouth's corners; a collarbone over each arm; three bones
+ * a finger; the toes.
+ */
 export function bones() {
   const J = JOINTS;
+  const eye = (m) => headPoint([(EYE.center[0] / HEAD_SCALE) * m, EYE.center[1] / HEAD_SCALE, EYE.center[2] / HEAD_SCALE]);
   const list = [
     ['root', null, [0, 0, 0]],
     ['hips', 'root', J.hips],
@@ -78,11 +99,24 @@ export function bones() {
     ['chest', 'spine', J.chest],
     ['neck', 'chest', J.neck],
     ['head', 'neck', J.head],
+    ['jaw', 'head', headPoint(FACE.jaw)],
+    ['tongue', 'jaw', headPoint(FACE.tongue)],
   ];
   for (const m of [1, -1]) {
     const S = sideOf(m);
     list.push(
-      [`arm${S}`, 'chest', mirror(J.shoulder, m)],
+      [`eye${S}`, 'head', eye(m)],
+      [`lidUp${S}`, 'head', eye(m)],
+      [`lidLow${S}`, 'head', eye(m)],
+      [`brow${S}`, 'head', headPoint(mirror(FACE.brow, m))],
+      [`lipCorner${S}`, 'head', headPoint(mirror(FACE.lipCorner, m))],
+    );
+  }
+  for (const m of [1, -1]) {
+    const S = sideOf(m);
+    list.push(
+      [`clavicle${S}`, 'chest', mirror(J.clavicle, m)],
+      [`arm${S}`, `clavicle${S}`, mirror(J.shoulder, m)],
       [`fore${S}`, `arm${S}`, mirror(J.elbow, m)],
       [`hand${S}`, `fore${S}`, mirror(J.wrist, m)],
     );
@@ -130,8 +164,11 @@ export function armWeights(p) {
   const arm = smooth(-0.045, 0.05, dot(sub(p, sh), up) + 0.35 * Math.max(0, Math.abs(p[0]) - Math.abs(sh[0])));
   const fore = smooth(-0.03, 0.035, dot(sub(p, el), fo));
   const hand = smooth(-0.012, 0.022, dot(sub(p, wr), fo));
+  // What the arm doesn't take round the shoulder, the collarbone does (on top) and the chest (below and inside).
+  const clav = smooth(1.3, 1.42, p[1]) * smooth(0.06, 0.15, Math.abs(p[0]));
   return {
-    chest: 1 - arm,
+    chest: (1 - arm) * (1 - clav),
+    [`clavicle${S}`]: (1 - arm) * clav,
     [`arm${S}`]: arm * (1 - fore),
     [`fore${S}`]: arm * fore * (1 - hand),
     [`hand${S}`]: arm * fore * hand,
