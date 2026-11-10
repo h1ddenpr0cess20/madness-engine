@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import * as GFX from '../src/gfx/index.js';
-import { createStaff, STAFF_TOPPERS } from '../src/weapons/index.js';
+import { createStaff, createMetalStaff, STAFF_TOPPERS, METALS } from '../src/weapons/index.js';
 import { WOOD_SPECIES } from '../src/textures/wood.js';
 
 const visibleToppers = (staff) => staff.head.children
@@ -48,6 +48,63 @@ test('the glass egg is an optional topper, point up, and can be swapped with the
   assert.ok(staff.dimensions.overallLength > 1.6);
 });
 
+test('the Madness marble is an optional topper using the existing glass marble and 3D spark', () => {
+  const staff = createStaff(GFX, { topper: 'marble' });
+  assert.equal(staff.topper, 'marble');
+  assert.ok(staff.marble.asset.marble && staff.marble.asset.glass && staff.marble.asset.spark);
+  assert.equal(staff.marble.group.position.y, staff.dimensions.cradleDepth + 0.045);
+  assert.equal(visibleToppers(staff).length, 1);
+});
+
+test('the glass planets reuse the glass globe factory and all start with mist enabled', async () => {
+  const staff = createStaff(GFX, { topper: 'moon' });
+  assert.equal(staff.topper, 'moon');
+  assert.ok(staff.moon);
+  await staff.topperReady;
+  assert.equal(staff.moon.mist.visible, true);
+  assert.equal(staff.moon.glass.material.transmission, 1);
+
+  for (const kind of ['globe', 'moon', 'mars', 'jupiter']) {
+    staff.setTopper(kind);
+    await staff.topperReady;
+    const planet = staff.topperAsset;
+    assert.ok(planet, `${kind} is available as a staff topper`);
+    assert.equal(planet.mist.visible, true, `${kind} has its mist enabled`);
+    assert.equal(planet.glass.material.transmission, 1, `${kind} uses the shared transmissive glass`);
+    assert.equal(visibleToppers(staff).length, 1);
+  }
+});
+
+test('the metal staff preserves the wooden staff design while using the selected engine metal throughout its structure', () => {
+  const staff = createMetalStaff(GFX, { metal: 'copper', tendrils: 12 });
+  assert.equal(staff.materialType, 'metal');
+  assert.equal(staff.metal, 'copper');
+  assert.equal(staff.finish, null);
+  assert.equal(staff.info.Metal, 'copper');
+  assert.equal(staff.shaft.material.metalness, 1);
+  assert.equal(staff.shaft.material.color.getHexString(), 'f08a68');
+  assert.equal(staff.head.children.find((child) => child.name === 'metal topper cup').material, staff.shaft.material);
+  const metalParts = [];
+  staff.group.traverse((object) => {
+    if (object.isMesh && object.material.name === 'staff metal') metalParts.push(object);
+  });
+  assert.ok(metalParts.length > 20, 'the shaft, vines, cup, tendrils and bindings share the metal finish');
+  assert.ok(metalParts.every((mesh) => mesh.material === staff.shaft.material));
+  assert.throws(() => staff.setWood(), /only available on a wooden staff/);
+
+  staff.setMetal('rose gold');
+  assert.equal(staff.metal, 'rose gold');
+  assert.equal(staff.shaft.material.color.getHexString(), 'f0aa9a');
+  assert.ok(metalParts.every((mesh) => mesh.material === staff.shaft.material));
+
+  for (const metal of Object.keys(METALS)) {
+    assert.doesNotThrow(() => staff.setMetal(metal));
+    assert.equal(staff.metal, metal);
+  }
+  assert.throws(() => staff.setMetal('unobtainium'), /no metal called/);
+  assert.throws(() => createMetalStaff(GFX, { metal: 'unobtainium' }), /no metal called/);
+});
+
 test('wood and grip colours are customizable at creation and afterwards', () => {
   const staff = createStaff(GFX, { species: 'oak', finish: 'raw', gripColor: '#112233', threadColor: '#ffeeaa' });
   assert.equal(staff.species, 'oak');
@@ -69,7 +126,7 @@ test('the staff rejects unknown choices', () => {
   assert.throws(() => createStaff(GFX, { topper: 'cube' }), /no topper called/);
   assert.throws(() => createStaff(GFX, { tendrils: 2 }), RangeError);
   assert.throws(() => createStaff(GFX, { gripColor: 'red' }), TypeError);
-  assert.deepEqual([...STAFF_TOPPERS], ['orb', 'egg', 'none']);
+  assert.deepEqual([...STAFF_TOPPERS], ['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none']);
 });
 
 test('every decorative part is wood: only the grip leather and thread are not', () => {
