@@ -66,6 +66,7 @@ export const DEFAULTS = {
   ink: '#2a1d14',
   endpaper: '#e4d6b6',
   bookplate: true,      // the ex libris on the inside of the front cover; false for plain endpapers
+  shell: false,         // true builds the cover and its size only; the leaves wait for `build()`, the first time it is opened
   font: undefined,
   width: 0.30,          // a page's width, spine to fore-edge
   height: 0.42,         // a page's height
@@ -376,6 +377,8 @@ export function createBook(GFX, options = {}) {
   /* ----------------------------- the leaves -------------------------- */
 
   const leaves = [];
+  // The leaves are built once the book is wanted: all at once, or by `build()` for a shell.
+  const buildLeaves = () => {
   for (let k = 0; k < N; k++) {
     const len = o.width;
     const tint = 1 + ((((k * 7919) % 13) / 13) - 0.5) * 0.04;
@@ -408,6 +411,8 @@ export function createBook(GFX, options = {}) {
       dirty: true,
     });
   }
+  };
+  if (!o.shell) buildLeaves();
 
   /* ---------------------------- the words ---------------------------- */
 
@@ -555,13 +560,18 @@ export function createBook(GFX, options = {}) {
   };
   const go = () => { held = false; };
 
+  let built = !o.shell;
   const api = {
     group,
     cover: { mesh: coverMesh, geometry: coverGeometry, material: clothMaterial },
     /** Each leaf's mesh, how far it has turned (0..1) and how far its free edge trails its root (radians) while it moves. */
-    leaves: leaves.map((L) => ({ mesh: L.mesh, geometry: L.geometry, material: L.material, get turn() { return L.p; }, get curl() { return L.lag; },
+    get leaves() { return leaves.map((L) => ({ mesh: L.mesh, geometry: L.geometry, material: L.material, get turn() { return L.p; }, get curl() { return L.lag; },
       /** The leaf's middle line across the spine as it is now: [x0, y0, x1, y1, ...]. */
-      get centerline() { const out = []; for (let u = 0; u < L.cx.length; u++) out.push(L.cx[u], L.cy[u]); return out; } })),
+      get centerline() { const out = []; for (let u = 0; u < L.cx.length; u++) out.push(L.cx[u], L.cy[u]); return out; } })); },
+    /** Whether the leaves are built: always, unless the book is a shell. */
+    get built() { return built; },
+    /** Builds a shell's leaves (once), at rest, shut. Does nothing for a book already built. */
+    build() { if (!built) { buildLeaves(); built = true; api.pose({ open: 0, turn: 0 }); } return api; },
     clothMaterial,
     dimensions: { width: o.width, height: o.height, coverWidth: coverLength, coverHeight, thickness: rh * 2 + spine, leaves: N, pages: N * 2 },
     /** Where the camera should look. */
