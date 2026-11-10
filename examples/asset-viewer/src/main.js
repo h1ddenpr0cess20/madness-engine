@@ -364,7 +364,7 @@ function animGroup(built) {
       }
       show(view.item);
     };
-    const label = ({ bladeMetal: 'Blade metal', hiltMetal: 'Hilt metal' })[name] ?? name.replace(/([A-Z])/g, ' $1');
+    const label = ({ bladeMetal: 'Blade metal', hiltMetal: 'Hilt metal', metal: 'Structure metal', species: 'Wood species', finish: 'Wood finish', topper: 'Topper', wrap: 'Grip wrap', vine: 'Entwined roots' })[name] ?? name.replace(/([A-Z])/g, ' $1');
     $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, label), select));
   }
 }
