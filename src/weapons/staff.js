@@ -175,7 +175,7 @@ export function createStaff(GFX, {
   seed = 7,
   detail = 1,
   materialType = 'wood',
-  metal = 'steel',
+  metal = 'gold',
 } = {}) {
   if (materialType === 'wood' && !Object.hasOwn(WOOD_SPECIES, species)) throw new Error(`no wood called ${species}; choose ${Object.keys(WOOD_SPECIES).join(', ')}`);
   if (materialType === 'wood' && !WOOD_FINISHES.includes(finish)) throw new Error(`no wood finish called ${finish}; choose ${WOOD_FINISHES.join(', ')}`);
