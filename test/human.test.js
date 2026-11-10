@@ -557,6 +557,17 @@ test('dual wielding: a weapon in each hand, ready in both, struck one-two', () =
   assert.ok(hand('L')[1] > hand('R')[1] + 0.4, 'then the left');
   who.release('L');
   who.setStyle({});
+  // Not with a weapon made for two hands: it takes both, and the other weapon is put down, whichever comes second.
+  const great = createGreatsword(GFX);
+  assert.equal(great.handling.hands, 'two-handed');
+  const pair = createHuman(GFX, { detail: 0.5, glasses: null });
+  pair.hold(createKrystalSword(GFX), { hand: 'L' });
+  pair.hold(great);
+  assert.equal(pair.held('L'), null, 'the left put down for a two-handed one');
+  const sword = createKrystalSword(GFX);
+  pair.hold(sword, { hand: 'L' });
+  assert.equal(pair.held('R'), null, 'the two-handed one put down for a second weapon');
+  assert.equal(pair.held('L'), sword);
 });
 
 test('a coin flipped goes up turning and comes back to the hand; a shut book is carried in one', () => {

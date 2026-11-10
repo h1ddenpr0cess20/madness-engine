@@ -384,7 +384,10 @@ A hand holding something takes the grip shape.
   `grip` along its own y. Its +y points out of the fist on the thumb's side;
   a blade's edge leads. One in each hand, he wields both: ready in both,
   and an attack is a one-two, the right striking then the left, the same
-  swing mirrored.
+  swing mirrored. Only one-handed weapons are wielded in pairs: a weapon
+  made for two hands (its `handling.hands`, a greatsword or a staff) takes
+  both, so a weapon in the other hand is put down when one is taken, and
+  it is put down when a second weapon is taken.
 - `'palm'`: a ball (a hero, say) on the upturned palm, out in front, the
   fingers cupped under it.
 - `'pinch'`: a coin between the thumb and forefinger, held up to be looked

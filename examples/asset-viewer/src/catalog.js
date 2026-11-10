@@ -770,6 +770,8 @@ function humanItem(sex) {
         // A book open takes both hands: whatever the left held is put down.
         if (how === 'book' && open) weaponL = 'none';
         man.hold(thing, { hand: S, how, open });
+        // (A weapon made for two hands takes both: one in the other hand was put down.)
+        if (!man.held(S === 'R' ? 'L' : 'R')) { if (S === 'R') weaponL = 'none'; else weapon = 'none'; }
       };
       const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
       const ui = [

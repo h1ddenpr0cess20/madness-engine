@@ -1276,6 +1276,9 @@ export function createHuman(GFX, options = {}) {
     const second = bounds ? Math.max(bounds.bottom + 0.03, y - 0.085) : y - 0.085;
     // How many hands it is made for (a weapon's `handling`); anything else is taken as one-handed.
     const hands = thing.handling?.hands ?? 'one-handed';
+    // Two weapons are wielded only if neither is made for two hands: one that is takes both, and the other is put down.
+    const other = S === 'L' ? 'R' : 'L';
+    if (held[other]?.how === 'grip' && (hands === 'two-handed' || held[other].hands === 'two-handed')) release(other);
     held[S] = { thing, object, rest, second, hands, how: 'grip' };
     if (last) pose(last);
     return api;
