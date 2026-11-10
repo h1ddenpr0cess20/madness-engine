@@ -139,6 +139,8 @@ export function createKrystal({ stage, GFX, random = Math.random, sky = 4096 }) 
     uniforms.uHue.value = hue;
     vision.updateWorldMatrix?.(true, false);
     uniforms.uCenter.value.setFromMatrixPosition(vision.matrixWorld);
+    // Marched in the world: its sphere as big as the ball is drawn, however it has been scaled.
+    uniforms.uShape.value.setFromMatrixScale(vision.matrixWorld);
 
     // What the visions throw on the brass and the cloth: the colour at the heart of them.
     const [r, g, b] = paletteColour(hue + 0.5);
