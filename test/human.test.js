@@ -582,6 +582,13 @@ test('a coin flipped goes up turning and comes back to the hand; a shut book is 
   who.pose({ clip: 'walk', t: 0.3, time: 0.3 });
   const at = book.group.matrix.elements.slice(12, 15), hand = who.point('handL', who.skeleton.pivots[who.skeleton.index.get('handL')]);
   assert.ok(Math.hypot(at[0] - hand[0], at[1] - hand[1], at[2] - hand[2]) < 0.15, 'in the left hand');
+  // Gripped by its top edge: the fingers' tips on its near board, the thumb's on its far one, the book between.
+  const e = book.group.matrix.elements, face = [e[4], e[5], e[6]].map((v, i, a) => v / Math.hypot(...a));
+  // (The box is centred on the book's origin, so its middle is where the book is.)
+  const off = (bone, p) => { const q = who.point(bone, p); return [0, 1, 2].reduce((t, a) => t + (q[a] - e[12 + a]) * face[a], 0); };
+  const tip = (name) => FINGERS[name].joints[3];
+  for (const name of ['index', 'middle', 'ring']) assert.ok(off(`${name}3L`, tip(name)) < -0.013, `${name} on the near board`);
+  assert.ok(off('thumb3L', tip('thumb')) > 0.013, `the thumb on the far board (${off('thumb3L', tip('thumb')).toFixed(3)})`);
 });
 
 test('a shirt\'s tail and a jacket\'s bottom hang from the hips, and are kept over what is under them sitting', () => {

@@ -396,10 +396,15 @@ A hand holding something takes the grip shape.
   anything with `turnTo`) opened at its middle and held in both hands, a
   reading distance below the eyes with its pages turned to face them, the
   head bowed and the eyes down to it. Standing, walking, or with the `read`
-  clip, sitting. With `open: false` it is shut and carried in one hand by
-  its side. Either way it is kept clear of the fingers holding it: every
+  clip, sitting. Open, it is kept clear of the fingers holding it: every
   joint of them is checked against it each frame, and it is moved off them
-  just as far as keeps them out of it.
+  just as far as keeps them out of it. With `open: false` it is shut and
+  carried in one hand at his side, gripped by its top edge. The fingers lie
+  flat down its outside board, and the thumb turns out of the palm just far
+  enough, for that book's thickness, to rest on the board toward his leg.
+  Its top edge sits up in the hand above the thumb's tip, its spine just
+  past the thumb, and the book hangs below. The arm keeps the clip's swing,
+  held out from the thigh by the book's thickness and room for the thumb.
 
 What is held keeps the size it was given (scale a hero to fit the hand
 first), and is held still: a globe or coin that turns on its own
