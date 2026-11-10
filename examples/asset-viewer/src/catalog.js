@@ -230,8 +230,7 @@ const HEROES = [
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   )), null, { metal: METAL_CHOICES }],
   ['glass egg (debater)', () => Promise.all([import('../../../src/heroes/debater-egg/index.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
-    // Its mist in it, as the glass things that have one are shown.
-    h.createGlassEgg({ GFX, mist: true }),
+    h.createGlassEgg({ GFX }),
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   ))],
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
@@ -642,6 +641,7 @@ const HUMAN_STAVES = [
 const HUMAN_CARRIES = [
   ['book', 'Book of Madness, open'],
   ['book:shut', 'Book of Madness, shut'],
+  ['bowling', 'Bowling ball'],
   ...HEROES.map(([name]) => [`hero:${name}`, `Hero: ${name}`]),
   // The planets, in glass, metal and resin.
   ...MOVING.filter(([name]) => /globe|earth|mars|moon|jupiter/.test(name)).map(([name]) => [`planet:${name}`, `Planet: ${name.replace('glass globe', 'glass earth')}`]),
@@ -663,6 +663,8 @@ async function humanCarry(choice) {
     const { createBook } = await import('../../../src/props/book.js');
     return { thing: createBook(GFX, { size: 0.45, pageCount: 60 }), how: 'book', open: choice === 'book' };
   }
+  // At its real size, 8.5 inches across (21.6 cm), held as a bowler holds it.
+  if (choice === 'bowling') return { thing: createBowlingBall(GFX, { radius: 0.108, widthSegments: 256, heightSegments: 192 }), how: 'bowl' };
   if (choice.startsWith('coin:')) {
     const kind = choice.slice(5);
     const radius = 0.0125;
@@ -673,15 +675,15 @@ async function humanCarry(choice) {
     const mod = kind === 'bitcoin' ? await import('../../../src/props/bitcoin-coin.js') : await import('../../../src/props/political-coin.js');
     return { thing: (kind === 'bitcoin' ? mod.createBitcoinCoin : mod.createPoliticalCoin)(GFX, { radius }), how: 'pinch' };
   }
-  // A hero, or a planet, on the palm: a ball about 9 cm across (a planet 10), and still: it does not turn in his hand.
+  // A hero, or a planet, on the palm, made by the same builder as on its own shelf, exactly as it is shown there,
+  // and only made smaller (its mists follow its size): a ball about 9 cm across (a planet 10). Still: it does not
+  // turn in his hand.
   const planet = choice.startsWith('planet:');
   const make = planet ? MOVING.find(([name]) => `planet:${name}` === choice)[3] : HEROES.find(([name]) => `hero:${name}` === choice)[1];
   const made = await make({});
   if (made && 'spinRate' in made) made.spinRate = 0;
   // An avatar (Alan) held still: it does not look about or float in his hand.
   if (made?.made && 'still' in made.made) made.made.still = true;
-  // A hero with a mist in it (the glass egg, the jewel rock) carried with its mist showing.
-  if (!planet && typeof made?.setMist === 'function') made.setMist(true);
   made?.pose?.(0);
   const object = objectOf(made);
   object.position.set(0, 0, 0);

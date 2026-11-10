@@ -377,12 +377,17 @@ A hand holding something takes the grip shape.
   fingers cupped under it.
 - `'pinch'`: a coin between the thumb and forefinger, held up to be looked
   at, its faces against them (the `flip` clip flips it).
+- `'bowl'`: a bowling ball (`createBowlingBall` from
+  `madness-engine/props/bowling-ball`, at its real size, `radius: 0.108`) on
+  the hand as a bowler holds it, its holes turned into the palm.
 - `'book'`: a book (`createBook` from `madness-engine/props/book`, or
   anything with `turnTo`) opened at its middle and held in both hands, a
   reading distance below the eyes with its pages turned to face them, the
   head bowed and the eyes down to it. Standing, walking, or with the `read`
   clip, sitting. With `open: false` it is shut and carried in one hand by
-  its side, the fingers over one board and the thumb on the other.
+  its side. Either way it is kept clear of the fingers holding it: every
+  joint of them is checked against it each frame, and it is moved off them
+  just as far as keeps them out of it.
 
 What is held keeps the size it was given (scale a hero to fit the hand
 first), and is held still: a globe or coin that turns on its own

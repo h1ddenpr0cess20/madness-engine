@@ -341,7 +341,9 @@ export const HAND_POSES = Object.freeze({
   // A coin between the thumb and forefinger: the others tucked out of the way.
   pinch: { curl: [0.85, 0.95, 0.5], thumb: 0.62, spread: 0, each: { index: [0.42, 0.55, 0.3] } },
   // A book's edge: the fingers under its board, the thumb over the page.
-  book: { curl: [0.04, 0.06, 0.04], thumb: 0.05, spread: 0.15 },
+  book: { curl: [0, 0.02, 0.02], thumb: 0, spread: 0.12 },
+  // A bowling ball: the middle and ring fingers and the thumb a little way into its holes, the hand spread under it.
+  bowl: { curl: [0.2, 0.28, 0.18], thumb: 0.25, spread: 0.45 },
   // A shut book by its edge: the fingers over one board, the thumb on the other.
   tome: { curl: [0.42, 0.35, 0.2], thumb: 0.55, spread: 0.05 },
 });
@@ -961,7 +963,7 @@ export function createHuman(GFX, options = {}) {
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
       const how = held.R?.how === 'book' ? 'book' : held[S]?.how;
-      const shape = how && how !== 'grip' ? HAND_POSES[{ palm: 'cup', pinch: 'pinch', book: 'book', tome: 'tome' }[how]]
+      const shape = how && how !== 'grip' ? HAND_POSES[{ palm: 'cup', pinch: 'pinch', book: 'book', tome: 'tome', bowl: 'bowl' }[how]]
         : held[S] || (S === 'L' && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
         // Running, a hand that was left easy closes loosely.
         : state.clip === 'run' && want === 'relaxed' ? HAND_POSES.loose
@@ -1023,7 +1025,7 @@ export function createHuman(GFX, options = {}) {
     // How it is held: by its grip (a weapon), on the palm (a ball), between thumb and forefinger (a coin), or
     // open in both hands (a book). Said, or told by what it is.
     const kind = how ?? thing.holdAs ?? (typeof thing.turnTo === 'function' ? 'book' : thing.handling || thing.gripBounds ? 'grip' : 'palm');
-    if (!['grip', 'palm', 'pinch', 'book'].includes(kind)) throw new Error(`human: hold how ${kind}? choose grip, palm, pinch or book`);
+    if (!['grip', 'palm', 'pinch', 'book', 'bowl'].includes(kind)) throw new Error(`human: hold how ${kind}? choose grip, palm, pinch, book or bowl`);
     // A book shut is carried in one hand at his side; open, it is read in both.
     if (kind === 'book' && !open) return carry(thing, object, 'tome', S);
     if (kind !== 'grip') return carry(thing, object, kind, S);
@@ -1141,8 +1143,10 @@ export function createHuman(GFX, options = {}) {
         // Each hand under its own edge, low on the page, flat under the board (its fingers kept out of the pages).
         const to = [0, 1, 2].map((a) => middle[a] + across[a] * m * w - up[a] * ht * 0.18 - face[a] * 0.03);
         aim = { point: f.centre, to, dirs: [[f.palm, face, 0.012], [f.along, across.map((v) => -m * v), 0.008]] };
-      } else if (h.how === 'palm') {
-        const to = applyAt(C, [m * J.shoulder[0] * 0.78, J.elbow[1] + 0.03, J.elbow[2] + 0.3]);
+      } else if (h.how === 'palm' || h.how === 'bowl') {
+        // (A bowling ball, heavier and bigger, a little lower and nearer the body's side.)
+        const big = h.how === 'bowl';
+        const to = applyAt(C, [m * J.shoulder[0] * (big ? 0.9 : 0.78), J.elbow[1] + (big ? -0.02 : 0.03), J.elbow[2] + (big ? 0.26 : 0.3)]);
         aim = { point: f.centre, to, dirs: [[f.palm, [0, 1, 0], 0.02], [f.along, normV(turnBy(C, [0, 0, 1])), 0.008]] };
       } else if (flipping(state) === S) {
         // Flipping it: the hand out in front at the waist, palm up, a little flick up as it lets go and a
@@ -1164,6 +1168,33 @@ export function createHuman(GFX, options = {}) {
     }
   }
 
+  /** Every joint and tip of the fingers and thumb of hand `S`, where they are now. */
+  function fingerPoints(S) {
+    const m = S === 'L' ? 1 : -1, out = [];
+    for (const name of FINGER_NAMES) {
+      const j = figure.fingers[name].joints.map((p) => mirror(p, m));
+      out.push(skeleton.point(`${name}1${S}`, j[0]), skeleton.point(`${name}2${S}`, j[1]), skeleton.point(`${name}3${S}`, j[2]), skeleton.point(`${name}3${S}`, j[3]));
+      // Half way along each bone too: a finger lying across the board touches it there as well.
+      for (let b = 0; b < 3; b++) out.push(skeleton.point(`${name}${b + 1}${S}`, j[b].map((v, a) => (v + j[b + 1][a]) / 2)));
+    }
+    return out;
+  }
+
+  /**
+   * How far a slab (a book: `size` across, through and up its axes `x`, `y`, `z`, centred on `at`) must move along
+   * its `y` so that none of `points` is inside it: they all on its −y side, `room` clear of it.
+   */
+  function pushClear(points, at, [x, y, z], size, room = 0.004) {
+    let push = 0;
+    for (const p of points) {
+      const d = [p[0] - at[0], p[1] - at[1], p[2] - at[2]];
+      const u = d[0] * x[0] + d[1] * x[1] + d[2] * x[2], v = d[0] * y[0] + d[1] * y[1] + d[2] * y[2], w = d[0] * z[0] + d[1] * z[1] + d[2] * z[2];
+      if (Math.abs(u) > size[0] / 2 || Math.abs(w) > size[2] / 2) continue;
+      push = Math.max(push, v + size[1] / 2 + room);
+    }
+    return Math.min(push, 0.08);
+  }
+
   /** Puts what is carried where the hands carrying it have it now. */
   function placeCarried() {
     for (const S of ['L', 'R']) {
@@ -1173,7 +1204,13 @@ export function createHuman(GFX, options = {}) {
       const M = h.object.matrix;
       const scale = new GFX.Matrix4().makeScale(h.scale.x, h.scale.y, h.scale.z);
       if (h.how === 'book') {
-        const { middle, across, face, up } = bookAt;
+        const { across, face, up } = bookAt;
+        // Clear of every finger of both hands holding it: moved toward him (along its face) just as far as
+        // keeps them all behind its boards. (Its box: its middle, from its origin at the spine, turned as it is.)
+        const fingers = [...fingerPoints('L'), ...fingerPoints('R')];
+        const centre = bookAt.middle.map((v, a) => v - across[a] * h.middle[0] + face[a] * h.middle[1] - up[a] * h.middle[2]);
+        const push = pushClear(fingers, centre, [across, face, up], h.size);
+        const middle = bookAt.middle.map((v, a) => v + face[a] * push);
         // (Turned half round in its own plane: the book's pages run head-first along its −z, so its +z goes
         // toward him, the first page on his left.)
         M.makeBasis(new GFX.Vector3(...across.map((v) => -v)), new GFX.Vector3(...face), new GFX.Vector3(...up.map((v) => -v))).setPosition(new GFX.Vector3(...middle)).multiply(scale);
@@ -1183,8 +1220,20 @@ export function createHuman(GFX, options = {}) {
         const f = handFrame(JOINTS, figure.fingers, m), H = boneAt(skeleton, `hand${S}`);
         const across = normV(turnBy(H, f.along)), face = normV(turnBy(H, f.palm));
         const up = normV(crossV(across, face));
-        const at = applyAt(H, f.centre).map((v, a) => v + face[a] * (h.size[1] / 2 + 0.012) + across[a] * (h.size[0] / 2 - 0.06));
+        let at = applyAt(H, f.centre).map((v, a) => v + face[a] * (h.size[1] / 2 + 0.004) + across[a] * (h.size[0] / 2 - 0.06));
+        // Clear of the fingers and thumb: off the hand (along its face) just as far as keeps them all out of it.
+        const push = pushClear(fingerPoints(S), at, [across, face, up], h.size);
+        at = at.map((v, a) => v + face[a] * push);
         M.makeBasis(new GFX.Vector3(...across), new GFX.Vector3(...face), new GFX.Vector3(...up)).setPosition(new GFX.Vector3(...at)).multiply(scale);
+      } else if (h.how === 'bowl') {
+        // On the hand, its holes turned into it: its +z (the holes' middle) to the palm, its +y (the two finger
+        // holes, the thumb's on the −y side) toward the fingertips; sunk a centimetre onto the fingers in them.
+        const f = handFrame(JOINTS, figure.fingers, m), H = boneAt(skeleton, `hand${S}`);
+        const up = normV(turnBy(H, f.palm)), fwd0 = normV(turnBy(H, f.along));
+        const z = up.map((v) => -v), d = fwd0[0] * z[0] + fwd0[1] * z[1] + fwd0[2] * z[2];
+        const y = normV(fwd0.map((v, i) => v - z[i] * d)), x = crossV(y, z);
+        const at = applyAt(H, f.centre).map((v, a) => v + up[a] * (h.radius - 0.01));
+        M.makeBasis(new GFX.Vector3(...x), new GFX.Vector3(...y), new GFX.Vector3(...z)).setPosition(new GFX.Vector3(...at)).multiply(scale);
       } else if (h.how === 'palm') {
         const f = handFrame(JOINTS, figure.fingers, m), H = boneAt(skeleton, `hand${S}`);
         const up = normV(turnBy(H, f.palm)), fwd0 = normV(turnBy(H, f.along));

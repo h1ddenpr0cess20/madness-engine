@@ -424,6 +424,8 @@ export function createBowlingBall(GFX, options = {}) {
 
   return {
     group, shell, holes, setColors, setDesign,
+    // A human (people/human) takes it as a bowler does: on the hand, its holes turned into it.
+    holdAs: 'bowl',
     get design() { return design; },
     get colors() {
       return {
