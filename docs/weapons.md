@@ -209,16 +209,38 @@ staff.
 
 The topper is the Krystal crystal orb (the default, with its ray-marched
 visions) or, optionally, the Magic Egg's glass egg with its white/yellow mist,
-stood on its broad end with the point up. Use `topper: 'none'` for an empty
-cradle. The orb and egg are each built the first time they are shown.
+stood on its broad end with the point up. Or it is one of the planets in glass,
+each with its own mist (see `props/glass-planets`): `earth` (the glass Earth,
+its continents etched on it), `mars`, `moon`, and Jupiter twice, `jupiter` (its
+clouds as a colored field in the glass) and `jupiter-etched` (its zones and
+belts etched into it). Use `topper: 'none'` for an empty cradle. Each topper is
+built the first time it is shown.
+
+A gem topper is the granite stone's shape cut from translucent glass in the gem's
+color, with the granite's grain painted in as inclusions and a mist of the same
+color inside (`heroes/rock-jewel`). Each is drawn at the orb's size.
+
+Every planet is drawn at the orb's radius, the size its cradle is cut for, so
+the Moon and Mars are not to scale beside the Earth on a staff. Mars, the Moon
+and the etched Jupiter need their etching, and the field Jupiter its clouds;
+those are canvases, loaded asynchronously, so load them before creating the
+staff and pass them in `planetMaps`. Without its maps a planet is clear glass
+with its mist.
+
+The staff can also be made in metal: `metal` takes one of the 12 `METALS`
+finishes (steel, silver, gold, copper, and the rest) for the shaft, the roots
+and the head, in place of the wood. The grip, its thread and the topper are
+unchanged. `setMetal()` changes the finish, and `setWood()` puts the wood back.
 
 | Option | Choices | Default |
 |---|---|---|
 | `species` | any `WOOD_SPECIES` (walnut, oak, mahogany, maple, cherry, ash, pine, teak) | `walnut` |
 | `finish` | `raw`, `sanded`, `lacquered` | `lacquered` |
+| `metal` | `null` for wood, or any `METALS` finish (steel, silver, gold, copper, bronze, brass, titanium, chrome, platinum, rose gold, iron, pewter) | `null` |
 | `wrap` | `true` or `false`: the leather and thread wrap on the grip (`setWrap()` toggles it) | `true` |
 | `gripColor`, `threadColor` | six-digit hex, for the wrap | `#3a2418`, `#e2b857` |
-| `topper` | `orb`, `egg`, `none` | `orb` |
+| `topper` | `orb`, `egg`, the planets (`earth`, `mars`, `moon`, `jupiter`, `jupiter-etched`), the gems (`sapphire`, `ruby`, `emerald`, `amber`, `amethyst`, `topaz`, `aquamarine`, `garnet`, `peridot`, `tourmaline`), `none` | `orb` |
+| `planetMaps` | `{ [planet]: maps }`, from `loadGlassPlanetMaps(planet)`, for a planet topper | `{}` |
 | `vine` | `true` or `false`: the roots entwined up the shaft (fixed at creation) | `true` |
 | `tendrils` | whole number from 8 to 32: how many roots make the cradle (fixed at creation) | `18` |
 | `seed` | any number: shapes the gnarls (fixed at creation) | `7` |
@@ -226,6 +248,7 @@ cradle. The orb and egg are each built the first time they are shown.
 ```js
 import * as GFX from 'madness-engine/gfx';
 import { createStaff } from 'madness-engine/weapons';
+import { loadGlassPlanetMaps } from 'madness-engine/props/glass-planets';
 
 const staff = createStaff(GFX, { species: 'cherry', topper: 'egg' });
 scene.add(staff.group);
@@ -233,7 +256,15 @@ scene.add(staff.group);
 staff.setTopper('orb');
 staff.setWood('oak', 'sanded');
 staff.setGripColor('#25364a').setThreadColor('#a7e6ff');
+
+// Mars in glass, on a staff in gold; then the finish changes to rose gold.
+const planetMaps = { mars: await loadGlassPlanetMaps('mars') };
+const golden = createStaff(GFX, { metal: 'gold', topper: 'mars', planetMaps });
+golden.setMetal('rose gold');
 ```
+
+`staff.info` reports the wood or the metal, and the topper by its name (for
+example `Glass Mars`).
 
 ## Magic Egg Sword, Dagger and Greatsword
 
