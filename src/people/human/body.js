@@ -36,6 +36,9 @@ export function zoneOf(w, p) {
   return { zone, y: p[1], d, x: Math.abs(p[0]), sx: p[0], z: p[2] };
 }
 
+/** A cell of a grid as one number (cells within ±15 m of the origin at 3 cm: the body is well inside). */
+const cellNumber = (i, j, k) => ((i + 512) * 1024 + (j + 512)) * 1024 + (k + 512);
+
 let S = null;
 /** The body at rest, ready to be measured: its triangles by zone, a grid over them, and its vertices hashed. */
 function surface() {
@@ -74,7 +77,7 @@ function surface() {
   const triZone = tris.map(([a, b, c]) => (zones[b].zone === zones[c].zone ? zones[b].zone : zones[a].zone));
   // Vertices hashed for nearest lookups.
   const H = 0.03, hash = new Map();
-  const hkey = (x, y, z) => `${Math.floor(x / H)},${Math.floor(y / H)},${Math.floor(z / H)}`;
+  const hkey = (x, y, z) => cellNumber(Math.floor(x / H), Math.floor(y / H), Math.floor(z / H));
   for (let i = 0; i < used.length; i++) {
     if (!used[i]) continue;
     const k = hkey(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]);
@@ -172,7 +175,7 @@ export function skinWeightsAt(p, { only = null } = {}) {
     near.length = 0;
     const cx = Math.floor(p[0] / H), cy = Math.floor(p[1] / H), cz = Math.floor(p[2] / H);
     for (let i = -reach; i <= reach; i++) for (let j = -reach; j <= reach; j++) for (let k = -reach; k <= reach; k++) {
-      for (const v of hash.get(`${cx + i},${cy + j},${cz + k}`) ?? []) {
+      for (const v of hash.get(cellNumber(cx + i, cy + j, cz + k)) ?? []) {
         if (only && !only(s.zones[v].zone)) continue;
         near.push([v, Math.hypot(P[v * 3] - p[0], P[v * 3 + 1] - p[1], P[v * 3 + 2] - p[2])]);
       }
