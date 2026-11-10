@@ -34,11 +34,11 @@ async function loadGlassPlanetSurface(globe, kind) {
 }
 
 /**
- * A gnarled wizard's staff carved entirely from the library's wood textures.
- * Its head is a cradle of twisting, knotted roots that rises out of the shaft
- * and clasps the Krystal crystal orb (or, optionally, the glass egg) in a
- * ragged lip, as if the staff had grown around it. Only the grip's leather and
- * thread are not wood. All dimensions are in metres.
+ * A gnarled wizard's staff with a wood or solid-metal structure. Its head is a
+ * cradle of twisting, knotted roots that rises out of the shaft and clasps a
+ * crystal, marble, glass egg or glass planet in a ragged lip, as if the staff
+ * had grown around it. The leather grip and thread remain as the hand wrap.
+ * All dimensions are in metres.
  */
 export const STAFF_DIMENSIONS = Object.freeze({
   shaftLength: 1.6,
