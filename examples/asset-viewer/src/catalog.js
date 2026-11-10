@@ -18,8 +18,12 @@ import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
 import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
+import { STAFF_TOPPERS } from '../../../src/weapons/staff.js';
 import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
+import { JEWEL_CHOICES } from '../../../src/heroes/rock-jewel.js';
 import { dress, extraItems } from './extras.js';
+import { WEAPON_ASSETS, weaponShelf } from './weapon-assets.js';
+import { RANGE } from '../../../src/weapons/categories.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
 const proceduralProps = import.meta.glob(['../../../src/props/*.js', '../../../src/props/**/*.js']);
@@ -216,6 +220,7 @@ const HEROES = [
   )), null, { metal: METAL_CHOICES }],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['rock (granite)', ({ colour = 'grey' } = {}) => import('../../../src/heroes/rock-granite.js').then((m) => m.createGraniteRock(GFX, { colour })), null, { colour: GRANITE_CHOICES }],
+  ['rock (jewel)', ({ colour = 'sapphire', mist = 'on' } = {}) => import('../../../src/heroes/rock-jewel.js').then((m) => m.createJewelRock(GFX, { colour, mist: mist === 'on' })), null, { colour: JEWEL_CHOICES, mist: ['on', 'off'] }],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
   ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],
@@ -258,6 +263,15 @@ async function avatar(path, fn, buildOptions = {}) {
 /** What an avatar brings with it to be shown in: its reflections and its sky. */
 const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.sky ?? null });
 
+/** A planet in glass, as the library makes it (props/glass-planets), at `radius` and on the frame the viewer shows it in. */
+async function glassPlanet(name, radius) {
+  const m = await import('../../../src/props/glass-planets.js');
+  const globe = m.createGlassPlanet(GFX, name, { radius, ...(await m.loadGlassPlanetMaps(name)) });
+  // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+  const mesh = globe.mist;
+  return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
+}
+
 /**
  * Props that move as a part of what they are: Krystal, the crystal ball, its cloud turning and churning inside it.
  * And the debate's frying pan, which is a prop but not a sculpt.
@@ -265,60 +279,12 @@ const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.
 const MOVING = [
   ['book', 'Animated props', 'book of madness', ({ pages = 80 } = {}) => bookItem(pages), 'props/book', { pages: PAGE_CHOICES }],
   ['krystal', 'Animated props', 'crystal ball', () => avatar('../../../src/heroes/krystal/index.js', 'createKrystal')],
-  ['glass globe', 'Animated props', 'Earth', () => import('../../../src/props/glassglobe.js').then((m) => {
-    const globe = m.createGlassGlobe(GFX, { radius: 0.6, mist: true, animate: true });
-    globe.orient(40, -95);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
-  ['glass mars', 'Animated props', 'Mars', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/mars/map.js')]).then(async ([m, mars]) => {
-    // Mars at its true size beside the Earth globe: 0.532 of its radius, its MOLA surface etched in the glass.
-    const r = m.RADIUS * mars.SIZE_VS_EARTH;
-    const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await mars.loadMarsEtch() });
-    // Rust: the palette's warm end, with the blue taken out of it.
-    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 2.1, core: 0.15 });
-    globe.orient(-5, -90);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
-  ['glass moon', 'Animated props', 'Moon', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/moon/map.js')]).then(async ([m, moon]) => {
-    // The Moon at its true size beside the Earth globe: 0.273 of its radius, its LOLA surface etched in the glass.
-    const r = m.RADIUS * moon.SIZE_VS_EARTH;
-    const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await moon.loadMoonEtch() });
-    // White: the palette's most neutral hue, with the tint balancing its three channels to grey-white.
-    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 2.1, core: 0.15 });
-    globe.orient(0, 0);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
-  ['glass jupiter', 'Animated props', 'Jupiter', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
-    // Shown at the Earth globe's size: Jupiter is 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
-    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false, mist: true, animate: true });
-    // White mist swirls inside, as the planet's pale zones are; the photograph's clouds drift over it as the field.
-    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 0.4, core: 0.02 });
-    globe.setField(await jupiter.loadJupiterMap(), { shell: 0.9, glow: 1.3 }).refreshField();
-    globe.orient(-22, 0);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
-  ['glass jupiter etched', 'Animated props', 'Jupiter', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
-    // The alternate: the zones and belts etched in the glass, and the mist in belts that shear sideways, in the planet's rust-red and blue-green.
-    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, mist: true, animate: true, etchCanvas: await jupiter.loadJupiterEtch() });
-    globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.02, 0.62, 0.78]], glow: 2.4, core: 0.1, swirl: 0.6 });
-    globe.orient(-22, 0);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
+  ['glass globe', 'Animated props', 'Earth', () => glassPlanet('earth', 0.6)],
+  ['glass mars', 'Animated props', 'Mars', async () => glassPlanet('mars', 0.6 * (await import('../../../src/textures/mars/map.js')).SIZE_VS_EARTH)],
+  ['glass moon', 'Animated props', 'Moon', async () => glassPlanet('moon', 0.6 * (await import('../../../src/textures/moon/map.js')).SIZE_VS_EARTH)],
+  // Jupiter is shown at the Earth globe's size: 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
+  ['glass jupiter', 'Animated props', 'Jupiter', () => glassPlanet('jupiter', 0.6)],
+  ['glass jupiter etched', 'Animated props', 'Jupiter', () => glassPlanet('jupiter-etched', 0.6)],
   // The same planets in solid metal, their relief raised; the metal is the viewer's `metal` option.
   ...[
     ['metal earth', 'Earth', () => import('../../../src/textures/earth/map.js'), 'loadEarthRelief', [40, -95], {}, { bump: -8, soften: 0.6, height: 0.022, segments: [768, 512] }],
@@ -606,39 +572,15 @@ function bowlingPinItems() {
   }];
 }
 
-/** Dedicated shelf for measured, display-ready weapons. */
-const WEAPON_ASSETS = [
-  { id: 'weapons/madness-sword', factory: 'createMadnessSword', name: 'Madness Sword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar', metal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
-  { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
-  { id: 'weapons/magic-egg-sword', factory: 'createMagicEggSword', name: 'Magic Egg Sword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/magic-egg-dagger', factory: 'createMagicEggDagger', name: 'Magic Egg Dagger', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/magic-egg-greatsword', factory: 'createMagicEggGreatsword', name: 'Magic Egg Greatsword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/banana-dagger', factory: 'createBananaDagger', name: 'Banana Dagger', group: 'Banana Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'brass', metalGrip: true },
-  { id: 'weapons/banana-broadsword', factory: 'createBananaBroadsword', name: 'Banana Broadsword', group: 'Banana Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'brass', metalGrip: true },
-  { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/granite-sword', factory: 'createGraniteSword', name: 'Granite Sword', group: 'Granite Set', paletteKind: 'granite-weapon', grip: '#101010', granite: 'grey' },
-  { id: 'weapons/granite-dagger', factory: 'createGraniteDagger', name: 'Granite Dagger', group: 'Granite Set', paletteKind: 'granite-weapon', grip: '#101010', granite: 'grey' },
-  { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/regular-morningstar', factory: 'createRegularMorningstar', name: 'Regular Morningstar', group: 'Regular Set', paletteKind: 'morningstar' },
-  { id: 'weapons/marcs-sword', factory: 'createMarcsSword', name: "Marc's Sword", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-dagger', factory: 'createMarcsDagger', name: "Marc's Dagger", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-greatsword', factory: 'createMarcsGreatsword', name: "Marc's Greatsword", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-morningstar', factory: 'createMarcsMorningstar', name: "Marc's Morningstar", group: "Marc's Set", paletteKind: 'morningstar', metal: 'gold', grip: '#101010' },
-];
-
+/** The Weapons shelf's entries are in weapon-assets.js; each one is shelved by its hands, or as ranged. */
 function weaponItems() {
   return WEAPON_ASSETS.map(({
-    id, factory, name, group, paletteKind, grip, thread, metalGrip,
+    id, factory, name, set, hands, paletteKind, grip, thread, metalGrip,
     bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault, granite: graniteDefault,
   }) => ({
     id,
     category: 'Weapons',
-    group,
+    group: weaponShelf({ hands }),
     name,
     source: 'weapons/variants',
     factory,
@@ -680,7 +622,7 @@ function weaponItems() {
           get: () => made.bladeMist.visible,
           set: (on) => made.setBladeMist(on),
         } : null,
-        info: { Source: `weapons/variants#${factory}`, ...made.info, ...countOf(made.group) },
+        info: { Source: `weapons/variants#${factory}`, Set: set, ...made.info, ...countOf(made.group) },
       };
     },
   }));
@@ -689,23 +631,30 @@ function weaponItems() {
 /** Everything on the weapons shelf, for the human to hold. */
 const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.factory, w.name])];
 
-/** The real-size, dressable human: his wardrobe, his look, his face and hands, and a weapon from the shelf to hold. */
+/** The real-size, dressable humans, a man and a woman: the wardrobe, the look, the face and hands, and a weapon from the shelf to hold. */
 function humanItems() {
-  return [{
-    id: 'people/human',
+  return [humanItem('male'), humanItem('female')];
+}
+
+/** One figure's item: `sex` 'male' (bearded) or 'female' (long blonde hair). */
+function humanItem(sex) {
+  const female = sex === 'female';
+  return {
+    id: female ? 'people/human-female' : 'people/human',
     category: 'People',
     group: 'people',
-    name: 'Human (dressable base)',
+    name: female ? 'Human, female (dressable base)' : 'Human (dressable base)',
     source: 'people/human',
     kind: 'object',
     async build() {
-      const [{ createHuman, CLIPS: clips, GARMENTS, HAND_POSES, CUSTOMIZATION }, weapons, metals] = await Promise.all([
+      const [{ createHuman, CLIPS: clips, garmentsFor, HAND_POSES, customizationFor }, weapons, metals] = await Promise.all([
         import('../../../src/people/human.js'),
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
-      const man = createHuman(GFX, { beard: 'full' });
+      const man = createHuman(GFX, female ? { sex } : { beard: 'full' });
       let weapon = 'none', attack = 'slash', handL = 'relaxed';
+      let pair = man.glasses ?? 'aviator';
       const style = {};
       const rearm = () => {
         man.release('R');
@@ -713,7 +662,9 @@ function humanItems() {
       };
       const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
       const ui = [
-        ...Object.keys(GARMENTS).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
+        ...Object.keys(garmentsFor(sex)).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
+        // The sunglasses on or off at a click (which pair is chosen under Accessories, below).
+        { type: 'check', label: 'Glasses', get: () => man.glasses !== null, set: (on) => { if (man.glasses) pair = man.glasses; man.customize({ glasses: on ? pair : 'none' }); } },
         { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm(); } },
         { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove'], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
         { type: 'select', label: 'Left hand', options: Object.keys(HAND_POSES), get: () => handL, set: (v) => { handL = v; man.hands(v, { hand: 'L' }); } },
@@ -722,11 +673,12 @@ function humanItems() {
         { type: 'color', label: 'Sneakers', get: () => man.look.shoe, set: (c) => man.setShoeColor(c) },
         face('jaw'), face('blink'), face('smile'), face('brows'),
         // The character creator, slot by slot: those not built yet are shown, kept, and greyed out.
-        ...CUSTOMIZATION.flatMap(({ group, slots }) => [
+        ...customizationFor(sex).flatMap(({ group, slots }) => [
           { type: 'heading', label: group },
           ...slots.map((s) => ({
             type: s.type === 'choice' ? 'select' : s.type, label: s.label, options: s.options, min: s.min, max: s.max, step: 0.01,
-            disabled: !s.ready, title: s.ready ? '' : 'Not built yet: kept, and shown once it is',
+            // (The figure is chosen when the human is made: each has an item of its own.)
+            disabled: !s.ready || s.key === 'sex', title: s.key === 'sex' ? 'Each figure is an item of its own' : s.ready ? '' : 'Not built yet: kept, and shown once it is',
             get: () => man.features[s.key], set: (v) => man.customize({ [s.key]: v }),
           })),
         ]),
@@ -741,41 +693,76 @@ function humanItems() {
         clips,
         ui,
         environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
-        info: { Source: 'people/human', Height: '1.76 m', Outfit: man.outfit.join(', '), Bones: man.skeleton.names.length, ...countOf(man.group) },
+        info: { Source: 'people/human', Height: `${man.dimensions.height} m`, Outfit: man.outfit.join(', '), Bones: man.skeleton.names.length, ...countOf(man.group) },
       };
     },
-  }];
+  };
 }
 
-/** The wizard staff: wood, metal and topper are chosen from the viewer's option menus. */
+/**
+ * Stands a staff up from the viewer's choices. `wood` is `{ species, finish }` for the wooden staff or `{ metal }` for
+ * the metal one, passed on its own: the viewer hands every item all the options, and the other kind's must not leak in.
+ * A planet topper is given its maps first.
+ */
+async function buildStaff(wood, { topper = 'orb', vine = 'roots', wrap = 'on', colours = {} } = {}) {
+  const [{ createStaff }, metals, planets] = await Promise.all([
+    import('../../../src/weapons/staff.js'),
+    import('../../../src/props/metalglobe.js'),
+    import('../../../src/props/glass-planets.js'),
+  ]);
+  const planetMaps = planets.GLASS_PLANET_NAMES.includes(topper)
+    ? { [topper]: await planets.loadGlassPlanetMaps(topper) }
+    : {};
+  const made = createStaff(GFX, { ...wood, topper, planetMaps, vine: vine === 'roots', wrap: wrap === 'on',
+    gripColor: colours.gripColor ?? '#3a2418', threadColor: colours.threadColor ?? '#e2b857' });
+  return {
+    object: made.group,
+    environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+    info: { Source: 'weapons/staff#createStaff', Set: 'Staff Set', ...made.info, ...countOf(made.group) },
+  };
+}
+
+/** The wizard staff: wood, topper and wrap are chosen from the viewer's option menus. */
 function staffItem() {
   return {
     id: 'weapons/wizard-staff',
     category: 'Weapons',
-    group: 'Staff Set',
+    group: weaponShelf({ range: RANGE.RANGED }),
     name: 'Wizard Staff',
     source: 'weapons/staff',
     kind: 'object',
     palette: { kind: 'staff', grip: '#3a2418', thread: '#e2b857' },
     options: {
-      topper: ['orb', 'egg', 'none'],
+      topper: [...STAFF_TOPPERS],
       species: ['walnut', ...Object.keys(WOOD_SPECIES).filter((k) => k !== 'walnut')],
       finish: ['lacquered', ...WOOD_FINISHES.filter((k) => k !== 'lacquered')],
       wrap: ['on', 'off'],
       vine: ['roots', 'none'],
     },
-    async build({ topper = 'orb', species = 'walnut', finish = 'lacquered', vine = 'roots', wrap = 'on', colours = {} } = {}) {
-      const [{ createStaff }, metals] = await Promise.all([
-        import('../../../src/weapons/staff.js'),
-        import('../../../src/props/metalglobe.js'),
-      ]);
-      const made = createStaff(GFX, { topper, species, finish, vine: vine === 'roots', wrap: wrap === 'on',
-        gripColor: colours.gripColor ?? '#3a2418', threadColor: colours.threadColor ?? '#e2b857' });
-      return {
-        object: made.group,
-        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
-        info: { Source: 'weapons/staff#createStaff', ...made.info, ...countOf(made.group) },
-      };
+    build({ species = 'walnut', finish = 'lacquered', ...rest } = {}) {
+      return buildStaff({ species, finish }, rest);
+    },
+  };
+}
+
+/** The same staff in metal: its wooden parts (shaft, roots and head) take one of the metal finishes. */
+function metalStaffItem() {
+  return {
+    id: 'weapons/metal-wizard-staff',
+    category: 'Weapons',
+    group: weaponShelf({ range: RANGE.RANGED }),
+    name: 'Metal Wizard Staff',
+    source: 'weapons/staff',
+    kind: 'object',
+    palette: { kind: 'staff', grip: '#3a2418', thread: '#e2b857', metal: true },
+    options: {
+      topper: [...STAFF_TOPPERS],
+      metal: METAL_CHOICES,
+      wrap: ['on', 'off'],
+      vine: ['roots', 'none'],
+    },
+    build({ metal = 'steel', ...rest } = {}) {
+      return buildStaff({ metal }, rest);
     },
   };
 }
@@ -825,7 +812,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
-  items.push(...weaponItems(), staffItem());
+  items.push(...weaponItems(), staffItem(), metalStaffItem());
   items.push(...humanItems());
   items.push(...buildingItems());
 

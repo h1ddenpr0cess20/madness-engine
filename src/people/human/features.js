@@ -11,13 +11,19 @@ import { SUNGLASSES } from './glasses.js';
  * already part of a person's `features`, kept and handed back, so a game or
  * a viewer can offer them now and they take effect as each is built.
  *
+ * A group with a `figure` is that figure's only (facial hair is his): see
+ * `customizationFor`.
+ *
  * The face and the body are shaped by the MakeHuman project's own morph
  * targets (CC0), the ones its modelling tab moves: each slot's `shape` says
  * which of them, and how much, make it. A slider has an `up` recipe (for 1)
  * and a `down` one (for −1); a choice has one per option (the default as he
  * is). Each recipe is { 'group/target': weight }, a `{s}` in the name both
- * sides (l and r). scripts/bake-human.mjs bakes them into data/shapes.js, in
- * his pose and at his size; people/human/shape.js puts them on him.
+ * sides (l and r). For the woman, the male targets of a recipe are taken in
+ * their female form, and `forFemale` replaces a recipe where hers differs.
+ * scripts/bake-human.mjs bakes them into data/shapes.js (and, with
+ * --female, data/shapes-female.js), each figure in its own pose and at its
+ * own size; people/human/shape.js puts them on him or her.
  */
 
 const choice = (key, label, options, { ready = false, value = options[0], shape = null } = {}) => ({ key, label, type: 'choice', options, default: value, ready: ready || !!shape, shape });
@@ -44,16 +50,25 @@ export const BUILDS = Object.freeze({
 
 export const CUSTOMIZATION = Object.freeze([
   { group: 'Body', slots: [
+    // Chosen when the human is made (createHuman's `sex`, or this feature then): a man or a woman.
+    choice('sex', 'Figure', ['male', 'female'], { ready: true }),
     choice('build', 'Build', Object.keys(BUILDS), { ready: true }),
     slider('height', 'Height', { shape: updown(
       { 'macrodetails/height/male-young-averagemuscle-averageweight-maxheight': 0.16 },
       { 'macrodetails/height/male-young-averagemuscle-averageweight-minheight': 0.33 },
     ) }),
-    // He is baked at 0.62 of the way to the most muscular: up takes him the rest of the way, down to the least.
-    slider('muscle', 'Muscle', { shape: updown(
-      { [`${MACRO}-maxmuscle-averageweight`]: 0.38 },
-      { [`${MACRO}-maxmuscle-averageweight`]: -0.62, [`${MACRO}-minmuscle-averageweight`]: 0.75 },
-    ) }),
+    // He is baked at 0.62 of the way to the most muscular: up takes him the rest of the way, down to the
+    // least. She is baked at a quarter of the way.
+    slider('muscle', 'Muscle', { shape: {
+      ...updown(
+        { [`${MACRO}-maxmuscle-averageweight`]: 0.38 },
+        { [`${MACRO}-maxmuscle-averageweight`]: -0.62, [`${MACRO}-minmuscle-averageweight`]: 0.75 },
+      ),
+      forFemale: updown(
+        { [`${MACRO}-maxmuscle-averageweight`]: 0.6 },
+        { [`${MACRO}-maxmuscle-averageweight`]: -0.25, [`${MACRO}-minmuscle-averageweight`]: 0.75 },
+      ),
+    } }),
     // Heavier: MakeHuman's heaviest build, and round the waist, hips, thighs, arms, neck and face besides.
     slider('weight', 'Weight', { shape: updown(
       {
@@ -162,7 +177,7 @@ export const CUSTOMIZATION = Object.freeze([
     choice('hair', 'Style', ['none', ...Object.keys(HAIRSTYLES)], { ready: true, value: 'sidePart' }),
     colour('hairColour', 'Colour', '#3b2a1f', { ready: true }),
   ] },
-  { group: 'Facial hair', slots: [
+  { group: 'Facial hair', figure: 'male', slots: [
     choice('beard', 'Beard', ['none', ...Object.keys(BEARDS)], { ready: true, value: 'none' }),
     choice('moustache', 'Moustache', ['with beard', 'none', 'chevron', 'handlebar', 'pencil', 'walrus']),
     slider('stubble', 'Stubble', { min: 0, max: 1, value: 0.5 }),
@@ -172,6 +187,14 @@ export const CUSTOMIZATION = Object.freeze([
   ] },
 ]);
 
+/** What a creator offers the figure `sex` ('male' or 'female'): every group but the other figure's own. */
+export function customizationFor(sex) {
+  return CUSTOMIZATION.filter((g) => !g.figure || g.figure === sex);
+}
+
+/** The figure a slot is only for, by key (none for most). */
+const FIGURE_OF = Object.fromEntries(CUSTOMIZATION.flatMap((g) => (g.figure ? g.slots.map((s) => [s.key, g.figure]) : [])));
+
 /** Every slot, by key. */
 export const SLOTS = Object.freeze(Object.fromEntries(CUSTOMIZATION.flatMap((g) => g.slots).map((s) => [s.key, s])));
 
@@ -179,30 +202,41 @@ export const SLOTS = Object.freeze(Object.fromEntries(CUSTOMIZATION.flatMap((g) 
 export const DEFAULT_FEATURES = Object.freeze(Object.fromEntries(Object.values(SLOTS).map((s) => [s.key, s.default])));
 
 /**
- * Every baked shape the slots are made of, by name: a slider's `key+` and
- * `key-`, a choice's `key:option`. Each is its recipe, both sides spelled
- * out: { 'group/target': weight }.
+/**
+ * Every baked shape the slots are made of, for the figure `sex`, by name: a
+ * slider's `key+` and `key-`, a choice's `key:option`. Each is its recipe,
+ * both sides spelled out, the male targets in her form for the woman:
+ * { 'group/target': weight }.
  */
-export function shapeRecipes() {
+export function shapeRecipes(sex = 'male') {
   const out = {};
+  const female = sex === 'female';
   const sides = (recipe) => {
     const r = {};
-    for (const [t, w] of Object.entries(recipe)) for (const s of t.includes('{s}') ? ['l', 'r'] : ['']) r[t.replace('{s}', s)] = w;
+    for (const [t, w] of Object.entries(recipe)) {
+      const name = female ? t.replace(/(^|[/-])male-young/g, '$1female-young') : t;
+      for (const s of name.includes('{s}') ? ['l', 'r'] : ['']) r[name.replace('{s}', s)] = w;
+    }
     return r;
   };
   for (const s of Object.values(SLOTS)) {
     if (!s.shape) continue;
-    if (s.type === 'range') { out[`${s.key}+`] = sides(s.shape.up); out[`${s.key}-`] = sides(s.shape.down); }
-    else for (const [o, r] of Object.entries(s.shape)) if (Object.keys(r).length) out[`${s.key}:${o}`] = sides(r);
+    const shape = (female && s.shape.forFemale) || s.shape;
+    if (s.type === 'range') { out[`${s.key}+`] = sides(shape.up); out[`${s.key}-`] = sides(shape.down); }
+    else for (const [o, r] of Object.entries(shape)) if (o !== 'forFemale' && Object.keys(r).length) out[`${s.key}:${o}`] = sides(r);
   }
   return out;
 }
 
-/** `change` checked against the slots: unknown keys, options and out-of-range values are refused. */
-export function checkFeatures(change) {
+/**
+ * `change` checked against the slots: unknown keys, options and out-of-range values are refused, and
+ * so is anything but the default of a slot that is another figure's (a beard for her), for `sex`.
+ */
+export function checkFeatures(change, sex = null) {
   for (const [key, value] of Object.entries(change)) {
     const s = SLOTS[key];
     if (!s) throw new Error(`human: no feature called ${key}; choose ${Object.keys(SLOTS).join(', ')}`);
+    if (sex && FIGURE_OF[key] && FIGURE_OF[key] !== sex && value !== s.default) throw new Error(`human: ${key} is for the ${FIGURE_OF[key]} figure only`);
     if (s.type === 'choice' && !s.options.includes(value)) throw new Error(`human: ${key} is one of ${s.options.join(', ')}, not ${value}`);
     if (s.type === 'range' && !(typeof value === 'number' && value >= s.min && value <= s.max)) throw new Error(`human: ${key} runs ${s.min} to ${s.max}, not ${value}`);
     if (s.type === 'color' && !/^#[0-9a-f]{6}$/i.test(value)) throw new Error(`human: ${key} is a #rrggbb colour, not ${value}`);

@@ -1,14 +1,15 @@
 import { Skeleton, skinDual } from '../models/rig.js';
 import { assemble, cross, len, Part, sub } from './human/kit.js';
-import { bones, FINGER_NAMES, FINGERS, HEIGHT, JOINTS, mirror, sideOf } from './human/skeleton.js';
+import { bones, figureOf, FIGURES, FINGER_NAMES, HEIGHT, mirror, sideOf } from './human/skeleton.js';
+import { fitData, fitPoint, hang, wrap } from './human/fit.js';
 import { buildEyes, buildMouth, withLipCorners } from './human/head.js';
 import { bodyLevel } from './human/basemesh.js';
 import { zoneOf } from './human/body.js';
 import { BONES as BAKED_BONES } from './human/data/base.js';
-import { DEFAULT_OUTFIT, GARMENTS } from './human/clothes.js';
+import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor } from './human/clothes.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
-import { BUILDS, checkFeatures, CUSTOMIZATION, DEFAULT_FEATURES } from './human/features.js';
+import { BUILDS, checkFeatures, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES } from './human/features.js';
 import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
 import { carried, levelOffsets, placeEyes, SHAPE_KEYS, shapeFor, thickenBrows } from './human/shape.js';
 import { buildGlasses, SUNGLASSES } from './human/glasses.js';
@@ -39,8 +40,15 @@ import { buildGlasses, SUNGLASSES } from './human/glasses.js';
  * `hands` set the rest, and `pose` takes them on every frame.
  */
 
-export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, DEFAULT_FEATURES, BUILDS };
+export { CLIPS, GARMENTS, GARMENTS_FEMALE, garmentsFor, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES, FIGURES, BUILDS };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
+/** Each figure's measures (metres), as HUMAN_DIMENSIONS gives the man's. */
+export const DIMENSIONS = Object.freeze({
+  male: HUMAN_DIMENSIONS,
+  female: Object.freeze({ height: FIGURES.female.height, headHeight: 0.21, shoulderWidth: 0.37, inseam: 0.76, armLength: 0.56, handLength: 0.175, footLength: 0.245, unit: 'm' }),
+});
+/** The woman's outfit, unless told otherwise: the man's, with a sports bra under the t-shirt. */
+export const DEFAULT_OUTFIT_FEMALE = Object.freeze(['bra', ...DEFAULT_OUTFIT]);
 
 const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'gums', 'tongue', 'lash'];
 const builds = new Map();
@@ -56,8 +64,11 @@ export const levelFor = (detail) => (detail >= 0.8 ? 1 : 0);
  * mouth's corners given their own bones), and tagged with where on the body
  * it is.
  */
-function skinPart(level) {
-  const { pos, uv, faces, uvFaces, weights, occ } = bodyLevel(level);
+function skinPart(level, sex = 'male') {
+  // Where each point is on him says what zone it is in and how the mouth weights it; on her, it is drawn where hers is.
+  const { pos: his, uv, faces, uvFaces, weights } = bodyLevel(level);
+  const { pos, occ } = bodyLevel(level, sex);
+  const H = (i) => [his[i * 3], his[i * 3 + 1], his[i * 3 + 2]];
   const n = new Float32Array(pos.length);
   const P = (i) => [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]];
   for (let f = 0; f < faces.length; f += 4) {
@@ -73,12 +84,12 @@ function skinPart(level) {
     const key = v * 4194304 + t;
     let id = ids.get(key);
     if (id === undefined) {
-      const p = P(v);
+      const p = P(v), h = H(v);
       const named = {};
       for (const [b, w] of Object.entries(weights[v])) named[BAKED_BONES[b]] = (named[BAKED_BONES[b]] ?? 0) + w;
       const l = Math.hypot(n[v * 3], n[v * 3 + 1], n[v * 3 + 2]) || 1;
       const ao = occ[v];
-      id = part.vertex(p, [uv[t * 2], uv[t * 2 + 1]], withLipCorners(named, p), 0.3 + 0.7 * Math.pow(ao, 0.75), [n[v * 3] / l, n[v * 3 + 1] / l, n[v * 3 + 2] / l], zoneOf(weights[v], p));
+      id = part.vertex(p, [uv[t * 2], uv[t * 2 + 1]], withLipCorners(named, h), 0.3 + 0.7 * Math.pow(ao, 0.75), [n[v * 3] / l, n[v * 3 + 1] / l, n[v * 3 + 2] / l], zoneOf(weights[v], h));
       ids.set(key, id);
       src.push(v);
     }
@@ -95,9 +106,9 @@ function skinPart(level) {
   return part;
 }
 
-/** The skin's normals at `level` with its vertices at `pos`, as skinPart works them out: one a vertex of the level. */
-function levelNormals(level, pos) {
-  const { faces } = bodyLevel(level);
+/** The skin's normals at `level` (of the figure `sex`) with its vertices at `pos`, as skinPart works them out: one a vertex of the level. */
+function levelNormals(level, pos, sex) {
+  const { faces } = bodyLevel(level, sex);
   const n = new Float32Array(pos.length);
   for (let f = 0; f < faces.length; f += 4) {
     const a = faces[f] * 3, b = faces[f + 1] * 3, c = faces[f + 2] * 3, d = faces[f + 3] * 3;
@@ -109,48 +120,99 @@ function levelNormals(level, pos) {
   return n;
 }
 
-/** The base body's mesh data at `detail`, made once and shared. */
-function bodyData(detail) {
+/**
+ * The base body's mesh data at `detail` for the figure `sex`, made once and
+ * shared. Her skin is her own; her eyes, teeth and tongue are his, carried
+ * onto her (fit.js).
+ */
+function bodyData(detail, sex = 'male') {
   const level = levelFor(detail);
-  const key = `body@${level}`;
+  const key = `body:${sex}@${level}`;
   if (!builds.has(key)) {
-    const parts = [skinPart(level), buildEyes(detail), ...buildMouth(detail)];
-    const data = assemble(parts, NAMES, BODY_MATERIALS);
-    // Where each of its parts is, for reshaping him: the skin (and which vertex of the level each of
-    // its vertices is), the eyes, and the mouth's teeth, gums and tongue.
-    const skin = parts[0].count, eyes = skin + parts[1].count;
-    data.skin = { src: parts[0].src, level, eyes: [skin, eyes], mouth: [eyes, data.count] };
+    const part = skinPart(level, sex), eyes = buildEyes(detail);
+    const skin = assemble([part], NAMES, BODY_MATERIALS);
+    const rest = fitData(assemble([eyes, ...buildMouth(detail)], NAMES, BODY_MATERIALS), sex);
+    const data = joinData(skin, rest, BODY_MATERIALS.length);
+    // Where each of its parts is, for reshaping: the skin (and which vertex of the level each of its
+    // vertices is), the eyes, and the mouth's teeth, gums and tongue.
+    const e = skin.count + eyes.count;
+    data.skin = { src: part.src, level, eyes: [skin.count, e], mouth: [e, data.count] };
     builds.set(key, { data });
   }
   return builds.get(key);
 }
 
-/** A haircut's or a beard's mesh data at `detail`, made once and shared. */
-function hairData(kind, name, detail) {
+/** Two sets of mesh data (in the same materials) as one: `a`'s vertices first. */
+function joinData(a, b, materials) {
+  const cat = (x, y) => { const out = new x.constructor(x.length + y.length); out.set(x); out.set(y, x.length); return out; };
+  const shift = (t) => Uint32Array.from(t, (i) => i + a.count);
+  const triangles = Array.from({ length: materials }, (_, m) => cat(a.triangles[m] ?? new Uint32Array(0), shift(b.triangles[m] ?? [])));
+  const index = new Uint32Array(triangles.reduce((s, t) => s + t.length, 0));
+  const groups = [];
+  let start = 0;
+  triangles.forEach((t, materialIndex) => {
+    if (!t.length) return;
+    index.set(t, start);
+    groups.push({ start, count: t.length, materialIndex });
+    start += t.length;
+  });
+  return {
+    position: cat(a.position, b.position), normal: cat(a.normal, b.normal), uv: cat(a.uv, b.uv), color: cat(a.color, b.color),
+    skinIndex: cat(a.skinIndex, b.skinIndex), skinWeight: cat(a.skinWeight, b.skinWeight),
+    index, groups, triangles, zones: a.zones.concat(b.zones), count: a.count + b.count,
+  };
+}
+
+/** A haircut's or a beard's mesh data at `detail`, made once and shared (made on him, and carried onto her). */
+function hairData(kind, name, detail, sex = 'male') {
   const key = `${kind}:${name}@${levelFor(detail)}`;
   const build = { hair: buildHair, beard: buildBeard, brows: buildBrows }[kind];
   if (!builds.has(key)) builds.set(key, assemble([build(name, detail)], NAMES, ['hair']));
-  return builds.get(key);
+  return fitted(key, sex, () => fitData(builds.get(key), sex));
 }
 
 /** A pair of sunglasses' mesh data at `detail`, made once and shared. */
-function glassesData(name, detail) {
+function glassesData(name, detail, sex = 'male') {
   const key = `glasses:${name}@${levelFor(detail)}`;
   if (!builds.has(key)) builds.set(key, assemble(buildGlasses(name, detail), NAMES, ['lens', 'frameMetal', 'frameAcetate']));
-  return builds.get(key);
+  return fitted(key, sex, () => fitData(builds.get(key), sex));
 }
+
+/** What was made on him under `key`, as it is on the figure `sex`: made once. */
+function fitted(key, sex, make) {
+  if (sex === 'male') return builds.get(key);
+  const k = `${key}~${sex}`;
+  if (!builds.has(k)) builds.set(k, make());
+  return builds.get(k);
+}
+
+/** The garments worn on the trunk, which hang off a bust: how freely each does (the bra, close, is wrapped over it instead: see wrap). */
+// (Her t-shirt and bomber are fitted: under the bust they come back in to her waist, bridging only just below it;
+// the bomber never comes in faster than the shirt under it.)
+const HANGS = {
+  bra: { ball: 0.05, hem: 0.015 },
+  tshirt: { down: 0.35, across: 0.35, up: 1.4 },
+  jacket: { down: 0.35, across: 0.3, up: 1.2 },
+  jacketZipped: { down: 0.35, across: 0.3, up: 1.2 },
+};
 
 /**
  * A garment's mesh data at `detail`, made once and shared. One that is
  * fitted over what is under it (`fits`) is made for each set of garments
  * under it: `below` is those, as { names, lift }.
  */
-function garmentData(name, garment, detail, below) {
-  const fitted = garment.fits && below.names.length;
-  const key = garment === GARMENTS[name] ? `${name}@${detail}${fitted ? `/${below.names.join('+')}` : ''}` : null;
+function garmentData(name, garment, detail, below, sex = 'male') {
+  const over = garment.fits && below.names.length;
+  const key = garment === garmentsFor(sex)[name] ? `${name}:${sex}@${detail}${over ? `/${below.names.join('+')}` : ''}` : null;
   if (key && builds.has(key)) return builds.get(key);
-  const parts = garment.build(detail, { under: fitted ? below.lift : null });
-  const data = assemble(parts, NAMES, garment.materials);
+  const parts = garment.build(detail, { under: over ? below.lift : null, sex });
+  let data = assemble(parts, NAMES, garment.materials);
+  // Made on him, worn by her: carried onto her, and hung from her bust.
+  if (sex !== 'male') {
+    data = fitData(data, sex, { surface: true });
+    const h = garment.hang ?? HANGS[name];
+    if (h) data = h.ball ? wrap(data, sex, h) : hang(data, sex, h);
+  }
   // How far off the skin it stands, by skin vertex, for what goes over it.
   for (const part of parts) {
     if (!part.lift) continue;
@@ -160,6 +222,9 @@ function garmentData(name, garment, detail, below) {
   if (key) builds.set(key, data);
   return data;
 }
+
+/** What a woman starts with, where it differs from a man: long blonde hair, blue eyes, groomed brows, no beard. */
+export const FEMALE_FEATURES = Object.freeze({ beard: 'none', hair: 'long', hairColour: '#d6b57c', iris: '#4f7fb8', brows: 'fine', lipColour: '#b0626a' });
 
 const DEFAULT_LOOK = Object.freeze({
   skin: '#b98a70', iris: '#5a4632', hair: '#3b2a1f',
@@ -195,14 +260,20 @@ function makeMaterials(GFX, look, tex) {
   const M = (name, o) => new GFX.MeshPhysicalMaterial({ name: `human ${name}`, vertexColors: true, ...o });
   const mats = {
     skin: M('skin', {
-      color: tex ? '#ffffff' : look.skin, map: tex?.skin.map ?? null, bumpMap: tex?.skin.bump ?? null, bumpScale: 0.00035, roughness: 0.5,
-      // Light scattered back out of the skin, warm and soft at the edges.
-      sheen: 0.3, sheenColor: new GFX.Color('#e8a090'), sheenRoughness: 0.4, clearcoat: 0.06, clearcoatRoughness: 0.45,
+      color: tex ? '#ffffff' : look.skin, map: tex?.skin.map ?? null, bumpMap: tex?.skin.bump ?? null, bumpScale: 0.00016, roughness: 0.52,
+      // Its detail: creases and folds, where it is glossier or rougher, where its pores are open.
+      detailMap: tex?.skin.detail ?? null, detailScale: 0.0011,
+      // Light carried under the skin and back out: red furthest, so the edge of every shadow warms.
+      subsurface: 1, subsurfaceColor: new GFX.Color().setRGB(0.42, 0.16, 0.09),
+      // The oil on it: a second, thin shine over the skin's own broad one; and the soft light off its down at the edges.
+      sheen: 0.22, sheenColor: new GFX.Color('#e8a090'), sheenRoughness: 0.4, clearcoat: 0.1, clearcoatRoughness: 0.3, specularIntensity: 0.8,
     }),
-    eye: M('eyes', { color: '#ffffff', map: tex?.eye ?? null, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.03 }),
-    teeth: M('teeth', { color: '#e8dfcb', roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.15, sheen: 0.25, sheenColor: new GFX.Color('#fff8ea') }),
-    gums: M('gums', { color: '#c8706c', roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.2 }),
-    tongue: M('tongue', { color: '#94504f', roughness: 0.45, clearcoat: 0.25 }),
+    // The eye: wet and mirror-smooth over a soft white that light sinks into.
+    eye: M('eyes', { color: '#ffffff', map: tex?.eye ?? null, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.02, subsurface: 0.7, subsurfaceColor: new GFX.Color().setRGB(0.4, 0.3, 0.26) }),
+    // Enamel: glossy, wet, a little light let into it. The gums and tongue wet too, and soft with blood.
+    teeth: M('teeth', { color: '#efe7d6', roughness: 0.2, clearcoat: 0.8, clearcoatRoughness: 0.1, sheen: 0.25, sheenColor: new GFX.Color('#fff8ea'), subsurface: 0.6, subsurfaceColor: new GFX.Color().setRGB(0.3, 0.26, 0.2) }),
+    gums: M('gums', { color: '#cf7a78', roughness: 0.36, clearcoat: 0.6, clearcoatRoughness: 0.14, subsurface: 0.8, subsurfaceColor: new GFX.Color().setRGB(0.45, 0.15, 0.1) }),
+    tongue: M('tongue', { color: '#a35a5a', roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.25, subsurface: 0.8, subsurfaceColor: new GFX.Color().setRGB(0.45, 0.15, 0.1) }),
     // Hair: the strand texture's gaps cut out; a soft sheen along it, as light runs down a strand.
     // Hair, in two passes: its strands solid where the texture is (writing depth), then their soft edges
     // blended over. Its highlights run across the strands (`strands`), the way hair's do.
@@ -279,8 +350,8 @@ const mul3 = (A, B) => A.map((r) => [0, 1, 2].map((j) => r[0] * B[0][j] + r[1] *
 /** A rest-frame axis of the left hand, for side `m` (a turn's axis mirrors as (x, −y, −z)). */
 const sideAxis = (a, m) => (m > 0 ? a : [a[0], -a[1], -a[2]]);
 
-// For each finger: its curl axis, and the axis that spreads it away from the middle finger.
-const HAND_AXES = Object.fromEntries(FINGER_NAMES.map((name) => {
+// For each finger of a figure's hand: its curl axis, and the axis that spreads it away from the middle finger.
+const handAxes = (FINGERS) => Object.fromEntries(FINGER_NAMES.map((name) => {
   const f = FINGERS[name];
   const dir = sub(f.joints[3], f.joints[0]);
   const away = sub(f.joints[0], FINGERS.middle.joints[0]);
@@ -288,12 +359,21 @@ const HAND_AXES = Object.fromEntries(FINGER_NAMES.map((name) => {
   const l = len(spread) || 1;
   return [name, { curl: f.curl, spread: spread.map((v) => v / l) }];
 }));
+const HAND_AXES = Object.fromEntries(Object.entries(FIGURES).map(([sex, f]) => [sex, handAxes(f.fingers)]));
+const handAxesMale = HAND_AXES.male;
 
-// The swings made with both hands on the grip.
+// The swings made with both hands on the grip, whatever the weapon; and the swings a two-handed weapon
+// (its `handling.hands`, see weapons/categories) is always swung with both.
 const TWO_HANDED = new Set(['chop']);
+const WEAPON_SWINGS = new Set(['slash', 'chop', 'thrust', 'smite']), UNARMED = new Set(['punch', 'shove']);
 
-// Where a held grip's middle sits in the (left) hand at rest, and how its axis tilts.
+// Where a held grip's middle sits in the (left) hand at rest, and how its axis tilts: his, and hers (the same place in her hand).
 const GRIP_AT = [0.283, 0.79, 0.04], GRIP_TILT = -0.05;
+const grips = new Map();
+const gripOf = (sex) => {
+  if (!grips.has(sex)) grips.set(sex, sex === 'male' ? GRIP_AT : fitPoint(GRIP_AT, sex, 'handL'));
+  return grips.get(sex);
+};
 
 // The axis the thumb's root turns about to come across the palm (left hand).
 const THUMB_IN = [-0.225, 0.03, 0.974];
@@ -304,7 +384,7 @@ const THUMB_IN = [-0.225, 0.03, 0.974];
  * it comes forward, so the shoulder keeps its shape instead of folding. The
  * arm is turned back by as much, so the hand stays where it was put.
  */
-function shrug(k) {
+function shrug(k, JOINTS) {
   for (const [S, m] of [['L', 1], ['R', -1]]) {
     const r = k.bone(`arm${S}`).rot;
     const rest = sub(mirror(JOINTS.elbow, m), mirror(JOINTS.shoulder, m));
@@ -324,7 +404,7 @@ function shrug(k) {
 }
 
 /** Bends side `S`'s hand into `shape` ({ curl, thumb, spread, straight }), `k` of the way (0..1). */
-function poseHand(k, S, shape, amount = 1) {
+function poseHand(k, S, shape, amount = 1, HAND_AXES = handAxesMale) {
   const m = S === 'L' ? 1 : -1;
   const bend = [1.45, 1.6, 1.1];
   const spreads = { index: 0.14, middle: 0.0, ring: 0.1, pinky: 0.24 };
@@ -459,11 +539,15 @@ function poseFace(k, f, time, said = null) {
 }
 
 export function createHuman(GFX, options = {}) {
-  const { detail = 1, outfit = DEFAULT_OUTFIT, look: lookIn = {} } = options;
   // The character creator's choices (features.js): those the human shows yet set his look and
   // grooming, the rest are kept for when they are built. `look`, `hair`, `beard` and `brows`, given
-  // as well, win.
-  const features = { ...DEFAULT_FEATURES, ...checkFeatures({ ...options.features }) };
+  // as well, win. `sex` (or the feature of that name) picks the figure: 'male' or 'female'.
+  const sex = options.sex ?? options.features?.sex ?? 'male';
+  const figure = figureOf(sex);
+  const { detail = 1, outfit = sex === 'female' ? DEFAULT_OUTFIT_FEMALE : DEFAULT_OUTFIT, look: lookIn = {} } = options;
+  const features = { ...DEFAULT_FEATURES, ...(sex === 'female' ? FEMALE_FEATURES : {}), ...checkFeatures({ ...options.features }, sex), sex };
+  // (A beard is his: she has none.)
+  if (sex !== 'male' && options.beard) throw new Error('human: a beard is for the male figure only');
   const none = (v) => (v === 'none' ? null : v);
   const look = { ...DEFAULT_LOOK, skin: features.skin, iris: features.iris, hair: features.hairColour, ...lookIn };
   let grooming = {
@@ -473,11 +557,14 @@ export function createHuman(GFX, options = {}) {
   };
   const group = new GFX.Group();
   group.name = 'human';
-  const { data: base } = bodyData(detail);
-  const paintFor = () => ({ skin: look.skin, iris: look.iris, hair: look.hair, style: grooming.hair, beard: grooming.beard, size: levelFor(detail) ? 2048 : 1024 });
+  const { data: base } = bodyData(detail, sex);
+  const paintFor = () => ({ skin: look.skin, iris: look.iris, hair: look.hair, style: grooming.hair, beard: grooming.beard, sex, size: levelFor(detail) ? 2048 : 1024 });
   let tex = humanTextures(GFX, paintFor());
   let mats = makeMaterials(GFX, look, tex);
-  const skeleton = new Skeleton(bones());
+  const skeleton = new Skeleton(bones(sex));
+  // His wardrobe, or hers (the women's cut of the t-shirt, jeans and bomber).
+  const wardrobe = garmentsFor(sex);
+  const JOINTS = figure.joints;
   const body = skinnedMesh(GFX, base, BODY_MATERIALS.map((n) => mats[n]), 'human body');
   group.add(body.mesh);
 
@@ -491,9 +578,9 @@ export function createHuman(GFX, options = {}) {
     const { skin } = src;
     const level = levelOffsets(shape.delta, skin.level);
     const position = src.position.slice(), normal = src.normal.slice();
-    const at = bodyLevel(skin.level).pos.slice();
+    const at = bodyLevel(skin.level, sex).pos.slice();
     for (let i = 0; i < at.length; i++) at[i] += level[i];
-    const n = levelNormals(skin.level, at);
+    const n = levelNormals(skin.level, at, sex);
     for (let i = 0; i < skin.src.length; i++) {
       const v = skin.src[i] * 3, o = i * 3;
       position[o] += level[v]; position[o + 1] += level[v + 1]; position[o + 2] += level[v + 2];
@@ -501,7 +588,7 @@ export function createHuman(GFX, options = {}) {
       normal[o] = n[v] / l; normal[o + 1] = n[v + 1] / l; normal[o + 2] = n[v + 2] / l;
     }
     placeEyes(position, skin.eyes[0], skin.eyes[1], shape);
-    carried(src, shape.delta, { k: 8, from: skin.mouth[0], to: skin.mouth[1], into: position });
+    carried(src, shape.delta, { k: 8, from: skin.mouth[0], to: skin.mouth[1], into: position, sex });
     return { position, normal };
   }
 
@@ -517,7 +604,7 @@ export function createHuman(GFX, options = {}) {
     else {
       const start = kind === 'brows' ? thickenBrows(src.position, shape.browThickness) : src.position.slice();
       const k = kind === 'glasses' ? 24 : kind === 'hair' ? 6 : 4;
-      m.data = { ...src, position: carried(src, shape.delta, { k, into: start }) };
+      m.data = { ...src, position: carried(src, shape.delta, { k, into: start, sex, trunk: kind === 'hair' }) };
     }
     m.position.array.set(m.data.position);
     m.normal.array.set(m.data.normal);
@@ -545,16 +632,18 @@ export function createHuman(GFX, options = {}) {
       if (groomed[kind]) group.remove(groomed[kind].mesh.mesh, groomed[kind].edges);
       groomed[kind] = null;
       if (!name) continue;
-      const m = fit(skinnedMesh(GFX, hairData(kind, name, detail), [mats.hair], `human ${kind}`), kind);
+      const m = fit(skinnedMesh(GFX, hairData(kind, name, detail, sex), [mats.hair], `human ${kind}`), kind);
       // Its soft edges: the same cards, blended over, drawn after everything solid.
       const edges = new GFX.Mesh(m.geometry, [mats.hairEdge]);
       edges.name = `human ${kind} edges`;
       // The cards cast no shadow of their own: they would cast their whole quads.
       m.mesh.castShadow = edges.castShadow = false;
       edges.receiveShadow = true;
-      if (kind === 'hair') m.mesh.matrixAutoUpdate = edges.matrixAutoUpdate = false;
+      // Short hair is carried whole by the head; long hair lies on the shoulders and back, and is skinned to them.
+      const rigid = kind === 'hair' && !HAIRSTYLES[name]?.skinned;
+      if (rigid) m.mesh.matrixAutoUpdate = edges.matrixAutoUpdate = false;
       group.add(m.mesh, edges);
-      groomed[kind] = { name, mesh: m, edges };
+      groomed[kind] = { name, mesh: m, edges, rigid };
     }
     grooming = { hair: groomed.hair?.name ?? null, beard: groomed.beard?.name ?? null, brows: groomed.brows?.name ?? null };
   }
@@ -567,7 +656,7 @@ export function createHuman(GFX, options = {}) {
     if (glasses) group.remove(glasses.mesh.mesh);
     glasses = null;
     if (!name) return;
-    const m = fit(skinnedMesh(GFX, glassesData(name, detail), [mats.lens, mats.frameMetal, mats.frameAcetate], 'human sunglasses'), 'glasses');
+    const m = fit(skinnedMesh(GFX, glassesData(name, detail, sex), [mats.lens, mats.frameMetal, mats.frameAcetate], 'human sunglasses'), 'glasses');
     m.mesh.matrixAutoUpdate = false;
     m.mesh.receiveShadow = true;
     group.add(m.mesh);
@@ -625,7 +714,7 @@ export function createHuman(GFX, options = {}) {
   }
 
   /** Makes the mesh for garment `g` as it fits over what he has on under it. */
-  function make(name, g, data = garmentData(name, g, detail, below(g.layer))) {
+  function make(name, g, data = garmentData(name, g, detail, below(g.layer), sex)) {
     const materials = g.materials.map((n) => mats[n] ?? g.materialFor?.(GFX, n) ?? mats.shirt);
     const m = fit(skinnedMesh(GFX, data, materials, `human ${name}`), name);
     group.add(m.mesh);
@@ -642,7 +731,7 @@ export function createHuman(GFX, options = {}) {
   function refitOver(layer) {
     const over = [...worn].filter(([, w]) => w.garment.fits && w.garment.layer > layer).sort(([, a], [, b]) => a.garment.layer - b.garment.layer);
     for (const [name, w] of over) {
-      const data = garmentData(name, w.garment, detail, below(w.garment.layer));
+      const data = garmentData(name, w.garment, detail, below(w.garment.layer), sex);
       if (data === (w.mesh.source ?? w.mesh.data)) continue;
       drop(w.mesh);
       w.mesh = make(name, w.garment, data);
@@ -651,10 +740,10 @@ export function createHuman(GFX, options = {}) {
 
   function wear(nameOrGarment, garment = null) {
     const name = typeof nameOrGarment === 'string' ? nameOrGarment : nameOrGarment.name;
-    const g = garment ?? (typeof nameOrGarment === 'object' ? nameOrGarment : GARMENTS[name] ?? custom.get(name));
-    if (!g) throw new Error(`human: no garment called ${name}; choose ${Object.keys(GARMENTS).join(', ')} or pass one of your own`);
+    const g = garment ?? (typeof nameOrGarment === 'object' ? nameOrGarment : wardrobe[name] ?? custom.get(name));
+    if (!g) throw new Error(`human: no garment called ${name}; choose ${Object.keys(wardrobe).join(', ')} or pass one of your own`);
     if (worn.has(name)) return api;
-    if (g !== GARMENTS[name]) custom.set(name, g);
+    if (g !== wardrobe[name]) custom.set(name, g);
     // One thing in each slot: a jacket worn open takes the place of one worn closed.
     if (g.slot) for (const [other, w] of [...worn]) if (w.garment.slot === g.slot) unwear(other);
     worn.set(name, { garment: g, mesh: make(name, g) });
@@ -718,9 +807,15 @@ export function createHuman(GFX, options = {}) {
     }
   }
 
-  /** How much the left hand takes the right's weapon too, in `state`: for the swings made with both hands. */
+  /**
+   * How much the left hand takes the right's weapon too, in `state`: in the swings made with both hands,
+   * and in every weapon swing of a weapon made for two.
+   */
   function twoHanded(state) {
-    if (state.clip !== 'attack' || !TWO_HANDED.has(style.attack)) return 0;
+    if (state.clip !== 'attack') return 0;
+    // As the motion does: a swing it does not know is a slash.
+    const swing = WEAPON_SWINGS.has(style.attack) || UNARMED.has(style.attack) ? style.attack : 'slash';
+    if (!(TWO_HANDED.has(swing) || (WEAPON_SWINGS.has(swing) && held.R?.hands === 'two-handed'))) return 0;
     const t = state.t ?? 0;
     return Math.min(1, Math.max(0, (t - 0.04) / 0.12)) * Math.min(1, Math.max(0, (0.88 - t) / 0.12));
   }
@@ -740,7 +835,7 @@ export function createHuman(GFX, options = {}) {
     const axis = new GFX.Vector3(0, 1, 0).transformDirection(world);
     // The right hand's back (rest −x for the right hand): the left's (rest +x) goes the same way.
     const back = new GFX.Vector3(B[o] * -1, B[o + 4] * -1, B[o + 8] * -1).normalize();
-    const grip = mirror(GRIP_AT, 1).map((v, a) => v + handShift('L')[a]), along = [0, GRIP_TILT, 1];
+    const grip = mirror(gripOf(sex), 1).map((v, a) => v + handShift('L')[a]), along = [0, GRIP_TILT, 1];
     const bonesL = ['armL', 'foreL', 'handL'];
     const start = bonesL.map((b) => skeleton.bone(b).rot.slice());
     const dirOf = (name, d) => {
@@ -826,17 +921,19 @@ export function createHuman(GFX, options = {}) {
     last = state;
     skeleton.reset();
     const armed = held.R ? 'R' : null;
-    moveBlended(state, { ...style, armed, heavy: style.heavy ?? 0 });
-    shrug(skeleton);
-    const both = held.R && !held.L ? twoHanded(state) : 0;
-    if (both) bothHands(both);
+    // A weapon made for two hands is swung with both.
+    const both = armed && !held.L && held.R.hands === 'two-handed';
+    moveBlended(state, { ...style, armed, both, heavy: style.heavy ?? 0 });
+    shrug(skeleton, JOINTS);
+    const grip = held.R && !held.L ? twoHanded(state) : 0;
+    if (grip) bothHands(grip);
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
-      const shape = held[S] || (S === 'L' && both > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
+      const shape = held[S] || (S === 'L' && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
         // Running, a hand that was left easy closes loosely.
         : state.clip === 'run' && want === 'relaxed' ? HAND_POSES.loose
         : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
-      poseHand(skeleton, S, shape, held[S] ? 1 : hands[S].amount);
+      poseHand(skeleton, S, shape, held[S] ? 1 : hands[S].amount, HAND_AXES[sex]);
     }
     // Speech, when he is talking (or shouting) and his face has not been told otherwise.
     const said = state.clip === 'yell' ? yelling(state.time ?? 0)
@@ -853,16 +950,17 @@ export function createHuman(GFX, options = {}) {
       m.position.needsUpdate = true;
       m.normal.needsUpdate = true;
     }
-    for (const kind of ['beard', 'brows']) {
-      if (!groomed[kind]) continue;
+    for (const kind of ['hair', 'beard', 'brows']) {
+      if (!groomed[kind] || groomed[kind].rigid) continue;
       const m = groomed[kind].mesh;
       skinDual(m.data, skeleton, m.position.array, m.normal.array);
       m.position.needsUpdate = true;
       m.normal.needsUpdate = true;
     }
-    if (groomed.hair || glasses) {
+    const rigidHair = groomed.hair?.rigid ? groomed.hair : null;
+    if (rigidHair || glasses) {
       const o = skeleton.index.get('head') * 12, B = skeleton.matrices;
-      for (const mesh of [groomed.hair?.mesh.mesh, groomed.hair?.edges, glasses?.mesh.mesh].filter(Boolean)) {
+      for (const mesh of [rigidHair?.mesh.mesh, rigidHair?.edges, glasses?.mesh.mesh].filter(Boolean)) {
         mesh.matrix.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
         mesh.matrixWorldNeedsUpdate = true;
       }
@@ -887,7 +985,7 @@ export function createHuman(GFX, options = {}) {
     // The grip's middle, at rest: across the roots of the fingers, in front of the palm, where they close round it; its axis runs forward along them.
     const wrist = mirror(JOINTS.wrist, m), elbow = mirror(JOINTS.elbow, m);
     const down = new GFX.Vector3(wrist[0] - elbow[0], wrist[1] - elbow[1], wrist[2] - elbow[2]).normalize();
-    const centre = new GFX.Vector3(...mirror(GRIP_AT, m));
+    const centre = new GFX.Vector3(...mirror(gripOf(sex), m));
     // The object's +y along the grip; its +x (a blade's width) in the plane the wrist bends in, edge leading.
     const along = new GFX.Vector3(0, GRIP_TILT, 1).normalize();
     const side = new GFX.Vector3().crossVectors(along, down).normalize();
@@ -899,7 +997,9 @@ export function createHuman(GFX, options = {}) {
     group.add(object);
     // Where a second hand takes it, below the first (toward the pommel), as far down the grip as there is.
     const second = bounds ? Math.max(bounds.bottom + 0.03, y - 0.085) : y - 0.085;
-    held[S] = { thing, object, rest, second };
+    // How many hands it is made for (a weapon's `handling`); anything else is taken as one-handed.
+    const hands = thing.handling?.hands ?? 'one-handed';
+    held[S] = { thing, object, rest, second, hands };
     if (last) pose(last);
     return api;
   }
@@ -919,7 +1019,7 @@ export function createHuman(GFX, options = {}) {
     if (change.skin || change.iris || change.hair) {
       tex = humanTextures(GFX, paintFor());
       const next = makeMaterials(GFX, look, tex);
-      for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
+      for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap, detailMap: next[n].detailMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
     }
     for (const n of ['shirt', 'shoe', 'sole', 'briefs']) if (change[n]) mats[n].color.set(change[n]);
     if (change.socks) mats.sock.color.set(change.socks);
@@ -937,6 +1037,7 @@ export function createHuman(GFX, options = {}) {
 
   /** Gives him the haircut `hair` (one of `HAIRSTYLES`, or null for none), the beard `beard` (one of `BEARDS`, or null) and the brows `brows` (one of `BROWS`); any left out stays. */
   function setHair(next = {}) {
+    if (sex !== 'male' && next.beard) throw new Error('human: a beard is for the male figure only');
     groom({ ...grooming, ...next });
     tex = humanTextures(GFX, paintFor());
     if (tex) Object.assign(mats.skin, { map: tex.skin.map }), mats.skin.needsUpdate = true;
@@ -950,7 +1051,9 @@ export function createHuman(GFX, options = {}) {
     skeleton,
     materials: mats,
     clips: CLIPS,
-    dimensions: HUMAN_DIMENSIONS,
+    /** The figure: 'male' or 'female'. */
+    sex,
+    dimensions: DIMENSIONS[sex],
     get outfit() { return [...worn.keys()]; },
     garment: (name) => worn.get(name)?.mesh.mesh ?? null,
     wear,
@@ -994,7 +1097,8 @@ export function createHuman(GFX, options = {}) {
     },
     /** Sets any of the creator's choices: `{ noseShape: 'aquiline', hair: 'sidePart', eyeSize: 0.3 }`. */
     customize(change) {
-      checkFeatures(change);
+      checkFeatures(change, sex);
+      if ('sex' in change && change.sex !== sex) throw new Error('human: the figure is chosen when the human is made: createHuman(GFX, { sex })');
       Object.assign(features, change);
       const colours = {};
       if (change.skin) colours.skin = change.skin;
@@ -1009,7 +1113,7 @@ export function createHuman(GFX, options = {}) {
       return api;
     },
     /** How tall he stands, in metres, in the shape he has been given. */
-    get height() { return shape?.height ?? HEIGHT; },
+    get height() { return shape?.height ?? figureOf(sex).height; },
     setHairColor: (c) => setLook({ hair: c }),
     setShirtColor: (c) => setLook({ shirt: c }),
     setJeansColor: (c) => setLook({ denim: c }),
@@ -1022,7 +1126,7 @@ export function createHuman(GFX, options = {}) {
     point: (name, p) => skeleton.point(name, p),
   };
   // Put on from the inside out, so nothing is fitted twice.
-  const layerOf = (n) => (GARMENTS[n]?.layer ?? 0);
+  const layerOf = (n) => (wardrobe[n]?.layer ?? 0);
   for (const name of [...outfit].sort((a, b) => layerOf(a) - layerOf(b))) wear(name);
   pose({ clip: 'idle', t: 0, time: 0 });
   return api;

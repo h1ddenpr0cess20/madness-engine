@@ -59,6 +59,21 @@ in vec3 vViewPosition;
   uniform sampler2D map;
   in vec2 vMapUv;
 #endif
+#ifdef USE_DETAILMAP
+  uniform sampler2D detailMap;
+  uniform float detailScale;
+#endif
+#ifdef USE_SUBSURFACE
+  uniform vec3 subsurfaceColor;
+
+  // Light carried under the surface past where it falls: each colour wrapped round the form as far as
+  // it travels (skin's red furthest), over the smooth shape, not the pores'.
+  vec3 subsurfaceScatter( vec3 L, vec3 lightColor, vec3 N, vec3 albedo ) {
+    float nl = dot( N, L );
+    vec3 wrapped = clamp( ( nl + subsurfaceColor ) / ( 1.0 + subsurfaceColor ), 0.0, 1.0 );
+    return lightColor * albedo * RECIPROCAL_PI * ( wrapped - clamp( nl, 0.0, 1.0 ) );
+  }
+#endif
 #ifdef USE_BUMPMAP
   uniform sampler2D bumpMap;
   uniform float bumpScale;
@@ -70,7 +85,15 @@ in vec3 vViewPosition;
     float Hll = bumpScale * texture( bumpMap, vBumpMapUv ).x;
     float dBx = bumpScale * texture( bumpMap, vBumpMapUv + dSTdx ).x - Hll;
     float dBy = bumpScale * texture( bumpMap, vBumpMapUv + dSTdy ).x - Hll;
-    return vec2( dBx, dBy );
+    vec2 dH = vec2( dBx, dBy );
+    #ifdef USE_DETAILMAP
+      // The detail map, on the colour map's layout: how much of the fine bump shows here (b), and a
+      // relief of its own (r) for what the tile cannot hold: creases, wrinkles, folds.
+      vec3 detail = texture( detailMap, vMapUv ).xyz;
+      dH *= detail.z;
+      dH += detailScale * ( vec2( texture( detailMap, vMapUv + dFdx( vMapUv ) ).x, texture( detailMap, vMapUv + dFdy( vMapUv ) ).x ) - detail.x );
+    #endif
+    return dH;
   }
 
   vec3 perturbNormalArb( vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDirection ) {
@@ -177,6 +200,10 @@ void main() {
     if ( diffuseColor.a < ALPHA_TEST ) discard;
   #endif
   float roughnessFactor = roughness;
+  #ifdef USE_DETAILMAP
+    // The detail map's g: rougher or glossier than the material, 0.5 as it is.
+    roughnessFactor *= texture( detailMap, vMapUv ).y * 2.0;
+  #endif
   float metalnessFactor = metalness;
 
   float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;
@@ -289,6 +316,9 @@ void main() {
       vec3 lightColor = pointLightColor[ i ];
       lightColor *= getDistanceAttenuation( lightDistance, pointLightDistance[ i ], pointLightDecay[ i ] );
       RE_Direct_Physical( lightDirection, lightColor, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
+      #ifdef USE_SUBSURFACE
+        reflectedLight.directDiffuse += subsurfaceScatter( lightDirection, lightColor, nonPerturbedNormal, material.diffuseContribution );
+      #endif
       #ifdef USE_STRANDS
         reflectedLight.directSpecular += strandSpecular( lightDirection, lightColor, geometryNormal, geometryViewDir, strand, strandJitter, strandTint );
       #endif
@@ -302,6 +332,9 @@ void main() {
         if ( i == 0 ) lightColor *= receiveShadow ? directionalShadow() : 1.0;
       #endif
       RE_Direct_Physical( directionalLightDirection[ i ], lightColor, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
+      #ifdef USE_SUBSURFACE
+        reflectedLight.directDiffuse += subsurfaceScatter( directionalLightDirection[ i ], lightColor, nonPerturbedNormal, material.diffuseContribution );
+      #endif
       #ifdef USE_STRANDS
         reflectedLight.directSpecular += strandSpecular( directionalLightDirection[ i ], lightColor, geometryNormal, geometryViewDir, strand, strandJitter, strandTint );
       #endif

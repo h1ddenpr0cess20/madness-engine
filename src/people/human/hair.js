@@ -253,12 +253,131 @@ function grow(style, [root, n0], L, layer, steps) {
   return { pts, normals };
 }
 
+/**
+ * The body from the hips up, without the arms: where long hair lies once it
+ * falls past the head (the neck, the shoulders, the back).
+ */
+let torsoSurface = null;
+function torso() {
+  if (torsoSurface) return torsoSurface;
+  const { pos, faces, weights } = bodyLevel(0);
+  const count = pos.length / 3;
+  const P = (i) => [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]];
+  const n = new Float32Array(pos.length);
+  for (let f = 0; f < faces.length; f += 4) {
+    const [a, b, c, d] = [faces[f], faces[f + 1], faces[f + 2], faces[f + 3]];
+    const q = cross(sub(P(c), P(a)), sub(P(d), P(b)));
+    for (const v of [a, b, c, d]) { n[v * 3] += q[0]; n[v * 3 + 1] += q[1]; n[v * 3 + 2] += q[2]; }
+  }
+  const limb = new Set(BAKED_BONES.map((b, i) => (/^(arm|fore|hand|thumb|index|middle|ring|pinky)/.test(b) ? i : -1)).filter((i) => i >= 0));
+  const CELL = 0.02, cells = new Map();
+  const key = (x, y, z) => `${x},${y},${z}`;
+  for (let v = 0; v < count; v++) {
+    if (pos[v * 3 + 1] < 0.95 || !Object.keys(weights[v]).length) continue;
+    // Not the arms: the hair falls behind them, and they move away from it.
+    let arm = 0;
+    for (const [b, x] of Object.entries(weights[v])) if (limb.has(+b)) arm += x;
+    if (arm > 0.5) continue;
+    const l = Math.hypot(n[v * 3], n[v * 3 + 1], n[v * 3 + 2]) || 1;
+    n[v * 3] /= l; n[v * 3 + 1] /= l; n[v * 3 + 2] /= l;
+    const k = key(Math.floor(pos[v * 3] / CELL), Math.floor(pos[v * 3 + 1] / CELL), Math.floor(pos[v * 3 + 2] / CELL));
+    if (!cells.has(k)) cells.set(k, []);
+    cells.get(k).push(v);
+  }
+  /** How far `p` is out from the skin nearest it (along that skin's normal), and that normal; null far from it. */
+  const outside = (p) => {
+    const cx = Math.floor(p[0] / CELL), cy = Math.floor(p[1] / CELL), cz = Math.floor(p[2] / CELL);
+    let best = -1, bd = Infinity;
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) for (let k = -2; k <= 2; k++) {
+      const list = cells.get(key(cx + i, cy + j, cz + k));
+      if (!list) continue;
+      for (const v of list) {
+        const d = (pos[v * 3] - p[0]) ** 2 + (pos[v * 3 + 1] - p[1]) ** 2 + (pos[v * 3 + 2] - p[2]) ** 2;
+        if (d < bd) { bd = d; best = v; }
+      }
+    }
+    if (best < 0) return null;
+    const nn = [n[best * 3], n[best * 3 + 1], n[best * 3 + 2]];
+    return { d: dot(sub(p, P(best)), nn), n: nn };
+  };
+  torsoSurface = { outside };
+  return torsoSurface;
+}
+
+/**
+ * A long strand's path from `root`: combed along the head (lying on the hair
+ * under it, `layer` 0 against the scalp, 1 at the outside), then, once it
+ * leaves the head, falling, and lying where it falls: over the shoulders and
+ * down the back, never into them. It ends at the style's cut (`endAt`), or
+ * at `L` long, whichever comes first.
+ */
+function fall(style, [root, n0], L, layer, fine, rnd) {
+  const S = surface(), T = torso();
+  const thick = style.volume * layer;
+  let p = [root[0] - n0[0] * 0.0012, root[1] - n0[1] * 0.0012, root[2] - n0[2] * 0.0012];
+  let dir = norm(add3(times(n0, style.rise), style.comb(root, n0)));
+  const pts = [p], normals = [n0];
+  const end = style.endAt(root) + (rnd() - 0.5) * 0.03;
+  let run = 0;
+  while (run < L && p[1] > end) {
+    // Fine along the head, where it curves; longer steps where it hangs.
+    const onHead = smooth(1.56, 1.64, p[1]);
+    const ds = (fine ? 0.012 : 0.02) * (1 + 1.2 * (1 - onHead));
+    const c = style.comb(p, normals[normals.length - 1]);
+    // Gravity takes it as it leaves the top of the head.
+    const g = style.weight * (0.25 + 0.75 * smooth(1.74, 1.62, p[1]));
+    // Hanging, it falls behind the shoulders, not in front of them.
+    const back = (style.drift ?? 0) * (1 - onHead) * smooth(-0.04, 0.04, p[2]);
+    dir = norm([dir[0] * 0.55 + c[0] * 0.45 * onHead, dir[1] * 0.55 + c[1] * 0.45 * onHead - g, dir[2] * 0.55 + c[2] * 0.45 * onHead - back]);
+    // Once it hangs it falls straight, not on in under the back of the head toward the neck.
+    if (onHead < 1 && p[2] < -0.01 && dir[2] > 0) dir = norm([dir[0], dir[1], dir[2] * onHead]);
+    p = [p[0] + dir[0] * ds, p[1] + dir[1] * ds, p[2] + dir[2] * ds];
+    run += ds;
+    let n = normals[normals.length - 1];
+    // On the head: on its layer of the hair, close.
+    if (p[1] > 1.45) {
+      const v = S.nearest(p);
+      if (v >= 0) {
+        const q = S.P(v), hn = S.N(v), d = dot(sub(p, q), hn);
+        // Flat at the root (a hairline lies on the skin), its layer's height built up along it.
+        const want = 0.0015 + thick * (0.35 + 0.65 * smooth(1.78, 1.62, p[1])) * smooth(0, 0.07, run);
+        const most = want + 0.004 + 0.01 * (1 - onHead);
+        // (Held to the head only where it faces up or out: under the back of the head, where it turns in
+        // toward the neck, the hair leaves it and falls.)
+        const to = d < want ? want : d > most && onHead > 0.5 && hn[1] > -0.15 ? most : d;
+        if (to !== d) p = [p[0] + hn[0] * (to - d), p[1] + hn[1] * (to - d), p[2] + hn[2] * (to - d)];
+        n = hn;
+      }
+    }
+    // Off it: kept outside the neck, the shoulders and the back, lying on them, and over what is worn
+    // there (a jacket stands a few centimetres off the skin; its collar less).
+    const o = T.outside(p);
+    if (o) {
+      const want = 0.006 + (style.over ?? 0) * smooth(1.52, 1.4, p[1]) + thick * 0.6;
+      if (o.d < want) p = [p[0] + o.n[0] * (want - o.d), p[1] + o.n[1] * (want - o.d), p[2] + o.n[2] * (want - o.d)];
+      // (Turned gradually, so a card does not twist where it comes off the head.)
+      if (p[1] < 1.56) n = norm(add3(times(n, 0.7), times(norm([o.n[0], o.n[1] * 0.3, o.n[2]]), 0.3)));
+    }
+    const prev = pts[pts.length - 1];
+    dir = norm(sub(p, prev));
+    pts.push(p);
+    normals.push(n);
+  }
+  return { pts, normals };
+}
+
 // The strand texture: COLUMNS clumps side by side, root at v 0, tip at v 1.
 const COLUMNS = 4;
 
 /** One card into `part` along a strand: `width` across at the root, narrowing to the tip; the texture's `column`. */
-function card(part, { pts, normals }, width, column, weights, shade) {
+function card(part, { pts, normals }, width, column, weights, shade, rootFade = 0) {
   const steps = pts.length - 1;
+  // Where along the texture each point is: evenly, or (for long hair, `rootFade` metres) the texture's
+  // fading-in roots kept to the first few centimetres, the rest of it spread over the length.
+  const arc = [0];
+  for (let i = 1; i <= steps; i++) arc.push(arc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
+  const L = arc[steps] || 1;
+  const vOf = (i) => (!rootFade ? i / steps : arc[i] < rootFade ? (0.18 * arc[i]) / rootFade : 0.18 + (0.82 * (arc[i] - rootFade)) / Math.max(1e-6, L - rootFade));
   // Faced out from the head, so the side seen from outside is the front, its normal the head's.
   part.grid(steps, 1, (i, j) => {
     const a = pts[Math.max(0, i - 1)], b = pts[Math.min(steps, i + 1)];
@@ -268,7 +387,7 @@ function card(part, { pts, normals }, width, column, weights, shade) {
     const t = i / steps;
     const w = width * (1 - 0.55 * t ** 1.4) * (j - 0.5);
     const p = [pts[i][0] + side[0] * w, pts[i][1] + side[1] * w, pts[i][2] + side[2] * w];
-    return { p, uv: [(column + 0.04 + 0.92 * j) / COLUMNS, t], w: weights, tint: shade(t), n, zone: { zone: 'head', y: p[1], d: 0 } };
+    return { p, uv: [(column + 0.04 + 0.92 * j) / COLUMNS, vOf(i)], w: typeof weights === 'function' ? weights(pts[i]) : weights, tint: shade(t), n, zone: { zone: 'head', y: p[1], d: 0 } };
   }, { flip: true });
 }
 
@@ -285,21 +404,23 @@ function cards(style, material, fine, rigid) {
     const L = style.length(r[0], r[1]) * (0.85 + 0.3 * k);
     if (L < style.shortest) continue;
     const steps = Math.max(2, Math.min(fine ? 9 : 5, Math.round(L / (fine ? 0.0055 : 0.01))));
-    const strand = grow(style, r, L, layer, steps);
-    const weights = rigid ? { head: 1 } : S.named(S.nearest(r[0]));
+    const strand = style.fall ? fall(style, r, L, layer, fine, rnd) : grow(style, r, L, layer, steps);
+    if (strand.pts.length < 3) continue;
+    const weights = style.weightsAt ? style.weightsAt : rigid ? { head: 1 } : S.named(S.nearest(r[0]));
     // Darker at the root and deep in the hair, where less light gets in.
     // (Short hair lets more light down to its roots.)
     // (Cropped hair, lying close in the light, barely darkens at all.)
     const crop = smooth(0.02, 0.008, L);
     const deep = 0.62 + 0.38 * Math.max(layer, crop), root = 0.5 + 0.4 * crop;
-    const shade = (t) => deep * (root + (1 - root) * smooth(0, 0.7, t));
+    const tone = style.tone ?? 1;
+    const shade = (t) => tone * deep * (root + (1 - root) * smooth(0, 0.7, t));
     const columns = style.columns ?? [0, 0, 1, 1, 2, 2, 3];
     // Short hair in narrower cards, so a card's clump stays a clump's shape.
     // Short hair in narrow cards of the looser clumps, so a short card is a few hairs, not a squashed clump.
     const short = L < 0.016;
     const width = Math.min(style.width * (0.8 + 0.4 * rnd()) * (style.widthAt ? style.widthAt(r[0]) : 1), L * (0.5 + 0.3 * rnd()) + 0.004 * smooth(0.016, 0.03, L));
     const column = short ? 2 + Math.floor(rnd() * 2) : columns[Math.floor(rnd() * columns.length)];
-    card(part, strand, width, column, weights, shade);
+    card(part, strand, width, column, weights, shade, style.fall ? 0.025 : 0);
   }
   return part;
 }
@@ -309,6 +430,72 @@ const times = (v, k) => [v[0] * k, v[1] * k, v[2] * k];
 
 // The parting, over the left eye (his left: +x), from the hairline back toward the crown.
 const PART_X = 0.036;
+
+// A woman's hairline: rounder, full at the temples, no sideburn to speak of (bearing → height, as HAIRLINE).
+const HAIRLINE_FULL = profile([
+  [0, 1.735], [0.5, 1.733], [0.8, 1.727], [1.0, 1.716], [1.1, 1.698], [1.2, 1.676], [1.38, 1.655],
+  [1.47, 1.69], [1.62, 1.694], [1.78, 1.682], [1.95, 1.652], [2.2, 1.628], [2.6, 1.612], [Math.PI, 1.604],
+]);
+/** How much hair grows at `p` for a full hairline (long hair): as scalpCover, round the temples. */
+export function fullScalpCover(p, n) {
+  if (p[1] < 1.58) return 0;
+  if (n && dot(n, sub(p, SKULL)) <= 0) return 0;
+  const b = bearing(p);
+  const H = (HAIRLINE_FULL(b - 0.05) + HAIRLINE_FULL(b - 0.025) + HAIRLINE_FULL(b) + HAIRLINE_FULL(b + 0.025) + HAIRLINE_FULL(b + 0.05)) / 5
+    + 0.003 * noise3(p[0] * 160, p[1] * 60, p[2] * 160);
+  return smooth(H - 0.004, H + 0.006, p[1]);
+}
+
+/**
+ * Long hair, parted in the middle: off the face, back past the temples and
+ * behind the ears, falling over the shoulders and down the back to below the
+ * shoulder blades, cut in a soft U. It lies on the head and, below it, on the
+ * neck, shoulders and back, so it is skinned to them (`weightsAt`) rather
+ * than carried whole by the head.
+ */
+const LONG = Object.freeze({
+  name: 'long',
+  seed: 41,
+  cover: fullScalpCover,
+  fall: true,
+  skinned: true,
+  cards: 3600,
+  width: 0.024,
+  columns: [0, 0, 1, 1, 2],
+  shortest: 0,
+  rise: 0.3,
+  weight: 0.55,
+  volume: 0.03,
+  // How far off the skin it keeps below the neck (over a jacket), and how hard it is drawn behind the shoulders.
+  over: 0.026,
+  drift: 0.7,
+  /** Long enough to reach its cut from anywhere on the head. */
+  length: () => 0.75,
+  /** The cut: below the shoulder blades at the back, a little higher toward the sides. */
+  endAt(p) {
+    return 1.14 + 0.05 * smooth(2.2, 1.0, bearing(p));
+  },
+  /** Away from the part and back on top; down and back at the sides; straight down behind. */
+  comb(p) {
+    const m = Math.sign(p[0]) || 1, b = bearing(p);
+    const top = smooth(1.70, 1.76, p[1]);
+    const front = smooth(1.2, 0.3, b);
+    // Back from the part and out a little, so the hair from the hairline covers the top of the head.
+    const away = norm([0.3 * m, 0.05, -0.8 - 0.2 * (1 - front)]);
+    // Off the face: the front swept back past the temples, behind the ears; behind, straight down, not parted.
+    const sides = norm([0.25 * m * smooth(2.5, 1.5, b), -1, -0.55 - 0.4 * smooth(1.6, 0.6, b)]);
+    const off = 0.6 * smooth(0.008, 0, Math.abs(p[0])) * smooth(-0.02, 0.04, p[2]);
+    return add3(times(away, top), times(sides, 1 - top), [m * off, 0, 0]);
+  },
+  /** On the head, the head's; down the neck, partly the neck's; on the shoulders and back, the chest's. */
+  weightsAt(p) {
+    const head = smooth(1.5, 1.62, p[1]);
+    const neck = (1 - head) * smooth(1.36, 1.48, p[1]) * 0.5;
+    const out = { head, neck, chest: 1 - head - neck };
+    for (const k of Object.keys(out)) if (out[k] < 1e-3) delete out[k];
+    return out;
+  },
+});
 
 /** The haircuts, by name. */
 export const HAIRSTYLES = Object.freeze({
@@ -356,6 +543,7 @@ export const HAIRSTYLES = Object.freeze({
       return add3(times(across, high), times(down, 1 - high), away);
     },
   }),
+  long: LONG,
 });
 
 /**
@@ -364,18 +552,23 @@ export const HAIRSTYLES = Object.freeze({
  * through its middle, and its half-height there. The same arch the skin's
  * paint follows (textures.js).
  */
-function browAt(p) {
+export function browAt(p, fine = false) {
   const E = EYE.center, s = Math.abs(p[0]);
-  const along = (s - 0.008) / 0.05, a = Math.max(0, Math.min(1, along));
+  const along = (s - (fine ? 0.01 : 0.008)) / (fine ? 0.048 : 0.05), a = Math.max(0, Math.min(1, along));
+  if (fine) {
+    // Groomed: a clean line, highest two-thirds out (the arch), tapering to a fine tail.
+    const mid = E[1] + 0.0215 + 0.0075 * Math.sin(Math.min(1, a / 0.68) * Math.PI * 0.5) - 0.0075 * smooth(0.68, 1, a);
+    return { along, mid, half: 0.0024 * (1 - 0.6 * a ** 1.3) + 0.0006 };
+  }
   const mid = E[1] + 0.0205 + 0.006 * Math.sin(a * Math.PI * 0.85) - 0.004 * a;
   return { along, mid, half: 0.0036 * (1 - 0.5 * a) + 0.0008 };
 }
 
-/** How much brow grows at `p` (rest) with normal `n`: 0 to 1. */
-export function browCover(p, n) {
+/** How much brow grows at `p` (rest) with normal `n`: 0 to 1 (`fine`: the groomed brow's line). */
+export function browCover(p, n, fine = false) {
   const E = EYE.center;
   if (p[2] < E[2] - 0.012 || (n && n[2] < 0.1)) return 0;
-  const { along, mid, half } = browAt(p);
+  const { along, mid, half } = browAt(p, fine);
   const ends = smooth(-0.06, 0.06, along) * smooth(1.05, 0.88, along);
   return ends * smooth(1.05, 0.6, Math.abs(p[1] - mid) / half);
 }
@@ -405,6 +598,41 @@ export const BROWS = Object.freeze({
       const { along, mid } = browAt(p), m = Math.sign(p[0]) || 1;
       const head = smooth(0.25, 0.05, along);
       const out = norm([m, 0.25 - 0.55 * smooth(0.4, 1, along) + 0.9 * Math.max(-0.4, Math.min(0.4, (mid - p[1]) * 120)) * 0.3, 0]);
+      return add3(times(out, 1 - head), times(norm([0.35 * m, 1, 0]), head));
+    },
+  }),
+  /** Groomed and fine: a thin, clean line with a lifted arch and a tapering tail, the hairs lying flat along it. */
+  /**
+   * His natural brows, shaped and plucked: the same hairs, as many to the
+   * square centimetre and as long, kept to a narrower line with a clean
+   * edge under it, lifted to an arch two-thirds out and tapered to a fine
+   * tail.
+   */
+  fine: Object.freeze({
+    name: 'fine',
+    seed: 31,
+    cover: (p, n) => browCover(p, n, true),
+    // (Their area is about two-thirds the natural brows', at the same density.)
+    cards: 320,
+    width: 0.0032,
+    columns: [1, 2, 2, 3],
+    shortest: 0.003,
+    rise: 0.12,
+    loose: 0.018,
+    lift: 0.035,
+    follow: 3,
+    weight: 0,
+    volume: 0.22,
+    // Darker than the hair, as brows are (fair hair's especially, or they read faint).
+    tone: 0.5,
+    length(p) {
+      return 0.0088 - 0.0042 * Math.max(0, Math.min(1, browAt(p, true).along));
+    },
+    /** As the natural brows are combed, along the plucked line. */
+    comb(p) {
+      const { along, mid } = browAt(p, true), m = Math.sign(p[0]) || 1;
+      const head = smooth(0.25, 0.05, along);
+      const out = norm([m, 0.25 - 0.75 * smooth(0.62, 1, along) + 0.9 * Math.max(-0.4, Math.min(0.4, (mid - p[1]) * 120)) * 0.3, 0]);
       return add3(times(out, 1 - head), times(norm([0.35 * m, 1, 0]), head));
     },
   }),
@@ -475,7 +703,7 @@ export function hairPaint(hair, beard, p, n) {
   if (hair && HAIRSTYLES[hair]) {
     const s = HAIRSTYLES[hair];
     cover = s.cover(p, n);
-    shade = 0.5 + 0.35 * smooth(0.035, 0.018, s.length(p, n));
+    shade = s.fall ? 0.62 : 0.5 + 0.35 * smooth(0.035, 0.018, s.length(p, n));
   }
   if (beard && BEARDS[beard]) {
     const c = BEARDS[beard].cover(p, n);

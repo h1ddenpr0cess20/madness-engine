@@ -12,4 +12,6 @@ export default `// Group 0 is the pass, group 1 the draw.
 @group(1) @binding(2) var s_map: sampler;
 @group(1) @binding(3) var t_bump: texture_2d<f32>;
 @group(1) @binding(4) var s_bump: sampler;
+@group(1) @binding(5) var t_detail: texture_2d<f32>;
+@group(1) @binding(6) var s_detail: sampler;
 `;

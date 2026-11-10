@@ -85,6 +85,9 @@ function section(kind, w, d, h, u = 0, v = 0) {
 
 /** One tooth into `part`: its middle `c` on the arch, with frame T (along) and N (out); `up` +1 for a lower tooth (its crown rising), −1 for an upper. */
 function tooth(part, { kind, w, d, height }, c, T, N, up, edgeY, weights, shade, [UP, AROUND]) {
+  // No two teeth quite the same shade; the canines the yellowest, as they are.
+  const hue = 0.955 + 0.045 * Math.sin(c[0] * 4100 + c[2] * 2300 + up);
+  const warm = kind === 'canine' ? [1, 0.975, 0.9] : [1, 0.99, 0.95];
   part.grid(UP, AROUND, (i, j) => {
     const h = -0.22 + (1.22 * i) / UP;
     const th = (j / AROUND) * Math.PI * 2;
@@ -97,8 +100,17 @@ function tooth(part, { kind, w, d, height }, c, T, N, up, edgeY, weights, shade,
     const x = u * s.a, z = v * s.b + s.back;
     const y = edgeY - up * height * (1 - Math.min(1, h)) + up * s.lift * height;
     const p = [c[0] + T[0] * x + N[0] * z, y, c[2] + T[2] * x + N[2] * z];
-    // Ivory at the neck, whiter and clearer toward the edge.
-    const tint = (0.86 + 0.14 * smooth(0, 0.7, h)) * shade(p);
+    // Enamel is thin at the neck, where the yellow dentine shows through it, and thick and whiter over
+    // the crown; an incisor's edge is enamel alone, a little grey-blue and clear. The fissures between
+    // the back teeth's cusps are stained darker.
+    const k = shade(p) * hue;
+    const neck = smooth(0.45, 0, h), edge = (kind === 'incisor' ? 1 : kind === 'canine' ? 0.5 : 0) * smooth(0.82, 0.97, h) * smooth(1.06, 0.99, h);
+    const pit = kind === 'molar' || kind === 'premolar' ? smooth(0.9, 1.05, h) * (1 - Math.min(1, s.lift / 0.05)) * 0.3 : 0;
+    const tint = [
+      k * (1 - 0.1 * neck - 0.1 * edge - pit) * warm[0],
+      k * (1 - 0.16 * neck - 0.07 * edge - pit) * warm[1],
+      k * (1 - 0.3 * neck - 0.02 * edge - pit * 1.2) * warm[2],
+    ];
     return { p, w: weights, tint, uv: [0, 0] };
   }, { flip: up < 0 });
 }
@@ -136,7 +148,10 @@ function gum(part, arch, teeth, up, lineY, weights, shade, [STEPS, ACROSS]) {
     const end = smooth(at - 0.004, at, d);
     const y = margin - up * 0.0062 * Math.sin(a) ** 0.6 * (1 - 0.6 * end);
     const q = [p[0] + N[0] * n * (1 - end * 0.9), y, p[2] + N[2] * n * (1 - end * 0.9)];
-    return { p: q, w: weights, tint: (0.8 + 0.2 * Math.sin(a)) * shade(q), uv: [0, 0] };
+    // Paler and pinker along the margin where it is tight to the teeth, redder and darker away up the jaw; stippled faintly.
+    const g = (0.8 + 0.2 * Math.sin(a)) * shade(q) * (0.96 + 0.04 * Math.sin(q[0] * 5200) * Math.sin(q[2] * 4700 + q[1] * 3900));
+    const tight = Math.sin(a) ** 2;
+    return { p: q, w: weights, tint: [g * (0.9 + 0.1 * tight), g * (0.78 + 0.22 * tight), g * (0.8 + 0.2 * tight)], uv: [0, 0] };
   }, { flip: up > 0 });
 }
 

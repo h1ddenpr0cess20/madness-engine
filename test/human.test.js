@@ -5,7 +5,7 @@ import * as GFX from '../src/gfx/index.js';
 import { createHuman, CLIPS, GARMENTS, HAND_POSES, HUMAN_DIMENSIONS } from '../src/people/index.js';
 import { bones } from '../src/people/human/skeleton.js';
 import { jeansPoint, legPoint, shirtPoint, trunkPoint } from '../src/people/human/clothes.js';
-import { createKrystalSword } from '../src/weapons/index.js';
+import { createGreatsword, createKrystalSword } from '../src/weapons/index.js';
 
 const man = createHuman(GFX, { detail: 0.5 });
 man.dress(['briefs', 'tshirt', 'jeans', 'sneakers']);
@@ -137,6 +137,32 @@ test('the hands shape themselves, and a held weapon goes where the hand goes', (
   man.hands('relaxed');
 });
 
+test('a two-handed weapon is swung with both hands on the grip; a one-handed one with one', () => {
+  // How far the left hand's grip is from where a second hand takes the held weapon, at t in a swing.
+  const gap = (weapon, attack, t) => {
+    man.hold(weapon);
+    man.setStyle({ attack });
+    man.pose({ clip: 'attack', t, time: 0 });
+    const b = weapon.gripBounds, y = Math.max((b.bottom + b.top) / 2, b.top - 0.05), second = Math.max(b.bottom + 0.03, y - 0.085);
+    const e = weapon.group.matrix.elements;
+    const at = [e[4] * second + e[12], e[5] * second + e[13], e[6] * second + e[14]];
+    const p = man.point('handL', [0.283, 0.79, 0.04]);
+    man.release('R');
+    return Math.hypot(p[0] - at[0], p[1] - at[1], p[2] - at[2]);
+  };
+  const great = createGreatsword(GFX), sword = createKrystalSword(GFX);
+  assert.equal(great.handling.hands, 'two-handed');
+  // At each swing's wind-up, strike and follow-through.
+  const keys = { slash: [0.24, 0.36, 0.52], chop: [0.24, 0.36, 0.52], thrust: [0.24, 0.36, 0.5], smite: [0.26, 0.38, 0.55] };
+  for (const [attack, times] of Object.entries(keys)) {
+    for (const t of times) assert.ok(gap(great, attack, t) < 0.06, `${attack} at ${t}: the left hand is on the greatsword's grip`);
+  }
+  // A one-handed sword is slashed with one hand, but chopped with two.
+  assert.ok(gap(sword, 'slash', 0.36) > 0.15, 'the left hand stays off a one-handed sword');
+  assert.ok(gap(sword, 'chop', 0.36) < 0.06, 'a chop takes both hands');
+  man.setStyle({});
+});
+
 test('every garment in the wardrobe can be worn on its own', () => {
   for (const name of Object.keys(GARMENTS)) {
     man.dress([name]);
@@ -258,10 +284,84 @@ test('sunglasses sit on his face and move with his head', async () => {
   assert.equal(him.features.glasses, 'none');
 });
 
+test('the woman: her own figure on the same mesh, in the women\'s cut of his clothes, with long hair', async () => {
+  const { DIMENSIONS, FIGURES, HAIRSTYLES } = await import('../src/people/index.js');
+  const her = createHuman(GFX, { sex: 'female', detail: 0.5, glasses: null });
+  assert.equal(her.sex, 'female');
+  assert.equal(her.features.sex, 'female');
+  assert.equal(her.dimensions, DIMENSIONS.female);
+  // Long blonde hair, blue eyes, groomed brows, no beard; a sports bra under what he wears.
+  assert.deepEqual(her.hair, { hair: 'long', beard: null, brows: 'fine' });
+  assert.equal(her.look.iris, '#4f7fb8');
+  assert.ok(HAIRSTYLES.long.skinned);
+  assert.deepEqual([...her.outfit].sort(), ['bra', 'briefs', 'jacket', 'jeans', 'sneakers', 'socks', 'tshirt']);
+  // His skeleton's bones, at her joints.
+  assert.deepEqual(her.skeleton.names, man.skeleton.names);
+  assert.ok(FIGURES.female.joints.shoulder[0] < FIGURES.male.joints.shoulder[0] - 0.03, 'narrower shoulders');
+  assert.ok(FIGURES.female.joints.hip[0] > FIGURES.male.joints.hip[0], 'wider hips');
+  her.pose({ clip: 'idle', t: 0, time: 0 });
+  her.dress([]);
+  const { min, max } = boundsOf(her.body.geometry.attributes.position);
+  assert.ok(Math.abs(max[1] - 1.65) < 0.03, `she stands 1.65 m (${max[1]})`);
+  assert.ok(min[1] > -0.03 && min[1] < 0.02);
+  // The same skin as his, point for point: the same count, and his garments' coverage still hides it.
+  assert.equal(her.body.geometry.attributes.position.count, man.body.geometry.attributes.position.count);
+  const bare = her.body.geometry.index.count;
+  her.dress(['bra', 'briefs', 'tshirt', 'jeans']);
+  assert.ok(her.body.geometry.index.count < bare * 0.88, 'her clothes hide her skin');
+  // The shirt hangs off her bust: in front of the skin at the bust, and below it, not drawn in under it.
+  her.pose({ clip: 'idle', t: 0, time: 0 });
+  const front = (mesh, y0, y1) => {
+    const p = mesh.geometry.attributes.position;
+    let z = -Infinity;
+    for (let i = 0; i < p.count; i++) if (p.getY(i) > y0 && p.getY(i) < y1 && Math.abs(p.getX(i) - 0.08) < 0.02) z = Math.max(z, p.getZ(i));
+    return z;
+  };
+  const { bustOf } = await import('../src/people/human/fit.js');
+  const shirt = her.garment('tshirt'), bust = bustOf('female')[1];
+  her.remove('tshirt').remove('bra');
+  const skin = front(her.body, bust - 0.09, bust - 0.06);
+  assert.ok(front(shirt, bust - 0.09, bust - 0.06) > skin + 0.008, 'the shirt bridges below her bust, not drawn in under it');
+  // Every clip poses her, the long hair with her.
+  const hair = her.group.children.find((c) => c.name === 'human hair');
+  for (const clip of CLIPS) {
+    her.pose({ clip, t: 0.4, time: 0.4 });
+    for (const m of [her.body, hair]) {
+      const p = m.geometry.attributes.position.array;
+      for (let i = 0; i < p.length; i += 97) assert.ok(Number.isFinite(p[i]), `${clip}`);
+    }
+  }
+  // Her hair falls past her shoulders, and lies on them (skinned), not inside them.
+  her.pose({ clip: 'idle', t: 0, time: 0 });
+  assert.ok(boundsOf(hair.geometry.attributes.position).min[1] < FIGURES.female.joints.shoulder[1] - 0.1, 'long hair');
+  assert.throws(() => her.customize({ sex: 'male' }), /chosen when the human is made/);
+  // Each has their own: a bra is hers, a beard his.
+  assert.throws(() => her.customize({ beard: 'full' }), /male figure only/);
+  assert.throws(() => her.setHair({ beard: 'full' }), /male figure only/);
+  assert.throws(() => man.wear('bra'), /no garment called bra/);
+  const { customizationFor, garmentsFor } = await import('../src/people/index.js');
+  assert.ok(!customizationFor('female').some((g) => g.slots.some((s) => s.key === 'beard')) && customizationFor('male').some((g) => g.slots.some((s) => s.key === 'beard')));
+  assert.ok('bra' in garmentsFor('female') && !('bra' in garmentsFor('male')));
+  // A held weapon sits in her hand: the grip as far from her wrist as it is from his.
+  const offset = (who) => {
+    const sword = createKrystalSword(GFX);
+    who.hold(sword);
+    who.pose({ clip: 'idle', t: 0, time: 0 });
+    const hand = who.point('handR', who.skeleton.pivots[who.skeleton.index.get('handR')]);
+    const e = sword.group.matrix.elements;
+    who.release('R');
+    return Math.hypot(e[12] - hand[0], e[13] - hand[1], e[14] - hand[2]);
+  };
+  assert.ok(Math.abs(offset(her) - offset(man)) < 0.03, 'the weapon is in her hand');
+});
+
 test('every shape slot is baked: each recipe in features.js is in data/shapes.js, and nothing else is', async () => {
   const { shapeRecipes, SLOTS } = await import('../src/people/human/features.js');
   const { SHAPES } = await import('../src/people/human/data/shapes.js');
+  const { SHAPES: HERS } = await import('../src/people/human/data/shapes-female.js');
   assert.deepEqual(Object.keys(SHAPES).sort(), Object.keys(shapeRecipes()).sort(), 'rebake with scripts/bake-human.mjs --shapes-only');
+  assert.deepEqual(Object.keys(HERS).sort(), Object.keys(shapeRecipes('female')).sort(), 'rebake with scripts/bake-human.mjs --female --shapes-only');
+  assert.ok(Object.keys(shapeRecipes('female')['muscle+']).every((t) => t.includes('female-young')), 'her build is made of the female targets');
   for (const k of ['height', 'muscle', 'weight', 'shoulders', 'face', 'jaw', 'eyeShape', 'eyeSize', 'noseShape', 'mouthShape', 'earShape', 'browArch']) {
     assert.ok(SLOTS[k].ready, `${k} is built`);
   }
@@ -321,4 +421,16 @@ test('a build sets the body sliders off from where they are, and a held weapon g
   him.customize({ build: 'average', height: 1 });
   const high = at(sword.group ?? sword);
   assert.ok(high[1] - low[1] > 0.04, `the grip rises with the hand: ${low[1]} to ${high[1]}`);
+});
+
+test('the woman is shaped by her own shapes, in her pose and at her size', () => {
+  const her = createHuman(GFX, { detail: 0.5, sex: 'female', glasses: null });
+  const body = () => her.group.children.find((m) => m.name === 'human body').geometry.attributes.position;
+  const before = body().array.slice();
+  assert.equal(her.height, 1.65);
+  her.customize({ height: 1, build: 'athletic', noseShape: 'button' });
+  assert.ok(her.height > 1.72 && her.height < 1.8, `taller: ${her.height}`);
+  assert.ok(Math.abs(boundsOf(body()).min[1]) < 0.003, 'her soles stay on the ground');
+  her.customize({ height: 0, build: 'average', noseShape: 'straight' });
+  assert.deepEqual(body().array.slice(), before, 'back as she was');
 });

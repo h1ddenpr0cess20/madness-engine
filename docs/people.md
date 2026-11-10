@@ -15,6 +15,63 @@ by Catmull–Clark subdivision (detail ≥ 0.8), the skin is painted onto its
 UV layout from where each texel is on the body, and every garment is cut
 by casting rays onto that body.
 
+## The woman
+
+`createHuman(GFX, { sex: 'female' })` (or `features: { sex: 'female' }`)
+makes a woman: MakeHuman's own young woman, baked by `scripts/bake-human.mjs
+--female` into `src/people/human/data/female.js`. Her targets blend the
+young-female of the same three ancestries, an average-to-toned build,
+ideal proportions, a moderate bust, and a finer face (a narrower nose,
+jaw and chin, fuller lips, an oval head, higher cheekbones), scaled to
+1.65 m. She is the man's own mesh, vertex for vertex (MakeHuman's targets
+only move its points), so the file keeps only where her points are and
+her joints: her UVs, quads, bones and skin weights are his.
+
+| Measure | Value |
+|---|---:|
+| Height | 1.65 m |
+| Head height | 0.21 m |
+| Shoulder width | 0.37 m |
+| Inseam | 0.76 m |
+| Shoulder to wrist | 0.56 m |
+| Hand / foot length | 0.175 / 0.245 m |
+
+`DIMENSIONS.female` (and `her.dimensions`) give these; `FIGURES` gives each
+figure's joints, face and fingers.
+
+Everything worn or grown is made on him, as it always is, and carried onto
+her (`people/human/fit.js`): each point moves as the skin under it moves
+from his body to hers, the skin it follows chosen by how near it is and how
+alike its bone weights are (so a point on the left thigh follows the left
+thigh), wider the further the point stands off the skin. Normals turn with
+the move's gradient; the eyes go whole, to hers and at her size. Their
+weights, UVs and the zones they say they cover are his, so coverage,
+layering and skinning work as they do on him. Cloth on the trunk then hangs
+as it does over a bust (`hang`): from the fullest of it nearly straight
+down, across between the breasts, and only ever outward, so hems and layers
+keep their thickness. Her skeleton is his bones at her joints; the clips
+read her legs' lengths off it, and a weapon is held at the same place in
+her hand.
+
+She starts in `DEFAULT_OUTFIT_FEMALE`: his outfit with a sports bra (`bra`,
+cut from the chest, a band held close round her ribs and straps) under the
+t-shirt. The bra is not hung but wrapped (`wrap`): kept clear of her skin,
+then filled out between her breasts and under them as far as a 5 cm ball
+rolled over her front cannot reach, as a stretched knit lies; past the
+fullest of them it follows her round her sides. The bra is hers only, and a beard his: `wear('bra')`
+on him and a beard for her are refused. Her wardrobe (`GARMENTS_FEMALE`, used
+by `wear` on her; `garmentsFor(sex)` gives either) is his in the
+women's cut (`WOMENS_CUT`, said in his measures, since it is cut on him and
+carried onto her): a fitted t-shirt, a little shorter, its sleeves shorter
+and close; slim jeans, close down the whole leg (over the socks' cuffs and
+the briefs, which they hide); the bomber cropped to the waist and fitted,
+not bloused. Her briefs lie flat in front. Her t-shirt and bomber hang off
+her bust and come back in to her waist; the bomber never comes in faster
+than the shirt under it, and hides the shirt nearly to its hem. `FEMALE_FEATURES` are her defaults:
+long blonde hair, blue eyes, groomed brows, no beard. Her skin has no
+shaved shadow, and her lips are a little rosier. The figure is fixed when
+she is made; `customize({ sex })` refuses to change it.
+
 ## Scale and proportions
 
 One world unit is one metre, the same as the weapons. He is a stylised,
@@ -119,7 +176,9 @@ spacing, tilt, depth, color), the brows (style, thickness, height, arch), the
 nose (shape, width, length, bridge, tip), the mouth (shape, width, each lip,
 color), the ears (shape, size, angle), the hair and the facial hair. Each
 slot is a choice, a slider (−1 to 1, 0 the average) or a color, with its
-default, and `ready` says whether he is built to show it yet.
+default, and `ready` says whether it is built to show yet. A group with a
+`figure` is that figure's only (the facial hair is his);
+`customizationFor(sex)` leaves out the other's.
 
 ```js
 const him = createHuman(GFX, { features: { build: 'athletic', height: 0.4, noseShape: 'roman', beard: 'full' } });
@@ -149,6 +208,13 @@ Shaping him moves:
   tongue each move as the skin nearest them does, so a heavier man's shirt
   goes out over his belly;
 - him back onto the ground, however much taller or shorter he has become.
+
+The woman has shapes of her own (`data/shapes-female.js`, baked with
+`--female --shapes-only`): the same recipes in her pose and at her size, with
+MakeHuman's female build and height targets in place of the male ones (and
+`forFemale` where her recipe differs, as for muscle, since she is baked less
+muscular). Her long hair goes with her head and back, not with the arms it
+hangs beside.
 
 Brow thickness widens the brows' cards about the line they run along. The
 skin details (age, freckles, scars, a tattoo), the lip color, the moustache
@@ -183,6 +249,16 @@ own colour (the material's `strands` flag).
 - `natural` (`brows`, on unless `brows: null`): about 9 mm at the head of
   each brow, swept up there, then lying out along the arch and turning down
   toward the tail.
+- `fine` (`brows`, the woman's): the natural brows shaped and plucked: the
+  same hairs at the same density, kept to a narrower line with a clean edge
+  under it, lifted to an arch two-thirds out and tapered to a fine tail; a
+  shade darker than the hair.
+- `long` (`hair`, the woman's): parted in the middle, off the face and
+  behind the ears, falling over the shoulders and down the back to below
+  the shoulder blades, cut in a soft U, round a full hairline. Its strands
+  are grown along the head, then fall and lie where they fall, on the
+  neck, shoulders and back (kept out over a jacket). It is skinned (to the
+  head, then the neck and chest down the back) rather than carried whole.
 
 The hair rides the head bone whole; the beard and brows are skinned, so they
 move with the jaw, the lips and the brows.
@@ -222,6 +298,13 @@ weapon in his right hand the idle, walk, run and jump hold it ready.
 `man.setStyle({ attack, heavy })`: `attack` is `'slash'`, `'chop'`,
 `'thrust'`, `'smite'`, `'punch'` or `'shove'`. Each is a keyed swing from
 ready: wind-up, strike, follow-through, recovery.
+
+A weapon made for two hands (its `handling.hands` is `'two-handed'`, see
+[Categories](weapons.md#categories)), such as a greatsword, is swung with
+both: in a slash, chop, thrust or smite the sword arm keeps the grip nearer
+the middle and the left hand closes on it below the right, then lets go for
+the recovery. A chop takes both hands whatever is held; a one-handed weapon
+is otherwise swung with one.
 
 `talk` moves his mouth as he speaks: syllables at a talking pace, each an
 open, spread, rounded or closed shape, in phrases with breaths between, the
@@ -268,6 +351,8 @@ gives it back; `man.held(hand)` says what is there.
 | `people/human.js` | `createHuman`: meshes, wardrobe, face, hands, holding, posing. |
 | `people/human/skeleton.js` | Proportions, joints, bones and the skin-weight rules. |
 | `people/human/data/base.js` | The baked body (generated by `scripts/bake-human.mjs`). |
+| `people/human/data/female.js` | The woman's points and joints on the same mesh (`scripts/bake-human.mjs --female`). |
+| `people/human/fit.js` | Carrying what is made on him onto her; cloth hung over her bust. |
 | `people/human/basemesh.js` | Unpacks it; Catmull–Clark subdivision. |
 | `people/human/head.js` | Eyes, tongue, the mouth's corners and lips. |
 | `people/human/features.js` | The character creator's slots: what can be chosen, its options and defaults, and the MakeHuman targets each shape is made of. |
@@ -276,11 +361,11 @@ gives it back; `man.held(hand)` says what is there.
 | `people/human/hair.js` | Hair and beards: where each grows, its length and combing, the cards, the strand texture. |
 | `people/human/teeth.js` | The teeth and gums, tooth by tooth, sized from average adult crowns. |
 | `people/human/body.js` | Measuring the body: rays onto its skin, zones, skin weights for cloth, the feet. |
-| `people/human/clothes.js` | The wardrobe: briefs, t-shirt, jeans, sneakers. |
+| `people/human/clothes.js` | The wardrobe: briefs, sports bra, socks, t-shirt, jeans, sneakers, bomber. |
 | `people/human/shell.js` | Garments cut from the skin: outline, ease, drape, turned edges. |
 | `people/human/textures.js` | Skin painted on the body's UVs, eyes, jersey, denim and sneakers. |
 | `people/human/motion.js` | The clips. |
 | `people/human/kit.js` | The modelling kit: grids, normals, assembly. |
 
-The asset viewer lists him under **People**, with his wardrobe, colours,
+The asset viewer lists him, and her (**Human, female**), under **People**, with his wardrobe, colours,
 a weapon to hold, the attack, his left hand and his face to set.

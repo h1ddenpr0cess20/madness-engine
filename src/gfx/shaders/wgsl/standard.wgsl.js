@@ -112,6 +112,15 @@ fn vs(in: VertexInput) -> Varyings {
 #ifdef USE_BUMPMAP
 #include <bump>
 #endif
+#ifdef USE_SUBSURFACE
+// Light carried under the surface past where it falls: each colour wrapped round the form as far as
+// it travels (skin's red furthest), over the smooth shape, not the pores'.
+fn subsurfaceScatter(L: vec3f, lightColor: vec3f, N: vec3f, albedo: vec3f) -> vec3f {
+  let nl = dot(N, L);
+  let wrapped = clamp((vec3f(nl) + u_draw.subsurfaceColor) / (vec3f(1.0) + u_draw.subsurfaceColor), vec3f(0.0), vec3f(1.0));
+  return lightColor * albedo * RECIPROCAL_PI * (wrapped - vec3f(clamp(nl, 0.0, 1.0)));
+}
+#endif
 
 #ifdef USE_ENVMAP
 fn getIBLIrradiance(normal: vec3f) -> vec3f {
@@ -179,7 +188,11 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
     discard;
   }
   #endif
-  let roughnessFactor = u_draw.roughness;
+  var roughnessFactor = u_draw.roughness;
+  #ifdef USE_DETAILMAP
+  // The detail map's g: rougher or glossier than the material, 0.5 as it is.
+  roughnessFactor *= textureSample(t_detail, s_detail, in.mapUv).y * 2.0;
+  #endif
   let metalnessFactor = u_draw.metalness;
 
   let faceDirection = select(-1.0, 1.0, frontFacing);
@@ -195,7 +208,11 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #endif
   let nonPerturbedNormal = normal;
   #ifdef USE_BUMPMAP
-  normal = perturbNormalArb(-in.viewPosition, normal, dHdxy_fwd(in.bumpMapUv), faceDirection);
+  #ifdef USE_MAP
+  normal = perturbNormalArb(-in.viewPosition, normal, dHdxy_fwd(in.bumpMapUv, in.mapUv), faceDirection);
+  #else
+  normal = perturbNormalArb(-in.viewPosition, normal, dHdxy_fwd(in.bumpMapUv, in.bumpMapUv), faceDirection);
+  #endif
   #endif
   let clearcoatNormal = nonPerturbedNormal;
   #ifdef USE_STRANDS
@@ -293,6 +310,9 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
     var lightColor = u_frame.pointLightColor[i].xyz;
     lightColor *= getDistanceAttenuation(lightDistance, u_frame.pointLightPosition[i].w, u_frame.pointLightColor[i].w);
     RE_Direct_Physical(lightDirection, lightColor, geometryNormal, geometryViewDir, geometryClearcoatNormal, material);
+    #ifdef USE_SUBSURFACE
+    directDiffuse += subsurfaceScatter(lightDirection, lightColor, nonPerturbedNormal, material.diffuseContribution);
+    #endif
     #ifdef USE_STRANDS
     directSpecular += strandSpecular(lightDirection, lightColor, geometryNormal, geometryViewDir, strand, strandJitter, strandTint);
     #endif
@@ -309,6 +329,9 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
     if (i == 0) { lightColor *= shadow; }
     #endif
     RE_Direct_Physical(u_frame.dirLightDirection[i].xyz, lightColor, geometryNormal, geometryViewDir, geometryClearcoatNormal, material);
+    #ifdef USE_SUBSURFACE
+    directDiffuse += subsurfaceScatter(u_frame.dirLightDirection[i].xyz, lightColor, nonPerturbedNormal, material.diffuseContribution);
+    #endif
     #ifdef USE_STRANDS
     directSpecular += strandSpecular(u_frame.dirLightDirection[i].xyz, lightColor, geometryNormal, geometryViewDir, strand, strandJitter, strandTint);
     #endif

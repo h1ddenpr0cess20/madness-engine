@@ -1,13 +1,19 @@
 import { WOOD_FINISHES, WOOD_SPECIES } from '../textures/wood.js';
 import { woodBoardMaterial } from '../props/wood-board.js';
-import { createKrystalOrbPommel, createMagicEggPommel } from './common.js';
+import { createKrystalOrbPommel, createMagicEggPommel, metalMaterial } from './common.js';
+import { METALS } from '../props/metalglobe.js';
+import { createGlassPlanet, GLASS_PLANET_NAMES } from '../props/glass-planets.js';
+import { createJewelBoulder, JEWEL_CHOICES } from '../heroes/rock-jewel.js';
+import { HANDS, handlingInfo, handlingOf } from './categories.js';
 
 /**
  * A gnarled wizard's staff carved entirely from the library's wood textures.
  * Its head is a cradle of twisting, knotted roots that rises out of the shaft
- * and clasps the Krystal crystal orb (or, optionally, the glass egg) in a
- * ragged lip, as if the staff had grown around it. Only the grip's leather and
- * thread are not wood. All dimensions are in metres.
+ * and clasps its topper (the Krystal crystal orb, the glass egg, or a planet in
+ * glass) in a ragged lip, as if the staff had grown around it. Only the grip's
+ * leather and thread are not wood, unless the staff is made in metal: then the
+ * shaft, roots and head take one of the `METALS` finishes instead. All
+ * dimensions are in meters.
  */
 export const STAFF_DIMENSIONS = Object.freeze({
   shaftLength: 1.6,
@@ -23,7 +29,27 @@ export const STAFF_DIMENSIONS = Object.freeze({
   unit: 'm',
 });
 
-export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', 'none']);
+/** The planets in glass are toppers too: `earth`, `mars`, `moon`, `jupiter`, `jupiter-etched` (see `props/glass-planets`). */
+/** A gem is a topper too: `sapphire`, `ruby`, and the rest of `JEWEL_CHOICES`, each the jewel stone in its color, with its mist. */
+export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', ...GLASS_PLANET_NAMES, ...JEWEL_CHOICES, 'none']);
+
+const TOPPER_LABELS = Object.freeze({
+  orb: 'Krystal crystal orb',
+  egg: 'Glass egg',
+  earth: 'Glass Earth',
+  mars: 'Glass Mars',
+  moon: 'Glass Moon',
+  jupiter: 'Glass Jupiter',
+  'jupiter-etched': 'Glass Jupiter (etched)',
+  ...Object.fromEntries(JEWEL_CHOICES.map((name) => [name, `${name[0].toUpperCase()}${name.slice(1)} (jewel)`])),
+  none: 'none',
+});
+
+/**
+ * The staff's handling: held in one hand, as the engine's wizard and doomlord
+ * figures hold theirs, and ranged, a focus for spells rather than a melee reach.
+ */
+export const STAFF_HANDLING = handlingOf({ hands: HANDS.ONE, ranged: true });
 
 const GRIP_Y = [0.8, 1.1];
 const HEAD_Y = 1.55;
@@ -135,10 +161,12 @@ function shaftProfile() {
 export function createStaff(GFX, {
   species = 'walnut',
   finish = 'lacquered',
+  metal = null,
   gripColor = '#3a2418',
   threadColor = '#e2b857',
   wrap = true,
   topper = 'orb',
+  planetMaps = {},
   vine = true,
   tendrils = 18,
   seed = 7,
@@ -146,6 +174,7 @@ export function createStaff(GFX, {
 } = {}) {
   if (!Object.hasOwn(WOOD_SPECIES, species)) throw new Error(`no wood called ${species}; choose ${Object.keys(WOOD_SPECIES).join(', ')}`);
   if (!WOOD_FINISHES.includes(finish)) throw new Error(`no wood finish called ${finish}; choose ${WOOD_FINISHES.join(', ')}`);
+  if (metal !== null && !Object.hasOwn(METALS, metal)) throw new Error(`no metal called ${metal}; choose ${Object.keys(METALS).join(', ')}`);
   if (!STAFF_TOPPERS.includes(topper)) throw new Error(`no topper called ${topper}; choose ${STAFF_TOPPERS.join(', ')}`);
   if (!Number.isInteger(tendrils) || tendrils < 8 || tendrils > 32) throw new RangeError('tendrils must be a whole number from 8 to 32');
   if (!Number.isFinite(seed)) throw new TypeError('seed must be a number');
@@ -162,6 +191,10 @@ export function createStaff(GFX, {
   let woodSpecies = species;
   let woodFinish = finish;
   let wood = woodBoardMaterial(GFX, woodSpecies, woodFinish);
+  // In metal, the wooden parts take a metal finish instead; `wood` is kept for when the staff goes back to it.
+  let metalName = metal;
+  let metalMat = metalName ? metalMaterial(GFX, `staff ${metalName}`, metalName) : null;
+  const finishMaterial = () => (metalName ? metalMat : wood);
   const leather = new GFX.MeshPhysicalMaterial({
     name: 'staff leather', color: gripColor, roughness: 0.62, metalness: 0, clearcoat: 0.1,
   });
@@ -171,16 +204,17 @@ export function createStaff(GFX, {
   const woodParts = [];
 
   const add = (parent, geometry, material, name) => {
+    const isFinish = material === wood;
     // Wood gets its grain along its length: turned parts by their lathe, carved parts planar.
-    if (material === wood) {
+    if (isFinish) {
       if (geometry.type === 'LatheGeometry') turnedUV(geometry); else carvedUV(GFX, geometry);
     }
-    const mesh = new GFX.Mesh(geometry, material);
+    const mesh = new GFX.Mesh(geometry, isFinish ? finishMaterial() : material);
     mesh.name = name;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     parent.add(mesh);
-    if (material === wood) woodParts.push(mesh);
+    if (isFinish) woodParts.push(mesh);
     return mesh;
   };
 
@@ -363,6 +397,16 @@ export function createStaff(GFX, {
       if (kind === 'orb') {
         const asset = createKrystalOrbPommel(GFX, STAFF_DIMENSIONS.orbRadius);
         toppers.orb = { asset, object: asset.group };
+      } else if (JEWEL_CHOICES.includes(kind)) {
+        // A jewel is the granite's own shape, cut to the orb's size, with its mist inside.
+        const scale = STAFF_DIMENSIONS.orbRadius / 0.9;
+        const asset = createJewelBoulder(GFX, { colour: kind, mist: true, size: scale });
+        asset.mesh.scale.setScalar(scale);
+        toppers[kind] = { asset, object: asset.mesh };
+      } else if (GLASS_PLANET_NAMES.includes(kind)) {
+        // A planet is drawn at the orb's radius, the size its cradle is cut for; the Moon and Mars are not to scale beside the Earth.
+        const asset = createGlassPlanet(GFX, kind, { radius: STAFF_DIMENSIONS.orbRadius, ...planetMaps[kind] });
+        toppers[kind] = { asset, object: asset.group };
       } else {
         const asset = createMagicEggPommel(GFX, STAFF_DIMENSIONS.eggHalfHeight / STAFF_DIMENSIONS.eggScale);
         // The sword's egg hangs point-down; stand it on its broad end by turning it end over end about its centre.
@@ -392,6 +436,12 @@ export function createStaff(GFX, {
   // The top of the staff: the topper's centre and its half-height.
   const dims = () => HEAD_Y + headCentre + topperSpec(topperKind === 'none' ? 'orb' : topperKind).b;
 
+  // The wooden parts, all at once: the current finish, wood or metal.
+  const paintWood = () => {
+    const next = finishMaterial();
+    for (const mesh of woodParts) mesh.material = next;
+  };
+
   const api = {
     group,
     shaft,
@@ -405,33 +455,49 @@ export function createStaff(GFX, {
     get egg() { return toppers.egg?.asset ?? null; },
     get species() { return woodSpecies; },
     get finish() { return woodFinish; },
+    get metal() { return metalName; },
     get gripColor() { return `#${leather.color.getHexString()}`; },
     get threadColor() { return `#${thread.color.getHexString()}`; },
     get wrap() { return wrapOn; },
     get vine() { return vine; },
     get tendrils() { return tendrils; },
     get seed() { return seed; },
+    handling: STAFF_HANDLING,
     get dimensions() {
       return Object.freeze({ ...STAFF_DIMENSIONS, overallLength: dims(), tendrils, unit: 'm' });
     },
     get info() {
       return {
+        ...handlingInfo(STAFF_HANDLING),
         'Staff length': `${dims().toFixed(2)} m`,
-        Wood: `${woodSpecies} (${woodFinish})`,
-        Topper: topperKind === 'orb' ? 'Krystal crystal orb' : topperKind === 'egg' ? 'Glass egg' : 'none',
+        ...(metalName ? { Metal: metalName } : { Wood: `${woodSpecies} (${woodFinish})` }),
+        Topper: TOPPER_LABELS[topperKind],
         Tendrils: String(tendrils),
         Scale: '1 world unit = 1 metre',
       };
     },
+    /** Makes the wooden parts wood again: `setWood()` with no arguments keeps the wood it had. */
     setWood(nextSpecies = woodSpecies, nextFinish = woodFinish) {
       if (!Object.hasOwn(WOOD_SPECIES, nextSpecies)) throw new Error(`no wood called ${nextSpecies}; choose ${Object.keys(WOOD_SPECIES).join(', ')}`);
       if (!WOOD_FINISHES.includes(nextFinish)) throw new Error(`no wood finish called ${nextFinish}; choose ${WOOD_FINISHES.join(', ')}`);
-      const next = woodBoardMaterial(GFX, nextSpecies, nextFinish);
-      for (const mesh of woodParts) mesh.material = next;
-      wood.dispose?.();
-      wood = next;
+      const old = wood;
+      wood = woodBoardMaterial(GFX, nextSpecies, nextFinish);
       woodSpecies = nextSpecies;
       woodFinish = nextFinish;
+      if (metalMat) { metalMat.dispose?.(); metalMat = null; }
+      metalName = null;
+      paintWood();
+      old.dispose?.();
+      return api;
+    },
+    /** Makes the wooden parts a metal: one of the `METALS` finishes. The grip, its thread and the topper stay as they are. */
+    setMetal(name) {
+      if (!Object.hasOwn(METALS, name)) throw new Error(`no metal called ${name}; choose ${Object.keys(METALS).join(', ')}`);
+      const next = metalMaterial(GFX, `staff ${name}`, name);
+      metalMat?.dispose?.();
+      metalMat = next;
+      metalName = name;
+      paintWood();
       return api;
     },
     setGripColor(color) {

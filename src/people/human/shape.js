@@ -1,7 +1,11 @@
-import { SHAPES } from './data/shapes.js';
+import { SHAPES as HIS } from './data/shapes.js';
+import { SHAPES as HERS } from './data/shapes-female.js';
 import { baseMesh } from './basemesh.js';
 import { BUILDS, SLOTS } from './features.js';
-import { EYE, HEIGHT } from './skeleton.js';
+import { figureOf } from './skeleton.js';
+
+/** Each figure's shapes, baked in its own pose and at its own size. */
+const BY_FIGURE = { male: HIS, female: HERS };
 
 /**
  * The character creator's shapes put on the human. Each slot that changes
@@ -15,7 +19,8 @@ import { EYE, HEIGHT } from './skeleton.js';
  * shape bends. Everything worn or grown over the skin (clothes, hair,
  * beard, brows, glasses, teeth, tongue) moves as the skin nearest it does,
  * and the eyeballs move and grow whole. He is set back on the ground
- * afterward, however much taller or shorter he has become.
+ * afterward, however much taller or shorter he has become. The woman has
+ * shapes of her own, baked from MakeHuman's female targets on her body.
  */
 
 function decode(b64, Type) {
@@ -31,14 +36,15 @@ function decode(b64, Type) {
 }
 
 const unpacked = new Map();
-/** One baked shape, unpacked once: the vertices it moves and by how much (metres), its joints and eyes. */
-function shapeOf(name) {
-  if (!unpacked.has(name)) {
-    const s = SHAPES[name];
+/** One of figure `sex`'s baked shapes, unpacked once: the vertices it moves and by how much (metres), its joints and eyes. */
+function shapeOf(name, sex) {
+  const key = `${sex}:${name}`;
+  if (!unpacked.has(key)) {
+    const s = BY_FIGURE[sex][name];
     const raw = decode(s.d, s.bits === 8 ? Int8Array : Int16Array);
-    unpacked.set(name, { index: decode(s.i, Uint16Array), offset: Float32Array.from(raw, (v) => v * s.q), pivots: s.pivots, eyes: s.eyes ?? {} });
+    unpacked.set(key, { index: decode(s.i, Uint16Array), offset: Float32Array.from(raw, (v) => v * s.q), pivots: s.pivots, eyes: s.eyes ?? {} });
   }
-  return unpacked.get(name);
+  return unpacked.get(key);
 }
 
 /** The keys of the slots that change his shape. */
@@ -51,6 +57,7 @@ export const SHAPE_KEYS = Object.freeze([...Object.values(SLOTS).filter((s) => s
  */
 export function shapeAmounts(features) {
   const out = {};
+  const SHAPES = BY_FIGURE[features.sex ?? 'male'];
   const build = BUILDS[features.build] ?? {};
   for (const s of Object.values(SLOTS)) {
     if (!s.shape) continue;
@@ -66,17 +73,17 @@ export function shapeAmounts(features) {
   return out;
 }
 
-let soles = null;
-/** The body's lowest point as baked, and the vertices of its skin. */
-function groundOf() {
-  if (soles) return soles;
-  const m = baseMesh();
+const soles = new Map();
+/** Figure `sex`'s lowest and highest points as baked, and the vertices of its skin. */
+function groundOf(sex) {
+  if (soles.has(sex)) return soles.get(sex);
+  const m = baseMesh(sex);
   const skin = new Uint8Array(m.count);
   for (const v of m.surfaces.body.v) skin[v] = 1;
   let lo = Infinity, hi = -Infinity;
   for (let v = 0; v < m.count; v++) if (skin[v]) { lo = Math.min(lo, m.position[v * 3 + 1]); hi = Math.max(hi, m.position[v * 3 + 1]); }
-  soles = { skin, lo, hi };
-  return soles;
+  soles.set(sex, { skin, lo, hi });
+  return soles.get(sex);
 }
 
 /**
@@ -86,15 +93,16 @@ function groundOf() {
  * `browThickness`, for his brows' cards.
  */
 export function shapeFor(features) {
+  const sex = features.sex ?? 'male';
   const amounts = shapeAmounts(features);
   const thick = features.browThickness ?? 0;
   if (!Object.keys(amounts).length && !thick) return null;
-  const m = baseMesh();
+  const m = baseMesh(sex);
   const delta = new Float32Array(m.count * 3);
   const pivots = {};
   const eyes = { L: 0, R: 0 };
   for (const [name, k] of Object.entries(amounts)) {
-    const s = shapeOf(name);
+    const s = shapeOf(name, sex);
     for (let j = 0; j < s.index.length; j++) {
       const o = s.index[j] * 3;
       delta[o] += s.offset[j * 3] * k; delta[o + 1] += s.offset[j * 3 + 1] * k; delta[o + 2] += s.offset[j * 3 + 2] * k;
@@ -106,7 +114,7 @@ export function shapeFor(features) {
     for (const [S, r] of Object.entries(s.eyes)) eyes[S] += r * k;
   }
   // Back on the ground: his soles where they were.
-  const { skin, lo, hi } = groundOf();
+  const { skin, lo, hi } = groundOf(sex);
   let low = Infinity, top = -Infinity;
   for (let v = 0; v < m.count; v++) {
     if (!skin[v]) continue;
@@ -120,7 +128,7 @@ export function shapeFor(features) {
     pivots.root = [0, 0, 0];
     for (const p of Object.values(pivots)) p[1] += lift;
   }
-  return { amounts, delta, pivots, eyes, lift, height: HEIGHT + top + lift - hi, browThickness: thick };
+  return { sex, amounts, delta, pivots, eyes, lift, height: figureOf(sex).height + top + lift - hi, browThickness: thick };
 }
 
 // ————————————————————————————————————————————— the skin, through its subdivision
@@ -193,6 +201,7 @@ function subdivideOffsets(d, t) {
 
 /** The base offsets carried to subdivision `level` of the skin. */
 export function levelOffsets(delta, level) {
+  // The figures are one mesh: their quads are the same.
   const m = baseMesh();
   let d = delta, faces = m.surfaces.body.v, V = m.count;
   for (let l = 0; l < level; l++) {
@@ -226,12 +235,19 @@ function nextFaces(t) {
 
 // ————————————————————————————————————————————— what is over the skin
 
-let grid = null;
-/** The skin's base vertices in a grid of 2 cm cells, to find those nearest a point. */
-function skinGrid() {
-  if (grid) return grid;
-  const m = baseMesh();
-  const { skin } = groundOf();
+const grids = new Map();
+const LIMBS = /^(arm|fore|hand|thumb|index|middle|ring|pinky)/;
+/**
+ * Figure `sex`'s skin's base vertices in a grid of 2 cm cells, to find those
+ * nearest a point; with `trunk`, only those of the head and trunk (long hair
+ * lies by the arms, but goes with the back it hangs down).
+ */
+function skinGrid(sex, trunk = false) {
+  const id = `${sex}${trunk ? ':trunk' : ''}`;
+  if (grids.has(id)) return grids.get(id);
+  const m = baseMesh(sex);
+  const skin = groundOf(sex).skin.slice();
+  if (trunk) for (let v = 0; v < m.count; v++) if (LIMBS.test(m.bones[m.bone[v * 4]])) skin[v] = 0;
   const CELL = 0.02, cells = new Map();
   const key = (i, j, k) => (i + 512) * 1048576 + (j + 512) * 1024 + (k + 512);
   for (let v = 0; v < m.count; v++) {
@@ -241,16 +257,16 @@ function skinGrid() {
     if (!list) cells.set(k, (list = []));
     list.push(v);
   }
-  grid = { CELL, cells, key, P: m.position };
-  return grid;
+  grids.set(id, { CELL, cells, key, P: m.position });
+  return grids.get(id);
 }
 
 /**
  * For each of `position`'s points (xyz), the `k` skin vertices nearest it
  * and how much each counts (by inverse square distance): what it moves with.
  */
-function anchorsFor(position, k = 4) {
-  const { CELL, cells, key, P } = skinGrid();
+function anchorsFor(position, k, sex, trunk) {
+  const { CELL, cells, key, P } = skinGrid(sex, trunk);
   const n = position.length / 3;
   const index = new Uint32Array(n * k), weight = new Float32Array(n * k);
   const best = new Float64Array(k), bestV = new Int32Array(k);
@@ -284,11 +300,11 @@ function anchorsFor(position, k = 4) {
 }
 
 const anchorsOf = new WeakMap();
-/** `data`'s points moved with the skin under them, by base offsets `delta`: new rest positions. */
-export function carried(data, delta, { k = 4, from = 0, to = data.count, into = null } = {}) {
+/** `data`'s points moved with the skin (of figure `sex`) under them, by base offsets `delta`: new rest positions. */
+export function carried(data, delta, { k = 4, from = 0, to = data.count, into = null, sex = 'male', trunk = false } = {}) {
   let a = anchorsOf.get(data.position);
-  if (!a || a.k !== k || a.from !== from || a.to !== to) {
-    a = { ...anchorsFor(data.position.subarray(from * 3, to * 3), k), from, to };
+  if (!a || a.k !== k || a.from !== from || a.to !== to || a.sex !== sex || a.trunk !== trunk) {
+    a = { ...anchorsFor(data.position.subarray(from * 3, to * 3), k, sex, trunk), from, to, sex, trunk };
     anchorsOf.set(data.position, a);
   }
   const out = into ?? data.position.slice();
@@ -306,6 +322,7 @@ export function carried(data, delta, { k = 4, from = 0, to = data.count, into = 
 
 /** The eyeballs (in `position`, `from` to `to`), each moved and grown whole as its eye in `shape` is. */
 export function placeEyes(position, from, to, shape) {
+  const EYE = figureOf(shape.sex).eye;
   for (let i = from; i < to; i++) {
     const o = i * 3, m = position[o] >= 0 ? 1 : -1, S = m > 0 ? 'L' : 'R';
     const c = [EYE.center[0] * m, EYE.center[1], EYE.center[2]];

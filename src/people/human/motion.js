@@ -19,8 +19,22 @@ export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'atta
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
 /** The legs' length: what every rise and fall is measured against. */
-const THIGH = JOINTS.hip[1] - JOINTS.knee[1], SHIN = JOINTS.knee[1] - JOINTS.ankle[1];
-const LEG = THIGH + SHIN;
+// The legs' lengths, and how high the hips stand: the man's, until a skeleton of another figure is posed.
+let THIGH = JOINTS.hip[1] - JOINTS.knee[1], SHIN = JOINTS.knee[1] - JOINTS.ankle[1];
+let LEG = THIGH + SHIN, HIPS = JOINTS.hips[1];
+const figures = new WeakMap();
+/** Reads the legs off skeleton `k`'s own joints (once a skeleton), so a woman's clips fit her legs. */
+function measure(k) {
+  let m = figures.get(k);
+  if (!m) {
+    const at = (n) => k.pivots?.[k.index?.get(n)];
+    const hip = at('thighL'), knee = at('shinL'), ankle = at('footL'), hips = at('hips');
+    m = hip && knee && ankle && hips ? { THIGH: hip[1] - knee[1], SHIN: knee[1] - ankle[1], HIPS: hips[1] } : { THIGH, SHIN, HIPS };
+    figures.set(k, m);
+  }
+  ({ THIGH, SHIN, HIPS } = m);
+  LEG = THIGH + SHIN;
+}
 
 /** How far the hips drop when both knees bend by these (thigh forward, knee bent) angles. */
 const drop = (thigh, knee) => THIGH * (1 - Math.cos(thigh)) + SHIN * (1 - Math.cos(knee - thigh));
@@ -216,16 +230,16 @@ const SWINGS = {
   // From high over the right shoulder, across and down to the left hip.
   slash: [
     [0, READY_R],
-    [0.24, { chest: [-0.08, 0.45, 0.05], spine: [0, 0.15, 0], armR: [-2.5, 0, -0.35], foreR: [-0.75, 0.3, 0], handR: [0.2, 0, 0], armL: [-0.25, 0, 0.25], foreL: [-0.4, 0, 0], head: [0, -0.2, 0] }],
-    [0.36, { chest: [0.15, -0.45, -0.05], spine: [0.08, -0.15, 0], armR: [-1.35, 0, 0.7], foreR: [-0.15, 0.25, 0], handR: [0.95, 0, 0], armL: [0.25, 0, 0.15], foreL: [-0.3, 0, 0], head: [0.05, 0.2, 0] }],
-    [0.52, { chest: [0.22, -0.75, -0.05], spine: [0.1, -0.22, 0], armR: [-0.75, 0, 1.15], foreR: [-0.15, 0.1, 0], handR: [1.1, 0, 0], armL: [0.3, 0, 0.15], foreL: [-0.3, 0, 0], head: [0.05, 0.25, 0] }],
+    [0.24, { chest: [-0.08, -0.45, 0.05], spine: [0, -0.15, 0], armR: [-2.5, 0, -0.35], foreR: [-0.75, 0.3, 0], handR: [0.2, 0, 0], armL: [-0.25, 0, 0.25], foreL: [-0.4, 0, 0], head: [0, 0.2, 0] }],
+    [0.36, { chest: [0.15, 0.45, -0.05], spine: [0.08, 0.15, 0], armR: [-1.35, 0, 0.7], foreR: [-0.15, 0.25, 0], handR: [0.95, 0, 0], armL: [0.25, 0, 0.15], foreL: [-0.3, 0, 0], head: [0.05, -0.2, 0] }],
+    [0.52, { chest: [0.22, 0.75, -0.05], spine: [0.1, 0.22, 0], armR: [-0.75, 0, 1.15], foreR: [-0.15, 0.1, 0], handR: [1.1, 0, 0], armL: [0.3, 0, 0.15], foreL: [-0.3, 0, 0], head: [0.05, -0.25, 0] }],
     [0.92, READY_R],
     [1, READY_R],
   ],
   // Straight down from overhead, both hands, the body folding into it.
   chop: [
     [0, READY_R],
-    [0.24, { chest: [-0.22, 0.1, 0], spine: [-0.08, 0, 0], armR: [-2.85, 0, 0.15], foreR: [-1.1, 0.2, 0], handR: [-0.5, 0, 0], armL: [-2.75, 0, -0.35], foreL: [-1.1, -0.4, 0], handL: [-0.4, 0, 0], head: [-0.15, 0, 0] }],
+    [0.24, { chest: [-0.22, -0.1, 0], spine: [-0.08, 0, 0], armR: [-2.85, 0, 0.15], foreR: [-1.1, 0.2, 0], handR: [-0.5, 0, 0], armL: [-2.75, 0, -0.35], foreL: [-1.1, -0.4, 0], handL: [-0.4, 0, 0], head: [-0.15, 0, 0] }],
     [0.36, { chest: [0.3, 0, 0], spine: [0.15, 0, 0], armR: [-1.45, 0, 0.35], foreR: [-0.2, 0.2, 0], handR: [0.85, 0, 0], armL: [-1.3, 0, -0.45], foreL: [-0.4, -0.3, 0], handL: [0.7, 0, 0], head: [0.15, 0, 0] }],
     [0.52, { chest: [0.38, 0, 0], spine: [0.2, 0, 0], armR: [-0.95, 0, 0.35], foreR: [-0.15, 0.2, 0], handR: [1.0, 0, 0], armL: [-0.85, 0, -0.45], foreL: [-0.35, -0.3, 0], handL: [0.85, 0, 0], head: [0.2, 0, 0] }],
     [0.92, READY_R],
@@ -234,27 +248,27 @@ const SWINGS = {
   // Drawn back by the hip, then driven straight out, the point first.
   thrust: [
     [0, READY_R],
-    [0.24, { chest: [0, 0.45, 0], armR: [0.25, 0, -0.15], foreR: [-1.5, 0.5, 0], handR: [1.0, 0, 0], armL: [-0.6, 0, 0.35], foreL: [-0.6, 0, 0] }],
-    [0.36, { chest: [0.08, -0.35, 0], spine: [0.06, -0.1, 0], armR: [-1.45, 0, 0.3], foreR: [-0.05, 0.15, 0], handR: [1.25, 0, 0], armL: [0.35, 0, 0.25], foreL: [-0.3, 0, 0] }],
-    [0.5, { chest: [0.1, -0.4, 0], spine: [0.08, -0.12, 0], armR: [-1.5, 0, 0.3], foreR: [-0.02, 0.15, 0], handR: [1.25, 0, 0], armL: [0.35, 0, 0.25], foreL: [-0.3, 0, 0] }],
+    [0.24, { chest: [0, -0.45, 0], armR: [0.25, 0, -0.15], foreR: [-1.5, 0.5, 0], handR: [1.0, 0, 0], armL: [-0.6, 0, 0.35], foreL: [-0.6, 0, 0] }],
+    [0.36, { chest: [0.08, 0.35, 0], spine: [0.06, 0.1, 0], armR: [-1.45, 0, 0.3], foreR: [-0.05, 0.15, 0], handR: [1.25, 0, 0], armL: [0.35, 0, 0.25], foreL: [-0.3, 0, 0] }],
+    [0.5, { chest: [0.1, 0.4, 0], spine: [0.08, 0.12, 0], armR: [-1.5, 0, 0.3], foreR: [-0.02, 0.15, 0], handR: [1.25, 0, 0], armL: [0.35, 0, 0.25], foreL: [-0.3, 0, 0] }],
     [0.92, READY_R],
     [1, READY_R],
   ],
   // Overhand and heavy: right up behind the head and all the way down.
   smite: [
     [0, READY_R],
-    [0.26, { chest: [-0.25, 0.3, 0], spine: [-0.08, 0.1, 0], armR: [-3.0, 0, -0.1], foreR: [-1.6, 0.3, 0], handR: [-0.6, 0, 0], armL: [-0.6, 0, 0.4], foreL: [-0.5, 0, 0], head: [-0.1, -0.1, 0] }],
-    [0.38, { chest: [0.35, -0.2, 0], spine: [0.15, -0.05, 0], armR: [-1.3, 0, 0.45], foreR: [-0.1, 0.2, 0], handR: [1.0, 0, 0], armL: [0.3, 0, 0.2], foreL: [-0.3, 0, 0], head: [0.15, 0.05, 0] }],
-    [0.55, { chest: [0.45, -0.3, 0], spine: [0.22, -0.08, 0], armR: [-0.75, 0, 0.55], foreR: [-0.1, 0.15, 0], handR: [1.15, 0, 0], armL: [0.3, 0, 0.2], foreL: [-0.3, 0, 0], head: [0.2, 0.05, 0] }],
+    [0.26, { chest: [-0.25, -0.3, 0], spine: [-0.08, -0.1, 0], armR: [-3.0, 0, -0.1], foreR: [-1.6, 0.3, 0], handR: [-0.6, 0, 0], armL: [-0.6, 0, 0.4], foreL: [-0.5, 0, 0], head: [-0.1, 0.1, 0] }],
+    [0.38, { chest: [0.35, 0.2, 0], spine: [0.15, 0.05, 0], armR: [-1.3, 0, 0.45], foreR: [-0.1, 0.2, 0], handR: [1.0, 0, 0], armL: [0.3, 0, 0.2], foreL: [-0.3, 0, 0], head: [0.15, -0.05, 0] }],
+    [0.55, { chest: [0.45, 0.3, 0], spine: [0.22, 0.08, 0], armR: [-0.75, 0, 0.55], foreR: [-0.1, 0.15, 0], handR: [1.15, 0, 0], armL: [0.3, 0, 0.2], foreL: [-0.3, 0, 0], head: [0.2, -0.05, 0] }],
     [0.92, READY_R],
     [1, READY_R],
   ],
   // A straight right: the hip and shoulder turning through it.
   punch: [
     [0, { armR: [-0.35, 0, 0.2], foreR: [-1.9, 0.4, 0], armL: [-0.45, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
-    [0.22, { chest: [0, 0.4, 0], armR: [-0.15, 0, 0.1], foreR: [-2.0, 0.4, 0], armL: [-0.5, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
-    [0.34, { chest: [0.05, -0.55, 0], spine: [0, -0.15, 0], armR: [-1.45, 0, 0.4], foreR: [-0.08, 0.6, 0], armL: [-0.3, 0, -0.1], foreL: [-1.9, -0.4, 0] }],
-    [0.48, { chest: [0.05, -0.55, 0], spine: [0, -0.15, 0], armR: [-1.45, 0, 0.4], foreR: [-0.08, 0.6, 0], armL: [-0.3, 0, -0.1], foreL: [-1.9, -0.4, 0] }],
+    [0.22, { chest: [0, -0.4, 0], armR: [-0.15, 0, 0.1], foreR: [-2.0, 0.4, 0], armL: [-0.5, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
+    [0.34, { chest: [0.05, 0.55, 0], spine: [0, 0.15, 0], armR: [-1.45, 0, 0.4], foreR: [-0.08, 0.6, 0], armL: [-0.3, 0, -0.1], foreL: [-1.9, -0.4, 0] }],
+    [0.48, { chest: [0.05, 0.55, 0], spine: [0, 0.15, 0], armR: [-1.45, 0, 0.4], foreR: [-0.08, 0.6, 0], armL: [-0.3, 0, -0.1], foreL: [-1.9, -0.4, 0] }],
     [0.9, { armR: [-0.35, 0, 0.2], foreR: [-1.9, 0.4, 0], armL: [-0.45, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
     [1, { armR: [-0.35, 0, 0.2], foreR: [-1.9, 0.4, 0], armL: [-0.45, 0, -0.2], foreL: [-1.9, -0.4, 0] }],
   ],
@@ -269,6 +283,54 @@ const SWINGS = {
   ],
 };
 
+/** A key's left arm, forearm and hand turned as the mirror of its right ones: where the left starts from to close on the same grip. */
+const mirrored = ([t, pose]) => {
+  // At ready the left hand is still its own.
+  if (pose === READY_R) return [t, pose];
+  const out = { ...pose };
+  for (const b of ['arm', 'fore', 'hand']) if (pose[`${b}R`]) { const [x, y, z] = pose[`${b}R`]; out[`${b}L`] = [x, -y, -z]; }
+  return [t, out];
+};
+
+/**
+ * The weapon swings with both hands on the grip (a two-handed weapon, `style.both`): the same
+ * swings, the sword arm kept nearer the middle so the left hand can reach the grip under the right,
+ * and the left arm mirroring it, from where the human closes the left hand on the grip.
+ */
+const BOTH = Object.fromEntries(Object.entries({
+  // Over the right shoulder, down through the middle and across to the left hip.
+  slash: [
+    [0, READY_R],
+    [0.24, { chest: [-0.08, -0.4, 0.05], spine: [0, -0.12, 0], armR: [-2.6, 0, -0.5], foreR: [-0.9, 0.3, 0], handR: [0.2, 0, 0], head: [0, 0.2, 0] }],
+    [0.3, { chest: [0.02, -0.05, 0], spine: [0.03, 0, 0], armR: [-2.2, 0.35, -0.25], foreR: [-0.5, 0.3, 0], handR: [0.7, 0, 0], head: [0.02, 0.05, 0] }],
+    SWINGS.slash[2],
+    SWINGS.slash[3],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+  // Straight down from overhead, the hands over the head's middle.
+  chop: [
+    [0, READY_R],
+    [0.24, { chest: [-0.22, -0.1, 0], spine: [-0.08, 0, 0], armR: [-2.85, 0, -0.3], foreR: [-1.1, 0.2, 0], handR: [-0.5, 0, 0], head: [-0.15, 0, 0] }],
+    [0.3, { chest: [0.05, 0, 0], spine: [0.03, 0, 0], armR: [-2.3, 0.3, -0.15], foreR: [-0.6, 0.25, 0], handR: [0.3, 0, 0], head: [0, 0, 0] }],
+    [0.36, { chest: [0.3, 0, 0], spine: [0.15, 0, 0], armR: [-1.45, 0.25, 0.2], foreR: [-0.2, 0.2, 0], handR: [0.85, 0, 0], head: [0.15, 0, 0] }],
+    [0.52, { chest: [0.38, 0, 0], spine: [0.2, 0, 0], armR: [-0.95, 0.2, 0.25], foreR: [-0.15, 0.2, 0], handR: [1.0, 0, 0], head: [0.2, 0, 0] }],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+  thrust: SWINGS.thrust,
+  // Overhand: up behind the head and all the way down through the middle.
+  smite: [
+    SWINGS.smite[0],
+    SWINGS.smite[1],
+    [0.32, { chest: [0.05, 0.05, 0], spine: [0.03, 0, 0], armR: [-2.3, 0.3, -0.15], foreR: [-0.7, 0.25, 0], handR: [0.4, 0, 0], head: [0, 0, 0] }],
+    SWINGS.smite[2],
+    SWINGS.smite[3],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+}).map(([name, keys]) => [name, keys.map(mirrored)]));
+
 function attack(k, t, style) {
   const heavy = style.heavy ?? 0;
   // Heavier is slower into the swing (the same shape, later).
@@ -281,7 +343,8 @@ function attack(k, t, style) {
   k.turn('hips', 0, -0.12 * s, 0);
   k.turn('thighL', -0.4 * s, 0, 0); k.turn('shinL', 0.5 * s, 0, 0); k.turn('footL', -0.1 * s, 0, 0);
   k.turn('thighR', 0.3 * s, 0, 0); k.turn('shinR', 0.2 * s, 0, 0); k.turn('footR', 0.15 * s, 0, 0); k.turn('toesR', -0.35 * s, 0, 0);
-  keyed(k, tt, SWINGS[kind]);
+  // The chop is always made with both hands.
+  keyed(k, tt, ((style.both || kind === 'chop') && BOTH[kind]) || SWINGS[kind]);
 }
 
 function talking(k, T, { talk = 1, think = 0, listen = 0, beat = 0 } = {}, armed) {
@@ -300,6 +363,7 @@ function talking(k, T, { talk = 1, think = 0, listen = 0, beat = 0 } = {}, armed
 export function moveHuman(k, state = {}, style = {}) {
   const { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 } = state;
   const T = time + seed;
+  if (typeof k === 'object' && k) measure(k);
   const heavy = style.heavy ?? 0;
   const armed = style.armed ?? null;
   breathe(k, T, heavy);
@@ -374,7 +438,7 @@ export function moveHuman(k, state = {}, style = {}) {
       // Kneeling: the hips down as far as the shins are long; lying: the back of the pelvis on the ground.
       const kneel = win(t, 0, 0.3), fall = win(t, 0.3, 0.75);
       const kneelDrop = THIGH + 0.02;
-      k.move('hips', 0, -kneelDrop * kneel * (1 - fall) - (JOINTS.hips[1] - 0.11) * fall, -0.06 * kneel * (1 - fall) - 0.35 * fall);
+      k.move('hips', 0, -kneelDrop * kneel * (1 - fall) - (HIPS - 0.11) * fall, -0.06 * kneel * (1 - fall) - 0.35 * fall);
       break;
     }
     case 'sit': {

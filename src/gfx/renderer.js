@@ -484,6 +484,9 @@ function describe(object, geometry, material, side, context, frame) {
       alphaTest: material.alphaTest > 0 ? material.alphaTest : 0,
       // Hair: highlights across the strands, which run along the map's v.
       strands: material.strands === true && !!material.map,
+      // Skin and the like: a detail map over the colour map's layout (it needs both the map and the bump), and light scattered under the surface.
+      detailMap: !!material.detailMap && !!material.map && !!material.bumpMap,
+      subsurface: physical && material.subsurface > 0,
       vertexColors: material.vertexColors === true,
       flat: material.flatShading === true || !hasNormal,
       doubleSided: side === DoubleSide,
@@ -513,6 +516,8 @@ function describe(object, geometry, material, side, context, frame) {
       clearcoat: 0, clearcoatRoughness: 0,
       iridescence: 0, iridescenceIOR: 1.3, iridescenceThicknessMaximum: 400,
       sheenColor: [0, 0, 0], sheenRoughness: 1,
+      detailScale: material.detailMap ? (side === BackSide ? -material.detailScale : material.detailScale) : 0,
+      subsurfaceColor: [0, 0, 0],
       transmission: 0, thickness: 0, attenuationDistance: Infinity, attenuationColor: [1, 1, 1],
     };
     if (physical) {
@@ -523,6 +528,7 @@ function describe(object, geometry, material, side, context, frame) {
         params.sheenColor = colorArray(material.sheenColor, material.sheen);
         params.sheenRoughness = material.sheenRoughness;
       }
+      if (material.subsurface > 0) params.subsurfaceColor = colorArray(material.subsurfaceColor, material.subsurface);
       if (material.clearcoat > 0) {
         params.clearcoat = material.clearcoat;
         params.clearcoatRoughness = material.clearcoatRoughness;
@@ -539,7 +545,7 @@ function describe(object, geometry, material, side, context, frame) {
         params.attenuationColor = colorArray(material.attenuationColor);
       }
     }
-    return { key, params, textures: { map: material.map, bumpMap: material.bumpMap } };
+    return { key, params, textures: { map: material.map, bumpMap: material.bumpMap, detailMap: material.detailMap } };
   }
 
   if (material.isMeshBasicMaterial || material.isLineBasicMaterial) {
