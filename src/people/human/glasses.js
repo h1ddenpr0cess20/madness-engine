@@ -1,4 +1,4 @@
-import { add, clamp, cross, frames, norm, Part, scale, spline } from './kit.js';
+import { add, clamp, cross, frames, norm, Part, scale, spline, sub } from './kit.js';
 import { castBody } from './body.js';
 
 /**
@@ -47,7 +47,7 @@ export const SUNGLASSES = Object.freeze({
 });
 
 /** Where the lenses sit: each one's middle (left; the right is its mirror), how far ahead of the face, and how far they wrap round it. */
-const LENS = Object.freeze({ center: [0.0335, 1.653, 0.167], wrap: 0.11, tilt: 0.12, curve: 0.11 });
+const LENS = Object.freeze({ center: [0.0365, 1.653, 0.166], wrap: 0.11, tilt: 0.12, curve: 0.11 });
 
 /** A point of the left lens at [u, v] in its outline (`out` metres off the lens's surface): on a sphere, turned round the face. */
 function lensPoint(uv, out = 0) {
@@ -65,19 +65,33 @@ function lensPoint(uv, out = 0) {
 
 const mirrorX = (p, m) => [p[0] * m, p[1], p[2]];
 
-/** A tube along `pts`, `radius(t)` round (t 0 to 1 along it), flattened to `flat` of that across its second axis. */
-function tube(part, pts, radius, { sides = 8, flat = 1, ref = [0, 1, 0], closed = false } = {}) {
-  const F = frames(pts, ref);
+/**
+ * A tube along `pts`, `radius(t)` round (t 0 to 1 along it), flattened to `flat` of that across its second axis.
+ * With `caps`, each open end is closed by a half sphere, so no end shows a hole.
+ */
+function tube(part, pts, radius, { sides = 8, flat = 1, ref = [0, 1, 0], closed = false, caps = !closed } = {}) {
   const n = pts.length - 1;
-  part.grid(n, sides, (i, j) => {
-    const f = F[i], a = (j / sides) * Math.PI * 2, r = radius(i / n);
+  let P = pts.map((p, i) => ({ p, r: radius(i / n) }));
+  if (caps) {
+    const cap = (end, prev, r) => {
+      const t = norm(sub(end, prev));
+      return Array.from({ length: 5 }, (_, k) => { const a = ((k + 1) / 5) * (Math.PI / 2); return { p: add(end, scale(t, r * Math.sin(a))), r: r * Math.cos(a) }; });
+    };
+    P = [...cap(pts[0], pts[1], P[0].r).reverse(), ...P, ...cap(pts[n], pts[n - 1], P[n].r)];
+  }
+  const F = frames(P.map((q) => q.p), ref);
+  part.grid(P.length - 1, sides, (i, j) => {
+    const f = F[i], a = (j / sides) * Math.PI * 2, r = P[i].r;
     const p = add(add(f.p, scale(f.u, Math.cos(a) * r)), scale(f.v, Math.sin(a) * r * flat));
-    return { p, uv: [j / sides, i / n], w: { head: 1 } };
+    return { p, uv: [j / sides, i / (P.length - 1)], w: { head: 1 } };
   }, { flip: closed });
 }
 
-/** The side of his head at height `y`, `z` back: how far out it is (the left side). */
-const headSide = (y, z) => castBody([0, y, z], [1, 0, 0], { far: 0.2, only: (zone) => zone === 'head' || zone === 'neck' }) ?? 0.07;
+const onHead = (zone) => zone === 'head' || zone === 'neck';
+/** The side of his head at height `y`, `z` back: how far out its outermost skin is (the left side), measured from outside in. */
+export const headSide = (y, z) => { const d = castBody([0.25, y, z], [-1, 0, 0], { far: 0.25, only: onHead }); return d === null ? 0 : 0.25 - d; };
+/** The same from inside out: the skin of the head itself, under the ear (for the bend behind it). */
+const skullSide = (y, z) => castBody([0, y, z], [1, 0, 0], { far: 0.2, only: onHead }) ?? 0.06;
 
 /** The sunglasses `name` (one of `SUNGLASSES`) as parts: the lenses, and the frame. */
 export function buildGlasses(name, detail = 1) {
@@ -99,38 +113,40 @@ export function buildGlasses(name, detail = 1) {
       const a = (j / A) * Math.PI * 2, e = style.outline(a), l = Math.hypot(...e) || 1;
       return mirrorX(lensPoint([e[0] + (e[0] / l) * style.rim * 0.6, e[1] + (e[1] / l) * style.rim * 0.6]), m);
     });
-    tube(frame, rimPts, () => style.rim, { sides, flat: style.wire ? 1 : 0.55, ref: [0, 0, 1] });
-    // The hinge, at the rim's outer top, and the temple from it back along the head, bending down behind the ear.
+    tube(frame, rimPts, () => style.rim, { sides, flat: style.wire ? 1 : 0.55, ref: [0, 0, 1], caps: false });
+    // Where it rests: on the top of the ear, where the ear meets the head, found by coming down on it from above
+    // (out past the side of the head, over the ear's rim, so it is the ear that is met).
     const outer = style.outline(0.32), hinge = mirrorX(lensPoint([outer[0] + style.rim, outer[1]]), m);
     const y = hinge[1];
-    // Where it rests: on the top of the ear, where the ear meets the head, found by coming down on it from above.
-    // (Out past the side of the head, over the ear's rim, so it is the ear that is met.)
-    let ear = { y: y - 0.006, z: 0.03, back: 0.03 };
+    let ear = { y: y - 0.006, z: 0.03 };
     for (let z = 0.08; z >= -0.01; z -= 0.004) {
       for (const x of [0.074, 0.078, 0.082, 0.086]) {
         const d = castBody([m * x, 1.8, z], [0, -1, 0], { far: 0.3, only: (zone) => zone === 'head' });
-        if (d === null || 1.8 - d > y + 0.01 || 1.8 - d < y - 0.05) continue;
-        if (1.8 - d > ear.y) ear = { ...ear, y: 1.8 - d, z };
-        ear.back = Math.min(ear.back, z);
+        if (d !== null && 1.8 - d < y + 0.01 && 1.8 - d > y - 0.05 && 1.8 - d > ear.y) ear = { y: 1.8 - d, z };
       }
     }
-    const rest = ear.y + style.temple * 0.8;
-    // Straight back from the hinge to the ear, then bent down behind it.
-    const pts = [hinge, add(hinge, [m * 0.005, 0, -0.012])];
-    for (const k of [0.25, 0.5, 0.75, 1]) {
-      const z = hinge[2] - 0.012 + (ear.z - hinge[2] + 0.012) * k;
-      pts.push([0, y + (rest - y) * k, z]);
-    }
-    const behind = Math.min(ear.z - 0.012, ear.back - 0.004);
-    pts.push([0, rest - 0.005, behind], [0, rest - 0.024, behind - 0.006]);
-    // Each point kept clear of the head round it (above and below its line, too), never sunk in it.
-    const clearOf = (p) => {
-      const out = Math.max(...[-0.003, 0, 0.003].map((dy) => headSide(p[1] + dy, p[2])));
-      return [m * Math.max(Math.abs(p[0]), out + style.temple + 0.0025), p[1], p[2]];
-    };
-    let path = spline(pts.map((p, i) => (i < 2 ? p : clearOf(p))), Math.round(36 * detail) + 8);
-    path = path.map((p, i) => (i < 4 ? p : clearOf(p)));
-    tube(frame, path, (t) => style.temple * (style.wire ? 1 + 0.8 * clamp((t - 0.72) / 0.1) : 1), { sides, flat: style.wire ? 1 : 0.4, ref: [0, 1, 0] });
+    const R = style.temple, rest = ear.y + R * 0.8;
+    // The temple is one straight piece from the endpiece to the ear. The endpiece stands out from the rim just
+    // far enough that the line clears the side of his face all the way back (above and below its middle too).
+    const clearAt = (yy, z) => Math.max(...[-R, 0, R].map((dy) => headSide(yy + dy, z))) + R + 0.0015;
+    const zc = ear.z, xc = headSide(rest + R + 0.002, zc) + R + 0.0015;
+    const ze = hinge[2] - 0.01;
+    const yAt = (z) => y + (rest - y) * (ze - z) / (ze - zc);
+    let xe = Math.abs(hinge[0]) + 0.002;
+    // (Over the ear it passes above it: there only the head above the ear's top counts.)
+    const need = (z) => (z < zc + 0.025 ? headSide(yAt(z) + R + 0.002, z) + R + 0.0015 : clearAt(yAt(z), z));
+    for (let z = zc + 0.004; z < ze; z += 0.002) xe = Math.max(xe, xc + (need(z) - xc) * (ze - zc) / (z - zc));
+    const E = [m * xe, y, ze], C = [m * xc, rest, zc];
+    // The endpiece: out from the rim and back, its corner rounded.
+    const toward = norm(sub(C, E)), E2 = add(E, scale(toward, 0.008));
+    const end = spline([hinge, [m * (Math.abs(hinge[0]) * 0.35 + xe * 0.65), y, hinge[2] - 0.002], E, E2], 14);
+    // Behind the ear it bends down, tucked against the head under it.
+    const behind = (dz, dy) => { const z = zc - dz, yy = rest - dy; return [m * (skullSide(yy, z) + R + 0.001), yy, z]; };
+    const straight = Array.from({ length: 13 }, (_, i) => { const k = i / 12; return [E2[0] + (C[0] - E2[0]) * k, E2[1] + (C[1] - E2[1]) * k, E2[2] + (C[2] - E2[2]) * k]; });
+    const path = [...end, ...straight.slice(1), ...spline([C, behind(0.012, 0.004), behind(0.02, 0.016), behind(0.024, 0.03)], 12).slice(1)];
+    if (globalThis.__glassesCheck) globalThis.__glassesCheck.push({ m, path, R, zc });
+    // A wire frame's tip in a thicker sleeve.
+    tube(frame, path, (t) => R * (style.wire ? 1 + 0.8 * clamp((t - 0.6) / 0.08) : 1), { sides, flat: style.wire ? 1 : 0.4, ref: [0, 1, 0] });
     if (style.wire) {
       // A nose pad on its arm, resting on the side of the nose.
       const inner = style.outline(Math.PI * 1.05), at = mirrorX(lensPoint([inner[0] - 0.001, inner[1] + 0.006]), m);
