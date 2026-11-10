@@ -4,6 +4,7 @@ import { createKrystalOrbPommel, createMagicEggPommel, metalMaterial } from './c
 import { METALS } from '../props/metalglobe.js';
 import { createGlassPlanet, GLASS_PLANET_NAMES } from '../props/glass-planets.js';
 import { createJewelBoulder, JEWEL_CHOICES } from '../heroes/rock-jewel.js';
+import { HANDS, handlingInfo, handlingOf } from './categories.js';
 
 /**
  * A gnarled wizard's staff carved entirely from the library's wood textures.
@@ -43,6 +44,12 @@ const TOPPER_LABELS = Object.freeze({
   ...Object.fromEntries(JEWEL_CHOICES.map((name) => [name, `${name[0].toUpperCase()}${name.slice(1)} (jewel)`])),
   none: 'none',
 });
+
+/**
+ * The staff's handling: held in one hand, as the engine's wizard and doomlord
+ * figures hold theirs, and ranged, a focus for spells rather than a melee reach.
+ */
+export const STAFF_HANDLING = handlingOf({ hands: HANDS.ONE, ranged: true });
 
 const GRIP_Y = [0.8, 1.1];
 const HEAD_Y = 1.55;
@@ -455,11 +462,13 @@ export function createStaff(GFX, {
     get vine() { return vine; },
     get tendrils() { return tendrils; },
     get seed() { return seed; },
+    handling: STAFF_HANDLING,
     get dimensions() {
       return Object.freeze({ ...STAFF_DIMENSIONS, overallLength: dims(), tendrils, unit: 'm' });
     },
     get info() {
       return {
+        ...handlingInfo(STAFF_HANDLING),
         'Staff length': `${dims().toFixed(2)} m`,
         ...(metalName ? { Metal: metalName } : { Wood: `${woodSpecies} (${woodFinish})` }),
         Topper: TOPPER_LABELS[topperKind],
