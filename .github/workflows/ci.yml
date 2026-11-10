@@ -114,23 +114,24 @@ jobs:
                 waitUntil: 'commit',
                 timeout: 60000,
               });
-              if (!result?.ok()) throw new Error(`Asset viewer returned HTTP ${result?.status()} for ${id}`);
+              if (result && !result.ok()) throw new Error(`Asset viewer returned HTTP ${result.status()} for ${id}`);
               await page.waitForFunction(
                 (expected) => document.querySelector('#title b')?.textContent === expected
                   && document.querySelector('#busy')?.style.display === 'none',
                 title,
                 { timeout: 120000 },
               );
-              if (document.querySelector('#err')?.textContent) throw new Error(document.querySelector('#err').textContent);
+              const errorText = await page.locator('#err').textContent();
+              if (errorText) throw new Error(errorText);
             };
-            const readOptions = () => [...document.querySelectorAll('.line.opt')].map((row) => ({
+            const readOptions = async () => page.locator('.line.opt').evaluateAll((rows) => rows.map((row) => ({
               label: row.querySelector('label')?.textContent?.trim(),
               value: row.querySelector('select')?.value,
               options: [...(row.querySelector('select')?.options ?? [])].map((option) => option.value),
-            }));
+            })));
 
             await waitForItem('weapons/wizard-staff', 'Wizard Staff');
-            const woodOptions = readOptions();
+            const woodOptions = await readOptions();
             const woodTopper = woodOptions.find((option) => option.label === 'Topper');
             if (!woodTopper || !['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none'].every((v) => woodTopper.options.includes(v))) {
               throw new Error('Wooden wizard staff is missing one or more topper choices');
@@ -138,7 +139,7 @@ jobs:
             await page.screenshot({ path: 'artifacts/wizard-staff-wood.png', fullPage: true });
 
             await waitForItem('weapons/wizard-staff-metal', 'Wizard Staff (Metal)');
-            const metalOptions = readOptions();
+            const metalOptions = await readOptions();
             const metalTopper = metalOptions.find((option) => option.label === 'Topper');
             const metalFinish = metalOptions.find((option) => option.label === 'Structure metal');
             if (!metalTopper || !['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none'].every((v) => metalTopper.options.includes(v))) {
@@ -147,9 +148,8 @@ jobs:
             if (!metalFinish || metalFinish.value !== 'gold') {
               throw new Error(`Metal wizard staff should default to gold, received ${metalFinish?.value ?? 'no metal control'}`);
             }
-            const topperSelect = [...document.querySelectorAll('.line.opt')].find((row) => row.querySelector('label')?.textContent?.trim() === 'Topper')?.querySelector('select');
-            topperSelect.value = 'jupiter';
-            topperSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            const topperSelect = page.locator('.line.opt').filter({ hasText: 'Topper' }).locator('select');
+            await topperSelect.selectOption('jupiter');
             await page.waitForFunction(
               () => document.querySelector('#busy')?.style.display === 'none'
                 && !document.querySelector('#err')?.textContent,
