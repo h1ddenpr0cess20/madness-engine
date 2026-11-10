@@ -5,7 +5,7 @@ import { METALS } from '../props/metalglobe.js';
 import { createGlassGlobe } from '../props/glassglobe.js';
 import { loadMoonEtch } from '../textures/moon/map.js';
 import { loadMarsEtch } from '../textures/mars/map.js';
-import { createJupiterEtch, loadJupiterMap } from '../textures/jupiter/map.js';
+import { loadJupiterEtch, loadJupiterMap } from '../textures/jupiter/map.js';
 
 const TOPPER_LABELS = Object.freeze({
   orb: 'Krystal crystal orb',
@@ -15,38 +15,32 @@ const TOPPER_LABELS = Object.freeze({
   moon: 'Glass Moon',
   mars: 'Glass Mars',
   jupiter: 'Glass Jupiter',
+  'jupiter-etched': 'Glass Jupiter (Etched)',
   none: 'none',
 });
 
-/** Planet-specific palettes for the mist inside each etched glass world. */
-const PLANET_MISTS = Object.freeze({
-  moon: Object.freeze({
-    hue: 0.54,
-    spread: 0.08,
-    tint: Object.freeze([0.90, 0.96, 1]),
-    glow: 0.78,
-    core: 0.16,
-  }),
-  mars: Object.freeze({
-    hue: 0.925,
-    spread: 0.08,
-    tint: Object.freeze([1, 0.90, 0.72]),
-    glow: 0.82,
-    core: 0.22,
-  }),
-  jupiter: Object.freeze({
-    hue: 0.15,
-    spread: 0,
-    tint: Object.freeze([1, 0.96, 0.88]),
-    glow: 0.88,
-    bands: 1,
-    duo: Object.freeze([
-      Object.freeze([1, 0.30, 0.20]),
-      Object.freeze([0.92, 0.84, 0.70]),
-      Object.freeze([0.12, 0.72, 0.68]),
-    ]),
-  }),
-});
+/** Use the same planet surfaces and mist settings as the existing asset-viewer assets. */
+async function loadGlassPlanetSurface(globe, kind) {
+  if (kind === 'moon') {
+    const etch = await loadMoonEtch();
+    if (etch) globe.setEtchCanvas(etch);
+    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 2.1, core: 0.15 });
+  } else if (kind === 'mars') {
+    const etch = await loadMarsEtch();
+    if (etch) globe.setEtchCanvas(etch);
+    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 2.1, core: 0.15 });
+  } else if (kind === 'jupiter') {
+    // The existing glass Jupiter: clear glass, pale internal mist, and the cloud image drifting as a field.
+    const field = await loadJupiterMap();
+    if (field) globe.setField(field, { shell: 0.9, glow: 1.3 }).refreshField();
+    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 0.4, core: 0.02 });
+  } else if (kind === 'jupiter-etched') {
+    // The separate etched Jupiter: cloud zones in the glass and the existing banded, multi-colour mist.
+    const etch = await loadJupiterEtch();
+    if (etch) globe.setEtchCanvas(etch);
+    globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.02, 0.62, 0.78]], glow: 2.4, core: 0.1, swirl: 0.6 });
+  }
+}
 
 /** Attach the repository's real planetary surface data to a staff-sized glass globe. */
 async function loadGlassPlanetSurface(globe, kind) {
@@ -85,7 +79,7 @@ export const STAFF_DIMENSIONS = Object.freeze({
   unit: 'm',
 });
 
-export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none']);
+export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'jupiter-etched', 'none']);
 
 const GRIP_Y = [0.8, 1.1];
 const HEAD_Y = 1.55;
@@ -507,6 +501,7 @@ export function createStaff(GFX, {
     get moon() { return toppers.moon?.asset ?? null; },
     get mars() { return toppers.mars?.asset ?? null; },
     get jupiter() { return toppers.jupiter?.asset ?? null; },
+    get jupiterEtched() { return toppers['jupiter-etched']?.asset ?? null; },
     get materialType() { return materialType; },
     get metal() { return materialType === 'metal' ? selectedMetal : null; },
     get species() { return materialType === 'wood' ? woodSpecies : null; },

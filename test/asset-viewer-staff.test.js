@@ -14,7 +14,7 @@ test('the asset viewer registers separate wooden and metal wizard staff entries'
 });
 
 test('the staff viewer exposes every topper and defaults its metal variant to gold', () => {
-  for (const topper of ['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none']) {
+  for (const topper of ['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'jupiter-etched', 'none']) {
     assert.ok(catalog.includes("'" + topper + "'"), `the ${topper} topper is offered`);
   }
   assert.ok(catalog.includes("Object.assign([...METAL_CHOICES], { default: 'gold' })"));

@@ -689,7 +689,7 @@ function weaponItems() {
 /** A staff entry with controls for the chosen structural material and its topper. */
 function staffItem(materialType = 'wood') {
   const isMetal = materialType === 'metal';
-  const topperOptions = ['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none'];
+  const topperOptions = ['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'jupiter-etched', 'none'];
   const metalOptions = Object.assign([...METAL_CHOICES], { default: 'gold' });
   return {
     id: isMetal ? 'weapons/wizard-staff-metal' : 'weapons/wizard-staff',

@@ -215,10 +215,12 @@ metal material and therefore benefits from a scene environment.
 
 The topper can be the Krystal crystal orb (the default, with its ray-marched
 visions), the Magic Egg's glass egg, the Madness marble with its 3D spark, or
-the glass globe, Moon, Mars and Jupiter. All four glass-planet toppers use the
-shared glass-globe construction with mist enabled; Moon and Mars use their
-existing etched relief maps, Earth uses the globe's existing etching, and
-Jupiter adds its cloud map inside the glass. Use `topper: 'none'` for an empty
+the glass globe, Moon, Mars, the unetched glass Jupiter, or the separately
+etched glass Jupiter. All glass-planet toppers use the shared glass-globe
+construction with mist enabled. Moon and Mars reuse their existing relief maps
+and exact mist presets. The ordinary Jupiter keeps its cloud photograph as a
+drifting field inside clear glass; the etched Jupiter cuts the cloud zones into
+the glass and uses the existing banded rust-red, cream and blue-green mist. Use `topper: 'none'` for an empty
 cradle. Assets are built lazily when first selected. Planetary surface images
 load asynchronously; await `staff.topperReady` after selecting one when code
 needs to wait for its surface to finish loading.
@@ -230,7 +232,7 @@ needs to wait for its surface to finish loading.
 | `metal` | any key of `METALS` | `gold` on `createMetalStaff` |
 | `wrap` | `true` or `false`: the leather and thread wrap on the grip (`setWrap()` toggles it) | `true` |
 | `gripColor`, `threadColor` | six-digit hex, for the wrap | `#3a2418`, `#e2b857` |
-| `topper` | `orb`, `egg`, `marble`, `globe`, `moon`, `mars`, `jupiter`, `none` | `orb` |
+| `topper` | `orb`, `egg`, `marble`, `globe`, `moon`, `mars`, `jupiter`, `jupiter-etched`, `none` | `orb` |
 | `vine` | `true` or `false`: the roots entwined up the shaft (fixed at creation) | `true` |
 | `tendrils` | whole number from 8 to 32: how many roots make the cradle (fixed at creation) | `18` |
 | `seed` | any number: shapes the gnarls (fixed at creation) | `7` |
@@ -241,7 +243,8 @@ import { createStaff, createMetalStaff } from 'madness-engine/weapons';
 
 const wood = createStaff(GFX, { species: 'cherry', topper: 'egg' });
 const metal = createMetalStaff(GFX, { metal: 'gold', topper: 'jupiter' });
-scene.add(wood.group, metal.group);
+const etchedJupiter = createStaff(GFX, { topper: 'jupiter-etched' });
+scene.add(wood.group, metal.group, etchedJupiter.group);
 
 wood.setTopper('marble');
 wood.setWood('oak', 'sanded');

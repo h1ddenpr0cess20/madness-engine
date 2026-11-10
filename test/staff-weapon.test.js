@@ -64,7 +64,7 @@ test('the glass planets reuse the glass globe factory and all start with mist en
   assert.equal(staff.moon.mist.visible, true);
   assert.equal(staff.moon.glass.material.transmission, 1);
 
-  for (const kind of ['globe', 'moon', 'mars', 'jupiter']) {
+  for (const kind of ['globe', 'moon', 'mars', 'jupiter', 'jupiter-etched']) {
     staff.setTopper(kind);
     await staff.topperReady;
     const planet = staff.topperAsset;
@@ -74,28 +74,32 @@ test('the glass planets reuse the glass globe factory and all start with mist en
     assert.equal(visibleToppers(staff).length, 1);
   }
 
-  // The Moon's mist is cool silver-blue, Mars is warm rust, and Jupiter has
-  // the engine's red/cream/teal belt palette rather than the generic Krystal hue.
-  staff.moon.update(0);
-  assert.equal(staff.moon.mistMaterial.uniforms.uHue.value, 0.54);
-  assert.deepEqual(
-    [staff.moon.mistMaterial.uniforms.uTint.value.x, staff.moon.mistMaterial.uniforms.uTint.value.y, staff.moon.mistMaterial.uniforms.uTint.value.z],
-    [0.90, 0.96, 1],
-  );
-  staff.mars.update(0);
-  assert.equal(staff.mars.mistMaterial.uniforms.uHue.value, 0.925);
-  assert.deepEqual(
-    [staff.mars.mistMaterial.uniforms.uTint.value.x, staff.mars.mistMaterial.uniforms.uTint.value.y, staff.mars.mistMaterial.uniforms.uTint.value.z],
-    [1, 0.90, 0.72],
-  );
-  staff.jupiter.update(0);
-  assert.equal(staff.jupiter.mistMaterial.uniforms.uBands.value, 1);
-  assert.equal(staff.jupiter.mistMaterial.uniforms.uDuo.value, 1);
-  assert.deepEqual(
-    [staff.jupiter.mistMaterial.uniforms.uDuoB.value.x, staff.jupiter.mistMaterial.uniforms.uDuoB.value.y, staff.jupiter.mistMaterial.uniforms.uDuoB.value.z],
-    [0.92, 0.84, 0.70],
-    'Jupiter has cream zones between its red and teal belts',
-  );
+  // Exact presets from examples/asset-viewer/src/catalog.js.
+  assert.deepEqual(staff.moon.mood, {
+    speed: 0.22, swirl: 2, churn: 0.5, glow: 2.1, core: 0.15,
+    hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], bands: 0, duo: null,
+  });
+  assert.deepEqual(staff.mars.mood, {
+    speed: 0.22, swirl: 2, churn: 0.5, glow: 2.1, core: 0.15,
+    hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], bands: 0, duo: null,
+  });
+
+  staff.setTopper('jupiter');
+  await staff.topperReady;
+  assert.equal(staff.jupiter.etch.length, 0, 'ordinary Jupiter has unetched clear glass');
+  assert.deepEqual(staff.jupiter.mood, {
+    speed: 0.22, swirl: 2, churn: 0.5, glow: 0.4, core: 0.02,
+    hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], bands: 0, duo: null,
+  });
+
+  staff.setTopper('jupiter-etched');
+  await staff.topperReady;
+  assert.equal(staff.jupiterEtched.field, null, 'etched Jupiter does not use the separate cloud field');
+  assert.deepEqual(staff.jupiterEtched.mood, {
+    speed: 0.22, swirl: 0.6, churn: 0.5, glow: 2.4, core: 0.1,
+    hue: 0.52, spread: 0, tint: [1, 1, 1], bands: 1,
+    duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.02, 0.62, 0.78]],
+  });
 });
 
 test('the metal staff preserves the wooden staff design while using the selected engine metal throughout its structure', () => {

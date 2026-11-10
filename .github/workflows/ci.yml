@@ -133,7 +133,7 @@ jobs:
             await waitForItem('weapons/wizard-staff', 'Wizard Staff');
             const woodOptions = await readOptions();
             const woodTopper = woodOptions.find((option) => option.label === 'Topper');
-            if (!woodTopper || !['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none'].every((v) => woodTopper.options.includes(v))) {
+            if (!woodTopper || !['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'jupiter-etched', 'none'].every((v) => woodTopper.options.includes(v))) {
               throw new Error('Wooden wizard staff is missing one or more topper choices');
             }
             await page.screenshot({ path: 'artifacts/wizard-staff-wood.png', fullPage: true });
@@ -142,33 +142,49 @@ jobs:
             const metalOptions = await readOptions();
             const metalTopper = metalOptions.find((option) => option.label === 'Topper');
             const metalFinish = metalOptions.find((option) => option.label === 'Structure metal');
-            if (!metalTopper || !['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none'].every((v) => metalTopper.options.includes(v))) {
+            if (!metalTopper || !['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'jupiter-etched', 'none'].every((v) => metalTopper.options.includes(v))) {
               throw new Error('Metal wizard staff is missing one or more topper choices');
             }
             if (!metalFinish || metalFinish.value !== 'gold') {
               throw new Error(`Metal wizard staff should default to gold, received ${metalFinish?.value ?? 'no metal control'}`);
             }
             const topperSelect = page.locator('.line.opt').filter({ hasText: 'Topper' }).locator('select');
-            await topperSelect.selectOption('jupiter');
-            await page.waitForFunction(
-              () => document.querySelector('#busy')?.style.display === 'none'
-                && !document.querySelector('#err')?.textContent,
-              null,
-              { timeout: 120000 },
-            );
-            await page.waitForTimeout(1200);
-            const jupiterSurface = await page.evaluate(() => {
-              const root = window.assetViewer?.view?.built?.object;
-              const planet = root?.getObjectByName('jupiter glass staff topper');
+            const waitForTopper = async (kind) => {
+              await topperSelect.selectOption(kind);
+              await page.waitForFunction(
+                () => document.querySelector('#busy')?.style.display === 'none'
+                  && !document.querySelector('#err')?.textContent,
+                null,
+                { timeout: 120000 },
+              );
+              await page.waitForTimeout(500);
+            };
+
+            await waitForTopper('jupiter');
+            const glassJupiter = await page.evaluate(() => {
+              const planet = window.assetViewer?.view?.built?.object?.getObjectByName('jupiter glass staff topper');
               return {
                 etchedShells: ['etch-near', 'etch-far'].filter((name) => planet?.getObjectByName(name)?.visible).length,
                 cloudField: Boolean(planet?.getObjectByName('field')?.visible),
               };
             });
-            if (jupiterSurface.etchedShells !== 2 || !jupiterSurface.cloudField) {
-              throw new Error(`Jupiter should render both etched glass shells and its cloud field: ${JSON.stringify(jupiterSurface)}`);
+            if (glassJupiter.etchedShells !== 0 || !glassJupiter.cloudField) {
+              throw new Error(`Glass Jupiter should have clear unetched glass and a drifting cloud field: ${JSON.stringify(glassJupiter)}`);
             }
             await page.screenshot({ path: 'artifacts/wizard-staff-metal-jupiter.png', fullPage: true });
+
+            await waitForTopper('jupiter-etched');
+            const etchedJupiter = await page.evaluate(() => {
+              const planet = window.assetViewer?.view?.built?.object?.getObjectByName('jupiter-etched glass staff topper');
+              return {
+                etchedShells: ['etch-near', 'etch-far'].filter((name) => planet?.getObjectByName(name)?.visible).length,
+                cloudField: Boolean(planet?.getObjectByName('field')?.visible),
+              };
+            });
+            if (etchedJupiter.etchedShells !== 2 || etchedJupiter.cloudField) {
+              throw new Error(`Etched Jupiter should have two etched shells and no separate cloud field: ${JSON.stringify(etchedJupiter)}`);
+            }
+            await page.screenshot({ path: 'artifacts/wizard-staff-metal-jupiter-etched.png', fullPage: true });
 
             if (errors.length) throw new Error(errors.join('\\n'));
             console.log('Rendered both wizard staff variants and the gold Jupiter topper in the asset viewer.');
@@ -184,4 +200,5 @@ jobs:
             examples/asset-viewer/artifacts/turkey.png
             examples/asset-viewer/artifacts/wizard-staff-wood.png
             examples/asset-viewer/artifacts/wizard-staff-metal-jupiter.png
+            examples/asset-viewer/artifacts/wizard-staff-metal-jupiter-etched.png
           if-no-files-found: warn
