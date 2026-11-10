@@ -103,11 +103,33 @@ export function buildGlasses(name, detail = 1) {
     // The hinge, at the rim's outer top, and the temple from it back along the head, bending down behind the ear.
     const outer = style.outline(0.32), hinge = mirrorX(lensPoint([outer[0] + style.rim, outer[1]]), m);
     const y = hinge[1];
-    const along = [0.13, 0.1, 0.07, 0.04, 0.01, -0.012];
-    const side = along.map((z) => [m * (headSide(y, z) + 0.009 + style.temple), y + 0.002 * (z - 0.13), z]);
-    const back = [m * (headSide(y - 0.018, -0.03) + 0.003 + style.temple), y - 0.018, -0.03];
-    const tip = [m * (headSide(y - 0.04, -0.038) + 0.003 + style.temple), y - 0.04, -0.038];
-    const path = spline([hinge, add(hinge, [m * 0.006, 0, -0.012]), ...side.filter((p) => p[2] < hinge[2] - 0.02), back, tip], Math.round(36 * detail) + 8);
+    // Where it rests: on the top of the ear, where the ear meets the head, found by coming down on it from above.
+    // (Out past the side of the head, over the ear's rim, so it is the ear that is met.)
+    let ear = { y: y - 0.006, z: 0.03, back: 0.03 };
+    for (let z = 0.08; z >= -0.01; z -= 0.004) {
+      for (const x of [0.074, 0.078, 0.082, 0.086]) {
+        const d = castBody([m * x, 1.8, z], [0, -1, 0], { far: 0.3, only: (zone) => zone === 'head' });
+        if (d === null || 1.8 - d > y + 0.01 || 1.8 - d < y - 0.05) continue;
+        if (1.8 - d > ear.y) ear = { ...ear, y: 1.8 - d, z };
+        ear.back = Math.min(ear.back, z);
+      }
+    }
+    const rest = ear.y + style.temple * 0.8;
+    // Straight back from the hinge to the ear, then bent down behind it.
+    const pts = [hinge, add(hinge, [m * 0.005, 0, -0.012])];
+    for (const k of [0.25, 0.5, 0.75, 1]) {
+      const z = hinge[2] - 0.012 + (ear.z - hinge[2] + 0.012) * k;
+      pts.push([0, y + (rest - y) * k, z]);
+    }
+    const behind = Math.min(ear.z - 0.012, ear.back - 0.004);
+    pts.push([0, rest - 0.005, behind], [0, rest - 0.024, behind - 0.006]);
+    // Each point kept clear of the head round it (above and below its line, too), never sunk in it.
+    const clearOf = (p) => {
+      const out = Math.max(...[-0.003, 0, 0.003].map((dy) => headSide(p[1] + dy, p[2])));
+      return [m * Math.max(Math.abs(p[0]), out + style.temple + 0.0025), p[1], p[2]];
+    };
+    let path = spline(pts.map((p, i) => (i < 2 ? p : clearOf(p))), Math.round(36 * detail) + 8);
+    path = path.map((p, i) => (i < 4 ? p : clearOf(p)));
     tube(frame, path, (t) => style.temple * (style.wire ? 1 + 0.8 * clamp((t - 0.72) / 0.1) : 1), { sides, flat: style.wire ? 1 : 0.4, ref: [0, 1, 0] });
     if (style.wire) {
       // A nose pad on its arm, resting on the side of the nose.
