@@ -1,9 +1,10 @@
 /**
  * WGSL for the WebGPU backend. The shaders are the files in `wgsl/`; this
- * puts them together. It is the same shading model as `glsl/`, term for term
- * (three.js r186's physically based model; MIT, © 2010-2025 three.js
- * authors). Keep the two in step: the WebGL and WebGPU paths are meant to be
+ * puts them together. It is the same shading model as `glsl/`, term for
+ * term. Keep the two in step: the WebGL and WebGPU paths are meant to be
  * pixel-for-pixel the same picture.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  *
  * WGSL has no preprocessor, so the `#if`s and `#include`s in the files are
  * resolved here (see preprocess.js) against the same defines glsl.js uses.
@@ -86,6 +87,11 @@ function standardDefines(key) {
     NUM_POINT_LIGHTS: key.numPoint,
     NUM_HEMI_LIGHTS: key.numHemi,
     NUM_DIR_LIGHT_SHADOWS: key.numDirShadows,
+    USE_ALPHATEST: key.alphaTest > 0,
+    USE_STRANDS: key.strands,
+    USE_DETAILMAP: key.detailMap,
+    USE_SUBSURFACE: key.subsurface,
+    ALPHA_TEST: key.alphaTest > 0 ? key.alphaTest.toFixed(4) : null,
     ...(key.envMap ? cubeUVDefines(key.env) : {}),
   };
 }

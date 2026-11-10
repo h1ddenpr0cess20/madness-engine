@@ -67,6 +67,8 @@ const rest = {
 };
 
 const controls = new OrbitControls(camera, renderer.domElement);
+// The near plane follows the camera to what it orbits, so a close look never cuts into a model.
+stage.focus = controls.target;
 controls.enableDamping = true;
 controls.autoRotateSpeed = 3;
 
@@ -175,7 +177,7 @@ async function show(item) {
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
-    renderItemUi(built.ui);
+    renderItemUi(built.ui ?? []);
     // What an item can switch on and off (the glass globe's mist).
     $('togglegroup').style.display = built.mist ? '' : 'none';
     if (built.mist) $('mistbox').checked = built.mist.get();
@@ -237,18 +239,22 @@ let uiTimer = null;
 /**
  * An item can hand over `ui`, a list of controls for itself: { type: 'buttons', items: [{ label, onClick }] },
  * { type: 'range', label, min, max, step, get, set }, { type: 'select', label, options, get, set },
- * { type: 'color' | 'text', label, get, set }, { type: 'check', label, get, set } and { type: 'textarea', label, apply, onApply }.
- * Those with a `get` follow the item while it moves on its own.
+ * { type: 'color' | 'text', label, get, set }, { type: 'check', label, get, set }, { type: 'textarea', label, apply, onApply }
+ * and { type: 'heading', label }. Those with a `get` follow the item while it moves on its own; `disabled` greys a
+ * control out (its `title` saying why).
  */
 function renderItemUi(specs) {
   clearInterval(uiTimer);
   const rows = $('itemuirows');
   rows.replaceChildren();
-  $('itemui').style.display = specs?.length ? '' : 'none';
+  // Shown for any model (its reset is there), with whatever controls it hands over.
+  $('itemui').style.display = specs === null ? 'none' : '';
   if (!specs?.length) return;
   const syncs = [];
   for (const sp of specs) {
-    if (sp.type === 'buttons') {
+    if (sp.type === 'heading') {
+      rows.append(el('div', { className: 'heading' }, sp.label));
+    } else if (sp.type === 'buttons') {
       rows.append(el('div', { className: 'line' }, ...sp.items.map((b) => el('button', { title: b.title ?? '', onclick: () => b.onClick() }, b.label))));
     } else if (sp.type === 'textarea') {
       const area = el('textarea', { placeholder: sp.placeholder ?? '' });
@@ -268,7 +274,7 @@ function renderItemUi(specs) {
         syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
       } else if (sp.type === 'color') {
         input = el('input', { type: 'color', style: 'padding:0;width:34px;height:22px' });
-        input.oninput = () => sp.set(input.value);
+        input.onchange = () => sp.set(input.value);
         syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
       } else if (sp.type === 'text') {
         input = el('input', { type: 'text' });
@@ -280,13 +286,33 @@ function renderItemUi(specs) {
         syncs.push(() => { if (sp.get) input.checked = !!sp.get(); });
       }
       if (!input) continue;
-      rows.append(el('div', { className: 'line' }, el('label', {}, sp.label), input, sp.type === 'range' ? readout : ''));
+      if (sp.disabled) Object.assign(input, { disabled: true, title: sp.title ?? '' });
+      rows.append(el('div', { className: 'line', title: sp.title ?? '', style: sp.disabled ? 'opacity:0.5' : '' }, el('label', {}, sp.label), input, sp.type === 'range' ? readout : ''));
     }
   }
   const sync = () => { for (const f of syncs) f(); };
   sync();
   uiTimer = setInterval(sync, 200);
 }
+
+/**
+ * The shown model as it first came: its option menus back to their defaults, its colours and saved metals
+ * forgotten, and it built afresh, so whatever its own controls changed (a person's shape, outfit, weapon, face)
+ * is as it was made too. The camera, light and animation are left as they are.
+ */
+function resetItem() {
+  const item = view.item;
+  if (!item) return;
+  for (const [name, values] of Object.entries(item.options ?? {})) options[name] = values.default ?? values[0];
+  delete view.weaponMetals[item.id];
+  if (item.palette?.kind === 'weapon') {
+    options.bladeMetal = item.palette.bladeMetal ?? 'steel';
+    options.hiltMetal = item.palette.hiltMetal ?? 'steel';
+  } else if (item.palette?.kind === 'morningstar') options.metal = item.palette.metal ?? 'steel';
+  view.colours = {}; view.draft = {}; view.seed = 0;
+  show(item);
+}
+$('itemreset').onclick = resetItem;
 
 /** The stage back to its plain light, sky and room, before an item dresses it. */
 function resetDress() {
@@ -964,6 +990,7 @@ addEventListener('keydown', (e) => {
   else if (k === 'f') { e.preventDefault(); toggleFlag(); }
   else if (k === 't') $('turn').click();
   else if (k === 'm') setMarking(!marking);
+  else if (k === 'r') resetItem();
   else if (k === 'c') contactSheet();
   else if (k === 'g') $('gridbtn').click();
   else if (k === ' ') { e.preventDefault(); $('pause').click(); }

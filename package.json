@@ -9,6 +9,7 @@
   },
   "exports": {
     "./weapons": "./src/weapons/index.js",
+    "./people": "./src/people/index.js",
     "./gfx": "./src/gfx/index.js",
     "./characters": "./src/characters/index.js",
     "./props": "./src/props/index.js",

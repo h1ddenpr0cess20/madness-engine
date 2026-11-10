@@ -8,12 +8,12 @@
  * so a program only carries the terms its material actually uses. The shading
  * itself — the GGX specular, the multiple-scattering compensation, clearcoat,
  * sheen, thin-film iridescence, transmission, the cube-UV environment lookup
- * and the PCF shadow taps — is the physically based model of three.js r186
- * (MIT, © 2010-2025 three.js authors), term for term, so that nothing a scene
- * was tuned against moves. (The one difference: r186 turns the shadow's taps by
- * a different amount at each pixel; here they keep to one pattern, so that a
- * shadow's edge does not crawl with dots as the camera moves.) `wgsl/` is the same model for WebGPU; keep the two
- * in step.
+ * and the PCF shadow taps — is kept term for term, so that nothing a scene
+ * was tuned against moves. The shadow's taps keep to one pattern, so that a
+ * shadow's edge does not crawl with dots as the camera moves. `wgsl/` is the
+ * same model for WebGPU; keep the two in step.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 import { include } from './preprocess.js';
@@ -81,9 +81,13 @@ function standardDefines(key) {
     OPAQUE: key.opaque,
     HAS_NORMAL: key.hasNormal,
     USE_INSTANCING: key.instanced,
+    USE_STRANDS: key.strands,
+    USE_DETAILMAP: key.detailMap,
+    USE_SUBSURFACE: key.subsurface,
   }) + `#define NUM_DIR_LIGHTS ${key.numDir}\n#define NUM_POINT_LIGHTS ${key.numPoint}\n`
     + `#define NUM_HEMI_LIGHTS ${key.numHemi}\n#define NUM_DIR_LIGHT_SHADOWS ${key.numDirShadows}\n`
-    + (key.envMap ? cubeUVDefines(key.env) : '');
+    + (key.envMap ? cubeUVDefines(key.env) : '')
+    + (key.alphaTest > 0 ? `#define USE_ALPHATEST\n#define ALPHA_TEST ${key.alphaTest.toFixed(4)}\n` : '');
 }
 
 export function programSources(key, material) {

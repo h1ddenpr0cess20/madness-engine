@@ -22,6 +22,8 @@ import { STAFF_TOPPERS } from '../../../src/weapons/staff.js';
 import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
 import { JEWEL_CHOICES } from '../../../src/heroes/rock-jewel.js';
 import { dress, extraItems } from './extras.js';
+import { WEAPON_ASSETS, weaponShelf } from './weapon-assets.js';
+import { RANGE } from '../../../src/weapons/categories.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
 const proceduralProps = import.meta.glob(['../../../src/props/*.js', '../../../src/props/**/*.js']);
@@ -570,39 +572,15 @@ function bowlingPinItems() {
   }];
 }
 
-/** Dedicated shelf for measured, display-ready weapons. */
-const WEAPON_ASSETS = [
-  { id: 'weapons/madness-sword', factory: 'createMadnessSword', name: 'Madness Sword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-dagger', factory: 'createMadnessDagger', name: 'Madness Dagger', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-greatsword', factory: 'createMadnessGreatsword', name: 'Madness Greatsword', group: 'Madness Set', paletteKind: 'weapon', bladeMetal: 'rose gold', hiltMetal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/madness-morningstar', factory: 'createMadnessMorningstar', name: 'Madness Morningstar', group: 'Madness Set', paletteKind: 'morningstar', metal: 'rose gold', grip: '#ffffff' },
-  { id: 'weapons/krystal-sword', factory: 'createKrystalSword', name: 'Krystal Sword', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
-  { id: 'weapons/krystal-dagger', factory: 'createKrystalDagger', name: 'Krystal Dagger', group: 'Krystal Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'platinum', grip: '#25364a', thread: '#a7e6ff' },
-  { id: 'weapons/magic-egg-sword', factory: 'createMagicEggSword', name: 'Magic Egg Sword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/magic-egg-dagger', factory: 'createMagicEggDagger', name: 'Magic Egg Dagger', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/magic-egg-greatsword', factory: 'createMagicEggGreatsword', name: 'Magic Egg Greatsword', group: 'Magic Egg Set', paletteKind: 'weapon', bladeMetal: 'silver', hiltMetal: 'gold', grip: '#c0c0c0', thread: '#ffd264' },
-  { id: 'weapons/banana-dagger', factory: 'createBananaDagger', name: 'Banana Dagger', group: 'Banana Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'brass', metalGrip: true },
-  { id: 'weapons/banana-broadsword', factory: 'createBananaBroadsword', name: 'Banana Broadsword', group: 'Banana Set', paletteKind: 'weapon', bladeMetal: 'platinum', hiltMetal: 'brass', metalGrip: true },
-  { id: 'weapons/regular-sword', factory: 'createRegularSword', name: 'Regular Sword', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/regular-dagger', factory: 'createRegularDagger', name: 'Regular Dagger', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/granite-sword', factory: 'createGraniteSword', name: 'Granite Sword', group: 'Granite Set', paletteKind: 'granite-weapon', grip: '#101010', granite: 'grey' },
-  { id: 'weapons/granite-dagger', factory: 'createGraniteDagger', name: 'Granite Dagger', group: 'Granite Set', paletteKind: 'granite-weapon', grip: '#101010', granite: 'grey' },
-  { id: 'weapons/regular-greatsword', factory: 'createRegularGreatsword', name: 'Regular Greatsword', group: 'Regular Set', paletteKind: 'weapon' },
-  { id: 'weapons/regular-morningstar', factory: 'createRegularMorningstar', name: 'Regular Morningstar', group: 'Regular Set', paletteKind: 'morningstar' },
-  { id: 'weapons/marcs-sword', factory: 'createMarcsSword', name: "Marc's Sword", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-dagger', factory: 'createMarcsDagger', name: "Marc's Dagger", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-greatsword', factory: 'createMarcsGreatsword', name: "Marc's Greatsword", group: "Marc's Set", paletteKind: 'weapon', bladeMetal: 'gold', hiltMetal: 'gold', grip: '#101010' },
-  { id: 'weapons/marcs-morningstar', factory: 'createMarcsMorningstar', name: "Marc's Morningstar", group: "Marc's Set", paletteKind: 'morningstar', metal: 'gold', grip: '#101010' },
-];
-
+/** The Weapons shelf's entries are in weapon-assets.js; each one is shelved by its hands, or as ranged. */
 function weaponItems() {
   return WEAPON_ASSETS.map(({
-    id, factory, name, group, paletteKind, grip, thread, metalGrip,
+    id, factory, name, set, hands, paletteKind, grip, thread, metalGrip,
     bladeMetal: bladeMetalDefault, hiltMetal: hiltMetalDefault, metal: metalDefault, granite: graniteDefault,
   }) => ({
     id,
     category: 'Weapons',
-    group,
+    group: weaponShelf({ hands }),
     name,
     source: 'weapons/variants',
     factory,
@@ -644,10 +622,196 @@ function weaponItems() {
           get: () => made.bladeMist.visible,
           set: (on) => made.setBladeMist(on),
         } : null,
-        info: { Source: `weapons/variants#${factory}`, ...made.info, ...countOf(made.group) },
+        info: { Source: `weapons/variants#${factory}`, Set: set, ...made.info, ...countOf(made.group) },
       };
     },
   }));
+}
+
+/** A staff topper's name for a menu: 'jupiter-etched' → 'Jupiter (etched)', 'orb' → 'Krystal orb'. */
+const topperName = (t) => ({ orb: 'Krystal orb', egg: 'glass egg', 'jupiter-etched': 'Jupiter (etched)' }[t] ?? `${t[0].toUpperCase()}${t.slice(1)}`);
+
+/** The staves for the human to hold: the wooden one with each topper, the metal one with the orb and the egg. */
+const HUMAN_STAVES = [
+  ...STAFF_TOPPERS.filter((t) => t !== 'none').map((t) => [`staff:wood:${t}`, `Wizard Staff, ${topperName(t)}`]),
+  ...['orb', 'egg'].map((t) => [`staff:gold:${t}`, `Metal Wizard Staff, ${topperName(t)}`]),
+];
+
+/** The other things a human can carry: a book (open, to read), every hero (on the palm), the coins (between thumb and forefinger). */
+const HUMAN_CARRIES = [
+  ['book', 'Book of Madness, open'],
+  ['book:shut', 'Book of Madness, shut'],
+  ['bowling', 'Bowling ball'],
+  ...HEROES.map(([name]) => [`hero:${name}`, `Hero: ${name}`]),
+  // The planets, in glass, metal and resin.
+  ...MOVING.filter(([name]) => /globe|earth|mars|moon|jupiter/.test(name)).map(([name]) => [`planet:${name}`, `Planet: ${name.replace('glass globe', 'glass earth')}`]),
+  ['coin:claude', 'Coin: Claude'], ['coin:bitcoin', 'Coin: Bitcoin'], ['coin:political', 'Coin: political'],
+];
+
+/** Everything on the weapons shelf, and all else he can carry, for the human to hold. */
+const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.factory, w.name]), ...HUMAN_STAVES, ...HUMAN_CARRIES];
+/** What the left hand can hold besides: a one-handed weapon (dual wielding), a hero or a coin. */
+const HUMAN_LEFT = [['none', 'Nothing'], ...WEAPON_ASSETS.filter((w) => w.hands !== 'two-handed').map((w) => [w.factory, w.name]), ...HUMAN_CARRIES.filter(([v]) => v !== 'book')];
+
+/**
+ * Something for the human to carry from a `HUMAN_CARRIES` choice, at the size it is held at: { thing, how, open }.
+ * A hero is a ball about 9 cm across on the palm; a coin 2.5 cm across, pinched (and flipped with the `flip`
+ * clip); the book 13 cm a page, open in both hands or shut in one.
+ */
+async function humanCarry(choice) {
+  if (choice === 'book' || choice === 'book:shut') {
+    const { createBook } = await import('../../../src/props/book.js');
+    return { thing: createBook(GFX, { size: 0.45, pageCount: 60 }), how: 'book', open: choice === 'book' };
+  }
+  // At its real size, 8.5 inches across (21.6 cm), held as a bowler holds it.
+  if (choice === 'bowling') return { thing: createBowlingBall(GFX, { radius: 0.108, widthSegments: 256, heightSegments: 192 }), how: 'bowl' };
+  if (choice.startsWith('coin:')) {
+    const kind = choice.slice(5);
+    const radius = 0.0125;
+    if (kind === 'claude') {
+      const [{ createCoin }, texture] = await Promise.all([import('../../../src/props/coin.js'), import('../../../src/textures/coin/logo.js')]);
+      return { thing: createCoin(GFX, { radius, logo: await texture.loadCoinLogo() }), how: 'pinch' };
+    }
+    const mod = kind === 'bitcoin' ? await import('../../../src/props/bitcoin-coin.js') : await import('../../../src/props/political-coin.js');
+    return { thing: (kind === 'bitcoin' ? mod.createBitcoinCoin : mod.createPoliticalCoin)(GFX, { radius }), how: 'pinch' };
+  }
+  // A hero, or a planet, on the palm, made by the same builder as on its own shelf, exactly as it is shown there,
+  // and only made smaller (its mists follow its size): a ball about 9 cm across (a planet 10). Still: it does not
+  // turn in his hand.
+  const planet = choice.startsWith('planet:');
+  const make = planet ? MOVING.find(([name]) => `planet:${name}` === choice)[3] : HEROES.find(([name]) => `hero:${name}` === choice)[1];
+  const made = await make({});
+  if (made && 'spinRate' in made) made.spinRate = 0;
+  // An avatar (Alan) held still: it does not look about or float in his hand.
+  if (made?.made && 'still' in made.made) made.made.still = true;
+  made?.pose?.(0);
+  // The yarn ball, wound up: in a hand there is no route for its strand to lie along, so none of it is laid out.
+  if (made?.laid && made?.ball) made.laid.visible = false;
+  const object = objectOf(made);
+  object.position.set(0, 0, 0);
+  // Sized by what of it is drawn: not the glow round it (Alan's aura and Vibey's halos are sprites several times
+  // their width), nor the part of a strand not yet laid (the yarn ball's runs the whole of its route).
+  const size = drawnSize(object);
+  object.scale.multiplyScalar((planet ? 0.1 : 0.09) / Math.max(...size));
+  return { thing: object, how: 'palm' };
+}
+
+/** How big `object` is as drawn: its visible meshes (not sprites), each only as far as its draw range goes. */
+function drawnSize(object) {
+  object.updateMatrixWorld(true);
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity], v = new GFX.Vector3();
+  object.traverseVisible((o) => {
+    const g = o.geometry, p = g?.attributes?.position;
+    if (!p || o.isSprite) return;
+    const index = g.index?.array ?? null, { start = 0, count = Infinity } = g.drawRange ?? {};
+    const to = Math.min(index ? index.length : p.count, start + count), step = Math.max(1, Math.floor((to - start) / 4000));
+    for (let k = start; k < to; k += step) {
+      const i = index ? index[k] : k;
+      v.set(p.getX(i), p.getY(i), p.getZ(i)).applyMatrix4(o.matrixWorld);
+      lo[0] = Math.min(lo[0], v.x); lo[1] = Math.min(lo[1], v.y); lo[2] = Math.min(lo[2], v.z);
+      hi[0] = Math.max(hi[0], v.x); hi[1] = Math.max(hi[1], v.y); hi[2] = Math.max(hi[2], v.z);
+    }
+  });
+  return Number.isFinite(lo[0]) ? hi.map((h, a) => h - lo[a]) : [0.1, 0.1, 0.1];
+}
+
+/** Something for a human's hand from a menu choice: a weapon, a staff, or anything carried. */
+async function humanHeld(choice, weapons) {
+  if (choice.startsWith('staff:')) return { thing: await humanStaff(choice), how: 'grip' };
+  if (HUMAN_CARRIES.some(([v]) => v === choice)) return humanCarry(choice);
+  return { thing: weapons[choice](GFX, {}), how: 'grip' };
+}
+
+/** A staff from a `staff:wood|gold:topper` choice, its planet's maps loaded first if it has one. */
+async function humanStaff(choice) {
+  const [, kind, topper] = choice.split(':');
+  const [{ createStaff }, planets] = await Promise.all([
+    import('../../../src/weapons/staff.js'),
+    import('../../../src/props/glass-planets.js'),
+  ]);
+  const planetMaps = planets.GLASS_PLANET_NAMES.includes(topper) ? { [topper]: await planets.loadGlassPlanetMaps(topper) } : {};
+  return createStaff(GFX, { ...(kind === 'gold' ? { metal: 'gold' } : {}), topper, planetMaps });
+}
+
+/** The real-size, dressable humans, a man and a woman: the wardrobe, the look, the face and hands, and a weapon from the shelf to hold. */
+function humanItems() {
+  return [humanItem('male'), humanItem('female')];
+}
+
+/** One figure's item: `sex` 'male' (bearded) or 'female' (long blonde hair). */
+function humanItem(sex) {
+  const female = sex === 'female';
+  return {
+    id: female ? 'people/human-female' : 'people/human',
+    category: 'People',
+    group: 'people',
+    name: female ? 'Human, female (dressable base)' : 'Human (dressable base)',
+    source: 'people/human',
+    kind: 'object',
+    async build() {
+      const [{ createHuman, CLIPS: clips, garmentsFor, HAND_POSES, customizationFor }, weapons, metals] = await Promise.all([
+        import('../../../src/people/human.js'),
+        import('../../../src/weapons/variants.js'),
+        import('../../../src/props/metalglobe.js'),
+      ]);
+      const man = createHuman(GFX, female ? { sex } : { beard: 'full' });
+      let weapon = 'none', weaponL = 'none', attack = 'slash', handL = 'relaxed';
+      let pair = man.glasses ?? 'aviator';
+      const style = {};
+      // (A staff, coin or hero may load first: only the latest choice for each hand is put in it.)
+      const arming = { R: 0, L: 0 };
+      const rearm = async (S = 'R') => {
+        const mine = ++arming[S];
+        const choice = S === 'R' ? weapon : weaponL;
+        man.release(S);
+        if (choice === 'none') return;
+        const { thing, how, open = true } = await humanHeld(choice, weapons);
+        if (mine !== arming[S]) return;
+        // A book open takes both hands: whatever the left held is put down.
+        if (how === 'book' && open) weaponL = 'none';
+        man.hold(thing, { hand: S, how, open });
+        // (A weapon made for two hands takes both: one in the other hand was put down.)
+        if (!man.held(S === 'R' ? 'L' : 'R')) { if (S === 'R') weaponL = 'none'; else weapon = 'none'; }
+      };
+      const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
+      const ui = [
+        ...Object.keys(garmentsFor(sex)).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
+        // The sunglasses on or off at a click (which pair is chosen under Accessories, below).
+        { type: 'check', label: 'Glasses', get: () => man.glasses !== null, set: (on) => { if (man.glasses) pair = man.glasses; man.customize({ glasses: on ? pair : 'none' }); } },
+        { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm('R'); } },
+        // The left hand's own: a second weapon to wield both, a hero or a coin (not while reading a book).
+        { type: 'select', label: 'Left holds', options: HUMAN_LEFT, get: () => weaponL, set: (v) => { weaponL = v; if (weapon === 'book') { weapon = 'none'; man.release('R'); } rearm('L'); } },
+        { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove'], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
+        { type: 'select', label: 'Left hand', options: Object.keys(HAND_POSES), get: () => handL, set: (v) => { handL = v; man.hands(v, { hand: 'L' }); } },
+        { type: 'color', label: 'T-shirt', get: () => man.look.shirt, set: (c) => man.setShirtColor(c) },
+        { type: 'color', label: 'Jeans tint', get: () => man.look.denim, set: (c) => man.setJeansColor(c) },
+        { type: 'color', label: 'Sneakers', get: () => man.look.shoe, set: (c) => man.setShoeColor(c) },
+        face('jaw'), face('blink'), face('smile'), face('brows'),
+        // The character creator, slot by slot: those not built yet are shown, kept, and greyed out.
+        ...customizationFor(sex).flatMap(({ group, slots }) => [
+          { type: 'heading', label: group },
+          ...slots.map((s) => ({
+            type: s.type === 'choice' ? 'select' : s.type, label: s.label, options: s.options, min: s.min, max: s.max, step: 0.01,
+            // (The figure is chosen when the human is made: each has an item of its own.)
+            disabled: !s.ready || s.key === 'sex', title: s.key === 'sex' ? 'Each figure is an item of its own' : s.ready ? '' : 'Not built yet: kept, and shown once it is',
+            get: () => man.features[s.key], set: (v) => man.customize({ [s.key]: v }),
+          })),
+        ]),
+        { type: 'range', label: 'Look', min: -0.6, max: 0.6, step: 0.01, get: () => man.faceState.look[0], set: (v) => man.face({ look: [v, man.faceState.look[1]] }) },
+      ];
+      // The weapon's ready stance and swing come from the style the human is posed with.
+      const pose = (s) => man.pose(s);
+      man.setStyle(style);
+      return {
+        object: man.group,
+        pose,
+        clips,
+        ui,
+        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+        info: { Source: 'people/human', Height: `${man.dimensions.height} m`, Outfit: man.outfit.join(', '), Bones: man.skeleton.names.length, ...countOf(man.group) },
+      };
+    },
+  };
 }
 
 /**
@@ -669,7 +833,7 @@ async function buildStaff(wood, { topper = 'orb', vine = 'roots', wrap = 'on', c
   return {
     object: made.group,
     environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
-    info: { Source: 'weapons/staff#createStaff', ...made.info, ...countOf(made.group) },
+    info: { Source: 'weapons/staff#createStaff', Set: 'Staff Set', ...made.info, ...countOf(made.group) },
   };
 }
 
@@ -678,7 +842,7 @@ function staffItem() {
   return {
     id: 'weapons/wizard-staff',
     category: 'Weapons',
-    group: 'Staff Set',
+    group: weaponShelf({ range: RANGE.RANGED }),
     name: 'Wizard Staff',
     source: 'weapons/staff',
     kind: 'object',
@@ -701,7 +865,7 @@ function metalStaffItem() {
   return {
     id: 'weapons/metal-wizard-staff',
     category: 'Weapons',
-    group: 'Staff Set',
+    group: weaponShelf({ range: RANGE.RANGED }),
     name: 'Metal Wizard Staff',
     source: 'weapons/staff',
     kind: 'object',
@@ -764,6 +928,7 @@ export async function loadCatalog(onProgress = () => {}) {
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
   items.push(...weaponItems(), staffItem(), metalStaffItem());
+  items.push(...humanItems());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
@@ -787,7 +952,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['Characters', 'Props', 'Weapons', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['People', 'Characters', 'Props', 'Weapons', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   // By category, and within one by shelf, so that each shelf's things are together under its heading.
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }

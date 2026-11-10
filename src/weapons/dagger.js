@@ -1,4 +1,5 @@
 import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
+import { HANDS } from './categories.js';
 
 /**
  * A broadsword-derived dagger. Its lenticular blade keeps the exact broadsword
@@ -19,6 +20,7 @@ export const DAGGER_DIMENSIONS = Object.freeze({
 
 export const DAGGER_SPEC = Object.freeze({
   name: 'dagger',
+  hands: HANDS.ONE,
   ...DAGGER_DIMENSIONS,
   gripWrapDivisions: 9,
 });

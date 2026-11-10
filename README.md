@@ -37,6 +37,16 @@ it in that set's mood. Start a new game by copying it:
 cd examples/starter && npm install && npm run dev
 ```
 
+`examples/human-world` is a test world for the human (`people/human`):
+Gravemoor's town at night (from the rpg-test-world game), you with the
+banana broadsword, and a crowd of the same man in every colour of skin,
+eyes, shirt, jeans and shoes, each armed from the engine's weapons, who
+come at you swinging. `?mobs=20` sets how many.
+
+```sh
+cd examples/human-world && npm install && npm run dev
+```
+
 ## Bowling ball
 
 The engine includes a high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs: classic marble, spiral ribbons, flame ribbons, a two-tone split and a blotchy marble. Its palette and surface design can be changed at runtime without rebuilding the sphere:
@@ -298,3 +308,18 @@ morningstar. The dagger and greatsword retain the broadsword's blade profile;
 the greatsword has a two-hand grip. The morningstar reuses the existing
 spiked head with a selectable metal haft, leather grip and marble pommel.
 See [docs/weapons.md](docs/weapons.md) for dimensions and construction.
+
+Every weapon also carries its `handling`: `hands` (`one-handed` or `two-handed`) and `range` (`short`, `medium` or `long` by striking reach, or `ranged`). The Weapons shelf is grouped by hands, and the ranged staff has its own shelf. See [Categories](docs/weapons.md#categories).
+
+## People
+
+A real-size human (1.76 m; one world unit a metre, as the weapons are),
+built to be dressed, posed and animated, and to carry the weapons:
+`createHuman(GFX)` from `madness-engine/people`. A whole base body with
+garments worn over it as their own meshes (briefs, t-shirt, jeans,
+sneakers; or your own), which hide what they cover so nothing shows
+through. 66 bones: the engine's movement clips (plus `yell`), and
+collarbones, three bones a finger, toes, jaw and tongue, eyes, lids, brows,
+lips and the mouth's corners; he talks and shouts with his mouth. `man.hold(sword)` puts a weapon in his hand. See
+[docs/people.md](docs/people.md).
+

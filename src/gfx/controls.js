@@ -1,8 +1,9 @@
 /**
  * Orbit, dolly and pan around a target: drag to orbit, wheel or pinch to
  * zoom, right-drag or two fingers to pan. The feel — damping, speeds, the
- * polar clamp — is three.js r186's OrbitControls (MIT, © 2010-2025 three.js
- * authors), because the scenes were framed and tuned under it.
+ * polar clamp — is what the scenes were framed and tuned under.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 import { EventDispatcher } from './core.js';

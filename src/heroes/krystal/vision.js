@@ -51,6 +51,11 @@ function visionUniforms(GFX) {
     uDuoB: { value: new GFX.Vector3(0.15, 0.75, 0.7) },
     uDuo: { value: 0 },
     uDuoC: { value: new GFX.Vector3(0.12, 0.72, 0.68) },
+    // With `uLocal` 1 the ellipsoid is marched in the mesh's own frame (`uInverse`, its world
+    // matrix inverted, set each frame), `uShape` in the mesh's own units: so it turns and scales
+    // with whatever carries it — a blade in a swinging hand. 0 keeps the world-space volume.
+    uLocal: { value: 0 },
+    uInverse: { value: new GFX.Matrix4() },
   };
 }
 
@@ -80,6 +85,8 @@ uniform vec3 uDuoA;
 uniform vec3 uDuoB;
 uniform float uDuo;
 uniform vec3 uDuoC;
+uniform float uLocal;
+uniform mat4 uInverse;
 varying vec3 vWorld;
 
 const int STEPS = ${STEPS};
@@ -112,6 +119,10 @@ void main() {
   // ray parameter in world units by not normalizing the transformed direction.
   vec3 ro = (cameraPosition - uCenter) / uShape;
   vec3 rd = normalize(vWorld - cameraPosition) / uShape;
+  if (uLocal > 0.5) {
+    ro = (uInverse * vec4(cameraPosition, 1.0)).xyz / uShape;
+    rd = (uInverse * vec4(normalize(vWorld - cameraPosition), 0.0)).xyz / uShape;
+  }
   float a = dot(rd, rd);
   float b = dot(ro, rd);
   float h = b * b - a * (dot(ro, ro) - uRadius * uRadius);
@@ -194,8 +205,12 @@ fn mist(at: vec3f) -> Mist {
 fn fs(v: VOut) -> @location(0) vec4f {
   // Unit-ellipsoid space supports a slender blade sheath while retaining the
   // original sphere when uShape is (1, 1, 1).
-  let ro = (object.cameraPosition - material.uCenter) / material.uShape;
-  let rd = normalize(v.world - object.cameraPosition) / material.uShape;
+  var ro = (object.cameraPosition - material.uCenter) / material.uShape;
+  var rd = normalize(v.world - object.cameraPosition) / material.uShape;
+  if (material.uLocal > 0.5) {
+    ro = (material.uInverse * vec4f(object.cameraPosition, 1.0)).xyz / material.uShape;
+    rd = (material.uInverse * vec4f(normalize(v.world - object.cameraPosition), 0.0)).xyz / material.uShape;
+  }
   let a = dot(rd, rd);
   let b = dot(ro, rd);
   var h = b * b - a * (dot(ro, ro) - material.uRadius * material.uRadius);

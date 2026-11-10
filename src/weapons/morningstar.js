@@ -1,6 +1,7 @@
 import { METALS } from '../props/metalglobe.js';
 import { CORE, createMetalMorningStar, SPIKES, TIP } from '../heroes/morningstar.js';
 import { createWeaponHandleAssembly, createDevilHornGuard, MARBLE_POMMEL_RADIUS, shadeHex } from './common.js';
+import { handlingInfo, handlingOf, HANDS, reachOf } from './categories.js';
 
 /**
  * The existing engine Morningstar head, unchanged in geometry and spike
@@ -25,6 +26,7 @@ export const MORNINGSTAR_DIMENSIONS = Object.freeze({
 
 export const MORNINGSTAR_SPEC = Object.freeze({
   name: 'morningstar',
+  hands: HANDS.ONE,
   ...MORNINGSTAR_DIMENSIONS,
 });
 
@@ -58,6 +60,8 @@ export function createMorningstar(GFX, {
   const coreRadius = CORE * MORNINGSTAR_SPEC.headScale;
   const headCenterY = haftTop + coreRadius;
   const overallLength = headCenterY + TIP * MORNINGSTAR_SPEC.headScale;
+  const reach = reachOf({ overallLength, gripLength: MORNINGSTAR_SPEC.gripLength });
+  const handling = handlingOf({ hands: MORNINGSTAR_SPEC.hands, reach });
   const shaftMaterial = handle.hiltMaterial;
   const shaft = new GFX.Mesh(
     new GFX.CylinderGeometry(
@@ -119,6 +123,7 @@ export function createMorningstar(GFX, {
     gripBounds: handle.gripBounds,
     haftBounds: Object.freeze({ bottom: haftBottom, top: haftTop, length: MORNINGSTAR_SPEC.haftLength }),
     headCenterY,
+    handling,
     dimensions: Object.freeze({
       overallLength,
       headDiameter: MORNINGSTAR_SPEC.headDiameter,
@@ -135,6 +140,7 @@ export function createMorningstar(GFX, {
     }),
     info: {
       'Weapon length': `${overallLength.toFixed(3)} m`,
+      ...handlingInfo(handling, reach),
       'Spiked head envelope': `${(MORNINGSTAR_SPEC.headDiameter * 1000).toFixed(0)} mm`,
       'Metal haft': `${(MORNINGSTAR_SPEC.haftLength * 1000).toFixed(0)} mm × ${(MORNINGSTAR_SPEC.haftDiameter * 1000).toFixed(0)} mm`,
       'Leather grip': `${(MORNINGSTAR_SPEC.gripLength * 1000).toFixed(0)} mm`,

@@ -48,7 +48,7 @@
       #colourrows .swatchrow button { padding: 0; width: 22px; height: 22px; visibility: hidden; }
       #colourrows .swatchrow.changed button { visibility: visible; }
       #itemuirows input[type=range] { flex: 1; min-width: 90px; } #itemuirows input[type=text], #itemuirows textarea { flex: 1; min-width: 0; }
-      #itemuirows .line > label:first-child { min-width: 64px; } #itemuirows textarea { min-height: 84px; }
+      #itemuirows .line > label:first-child { min-width: 64px; } #itemuirows .heading { margin-top: 8px; color: var(--dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; } #itemuirows textarea { min-height: 84px; }
       kbd { background: #1d2230; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
       @media (max-width: 900px) { #app { grid-template-columns: 1fr; grid-template-rows: 200px 1fr 220px; } aside { border: 0; } aside.right { border-top: 1px solid var(--line); } }
     </style>
@@ -104,7 +104,7 @@
           <div class="line"><button id="colourdiverse" title="A skin tone, hair and eyes from the palettes (diverse() in characters/person.js)">Randomise</button><button id="colourreset">Reset</button><button id="colourcopy">Copy code</button></div>
           <div style="color:var(--dim)" id="colourhint">The same model in other colours: <code>variant()</code>. Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.</div>
         </div>
-        <div class="group" id="itemui" style="display:none"><h3>Item</h3><div id="itemuirows" style="display:grid;gap:6px"></div></div>
+        <div class="group" id="itemui" style="display:none"><h3>Item</h3><div class="line" style="margin-bottom:6px"><button id="itemreset" title="Everything about this model as it first came: its options, colours, metals and controls (R)">Reset to defaults</button></div><div id="itemuirows" style="display:grid;gap:6px"></div></div>
         <div class="group" id="animgroup"><h3>Animation</h3>
           <div class="line"><select id="clip"></select><button id="pause">Pause (Space)</button></div>
           <div class="line"><label>Speed</label><input id="speed" type="range" min="0" max="2" step="0.05" value="1" /></div>
@@ -115,7 +115,7 @@
           <div class="line"><button id="copyflags">Copy for Claude</button><button id="dlflags">Download JSON</button></div>
           <div id="flagsummary" style="color:var(--dim)"></div>
         </div>
-        <div class="group"><h3>Keys</h3><div style="color:var(--dim)"><kbd>J</kbd>/<kbd>K</kbd> next / previous · <kbd>1</kbd>–<kbd>8</kbd> views · <kbd>F</kbd> flag · <kbd>T</kbd> turntable · <kbd>C</kbd> all angles · <kbd>M</kbd> mark areas · <kbd>/</kbd> search. Drag to orbit, wheel to zoom, right-drag to pan.</div></div>
+        <div class="group"><h3>Keys</h3><div style="color:var(--dim)"><kbd>J</kbd>/<kbd>K</kbd> next / previous · <kbd>1</kbd>–<kbd>8</kbd> views · <kbd>F</kbd> flag · <kbd>T</kbd> turntable · <kbd>C</kbd> all angles · <kbd>M</kbd> mark areas · <kbd>R</kbd> reset the model · <kbd>/</kbd> search. Drag to orbit, wheel to zoom, right-drag to pan.</div></div>
       </aside>
     </div>
     <script type="module" src="/src/main.js"></script>

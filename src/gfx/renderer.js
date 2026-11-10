@@ -4,10 +4,11 @@
  * sorts, works out the lights and shadows, and hands each draw to a backend
  * (`webgpu.js` or `webgl.js`) as a program key plus plain uniform values.
  *
- * The order of operations is three.js r186's (MIT, © 2010-2025 three.js
- * authors), because it is visible: which transparent layer lands on top,
- * whether a mesh is culled, when `onBeforeRender` runs relative to the
- * shadow pass, all of it shows up in the picture.
+ * The order of operations matters because it is visible: which transparent
+ * layer lands on top, whether a mesh is culled, when `onBeforeRender` runs
+ * relative to the shadow pass, all of it shows up in the picture.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 import {
@@ -157,7 +158,7 @@ export class Renderer {
     const shadowsOn = this.shadowMap.enabled && lists.shadows.length > 0;
     lists.lights.sort(shadowCastingLightsFirst);
     const env = scene.environment ? this._environment(scene.environment) : null;
-    // As three does: the lookup is turned back the other way, so the studio turns as asked.
+    // The lookup is turned back the other way, so the studio turns as asked.
     const turn = scene.environmentRotation;
     if (turn) _envEuler.set(-turn.x, -turn.y, -turn.z, turn.order);
     else _envEuler.set(0, 0, 0);
@@ -173,7 +174,7 @@ export class Renderer {
     if (lists.transmissive.length > 0) {
       const size = [this.domElement.width, this.domElement.height];
       const frame = this._frame_(context, 'linear', null);
-      // three clears this to white at half alpha, premultiplied by the context: where nothing opaque
+      // Cleared to white at half alpha, premultiplied by the context: where nothing opaque
       // is behind a transmissive surface, that grey is what it refracts.
       this.backend.beginPass({ target: 'transmission', clear: [0.5, 0.5, 0.5, 0.5], frame });
       this._renderItems(lists.opaque, context, frame);
@@ -234,8 +235,8 @@ export class Renderer {
   /**
    * Vertex data goes up once a frame, as objects are gathered — before any
    * `onBeforeRender` runs. A mesh that reshapes itself in its own
-   * `onBeforeRender` is therefore drawn with last frame's shape, exactly as
-   * it always was under three.js; the slime's wobble is timed to that.
+   * `onBeforeRender` is therefore drawn with last frame's shape; the
+   * slime's wobble is timed to that.
    */
   _sync(geometry) {
     if (geometry._syncedFrame === this._frame) return;
@@ -388,7 +389,7 @@ export class Renderer {
     }
   }
 
-  /** Which slice of the buffers a draw covers, as three works it out. */
+  /** Which slice of the buffers a draw covers. */
   _geometryRange(object, geometry, group) {
     const index = geometry.index;
     const position = geometry.attributes.position;
@@ -459,8 +460,8 @@ const transformOf = (texture) => {
 const IDENTITY3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
- * The program a draw needs and the values it reads — what three computes in
- * getProgram / refreshUniforms, for the materials the scenes use.
+ * The program a draw needs and the values it reads, for the materials the
+ * scenes use.
  */
 function describe(object, geometry, material, side, context, frame) {
   const output = frame.output;
@@ -479,6 +480,13 @@ function describe(object, geometry, material, side, context, frame) {
       kind: 'standard', physical, output, opaque, hasNormal, instanced,
       map: !!material.map,
       bumpMap: !!material.bumpMap,
+      // Fragments under this alpha are not drawn: hair cards, leaves. 0 for none.
+      alphaTest: material.alphaTest > 0 ? material.alphaTest : 0,
+      // Hair: highlights across the strands, which run along the map's v.
+      strands: material.strands === true && !!material.map,
+      // Skin and the like: a detail map over the colour map's layout (it needs both the map and the bump), and light scattered under the surface.
+      detailMap: !!material.detailMap && !!material.map && !!material.bumpMap,
+      subsurface: physical && material.subsurface > 0,
       vertexColors: material.vertexColors === true,
       flat: material.flatShading === true || !hasNormal,
       doubleSided: side === DoubleSide,
@@ -508,6 +516,8 @@ function describe(object, geometry, material, side, context, frame) {
       clearcoat: 0, clearcoatRoughness: 0,
       iridescence: 0, iridescenceIOR: 1.3, iridescenceThicknessMaximum: 400,
       sheenColor: [0, 0, 0], sheenRoughness: 1,
+      detailScale: material.detailMap ? (side === BackSide ? -material.detailScale : material.detailScale) : 0,
+      subsurfaceColor: [0, 0, 0],
       transmission: 0, thickness: 0, attenuationDistance: Infinity, attenuationColor: [1, 1, 1],
     };
     if (physical) {
@@ -518,6 +528,7 @@ function describe(object, geometry, material, side, context, frame) {
         params.sheenColor = colorArray(material.sheenColor, material.sheen);
         params.sheenRoughness = material.sheenRoughness;
       }
+      if (material.subsurface > 0) params.subsurfaceColor = colorArray(material.subsurfaceColor, material.subsurface);
       if (material.clearcoat > 0) {
         params.clearcoat = material.clearcoat;
         params.clearcoatRoughness = material.clearcoatRoughness;
@@ -534,7 +545,7 @@ function describe(object, geometry, material, side, context, frame) {
         params.attenuationColor = colorArray(material.attenuationColor);
       }
     }
-    return { key, params, textures: { map: material.map, bumpMap: material.bumpMap } };
+    return { key, params, textures: { map: material.map, bumpMap: material.bumpMap, detailMap: material.detailMap } };
   }
 
   if (material.isMeshBasicMaterial || material.isLineBasicMaterial) {

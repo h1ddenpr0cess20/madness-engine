@@ -116,6 +116,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
 
   // --- a field of colour, as mist: the haze (`textures/earth/haze.js`) reads a map of the Earth as it marches through the glass
   let field = null;
+  const worldScale = new GFX.Vector3();
   let fieldTexture = null;
   let fieldFlow = 0;
 
@@ -197,7 +198,13 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
         u.uFlow.value = fieldFlow;
         field.updateWorldMatrix?.(true, false);
         u.uCenter.value.setFromMatrixPosition(field.matrixWorld);
-        u.uInverse.value.copy(field.matrixWorld).invert();
+        // The haze is marched in the world: its sphere as big as the globe is drawn (a globe made small, or
+        // held in a hand, keeps its clouds), and read in its own frame without that scale.
+        worldScale.setFromMatrixScale(field.matrixWorld);
+        u.uRadius.value = R * HAZE_RADIUS * worldScale.x;
+        const e = u.uInverse.value.copy(field.matrixWorld).elements;
+        for (let c = 0; c < 3; c++) { const k = 1 / ([worldScale.x, worldScale.y, worldScale.z][c] || 1); e[c * 4] *= k; e[c * 4 + 1] *= k; e[c * 4 + 2] *= k; }
+        u.uInverse.value.invert();
       }
       if (!mist.visible) return;
       flow += dt * mood.speed;
@@ -215,6 +222,9 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
       if (mood.duo) { u.uDuoA.value.set(...mood.duo[0]); u.uDuoB.value.set(...mood.duo[1]); u.uDuoC.value.set(...mood.duo[2]); }
       mist.updateWorldMatrix?.(true, false);
       u.uCenter.value.setFromMatrixPosition(mist.matrixWorld);
+      // Marched in the world: its sphere as big as the globe is drawn, however it has been scaled.
+      // (Not when marched in its own frame, where its shape is set once.)
+      if (!u.uLocal?.value) u.uShape.value.setFromMatrixScale(mist.matrixWorld);
     },
 
     dispose() {

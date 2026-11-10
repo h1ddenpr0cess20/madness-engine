@@ -1,4 +1,5 @@
 import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
+import { HANDS } from './categories.js';
 
 export const BROADSWORD_DIMENSIONS = Object.freeze({
   overallLength: 0.99,
@@ -14,6 +15,7 @@ export const BROADSWORD_DIMENSIONS = Object.freeze({
 
 export const BROADSWORD_SPEC = Object.freeze({
   name: 'broadsword',
+  hands: HANDS.ONE,
   ...BROADSWORD_DIMENSIONS,
 });
 

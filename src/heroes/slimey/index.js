@@ -80,9 +80,13 @@ export function createSlimeOrb({ stage, GFX, metal = null, molten = false, lava 
     glow.mesh.visible = false;
   };
 
+  // Held still (`still`, as in a hand), it keeps the shape it has: no wobble, no drift.
+  let still = false, posed = false;
   shell.mesh.onBeforeRender = () => {
     timer.update();
     const dt = Math.min(timer.getDelta(), 0.05);
+    if (still && posed) return;
+    posed = true;
 
     impulse = Math.max(0, impulse - impulse * Math.min(1, dt * 3.4) - dt * 0.05);
     energy += (Math.min(1, sustain + impulse) - energy) * Math.min(1, dt * 6);
@@ -162,6 +166,9 @@ export function createSlimeOrb({ stage, GFX, metal = null, molten = false, lava 
   for (const b of bubbles.meshes) b.castShadow = b.receiveShadow = false;
 
   const api = {
+    /** Whether it is held still: true keeps it as it is, false lets it move again. */
+    get still() { return still; },
+    set still(on) { still = Boolean(on); },
     appearance: lava ? 'lava' : molten ? 'molten' : metal !== null ? 'metal' : 'slime',
     lavaMaterial,
     get state() { return state; },

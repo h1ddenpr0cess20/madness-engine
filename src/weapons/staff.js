@@ -4,6 +4,7 @@ import { createKrystalOrbPommel, createMagicEggPommel, metalMaterial } from './c
 import { METALS } from '../props/metalglobe.js';
 import { createGlassPlanet, GLASS_PLANET_NAMES } from '../props/glass-planets.js';
 import { createJewelBoulder, JEWEL_CHOICES } from '../heroes/rock-jewel.js';
+import { HANDS, handlingInfo, handlingOf } from './categories.js';
 
 /**
  * A gnarled wizard's staff carved entirely from the library's wood textures.
@@ -43,6 +44,13 @@ const TOPPER_LABELS = Object.freeze({
   ...Object.fromEntries(JEWEL_CHOICES.map((name) => [name, `${name[0].toUpperCase()}${name.slice(1)} (jewel)`])),
   none: 'none',
 });
+
+/**
+ * The staff's handling: held in both hands (a staff that long is wielded with
+ * two, as a quarterstaff is), and ranged, a focus for spells rather than a
+ * melee reach.
+ */
+export const STAFF_HANDLING = handlingOf({ hands: HANDS.TWO, ranged: true });
 
 const GRIP_Y = [0.8, 1.1];
 const HEAD_Y = 1.55;
@@ -408,9 +416,8 @@ export function createStaff(GFX, {
         asset.group.position.y = -STAFF_DIMENSIONS.eggHalfHeight / STAFF_DIMENSIONS.eggScale;
         holder.add(asset.group);
         holder.rotation.z = Math.PI;
-        // Enlarge the egg and the world-space volume its mist is marched through, together.
+        // Enlarge the egg (its mist is marched in its own frame, so it grows with it).
         holder.scale.setScalar(STAFF_DIMENSIONS.eggScale);
-        asset.mist.material.uniforms.uShape.value.multiplyScalar(STAFF_DIMENSIONS.eggScale);
         asset.glass.material.thickness *= STAFF_DIMENSIONS.eggScale;
         asset.glass.material.attenuationDistance *= STAFF_DIMENSIONS.eggScale;
         toppers.egg = { asset, object: holder };
@@ -456,11 +463,15 @@ export function createStaff(GFX, {
     get vine() { return vine; },
     get tendrils() { return tendrils; },
     get seed() { return seed; },
+    handling: STAFF_HANDLING,
+    /** Where along it (its own y, from its foot) the leather grip runs: a hand takes it there. */
+    gripBounds: Object.freeze({ bottom: GRIP_Y[0], top: GRIP_Y[1] }),
     get dimensions() {
       return Object.freeze({ ...STAFF_DIMENSIONS, overallLength: dims(), tendrils, unit: 'm' });
     },
     get info() {
       return {
+        ...handlingInfo(STAFF_HANDLING),
         'Staff length': `${dims().toFixed(2)} m`,
         ...(metalName ? { Metal: metalName } : { Wood: `${woodSpecies} (${woodFinish})` }),
         Topper: TOPPER_LABELS[topperKind],

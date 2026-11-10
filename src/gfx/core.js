@@ -4,8 +4,9 @@
  * can be built and measured under Node. The renderers read it.
  *
  * The shapes of these objects, and the order things happen in (world
- * matrices, bounds, normals), follow three.js r186 (MIT, © 2010-2025 three.js
- * authors), which is what the scenes were written against.
+ * matrices, bounds, normals), are what the scenes were written against.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 import {
@@ -310,7 +311,7 @@ export class Scene extends Object3D {
     this.type = 'Scene';
     /** The prefiltered studio the physical materials reflect — from a PMREMGenerator. */
     this.environment = null;
-    /** How that studio is turned in the world, as three's `Scene.environmentRotation` is. */
+    /** How that studio is turned in the world. */
     this.environmentRotation = new Euler();
   }
 }
@@ -467,7 +468,7 @@ export class BufferGeometry extends EventDispatcher {
     this.boundingSphere.radius = Math.sqrt(maxRadiusSq);
   }
 
-  /** Area-weighted and summed in the attribute's own float32, as three does. */
+  /** Area-weighted and summed in the attribute's own float32. */
   computeVertexNormals() {
     const index = this.index;
     const positionAttribute = this.getAttribute('position');
@@ -1123,6 +1124,10 @@ export class MeshStandardMaterial extends Material {
     this.emissiveIntensity = 1.0;
     this.bumpMap = null;
     this.bumpScale = 1;
+    // Over the map's layout (it needs the map and the bump map): r a relief of its own (scaled by detailScale),
+    // g the roughness (0.5 as the material's, to twice it), b how much of the bump map shows.
+    this.detailMap = null;
+    this.detailScale = 1;
     this.envMapIntensity = 1.0;
     this.flatShading = false;
     this.setValues(parameters);
@@ -1140,6 +1145,9 @@ export class MeshPhysicalMaterial extends MeshStandardMaterial {
     this.iridescence = 0;
     this.iridescenceIOR = 1.3;
     this.iridescenceThicknessRange = [100, 400];
+    // Light scattered under the surface (skin, wax): how much, and how far each colour is carried round the form.
+    this.subsurface = 0;
+    this.subsurfaceColor = new Color(0x000000);
     this.sheen = 0;
     this.sheenColor = new Color(0x000000);
     this.sheenRoughness = 1.0;

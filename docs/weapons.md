@@ -23,6 +23,50 @@ Useful historical proportion targets for future assets:
 These are modelling targets, not claims that every historical example shared
 one standard dimension.
 
+## Categories
+
+Every weapon carries a `handling` with two categories, and the asset viewer's
+Weapons shelf is grouped by them:
+
+| Field | Values | What it says |
+|---|---|---|
+| `hands` | `one-handed`, `two-handed` | How many hands hold it, by its grip. |
+| `range` | `short`, `medium`, `long`, `ranged` | How far it strikes. |
+
+A melee weapon's striking range is how far its striking end reaches beyond the
+hand: its overall length less its grip. The bands are:
+
+- `short`: under 0.6 meters of reach, such as a dagger.
+- `medium`: from 0.6 up to 1.1 meters, such as a broadsword or a morningstar.
+- `long`: 1.1 meters or more, such as a greatsword.
+
+Striking range is measured, so it follows the geometry. A weapon that strikes at
+a distance is `ranged` whatever its length: a bow, a throwing weapon or a spell
+staff. A new ranged weapon sets `ranged: true` in its spec, and it has no melee
+reach band.
+
+Each weapon spec declares its `hands`, and `buildWeapon` refuses a spec without
+a known one. Built weapons expose `handling`, and their info panel shows it as
+the `Hands` and `Range` rows. Variants inherit their family's hands, and their
+range follows their own measured reach.
+
+| Weapon | Hands | Range | Reach |
+|---|---|---|---|
+| Dagger | one-handed | short | 0.30 m |
+| Broadsword | one-handed | medium | 0.85 m |
+| Greatsword | two-handed | long | 1.24 m |
+| Morningstar | one-handed | medium | 0.94 m |
+| Wizard staff | two-handed | ranged | not banded |
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createGreatsword, HANDS } from 'madness-engine/weapons';
+
+const sword = createGreatsword(GFX);
+sword.handling; // { hands: 'two-handed', range: 'long' }
+sword.handling.hands === HANDS.TWO; // true
+```
+
 ## Broadsword
 
 `createBroadsword(GFX, options)` builds a point-up broadsword with the actual
@@ -262,6 +306,11 @@ const planetMaps = { mars: await loadGlassPlanetMaps('mars') };
 const golden = createStaff(GFX, { metal: 'gold', topper: 'mars', planetMaps });
 golden.setMetal('rose gold');
 ```
+
+It is a two-handed weapon (`handling.hands`), and ranged. Its `gripBounds`
+are the leather grip, 0.8 to 1.1 m up from its foot: a human holds it there,
+upright at its side when it stands or walks, and swings it with both hands
+on the grip, as a quarterstaff is (`man.hold(createStaff(GFX))`).
 
 `staff.info` reports the wood or the metal, and the topper by its name (for
 example `Glass Mars`).

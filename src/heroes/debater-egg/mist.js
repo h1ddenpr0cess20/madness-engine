@@ -46,6 +46,9 @@ export function createEggMist(GFX, { visible = false } = {}) {
     u.uFlow.value += Math.min(timer.getDelta(), 0.05) * 0.18;
     mesh.updateWorldMatrix?.(true, false);
     u.uCenter.value.setFromMatrixPosition(mesh.matrixWorld);
+    // Marched in the world: its sphere as big as the egg is drawn, however it has been scaled (held in a hand, say).
+    // (Not when marched in its own frame, as the weapons that set it in a glass egg do: their shape is the egg's.)
+    if (!u.uLocal?.value) u.uShape.value.setFromMatrixScale(mesh.matrixWorld);
   };
 
   return { mesh, material };

@@ -133,6 +133,7 @@ export class WebGLBackend {
     // before any unit is assigned.
     const map = call.textures.map ? this._texture(call.textures.map) : null;
     const bumpMap = call.textures.bumpMap ? this._texture(call.textures.bumpMap) : null;
+    const detailMap = call.textures.detailMap ? this._texture(call.textures.detailMap) : null;
     let unit = 0;
     const bindTexture = (name, texture) => {
       if (!u.has(name)) return;
@@ -158,6 +159,7 @@ export class WebGLBackend {
       if (fresh) this._lights(u, frame);
       if (map) bindTexture('map', map);
       if (bumpMap) bindTexture('bumpMap', bumpMap);
+      if (detailMap) bindTexture('detailMap', detailMap);
       if (frame.env && call.key.envMap) bindTexture('envMap', frame.env.gpu.texture);
       bindTexture('dfgLUT', this.dfg);
       if (frame.shadow && u.has('directionalShadowMap')) {

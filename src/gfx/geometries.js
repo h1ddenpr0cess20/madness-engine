@@ -1,11 +1,12 @@
 /**
  * The primitive shapes the scenes are built from.
  *
- * Vertex order, winding, UVs and groups all follow three.js r186 (MIT,
- * © 2010-2025 three.js authors) exactly — the scenes number die faces by
- * triangle order, displace sphere vertices by index and pick lectern
- * heights off these bounds, so "about the same mesh" would not be the same
- * scene.
+ * Vertex order, winding, UVs and groups are fixed: the scenes number die
+ * faces by triangle order, displace sphere vertices by index and pick
+ * lectern heights off these bounds, so "about the same mesh" would not be
+ * the same scene.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 import { BufferGeometry, Float32BufferAttribute } from './core.js';
