@@ -177,7 +177,7 @@ async function show(item) {
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
-    renderItemUi(built.ui);
+    renderItemUi(built.ui ?? []);
     // What an item can switch on and off (the glass globe's mist).
     $('togglegroup').style.display = built.mist ? '' : 'none';
     if (built.mist) $('mistbox').checked = built.mist.get();
@@ -247,7 +247,8 @@ function renderItemUi(specs) {
   clearInterval(uiTimer);
   const rows = $('itemuirows');
   rows.replaceChildren();
-  $('itemui').style.display = specs?.length ? '' : 'none';
+  // Shown for any model (its reset is there), with whatever controls it hands over.
+  $('itemui').style.display = specs === null ? 'none' : '';
   if (!specs?.length) return;
   const syncs = [];
   for (const sp of specs) {
@@ -293,6 +294,25 @@ function renderItemUi(specs) {
   sync();
   uiTimer = setInterval(sync, 200);
 }
+
+/**
+ * The shown model as it first came: its option menus back to their defaults, its colours and saved metals
+ * forgotten, and it built afresh, so whatever its own controls changed (a person's shape, outfit, weapon, face)
+ * is as it was made too. The camera, light and animation are left as they are.
+ */
+function resetItem() {
+  const item = view.item;
+  if (!item) return;
+  for (const [name, values] of Object.entries(item.options ?? {})) options[name] = values.default ?? values[0];
+  delete view.weaponMetals[item.id];
+  if (item.palette?.kind === 'weapon') {
+    options.bladeMetal = item.palette.bladeMetal ?? 'steel';
+    options.hiltMetal = item.palette.hiltMetal ?? 'steel';
+  } else if (item.palette?.kind === 'morningstar') options.metal = item.palette.metal ?? 'steel';
+  view.colours = {}; view.draft = {}; view.seed = 0;
+  show(item);
+}
+$('itemreset').onclick = resetItem;
 
 /** The stage back to its plain light, sky and room, before an item dresses it. */
 function resetDress() {
@@ -970,6 +990,7 @@ addEventListener('keydown', (e) => {
   else if (k === 'f') { e.preventDefault(); toggleFlag(); }
   else if (k === 't') $('turn').click();
   else if (k === 'm') setMarking(!marking);
+  else if (k === 'r') resetItem();
   else if (k === 'c') contactSheet();
   else if (k === 'g') $('gridbtn').click();
   else if (k === ' ') { e.preventDefault(); $('pause').click(); }
