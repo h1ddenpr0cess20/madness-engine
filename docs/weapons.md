@@ -312,7 +312,6 @@ are the leather grip, 0.8 to 1.1 m up from its foot: a human holds it there,
 upright at its side when it stands or walks, and swings it with both hands
 on the grip, as a quarterstaff is (`man.hold(createStaff(GFX))`).
 
-
 `staff.info` reports the wood or the metal, and the topper by its name (for
 example `Glass Mars`).
 
