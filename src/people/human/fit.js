@@ -36,6 +36,7 @@ const LIMB = (n) => {
 };
 const LIMBS = [...new Set(NAMES.map(LIMB))];
 const canonical = NAMES.map((n) => LIMBS.indexOf(LIMB(n)));
+const L = LIMBS.length;
 
 const fitters = new Map();
 const G = 0.02;
@@ -67,40 +68,19 @@ function fitter(sex) {
     lists.get(k).push(i);
   }
   const hash = new Map([...lists].map(([k, l]) => [k, Int32Array.from(l)]));
-  const f = { M, D, SB, SW, hash, sex, figure: figureOf(sex), male: figureOf('male'), found: [] };
+  // Each skin point's weights summed limb by limb, for comparing with a point's own.
+  const LW = new Float32Array(count * L);
+  for (let i = 0; i < count; i++) for (let k = 0; k < 4; k++) if (SB[i * 4 + k] >= 0) LW[i * L + SB[i * 4 + k]] += SW[i * 4 + k];
+  const f = { M, D, SB, SW, LW, hash, sex, figure: figureOf(sex), male: figureOf('male'), acc: new Float64Array(32) };
   fitters.set(sex, f);
   return f;
 }
 
-/** How alike a point's weights (bones `qb`, weights `qw`, four each) are to skin point `v`'s: 1 the same, 0 nothing shared. */
-const sums = new Float32Array(LIMBS.length * 2);
-function alike(F, qb, qw, v) {
-  if (!qb) return 1;
-  sums.fill(0);
-  for (let a = 0; a < 4; a++) if (qb[a] >= 0) sums[qb[a] * 2] += qw[a];
-  for (let c = 0; c < 4; c++) { const b = F.SB[v * 4 + c]; if (b >= 0) sums[b * 2 + 1] += F.SW[v * 4 + c]; }
-  let s = 0;
-  for (let l = 0; l < LIMBS.length; l++) s += Math.min(sums[l * 2], sums[l * 2 + 1]);
-  return s;
-}
-
-/** The skin's points within `reach` cells of q's, into F.found as [v, d², ...]; returns the nearest d². */
-function gather(F, q, reach) {
-  const { M, hash, found } = F;
-  found.length = 0;
-  const cx = Math.floor(q[0] / G), cy = Math.floor(q[1] / G), cz = Math.floor(q[2] / G);
-  let near = Infinity;
-  for (let i = -reach; i <= reach; i++) for (let j = -reach; j <= reach; j++) for (let k = -reach; k <= reach; k++) {
-    const cell = hash.get(cellKey(cx + i, cy + j, cz + k));
-    if (!cell) continue;
-    for (let n = 0; n < cell.length; n++) {
-      const v = cell[n];
-      const d2 = (M[v * 3] - q[0]) ** 2 + (M[v * 3 + 1] - q[1]) ** 2 + (M[v * 3 + 2] - q[2]) ** 2;
-      found.push(v, d2);
-      if (d2 < near) near = d2;
-    }
-  }
-  return near;
+/** A point's weights (bones `qb`, weights `qw`, four each) summed limb by limb, into `out` (L numbers). */
+function limbSums(qb, qw, out) {
+  out.fill(0);
+  for (let a = 0; a < 4; a++) if (qb[a] >= 0) out[qb[a]] += qw[a];
+  return out;
 }
 
 /**
@@ -111,43 +91,79 @@ function gather(F, q, reach) {
  * left thigh follows the left thigh and not the right one beside it. The
  * further from the skin, the wider the skin it follows, so cloth standing
  * off it moves smoothly.
+ *
+ * One pass over the skin within 3σ: the weighted sums of the moves and of
+ * their gradient's parts are gathered together (the gradient's
+ * Σ k·e·(D − mean) is Σ k·e·D − mean·Σ k·e).
  */
+const qsum = new Float32Array(L);
 function shiftAt(F, q, qb, qw, out, grad = null) {
-  const { M, D, found } = F;
-  let reach = 1, near = gather(F, q, 1);
-  while (!Number.isFinite(near) && reach < 12) near = gather(F, q, (reach += 2));
-  const sigma = 0.008 + 0.5 * Math.sqrt(near), s2 = sigma * sigma;
-  const need = Math.ceil((3 * sigma) / G);
-  if (need > reach) gather(F, q, need);
-  let tw = 0, x = 0, y = 0, z = 0, tw0 = 0, x0 = 0, y0 = 0, z0 = 0;
-  for (let n = 0; n < found.length; n += 2) {
-    const v = found[n], d2 = found[n + 1];
-    if (d2 > 9 * s2) continue;
-    const g = Math.exp(-d2 / s2);
-    const k = g * alike(F, qb, qw, v);
-    tw += k; x += D[v * 3] * k; y += D[v * 3 + 1] * k; z += D[v * 3 + 2] * k;
-    tw0 += g; x0 += D[v * 3] * g; y0 += D[v * 3 + 1] * g; z0 += D[v * 3 + 2] * g;
-  }
-  // Where nothing near shares its weights, the skin nearest it, whatever it is.
-  const plain = tw < 1e-6 * tw0 || tw === 0;
-  if (plain) { tw = tw0; x = x0; y = y0; z = z0; }
-  if (tw === 0) { out[0] = out[1] = out[2] = 0; if (grad) grad.fill(0); return out; }
-  out[0] = x / tw; out[1] = y / tw; out[2] = z / tw;
-  if (grad) {
-    grad.fill(0);
-    for (let n = 0; n < found.length; n += 2) {
-      const v = found[n], d2 = found[n + 1];
-      if (d2 > 9 * s2) continue;
-      const k = Math.exp(-d2 / s2) * (plain ? 1 : alike(F, qb, qw, v));
-      if (!k) continue;
-      // d(k)/dq = k · −2 (q − M) / σ²
-      const f = (-2 * k) / s2 / tw;
-      const e = [q[0] - M[v * 3], q[1] - M[v * 3 + 1], q[2] - M[v * 3 + 2]];
-      for (let r = 0; r < 3; r++) {
-        const dv = D[v * 3 + r] - out[r];
-        for (let c = 0; c < 3; c++) grad[r * 3 + c] += f * e[c] * dv;
+  const { M, D, LW, hash } = F;
+  const cx = Math.floor(q[0] / G), cy = Math.floor(q[1] / G), cz = Math.floor(q[2] / G);
+  // The nearest skin in the cells round q's own, those further out until some is found.
+  let near = Infinity;
+  for (let r = 1; !Number.isFinite(near); r += 2) {
+    if (r > 13) break;
+    for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) for (let k = -r; k <= r; k++) {
+      const cell = hash.get(cellKey(cx + i, cy + j, cz + k));
+      if (!cell) continue;
+      for (let n = 0; n < cell.length; n++) {
+        const v = cell[n];
+        const d2 = (M[v * 3] - q[0]) ** 2 + (M[v * 3 + 1] - q[1]) ** 2 + (M[v * 3 + 2] - q[2]) ** 2;
+        if (d2 < near) near = d2;
       }
     }
+  }
+  if (!Number.isFinite(near)) { out[0] = out[1] = out[2] = 0; if (grad) grad.fill(0); return out; }
+  const sigma = 0.008 + 0.5 * Math.sqrt(near), s2 = sigma * sigma, far = 9 * s2;
+  const reach = Math.ceil((3 * sigma) / G);
+  const weighted = !!qb;
+  if (weighted) limbSums(qb, qw, qsum);
+  // [Σw, Σw·D (3), Σw·e (3), Σw·e⊗D (9)], with the weights alike (k) and plain (g).
+  const A = F.acc.fill(0);
+  for (let i = -reach; i <= reach; i++) {
+    // Only the cells some of which lie within 3σ.
+    const dx = Math.max(0, Math.abs(i) - 1) * G;
+    for (let j = -reach; j <= reach; j++) {
+      const dy = Math.max(0, Math.abs(j) - 1) * G;
+      if (dx * dx + dy * dy > far) continue;
+      for (let k = -reach; k <= reach; k++) {
+        const dz = Math.max(0, Math.abs(k) - 1) * G;
+        if (dx * dx + dy * dy + dz * dz > far) continue;
+        const cell = hash.get(cellKey(cx + i, cy + j, cz + k));
+        if (!cell) continue;
+        for (let n = 0; n < cell.length; n++) {
+          const v = cell[n];
+          const e0 = q[0] - M[v * 3], e1 = q[1] - M[v * 3 + 1], e2 = q[2] - M[v * 3 + 2];
+          const d2 = e0 * e0 + e1 * e1 + e2 * e2;
+          if (d2 > far) continue;
+          const g = Math.exp(-d2 / s2);
+          let same = 1;
+          if (weighted) { same = 0; for (let l = 0; l < L; l++) { const a = qsum[l], b = LW[v * L + l]; same += a < b ? a : b; } }
+          const D0 = D[v * 3], D1 = D[v * 3 + 1], D2 = D[v * 3 + 2];
+          for (let t = 0, w = g * same; t < 2; t++, w = g) {
+            if (!w) continue;
+            const o = t * 16;
+            A[o] += w; A[o + 1] += w * D0; A[o + 2] += w * D1; A[o + 3] += w * D2;
+            if (!grad) continue;
+            A[o + 4] += w * e0; A[o + 5] += w * e1; A[o + 6] += w * e2;
+            A[o + 7] += w * e0 * D0; A[o + 8] += w * e1 * D0; A[o + 9] += w * e2 * D0;
+            A[o + 10] += w * e0 * D1; A[o + 11] += w * e1 * D1; A[o + 12] += w * e2 * D1;
+            A[o + 13] += w * e0 * D2; A[o + 14] += w * e1 * D2; A[o + 15] += w * e2 * D2;
+          }
+        }
+      }
+    }
+  }
+  // Where nothing near shares its weights, the skin nearest it, whatever it is.
+  const o = A[0] === 0 || A[0] < 1e-6 * A[16] ? 16 : 0;
+  const tw = A[o];
+  if (tw === 0) { out[0] = out[1] = out[2] = 0; if (grad) grad.fill(0); return out; }
+  out[0] = A[o + 1] / tw; out[1] = A[o + 2] / tw; out[2] = A[o + 3] / tw;
+  if (grad) {
+    // d(k)/dq = k · −2 (q − M) / σ²: grad[r][c] = −2/(σ² tw) Σ k e_c (D_r − out_r).
+    const f = -2 / s2 / tw;
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) grad[r * 3 + c] = f * (A[o + 7 + r * 3 + c] - out[r] * A[o + 4 + c]);
   }
   return out;
 }
