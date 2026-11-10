@@ -169,7 +169,7 @@ test('the staff rejects unknown choices', () => {
   assert.throws(() => createStaff(GFX, { topper: 'cube' }), /no topper called/);
   assert.throws(() => createStaff(GFX, { tendrils: 2 }), RangeError);
   assert.throws(() => createStaff(GFX, { gripColor: 'red' }), TypeError);
-  assert.deepEqual([...STAFF_TOPPERS], ['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none']);
+  assert.deepEqual([...STAFF_TOPPERS], ['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'jupiter-etched', 'none']);
 });
 
 test('every decorative part is wood: only the grip leather and thread are not', () => {
