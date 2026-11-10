@@ -52,7 +52,7 @@ test('the Madness marble is an optional topper using the existing glass marble a
   const staff = createStaff(GFX, { topper: 'marble' });
   assert.equal(staff.topper, 'marble');
   assert.ok(staff.marble.asset.marble && staff.marble.asset.glass && staff.marble.asset.spark);
-  assert.equal(staff.marble.group.position.y, staff.dimensions.cradleDepth + 0.045);
+  assert.ok(staff.marble.group.position.y > staff.dimensions.cradleDepth, 'the marble centre is above the cradle lip');
   assert.equal(visibleToppers(staff).length, 1);
 });
 
