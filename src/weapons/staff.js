@@ -181,7 +181,7 @@ export function createStaff(GFX, {
   if (materialType === 'wood' && !Object.hasOwn(WOOD_SPECIES, species)) throw new Error(`no wood called ${species}; choose ${Object.keys(WOOD_SPECIES).join(', ')}`);
   if (materialType === 'wood' && !WOOD_FINISHES.includes(finish)) throw new Error(`no wood finish called ${finish}; choose ${WOOD_FINISHES.join(', ')}`);
   if (!['wood', 'metal'].includes(materialType)) throw new Error(`no staff material called ${materialType}; choose wood or metal`);
-  if (!Object.hasOwn(METALS, metal)) throw new Error(`no metal called ${metal}; choose ${Object.keys(METALS).join(', ')}`);
+  if (materialType === 'metal' && !Object.hasOwn(METALS, metal)) throw new Error(`no metal called ${metal}; choose ${Object.keys(METALS).join(', ')}`);
   if (!STAFF_TOPPERS.includes(topper)) throw new Error(`no topper called ${topper}; choose ${STAFF_TOPPERS.join(', ')}`);
   if (!Number.isInteger(tendrils) || tendrils < 8 || tendrils > 32) throw new RangeError('tendrils must be a whole number from 8 to 32');
   if (!Number.isFinite(seed)) throw new TypeError('seed must be a number');
