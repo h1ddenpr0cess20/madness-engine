@@ -686,34 +686,56 @@ function weaponItems() {
   }));
 }
 
-/** The wizard staff: wood, metal and topper are chosen from the viewer's option menus. */
-function staffItem() {
+/** A staff entry with controls for the chosen structural material and its topper. */
+function staffItem(materialType = 'wood') {
+  const isMetal = materialType === 'metal';
+  const topperOptions = ['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none'];
+  const metalOptions = Object.assign([...METAL_CHOICES], { default: 'gold' });
   return {
-    id: 'weapons/wizard-staff',
+    id: isMetal ? 'weapons/wizard-staff-metal' : 'weapons/wizard-staff',
     category: 'Weapons',
     group: 'Staff Set',
-    name: 'Wizard Staff',
+    name: isMetal ? 'Wizard Staff (Metal)' : 'Wizard Staff',
     source: 'weapons/staff',
     kind: 'object',
+    materialType,
     palette: { kind: 'staff', grip: '#3a2418', thread: '#e2b857' },
     options: {
-      topper: ['orb', 'egg', 'none'],
-      species: ['walnut', ...Object.keys(WOOD_SPECIES).filter((k) => k !== 'walnut')],
-      finish: ['lacquered', ...WOOD_FINISHES.filter((k) => k !== 'lacquered')],
+      topper: topperOptions,
+      ...(isMetal ? { metal: metalOptions } : {
+        species: ['walnut', ...Object.keys(WOOD_SPECIES).filter((k) => k !== 'walnut')],
+        finish: ['lacquered', ...WOOD_FINISHES.filter((k) => k !== 'lacquered')],
+      }),
       wrap: ['on', 'off'],
       vine: ['roots', 'none'],
     },
-    async build({ topper = 'orb', species = 'walnut', finish = 'lacquered', vine = 'roots', wrap = 'on', colours = {} } = {}) {
-      const [{ createStaff }, metals] = await Promise.all([
-        import('../../../src/weapons/staff.js'),
-        import('../../../src/props/metalglobe.js'),
-      ]);
-      const made = createStaff(GFX, { topper, species, finish, vine: vine === 'roots', wrap: wrap === 'on',
-        gripColor: colours.gripColor ?? '#3a2418', threadColor: colours.threadColor ?? '#e2b857' });
+    async build({
+      topper = 'orb',
+      species = 'walnut',
+      finish = 'lacquered',
+      metal = 'gold',
+      vine = 'roots',
+      wrap = 'on',
+      colours = {},
+    } = {}) {
+      const { createStaff, createMetalStaff } = await import('../../../src/weapons/staff.js');
+      const build = isMetal ? createMetalStaff : createStaff;
+      const made = build(GFX, {
+        topper,
+        ...(isMetal ? { metal } : { species, finish }),
+        vine: vine === 'roots',
+        wrap: wrap === 'on',
+        gripColor: colours.gripColor ?? '#3a2418',
+        threadColor: colours.threadColor ?? '#e2b857',
+      });
+      // The surface maps for Moon, Mars and Jupiter decode asynchronously.
+      // Finish that work before the viewer frames the selected topper.
+      await made.topperReady;
+      const metals = await import('../../../src/props/metalglobe.js');
       return {
         object: made.group,
-        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
-        info: { Source: 'weapons/staff#createStaff', ...made.info, ...countOf(made.group) },
+        environment: isMetal ? metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) : null,
+        info: { Source: `weapons/staff#${isMetal ? 'createMetalStaff' : 'createStaff'}`, ...made.info, ...countOf(made.group) },
       };
     },
   };
@@ -764,7 +786,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
-  items.push(...weaponItems(), staffItem());
+  items.push(...weaponItems(), staffItem('wood'), staffItem('metal'));
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
