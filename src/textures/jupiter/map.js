@@ -39,10 +39,15 @@ export async function loadJupiterMap() {
  * the planet is cut into the glass and the mist inside shows through it.
  * Resolves to null where there is no document to paint on.
  */
-export async function loadJupiterEtch({ relief = false } = {}) {
-  const canvas = await loadJupiterMap();
-  if (!canvas) return null;
+/** Build the frosted glass etching from an already-decoded cloud map. */
+export function createJupiterEtch(source, { relief = false } = {}) {
+  if (!source || typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(source, 0, 0);
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const d = pixels.data;
   for (let i = 0; i < d.length; i += 4) {
@@ -54,4 +59,9 @@ export async function loadJupiterEtch({ relief = false } = {}) {
   }
   ctx.putImageData(pixels, 0, 0);
   return canvas;
+}
+
+/** The Jupiter clouds transformed into a frosted or relief etching. */
+export async function loadJupiterEtch(options = {}) {
+  return createJupiterEtch(await loadJupiterMap(), options);
 }
