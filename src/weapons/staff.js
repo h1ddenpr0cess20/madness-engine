@@ -1,6 +1,7 @@
 import { WOOD_FINISHES, WOOD_SPECIES } from '../textures/wood.js';
 import { woodBoardMaterial } from '../props/wood-board.js';
-import { createKrystalOrbPommel, createMagicEggPommel, createWeaponPommelMarble } from './common.js';
+import { createKrystalOrbPommel, createMagicEggPommel, createWeaponPommelMarble, metalMaterial } from './common.js';
+import { METALS } from '../props/metalglobe.js';
 import { createGlassGlobe } from '../props/glassglobe.js';
 import { loadMoonEtch } from '../textures/moon/map.js';
 import { loadMarsEtch } from '../textures/mars/map.js';
@@ -173,9 +174,13 @@ export function createStaff(GFX, {
   tendrils = 18,
   seed = 7,
   detail = 1,
+  materialType = 'wood',
+  metal = 'steel',
 } = {}) {
   if (!Object.hasOwn(WOOD_SPECIES, species)) throw new Error(`no wood called ${species}; choose ${Object.keys(WOOD_SPECIES).join(', ')}`);
   if (!WOOD_FINISHES.includes(finish)) throw new Error(`no wood finish called ${finish}; choose ${WOOD_FINISHES.join(', ')}`);
+  if (!['wood', 'metal'].includes(materialType)) throw new Error(`no staff material called ${materialType}; choose wood or metal`);
+  if (!Object.hasOwn(METALS, metal)) throw new Error(`no metal called ${metal}; choose ${Object.keys(METALS).join(', ')}`);
   if (!STAFF_TOPPERS.includes(topper)) throw new Error(`no topper called ${topper}; choose ${STAFF_TOPPERS.join(', ')}`);
   if (!Number.isInteger(tendrils) || tendrils < 8 || tendrils > 32) throw new RangeError('tendrils must be a whole number from 8 to 32');
   if (!Number.isFinite(seed)) throw new TypeError('seed must be a number');
@@ -191,30 +196,35 @@ export function createStaff(GFX, {
 
   let woodSpecies = species;
   let woodFinish = finish;
-  let wood = woodBoardMaterial(GFX, woodSpecies, woodFinish);
+  let selectedMetal = metal;
+  let structureMaterial = materialType === 'metal'
+    ? metalMaterial(GFX, 'staff metal', selectedMetal)
+    : woodBoardMaterial(GFX, woodSpecies, woodFinish);
   const leather = new GFX.MeshPhysicalMaterial({
     name: 'staff leather', color: gripColor, roughness: 0.62, metalness: 0, clearcoat: 0.1,
   });
   const thread = new GFX.MeshPhysicalMaterial({
     name: 'staff thread', color: threadColor, roughness: 0.5, metalness: 0.1,
   });
-  const woodParts = [];
+  const structureParts = [];
 
   const add = (parent, geometry, material, name) => {
     // Wood gets its grain along its length: turned parts by their lathe, carved parts planar.
-    if (material === wood) {
-      if (geometry.type === 'LatheGeometry') turnedUV(geometry); else carvedUV(GFX, geometry);
+    if (material === structureMaterial) {
+      if (materialType === 'wood') {
+        if (geometry.type === 'LatheGeometry') turnedUV(geometry); else carvedUV(GFX, geometry);
+      }
     }
     const mesh = new GFX.Mesh(geometry, material);
     mesh.name = name;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     parent.add(mesh);
-    if (material === wood) woodParts.push(mesh);
+    if (material === structureMaterial) structureParts.push(mesh);
     return mesh;
   };
 
-  const shaft = add(group, new GFX.LatheGeometry(profile(GFX, shaftProfile()), seg(48)), wood, 'turned wooden shaft');
+  const shaft = add(group, new GFX.LatheGeometry(profile(GFX, shaftProfile()), seg(48)), structureMaterial, materialType === 'metal' ? 'turned metal shaft' : 'turned wooden shaft');
 
   // Leather grip with a helix of contrasting thread.
   const gripLength = GRIP_Y[1] - GRIP_Y[0];
@@ -252,7 +262,7 @@ export function createStaff(GFX, {
         pts.push(new GFX.Vector3(Math.cos(a) * r, y0 - f * (y0 - y1), Math.sin(a) * r));
         radii.push(0.0036 * (0.55 + 0.45 * Math.sin(f * Math.PI)) * (1 + 0.28 * Math.sin(f * 23 + phase * 2)) + 0.0004);
       }
-      add(vineGroup, sweepTube(GFX, pts, radii, 8), wood, 'entwined wooden root');
+      add(vineGroup, sweepTube(GFX, pts, radii, 8), structureMaterial, materialType === 'metal' ? 'entwined metal root' : 'entwined wooden root');
     }
   }
 
@@ -277,8 +287,8 @@ export function createStaff(GFX, {
     for (const m of headParts) {
       head.remove(m);
       m.geometry?.dispose?.();
-      const i = woodParts.indexOf(m);
-      if (i >= 0) woodParts.splice(i, 1);
+      const i = structureParts.indexOf(m);
+      if (i >= 0) structureParts.splice(i, 1);
     }
     headParts.length = 0;
     const mark = (mesh) => { headParts.push(mesh); return mesh; };
@@ -310,7 +320,7 @@ export function createStaff(GFX, {
       core.push([envelope(h) * 0.86, h]);
     }
     core.push([rimR * 0.78, D + 0.002], [rimR * 0.55, D - 0.01], [0, D - 0.016]);
-    mark(add(head, new GFX.LatheGeometry(profile(GFX, core), seg(40)), wood, 'topper cup'));
+    mark(add(head, new GFX.LatheGeometry(profile(GFX, core), seg(40)), structureMaterial, materialType === 'metal' ? 'metal topper cup' : 'topper cup'));
 
     // The roots: each climbs from the shaft, twisting, and ends in a ragged lip; the tall ones clasp the topper.
     const n = tendrils;
@@ -338,7 +348,7 @@ export function createStaff(GFX, {
         const taper = f < 0.12 ? 0.5 + f * 4 : 1 - 0.78 * clamp((f - 0.62) / 0.38, 0, 1);
         radii.push(Math.max(0.0007, thick * swell * taper));
       }
-      mark(add(head, sweepTube(GFX, pts, radii, 8), wood, `root tendril ${i + 1}`));
+      mark(add(head, sweepTube(GFX, pts, radii, 8), structureMaterial, `${materialType === 'metal' ? 'metal' : 'root'} tendril ${i + 1}`));
     }
 
     // Bands of root wind around the cradle, binding the tendrils into a woven mass.
@@ -357,7 +367,7 @@ export function createStaff(GFX, {
         pts.push(new GFX.Vector3(Math.cos(phi) * r, h, Math.sin(phi) * r));
         radii.push(Math.max(0.0007, 0.0048 * (1 + 0.35 * Math.sin(f * 14 + ph)) * Math.min(1, f * 10, (1 - f) * 10)));
       }
-      mark(add(head, sweepTube(GFX, pts, radii, 7), wood, `root band ${k + 1}`));
+      mark(add(head, sweepTube(GFX, pts, radii, 7), structureMaterial, `${materialType === 'metal' ? 'metal' : 'root'} band ${k + 1}`));
     }
 
     // Fine roots creep down the shaft from the head's base and fade into it.
@@ -377,7 +387,7 @@ export function createStaff(GFX, {
         pts.push(new GFX.Vector3(Math.cos(phi) * r, h, Math.sin(phi) * r));
         radii.push(Math.max(0.0006, 0.0058 * (1 - f) ** 0.8 * (1 + 0.25 * Math.sin(f * 12 + ph))));
       }
-      mark(add(head, sweepTube(GFX, pts, radii, 7), wood, `shaft root ${i + 1}`));
+      mark(add(head, sweepTube(GFX, pts, radii, 7), structureMaterial, `${materialType === 'metal' ? 'metal' : 'shaft'} root ${i + 1}`));
     }
 
     headCentre = cy;
@@ -464,7 +474,9 @@ export function createStaff(GFX, {
     get moon() { return toppers.moon?.asset ?? null; },
     get mars() { return toppers.mars?.asset ?? null; },
     get jupiter() { return toppers.jupiter?.asset ?? null; },
-    get species() { return woodSpecies; },
+    get materialType() { return materialType; },
+    get metal() { return materialType === 'metal' ? selectedMetal : null; },
+    get species() { return materialType === 'wood' ? woodSpecies : null; },
     get finish() { return woodFinish; },
     get gripColor() { return `#${leather.color.getHexString()}`; },
     get threadColor() { return `#${thread.color.getHexString()}`; },
@@ -478,21 +490,32 @@ export function createStaff(GFX, {
     get info() {
       return {
         'Staff length': `${dims().toFixed(2)} m`,
-        Wood: `${woodSpecies} (${woodFinish})`,
+        ...(materialType === 'wood' ? { Wood: `${woodSpecies} (${woodFinish})` } : { Metal: selectedMetal }),
         Topper: TOPPER_LABELS[topperKind],
         Tendrils: String(tendrils),
         Scale: '1 world unit = 1 metre',
       };
     },
     setWood(nextSpecies = woodSpecies, nextFinish = woodFinish) {
+      if (materialType !== 'wood') throw new Error('setWood is only available on a wooden staff');
       if (!Object.hasOwn(WOOD_SPECIES, nextSpecies)) throw new Error(`no wood called ${nextSpecies}; choose ${Object.keys(WOOD_SPECIES).join(', ')}`);
       if (!WOOD_FINISHES.includes(nextFinish)) throw new Error(`no wood finish called ${nextFinish}; choose ${WOOD_FINISHES.join(', ')}`);
       const next = woodBoardMaterial(GFX, nextSpecies, nextFinish);
-      for (const mesh of woodParts) mesh.material = next;
-      wood.dispose?.();
-      wood = next;
+      for (const mesh of structureParts) mesh.material = next;
+      structureMaterial.dispose?.();
+      structureMaterial = next;
       woodSpecies = nextSpecies;
       woodFinish = nextFinish;
+      return api;
+    },
+    setMetal(nextMetal = selectedMetal) {
+      if (materialType !== 'metal') throw new Error('setMetal is only available on a metal staff');
+      if (!Object.hasOwn(METALS, nextMetal)) throw new Error(`no metal called ${nextMetal}; choose ${Object.keys(METALS).join(', ')}`);
+      const next = metalMaterial(GFX, 'staff metal', nextMetal);
+      for (const mesh of structureParts) mesh.material = next;
+      structureMaterial.dispose?.();
+      structureMaterial = next;
+      selectedMetal = nextMetal;
       return api;
     },
     setGripColor(color) {
@@ -518,4 +541,9 @@ export function createStaff(GFX, {
     },
   };
   return api;
+}
+
+/** The same gnarled staff construction with its wooden structure cast in a selected metal. */
+export function createMetalStaff(GFX, options = {}) {
+  return createStaff(GFX, { ...options, materialType: 'metal' });
 }
