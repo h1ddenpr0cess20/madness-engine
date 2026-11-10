@@ -2,7 +2,7 @@ import { SHAPES as HIS } from './data/shapes.js';
 import { SHAPES as HERS } from './data/shapes-female.js';
 import { baseMesh } from './basemesh.js';
 import { BUILDS, SLOTS } from './features.js';
-import { figureOf } from './skeleton.js';
+import { bones, figureOf } from './skeleton.js';
 
 /** Each figure's shapes, baked in its own pose and at its own size. */
 const BY_FIGURE = { male: HIS, female: HERS };
@@ -62,8 +62,11 @@ export function shapeAmounts(features) {
   for (const s of Object.values(SLOTS)) {
     if (!s.shape) continue;
     if (s.type === 'range') {
+      if (!SHAPES[`${s.key}+`]) continue;
       const v = Math.max(s.min, Math.min(s.max, (features[s.key] ?? 0) + (build[s.key] ?? 0)));
-      if (v > 1e-4) out[`${s.key}+`] = v;
+      // Past 1 (where a slider goes further), all of its `+` shape and so much of its `++` one.
+      if (v > 1 && SHAPES[`${s.key}++`]) { out[`${s.key}+`] = 1; out[`${s.key}++`] = v - 1; }
+      else if (v > 1e-4) out[`${s.key}+`] = v;
       else if (v < -1e-4) out[`${s.key}-`] = -v;
     } else {
       const name = `${s.key}:${features[s.key]}`;
@@ -123,12 +126,34 @@ export function shapeFor(features) {
     if (y > top) top = y;
   }
   const lift = lo - low;
+  // Every joint is lifted with him, those no shape moved as much as the rest (the eyes, when only the
+  // legs grow longer).
+  for (const [n] of bones(sex)) pivots[n] ??= [0, 0, 0];
   if (Math.abs(lift) > 1e-6) {
     for (let v = 0; v < m.count; v++) delta[v * 3 + 1] += lift;
-    pivots.root = [0, 0, 0];
     for (const p of Object.values(pivots)) p[1] += lift;
   }
-  return { sex, amounts, delta, pivots, eyes, lift, height: figureOf(sex).height + top + lift - hi, browThickness: thick };
+  return { sex, amounts, delta, pivots, eyes, lift, height: figureOf(sex).height + top + lift - hi, browThickness: thick, mass: massOf(sex, delta) };
+}
+
+/** About how dense a person is, kg a litre (more muscle, a little more; more fat, a little less). */
+const DENSITY = 1030;
+
+/**
+ * How much figure `sex` weighs, in kilograms, with its base points moved by
+ * `delta` (or as baked): the volume its skin closes round (it is closed), by
+ * the divergence theorem over its quads, at a person's density.
+ */
+export function massOf(sex, delta = null) {
+  const m = baseMesh(sex), F = m.surfaces.body.v, P = m.position;
+  const at = (v, a) => P[v * 3 + a] + (delta ? delta[v * 3 + a] : 0);
+  let vol = 0;
+  const tri = (a, b, c) => {
+    const ax = at(a, 0), ay = at(a, 1), az = at(a, 2), bx = at(b, 0), by = at(b, 1), bz = at(b, 2), cx = at(c, 0), cy = at(c, 1), cz = at(c, 2);
+    vol += (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx)) / 6;
+  };
+  for (let f = 0; f < F.length; f += 4) { tri(F[f], F[f + 1], F[f + 2]); if (F[f + 3] !== F[f + 2]) tri(F[f], F[f + 2], F[f + 3]); }
+  return vol * DENSITY;
 }
 
 // ————————————————————————————————————————————— the skin, through its subdivision

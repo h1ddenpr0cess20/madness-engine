@@ -12,7 +12,7 @@ import { CLIPS, moveHuman } from './human/motion.js';
 import { BUILDS, checkFeatures, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES } from './human/features.js';
 import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
 import { armDepth, clearArms, measure } from './human/clearance.js';
-import { carried, levelOffsets, placeEyes, SHAPE_KEYS, shapeFor, thickenBrows } from './human/shape.js';
+import { carried, levelOffsets, massOf, placeEyes, SHAPE_KEYS, shapeFor, thickenBrows } from './human/shape.js';
 import { buildGlasses, SUNGLASSES } from './human/glasses.js';
 
 /**
@@ -51,6 +51,8 @@ export const DIMENSIONS = Object.freeze({
 /** The woman's outfit, unless told otherwise: the man's, with a sports bra under the t-shirt. */
 export const DEFAULT_OUTFIT_FEMALE = Object.freeze(['bra', ...DEFAULT_OUTFIT]);
 
+/** Each figure's weight as baked, worked out when first asked for. */
+const baseMass = {};
 const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'gums', 'tongue', 'lash'];
 const builds = new Map();
 const NAMES = bones().map(([n]) => n);
@@ -1130,6 +1132,8 @@ export function createHuman(GFX, options = {}) {
     },
     /** How far each arm is inside his body (or what he wears) as he is posed now, by side, in metres: 0 when clear. */
     armDepth: (o) => armDepth(skeleton, clearance ??= measure([body.data, ...[...worn.values()].map((w) => w.mesh.data)], skeleton.names, skeleton.pivots), o),
+    /** About how much he weighs, in kilograms, in the shape he has been given (from the volume his skin closes round). */
+    get weight() { return shape?.mass ?? (baseMass[sex] ??= massOf(sex)); },
     /** How tall he stands, in metres, in the shape he has been given. */
     get height() { return shape?.height ?? figureOf(sex).height; },
     setHairColor: (c) => setLook({ hair: c }),

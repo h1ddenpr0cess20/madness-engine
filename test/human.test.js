@@ -466,3 +466,13 @@ test('arms never pass into the body, man or woman, slim or heavy, in any clip', 
     }
   }
 });
+
+test('a shape that moves only the legs lifts all of him with it, the eyes too', () => {
+  const him = createHuman(GFX, { detail: 0.5, glasses: null });
+  const eye = () => him.skeleton.pivots[him.skeleton.index.get('eyeL')][1];
+  const before = eye();
+  him.customize({ legLength: 1 });
+  const grew = him.height - HUMAN_DIMENSIONS.height;
+  assert.ok(grew > 0.02, `longer legs make him taller: ${grew}`);
+  assert.ok(Math.abs(eye() - before - grew) < 0.005, 'his eyes rise as much as he does');
+});

@@ -29,8 +29,8 @@ import { SUNGLASSES } from './glasses.js';
 const choice = (key, label, options, { ready = false, value = options[0], shape = null } = {}) => ({ key, label, type: 'choice', options, default: value, ready: ready || !!shape, shape });
 const slider = (key, label, { ready = false, min = -1, max = 1, value = 0, shape = null } = {}) => ({ key, label, type: 'range', min, max, default: value, ready: ready || !!shape, shape });
 const colour = (key, label, value, { ready = false } = {}) => ({ key, label, type: 'color', default: value, ready });
-/** A slider's recipes: `up` for +1, `down` for −1. */
-const updown = (up, down) => ({ up, down });
+/** A slider's recipes: `up` for +1, `down` for −1; `beyond`, for each step past +1 (where its range goes further). */
+const updown = (up, down, beyond = null) => ({ up, down, ...(beyond ? { beyond } : {}) });
 /** The `-decr` and `-incr` targets of one modifier, as a slider's recipes, scaled by `k`. */
 const range = (target, k = 1, [lo, hi] = ['decr', 'incr']) => updown({ [`${target}-${hi}`]: k }, { [`${target}-${lo}`]: k });
 
@@ -70,14 +70,58 @@ export const CUSTOMIZATION = Object.freeze([
       ),
     } }),
     // Heavier: MakeHuman's heaviest build, and round the waist, hips, thighs, arms, neck and face besides.
-    slider('weight', 'Weight', { shape: updown(
+    // Past 1, on into obesity (to about 400 lb on him at 3): fat laid on all over, the belly most, a
+    // double chin, full cheeks, heavy upper arms and thighs.
+    slider('weight', 'Weight', { max: 3, shape: updown(
       {
         [`${MACRO}-averagemuscle-maxweight`]: 1, 'measure/measure-waist-circ-incr': 0.8, 'measure/measure-hips-circ-incr': 0.4, 'stomach/stomach-pregnant-incr': 0.15,
         'measure/measure-thigh-circ-incr': 0.5, 'measure/measure-upperarm-circ-incr': 0.4, 'measure/measure-neck-circ-incr': 0.5, 'head/head-fat-incr': 0.6,
       },
       { [`${MACRO}-averagemuscle-minweight`]: 1, 'measure/measure-waist-circ-decr': 0.5, 'measure/measure-thigh-circ-decr': 0.3, 'head/head-fat-decr': 0.4 },
+      {
+        [`${MACRO}-averagemuscle-maxweight`]: 0.55, 'measure/measure-waist-circ-incr': 1.32, 'measure/measure-hips-circ-incr': 0.99, 'stomach/stomach-pregnant-incr': 0.66,
+        'measure/measure-bust-circ-incr': 0.77, 'torso/torso-scale-depth-incr': 0.33, 'buttocks/buttocks-volume-incr': 0.88,
+        'measure/measure-thigh-circ-incr': 0.99, 'measure/measure-calf-circ-incr': 0.55, 'armslegs/{s}-upperleg-fat-incr': 0.88, 'armslegs/{s}-lowerleg-fat-incr': 0.55,
+        'measure/measure-upperarm-circ-incr': 0.88, 'armslegs/{s}-upperarm-fat-incr': 0.88, 'armslegs/{s}-lowerarm-fat-incr': 0.55,
+        'measure/measure-neck-circ-incr': 0.77, 'neck/neck-double-incr': 0.88, 'head/head-fat-incr': 0.66, 'cheek/{s}-cheek-volume-incr': 0.66,
+      },
     ) }),
     slider('shoulders', 'Shoulders', { shape: range('measure/measure-shoulder-dist', 1) }),
+    slider('chest', 'Chest', { shape: updown(
+      { 'measure/measure-bust-circ-incr': 1, 'torso/torso-muscle-pectoral-incr': 0.5 },
+      { 'measure/measure-bust-circ-decr': 1, 'torso/torso-muscle-pectoral-decr': 0.5 },
+    ) }),
+    slider('waist', 'Waist', { shape: range('measure/measure-waist-circ', 1) }),
+    slider('hips', 'Hips', { shape: range('measure/measure-hips-circ', 1) }),
+    slider('belly', 'Belly', { shape: updown({ 'stomach/stomach-pregnant-incr': 0.5 }, { 'stomach/stomach-pregnant-decr': 1 }) }),
+    slider('buttocks', 'Buttocks', { shape: range('buttocks/buttocks-volume', 1) }),
+    slider('arms', 'Arm size', { shape: updown(
+      { 'measure/measure-upperarm-circ-incr': 1, 'armslegs/{s}-lowerarm-fat-incr': 0.6 },
+      { 'measure/measure-upperarm-circ-decr': 1, 'armslegs/{s}-lowerarm-fat-decr': 0.6 },
+    ) }),
+    slider('legs', 'Leg size', { shape: updown(
+      { 'measure/measure-thigh-circ-incr': 1, 'measure/measure-calf-circ-incr': 0.8 },
+      { 'measure/measure-thigh-circ-decr': 1, 'measure/measure-calf-circ-decr': 0.8 },
+    ) }),
+    slider('armLength', 'Arm length', { shape: updown(
+      { 'measure/measure-upperarm-length-incr': 1, 'measure/measure-lowerarm-length-incr': 1 },
+      { 'measure/measure-upperarm-length-decr': 1, 'measure/measure-lowerarm-length-decr': 1 },
+    ) }),
+    slider('legLength', 'Leg length', { shape: updown(
+      { 'measure/measure-upperleg-height-incr': 1, 'measure/measure-lowerleg-height-incr': 1 },
+      { 'measure/measure-upperleg-height-decr': 1, 'measure/measure-lowerleg-height-decr': 1 },
+    ) }),
+    slider('torsoLength', 'Torso length', { shape: range('measure/measure-napetowaist-dist', 1) }),
+    slider('neckLength', 'Neck length', { shape: range('measure/measure-neck-height', 1) }),
+    slider('neck', 'Neck size', { shape: range('measure/measure-neck-circ', 1) }),
+    slider('hands', 'Hands', { shape: range('armslegs/{s}-hand-scale', 1) }),
+    slider('feet', 'Feet', { shape: range('armslegs/{s}-foot-scale', 1) }),
+  ] },
+  { group: 'Bust', figure: 'female', slots: [
+    slider('bust', 'Size', { shape: updown(
+      { 'breast/female-young-averagemuscle-averageweight-maxcup-averagefirmness': 0.6 },
+      { 'breast/female-young-averagemuscle-averageweight-mincup-averagefirmness': 0.6 },
+    ) }),
   ] },
   { group: 'Skin', slots: [
     colour('skin', 'Tone', '#b98a70', { ready: true }),
@@ -220,9 +264,12 @@ export function shapeRecipes(sex = 'male') {
     return r;
   };
   for (const s of Object.values(SLOTS)) {
-    if (!s.shape) continue;
+    if (!s.shape || (FIGURE_OF[s.key] && FIGURE_OF[s.key] !== sex)) continue;
     const shape = (female && s.shape.forFemale) || s.shape;
-    if (s.type === 'range') { out[`${s.key}+`] = sides(shape.up); out[`${s.key}-`] = sides(shape.down); }
+    if (s.type === 'range') {
+      out[`${s.key}+`] = sides(shape.up); out[`${s.key}-`] = sides(shape.down);
+      if (shape.beyond) out[`${s.key}++`] = sides(shape.beyond);
+    }
     else for (const [o, r] of Object.entries(shape)) if (o !== 'forFemale' && Object.keys(r).length) out[`${s.key}:${o}`] = sides(r);
   }
   return out;
