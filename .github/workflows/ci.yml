@@ -105,8 +105,62 @@ jobs:
             );
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'artifacts/turkey.png', fullPage: true });
-            if (errors.length) throw new Error(errors.join('\\n'));
             console.log('Rendered turkey in the asset viewer:', await page.locator('#title b').textContent());
+
+            // The two wizard-staff entries are real catalogue items, not just exported factories.
+            // Render both in Chromium and exercise an asynchronous planetary topper selection.
+            const waitForItem = async (id, title) => {
+              const result = await page.goto(`http://127.0.0.1:4173/#${encodeURIComponent(id)}`, {
+                waitUntil: 'commit',
+                timeout: 60000,
+              });
+              if (!result?.ok()) throw new Error(`Asset viewer returned HTTP ${result?.status()} for ${id}`);
+              await page.waitForFunction(
+                (expected) => document.querySelector('#title b')?.textContent === expected
+                  && document.querySelector('#busy')?.style.display === 'none',
+                title,
+                { timeout: 120000 },
+              );
+              if (document.querySelector('#err')?.textContent) throw new Error(document.querySelector('#err').textContent);
+            };
+            const readOptions = () => [...document.querySelectorAll('.line.opt')].map((row) => ({
+              label: row.querySelector('label')?.textContent?.trim(),
+              value: row.querySelector('select')?.value,
+              options: [...(row.querySelector('select')?.options ?? [])].map((option) => option.value),
+            }));
+
+            await waitForItem('weapons/wizard-staff', 'Wizard Staff');
+            const woodOptions = readOptions();
+            const woodTopper = woodOptions.find((option) => option.label === 'Topper');
+            if (!woodTopper || !['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none'].every((v) => woodTopper.options.includes(v))) {
+              throw new Error('Wooden wizard staff is missing one or more topper choices');
+            }
+            await page.screenshot({ path: 'artifacts/wizard-staff-wood.png', fullPage: true });
+
+            await waitForItem('weapons/wizard-staff-metal', 'Wizard Staff (Metal)');
+            const metalOptions = readOptions();
+            const metalTopper = metalOptions.find((option) => option.label === 'Topper');
+            const metalFinish = metalOptions.find((option) => option.label === 'Structure metal');
+            if (!metalTopper || !['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none'].every((v) => metalTopper.options.includes(v))) {
+              throw new Error('Metal wizard staff is missing one or more topper choices');
+            }
+            if (!metalFinish || metalFinish.value !== 'gold') {
+              throw new Error(`Metal wizard staff should default to gold, received ${metalFinish?.value ?? 'no metal control'}`);
+            }
+            const topperSelect = [...document.querySelectorAll('.line.opt')].find((row) => row.querySelector('label')?.textContent?.trim() === 'Topper')?.querySelector('select');
+            topperSelect.value = 'jupiter';
+            topperSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            await page.waitForFunction(
+              () => document.querySelector('#busy')?.style.display === 'none'
+                && !document.querySelector('#err')?.textContent,
+              null,
+              { timeout: 120000 },
+            );
+            await page.waitForTimeout(1200);
+            await page.screenshot({ path: 'artifacts/wizard-staff-metal-jupiter.png', fullPage: true });
+
+            if (errors.length) throw new Error(errors.join('\\n'));
+            console.log('Rendered both wizard staff variants and the gold Jupiter topper in the asset viewer.');
           } finally {
             await browser.close();
           }
@@ -114,6 +168,9 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: turkey-asset-viewer
-          path: examples/asset-viewer/artifacts/turkey.png
+          name: asset-viewer-smoke
+          path: |
+            examples/asset-viewer/artifacts/turkey.png
+            examples/asset-viewer/artifacts/wizard-staff-wood.png
+            examples/asset-viewer/artifacts/wizard-staff-metal-jupiter.png
           if-no-files-found: warn
