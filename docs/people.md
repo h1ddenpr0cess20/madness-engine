@@ -140,6 +140,18 @@ there is no skin under the shirt to push through it. Skin is kept 6 cm
 inside every opening (collar, cuffs, hems), so looking in never shows a
 hole.
 
+The tails are the exception to moving as the skin does. A t-shirt's tail
+behind the hips, and a jacket's bottom all round, hang from the hips and
+not the thighs. When he sits, the skin of the seat stretches down under
+him, and cloth that followed it was dragged down over the seat until the
+layers cut through each other. Where the seat and the tops of the thighs
+then swell out under a tail (sitting, a knee lifted high), `pose` pushes
+the tail's cloth back out over whatever is under it: skin, jeans, or
+shirt. It goes only as far out as it stands at rest, at most 5 mm, and the
+push is spread over the cloth around it so a turned edge or a knit band
+moves out in one piece. Behind the hips the jeans' waist is not hidden
+under the shirt, so no cut edge shows as the seat drops away.
+
 The briefs, t-shirt and jeans are cut from the skin itself (`people/human/shell.js`):
 the part of the body they cover, cut along a clean outline, lifted off by
 an ease and hung as cloth hangs (off the chest and shoulder blades, straight

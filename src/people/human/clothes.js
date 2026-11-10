@@ -664,6 +664,38 @@ function bra(detail) {
  * garments over it to know what they cover), keeping where on the body it
  * lies: `on` the body's zone under it, and its `d`, `x` and `z`.
  */
+/**
+ * A shirt's or a jacket's tail hangs from the hips, not from the thighs:
+ * where it lies behind the hip joints, its share of the thighs' weight goes
+ * to the hips, so it is not stretched down over the seat as he sits (in
+ * front a shirt still rides up on the lap with the thighs; a jacket, short,
+ * hangs from the hips all `round`, its knit band and the leather tucked into
+ * it moving as one). Where the seat swells
+ * out under it, it is pushed out over it as he moves (`clearTails` in
+ * human.js).
+ */
+function hangFromHips(parts, { round = false } = {}) {
+  const back = JOINTS.hip[2];
+  for (const part of parts) {
+    part.weights = part.weights.map((w, v) => {
+      const legs = (w.thighL ?? 0) + (w.thighR ?? 0);
+      const k = legs && (round ? 1 : smooth(back + 0.01, back - 0.05, part.pos[v * 3 + 2]));
+      if (!k) return w;
+      const out = { ...w, hips: (w.hips ?? 0) + legs * k };
+      for (const b of ['thighL', 'thighR']) if (out[b] !== undefined) out[b] *= 1 - k;
+      return out;
+    });
+  }
+  return parts;
+}
+
+/**
+ * Behind the hips, the waist of what is worn under a shirt's tail is not
+ * hidden by it: as he sits the seat drops away under the tail, and a cut
+ * edge there would show.
+ */
+const seated = (z) => z < JOINTS.hip[2] - 0.03;
+
 function tag(parts, name) {
   for (const part of parts) part.zones = part.zones.map((z, v) => ({ d: 0, ...z, zone: name, on: z?.zone === part.name ? null : z?.zone ?? null, y: part.pos[v * 3 + 1], sx: part.pos[v * 3], z: part.pos[v * 3 + 2] }));
   return parts;
@@ -1270,12 +1302,15 @@ function bomber(open, c = MENS_CUT) {
     slot: 'outer',
     materials: ['leather', 'rib', 'ribTrim', 'leatherTrim', 'metal'],
     fits: true,
-    build: (detail, { under } = {}) => inCut(c, () => tag(jacket(detail, under, open), open ? 'jacket' : 'jacketZipped')),
+    build: (detail, { under } = {}) => inCut(c, () => tag(hangFromHips(jacket(detail, under, open), { round: true }), open ? 'jacket' : 'jacketZipped')),
     covers: (z) => {
       const on = z.on ?? z.zone;
       if (on === 'arm') return z.d < j.cuff - OPEN;
       // (Fitted over a fitted t-shirt, it hides the shirt nearly to its hem, so the shirt never shows through the knit.)
       if (z.zone === 'tshirt' && c.fitted) return (on === 'trunk' || on === 'leg' || on === null) && inside(z, 0.012);
+      // (Behind his hips a shirt's tail hangs from them as the jacket does, so it is hidden nearer the hem there:
+      // as he sits it is pushed out against the knit band, and would show between the band and the leather.)
+      if (z.zone === 'tshirt' && seated(z.z ?? 0)) return (on === 'trunk' || on === 'leg' || on === null) && inside(z, 0.02);
       if (z.zone === 'trunk' || z.zone === 'tshirt' || z.zone === 'leg' || z.zone === 'jeans' || z.zone === 'briefs' || z.zone === 'bra') return (on === 'trunk' || on === 'leg' || on === null) && inside(z, OPEN);
       return false;
     },
@@ -1317,8 +1352,8 @@ export const GARMENTS = Object.freeze({
     layer: 4,
     materials: ['shirt'],
     fits: true,
-    build: (detail, { under } = {}) => tag(shirt(detail, under), 'tshirt'),
-    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN) || zone === 'bra',
+    build: (detail, { under } = {}) => tag(hangFromHips(shirt(detail, under)), 'tshirt'),
+    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN && !seated(z)) || zone === 'bra',
   },
   jacket: bomber(true),
   jacketZipped: bomber(false),
@@ -1347,8 +1382,8 @@ export const GARMENTS_FEMALE = Object.freeze({
   ...GARMENTS,
   tshirt: {
     ...GARMENTS.tshirt,
-    build: (detail, { under } = {}) => inCut(WOMENS_CUT, () => tag(shirt(detail, under), 'tshirt')),
-    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > WOMENS_CUT.hem + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < WOMENS_CUT.sleeve - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > WOMENS_CUT.hem + OPEN) || zone === 'bra',
+    build: (detail, { under } = {}) => inCut(WOMENS_CUT, () => tag(hangFromHips(shirt(detail, under)), 'tshirt')),
+    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > WOMENS_CUT.hem + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < WOMENS_CUT.sleeve - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > WOMENS_CUT.hem + OPEN && !seated(z)) || zone === 'bra',
   },
   jeans: {
     ...GARMENTS.jeans,

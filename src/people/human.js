@@ -194,6 +194,17 @@ function glassesData(name, detail, sex = 'male') {
   return fitted(key, sex, () => fitData(builds.get(key), sex));
 }
 
+/**
+ * Keeping a tail over the seat (clearTails): once a thigh is turned this far
+ * (radians) from standing, the cloth from `below` under the hips to `above`
+ * over them (at rest), each kept as far outside the cloth under it (within
+ * `reach`) as it is at rest, at least `gap` and at most `most` (only what
+ * has come through is pushed, not all that has come nearer), and by no more
+ * than `push` (over cloth facing within `facing`, a cosine, the same way); the push spread over
+ * `spread` rings of the cloth round it, and eased over as many more.
+ */
+const TAIL = Object.freeze({ bend: 0.45, below: 0.2, above: 0.2, gap: 0.002, most: 0.005, push: 0.03, facing: 0.7, reach: 0.06, spread: 2 });
+
 /** What was made on him under `key`, as it is on the figure `sex`: made once. */
 function fitted(key, sex, make) {
   if (sex === 'male') return builds.get(key);
@@ -943,6 +954,184 @@ export function createHuman(GFX, options = {}) {
   const drawnOf = new WeakMap();
 
   /**
+   * What is worn over his seat kept outside what is under it. A shirt's or a
+   * jacket's tail hangs from his hips (clothes.js: hangFromHips), but as he
+   * sits, or lifts a knee high, the seat and the tops of his thighs swell out
+   * under it: each tail's cloth there that would be under the cloth beneath
+   * it is pushed back out over it, by as little as it takes.
+   */
+  function clearTails() {
+    const bend = Math.max(...['thighL', 'thighR'].map((n) => Math.abs(skeleton.pose[skeleton.index.get(n)].rot[0])));
+    if (bend < TAIL.bend) return;
+    // (The skin first, where it shows: between a waistband and a hem.)
+    const layers = [{ mesh: body, garment: null }, ...[...worn.values()].filter((w) => w.garment.fits).sort((a, b) => a.garment.layer - b.garment.layer)];
+    const under = [], cells = new Map();
+    for (const w of layers) {
+      const m = w.mesh, P = m.position.array, N = m.normal.array, list = tailOf(m);
+      if (tails.has(w.garment) && under.length) {
+        const outermost = w === layers[layers.length - 1];
+        const stand = standOf(m, list, under);
+        const L = under.length, best = new Float64Array(L), at = new Int32Array(L);
+        const Ps = under.map((u) => u.position.array), Ns = under.map((u) => u.normal.array);
+        const D = new Float32Array(list.length * 3);
+        let moved = false;
+        list.forEach((v, n) => {
+          nearestEach(cells, Ps, Ns, P, N, v, best, at);
+          // Out over each, from the innermost, to stand off it at least as far as it does at rest.
+          let x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
+          for (let l = 0; l < L; l++) {
+            const u = at[l];
+            if (u < 0) continue;
+            const Q = Ps[l], M = Ns[l];
+            const nx = M[u * 3], ny = M[u * 3 + 1], nz = M[u * 3 + 2];
+            const h = (x - Q[u * 3]) * nx + (y - Q[u * 3 + 1]) * ny + (z - Q[u * 3 + 2]) * nz;
+            const want = stand[n * L + l];
+            if (h >= want) continue;
+            const push = Math.min(want - h, TAIL.push);
+            x += nx * push; y += ny * push; z += nz * push;
+            moved = true;
+          }
+          D[n * 3] = x - P[v * 3]; D[n * 3 + 1] = y - P[v * 3 + 1]; D[n * 3 + 2] = z - P[v * 3 + 2];
+        });
+        if (moved) {
+          // Spread over the cloth round it, so it moves out in one piece (the inside of a turned edge with the outside,
+          // a knit band whole), never pulled into points:
+          const { start, ring } = ringsOf(m, list);
+          // First each takes the most any of its ring is pushed (the outermost, which nothing must come through,
+          // from further round), so all of an edge, inside and out, goes out together; then the push is eased over
+          // the cloth round it.
+          const own = D.slice();
+          const grows = outermost ? TAIL.spread : 1;
+          for (let pass = 0; pass < grows + TAIL.spread; pass++) {
+            const E = D.slice(), grow = pass < grows;
+            for (let n = 0; n < list.length; n++) {
+              if (start[n + 1] === start[n]) continue;
+              if (grow) {
+                let most = Math.hypot(E[n * 3], E[n * 3 + 1], E[n * 3 + 2]);
+                for (let r = start[n]; r < start[n + 1]; r++) {
+                  const o = ring[r] * 3, h = Math.hypot(E[o], E[o + 1], E[o + 2]);
+                  if (h > most) { most = h; D[n * 3] = E[o]; D[n * 3 + 1] = E[o + 1]; D[n * 3 + 2] = E[o + 2]; }
+                }
+              } else {
+                let sx = E[n * 3], sy = E[n * 3 + 1], sz = E[n * 3 + 2];
+                for (let r = start[n]; r < start[n + 1]; r++) { const o = ring[r] * 3; sx += E[o]; sy += E[o + 1]; sz += E[o + 2]; }
+                const k = start[n + 1] - start[n] + 1;
+                D[n * 3] = sx / k; D[n * 3 + 1] = sy / k; D[n * 3 + 2] = sz / k;
+              }
+            }
+          }
+          // (None ends nearer in than its own push put it.)
+          for (let n = 0; n < list.length; n++) {
+            if (Math.hypot(own[n * 3], own[n * 3 + 1], own[n * 3 + 2]) > Math.hypot(D[n * 3], D[n * 3 + 1], D[n * 3 + 2])) { D[n * 3] = own[n * 3]; D[n * 3 + 1] = own[n * 3 + 1]; D[n * 3 + 2] = own[n * 3 + 2]; }
+          }
+          list.forEach((v, n) => { P[v * 3] += D[n * 3]; P[v * 3 + 1] += D[n * 3 + 1]; P[v * 3 + 2] += D[n * 3 + 2]; });
+        }
+        if (moved) m.position.needsUpdate = true;
+      }
+      // What it is, as it is now, for those over it.
+      under.push(m);
+      fileUnder(cells, under.length - 1, P, list);
+    }
+  }
+  const tails = new Set(['tshirt', 'jacket', 'jacketZipped'].map((n) => wardrobe[n]).filter(Boolean));
+  const cellOf = (x, y, z) => ((Math.floor(x / TAIL.reach) * 73856093) ^ (Math.floor(y / TAIL.reach) * 19349663) ^ (Math.floor(z / TAIL.reach) * 83492791)) | 0;
+  /** Files vertices `list` (at `P`) of the `l`th layer under in `cells`. */
+  function fileUnder(cells, l, P, list) {
+    for (const v of list) {
+      const k = cellOf(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
+      let near = cells.get(k);
+      if (!near) cells.set(k, (near = []));
+      near.push(l, v);
+    }
+  }
+  /**
+   * For vertex `v` (at `P`, facing `N`), the nearest vertex of each layer in `cells` within reach facing
+   * the same way out (cloth turned across it is at a fold or an edge, not under it): into `at` (−1 none).
+   */
+  function nearestEach(cells, Ps, Ns, P, N, v, best, at) {
+    best.fill(TAIL.reach); at.fill(-1);
+    const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2], H = TAIL.reach;
+    const cx = Math.floor(x / H), cy = Math.floor(y / H), cz = Math.floor(z / H);
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) {
+      const near = cells.get(((cx + i) * 73856093 ^ (cy + j) * 19349663 ^ (cz + k) * 83492791) | 0);
+      if (!near) continue;
+      for (let e = 0; e < near.length; e += 2) {
+        const l = near[e], u = near[e + 1], Q = Ps[l], M = Ns[l];
+        const d = Math.hypot(x - Q[u * 3], y - Q[u * 3 + 1], z - Q[u * 3 + 2]);
+        if (d < best[l] && M[u * 3] * N[v * 3] + M[u * 3 + 1] * N[v * 3 + 1] + M[u * 3 + 2] * N[v * 3 + 2] > TAIL.facing) { best[l] = d; at[l] = u; }
+      }
+    }
+  }
+  /** The vertices of mesh `m` that it draws about his seat (by where they are at rest), worked out once a cut. */
+  function tailOf(m) {
+    const index = m.geometry.index;
+    const key = tailsOf.get(index);
+    if (key?.data === m.data) return key.list;
+    const hip = JOINTS.hip, P = m.data.position, Z = m.data.zones, list = [];
+    for (const v of drawn(m) ?? Array.from({ length: m.data.count }, (_, i) => i)) {
+      const y = P[v * 3 + 1] - hip[1], on = Z?.[v]?.on ?? Z?.[v]?.zone;
+      // (Not the arms, hanging by the hips at rest.)
+      if (y > -TAIL.below && y < TAIL.above && on !== 'arm' && on !== 'hand') list.push(v);
+    }
+    tailsOf.set(index, { data: m.data, list });
+    return list;
+  }
+  const tailsOf = new WeakMap();
+  /**
+   * How far each of tail mesh `m`'s vertices `list` stands off each layer `under` it at rest (as far as
+   * it is kept off it as he moves; between TAIL.gap and TAIL.most): worked out once a cut.
+   */
+  function standOf(m, list, under) {
+    const key = standsOf.get(list);
+    if (key && key.data === m.data && key.under.length === under.length && key.under.every((u, l) => u.data === under[l].data && tailOf(u) === key.lists[l])) return key.stand;
+    const L = under.length, cells = new Map(), stand = new Float32Array(list.length * L);
+    under.forEach((u, l) => fileUnder(cells, l, u.data.position, tailOf(u)));
+    const Ps = under.map((u) => u.data.position), Ns = under.map((u) => u.data.normal);
+    const P = m.data.position, N = m.data.normal, best = new Float64Array(L), at = new Int32Array(L);
+    list.forEach((v, n) => {
+      nearestEach(cells, Ps, Ns, P, N, v, best, at);
+      for (let l = 0; l < L; l++) {
+        const u = at[l];
+        if (u < 0) { stand[n * L + l] = -Infinity; continue; }
+        const h = (P[v * 3] - Ps[l][u * 3]) * Ns[l][u * 3] + (P[v * 3 + 1] - Ps[l][u * 3 + 1]) * Ns[l][u * 3 + 1] + (P[v * 3 + 2] - Ps[l][u * 3 + 2]) * Ns[l][u * 3 + 2];
+        stand[n * L + l] = Math.min(Math.max(h, TAIL.gap), TAIL.most);
+      }
+    });
+    standsOf.set(list, { data: m.data, under: under.slice(), lists: under.map((u) => tailOf(u)), stand });
+    return stand;
+  }
+  const standsOf = new WeakMap();
+  /** Each of tail vertices `list`'s neighbours among them (by mesh `m`'s triangles, and where a seam splits a vertex), as rings: worked out once a cut. */
+  function ringsOf(m, list) {
+    const got = ringsFor.get(list);
+    if (got && got.data === m.data) return got;
+    const at = new Map(list.map((v, n) => [v, n])), sets = list.map(() => new Set());
+    const tri = m.geometry.index.array;
+    for (let t = 0; t < tri.length; t += 3) {
+      for (let a = 0; a < 3; a++) {
+        const i = at.get(tri[t + a]), j = at.get(tri[t + ((a + 1) % 3)]);
+        if (i === undefined || j === undefined) continue;
+        sets[i].add(j); sets[j].add(i);
+      }
+    }
+    const P = m.data.position, same = new Map();
+    list.forEach((v, n) => {
+      const key = `${Math.round(P[v * 3] * 1e4)},${Math.round(P[v * 3 + 1] * 1e4)},${Math.round(P[v * 3 + 2] * 1e4)}`;
+      const o = same.get(key);
+      if (o === undefined) same.set(key, n);
+      else { sets[n].add(o); sets[o].add(n); }
+    });
+    const start = new Int32Array(list.length + 1);
+    sets.forEach((r, n) => { start[n + 1] = start[n] + r.size; });
+    const ring = new Int32Array(start[list.length]);
+    sets.forEach((r, n) => { let k = start[n]; for (const j of r) ring[k++] = j; });
+    const out = { data: m.data, start, ring };
+    ringsFor.set(list, out);
+    return out;
+  }
+  const ringsFor = new WeakMap();
+
+  /**
    * Poses him: `{ clip, t, time, speed, seed, speaking, yell, talk, loud }`.
    * To crossfade, `from` is the state he is coming from and `mix` (0..1)
    * how far on from it he is.
@@ -1006,6 +1195,7 @@ export function createHuman(GFX, options = {}) {
       m.position.needsUpdate = true;
       m.normal.needsUpdate = true;
     }
+    clearTails();
     for (const kind of ['hair', 'beard', 'brows']) {
       if (!groomed[kind] || groomed[kind].rigid) continue;
       const m = groomed[kind].mesh;

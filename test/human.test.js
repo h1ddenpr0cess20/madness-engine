@@ -583,3 +583,39 @@ test('a coin flipped goes up turning and comes back to the hand; a shut book is 
   const at = book.group.matrix.elements.slice(12, 15), hand = who.point('handL', who.skeleton.pivots[who.skeleton.index.get('handL')]);
   assert.ok(Math.hypot(at[0] - hand[0], at[1] - hand[1], at[2] - hand[2]) < 0.15, 'in the left hand');
 });
+
+test('a shirt\'s tail and a jacket\'s bottom hang from the hips, and are kept over what is under them sitting', () => {
+  // Behind the hips (and all round a jacket's bottom) no cloth of theirs moves with the thighs.
+  for (const name of ['tshirt', 'jacket']) {
+    for (const part of GARMENTS[name].build(0.5, {})) {
+      part.weights.forEach((w, v) => {
+        const legs = (w.thighL ?? 0) + (w.thighR ?? 0);
+        if (name === 'jacket' || part.pos[v * 3 + 2] < -0.04) assert.ok(legs < 1e-9, `${name} ${part.name} moves with a thigh`);
+      });
+    }
+  }
+  // Sitting, none of the shirt's tail behind him is under the jeans' seat (by more than a hair: the push is eased over it).
+  const sitter = createHuman(GFX, { detail: 0.5 });
+  sitter.pose({ clip: 'sit', t: 0.6, time: 0 });
+  const drawn = (name) => {
+    const g = sitter.garment(name).geometry;
+    return { P: g.attributes.position.array, N: g.attributes.normal.array, I: [...new Set(g.index.array)] };
+  };
+  const jeans = drawn('jeans'), shirt = drawn('tshirt');
+  let under = 0, behind = 0;
+  for (const v of shirt.I) {
+    if (shirt.P[v * 3 + 2] > -0.06 || shirt.P[v * 3 + 1] > 0.75) continue;
+    behind++;
+    let best = 0.03, at = -1;
+    for (const u of jeans.I) {
+      const d = Math.hypot(shirt.P[v * 3] - jeans.P[u * 3], shirt.P[v * 3 + 1] - jeans.P[u * 3 + 1], shirt.P[v * 3 + 2] - jeans.P[u * 3 + 2]);
+      const facing = shirt.N[v * 3] * jeans.N[u * 3] + shirt.N[v * 3 + 1] * jeans.N[u * 3 + 1] + shirt.N[v * 3 + 2] * jeans.N[u * 3 + 2];
+      if (d < best && facing > 0.7) { best = d; at = u; }
+    }
+    if (at < 0) continue;
+    const h = [0, 1, 2].reduce((t, a) => t + (shirt.P[v * 3 + a] - jeans.P[at * 3 + a]) * jeans.N[at * 3 + a], 0);
+    if (h < -0.002) under++;
+  }
+  assert.ok(behind > 50, `${behind} of the tail behind`);
+  assert.ok(under <= behind * 0.01, `${under} of ${behind} under the jeans`);
+});
