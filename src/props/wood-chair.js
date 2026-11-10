@@ -26,12 +26,12 @@ export const BACKS = Object.freeze(['slat', 'spindle', 'ladder', 'bow', 'none'])
 
 /** The starting measures of each kind, in metres: the seat's outside, its height from the floor, the back above it. */
 export const KIND_DEFAULTS = Object.freeze({
-  dining: { seat: 'square', legs: 'tapered', back: 'slat', arms: false, stretchers: true, width: 0.44, depth: 0.44, height: 0.5, backHeight: 0.46 },
-  spindle: { seat: 'square', legs: 'turned', back: 'spindle', arms: false, stretchers: true, width: 0.44, depth: 0.42, height: 0.5, backHeight: 0.48 },
-  ladder: { seat: 'square', legs: 'square', back: 'ladder', arms: false, stretchers: true, width: 0.42, depth: 0.4, height: 0.5, backHeight: 0.5 },
-  armchair: { seat: 'square', legs: 'turned', back: 'slat', arms: true, stretchers: true, width: 0.58, depth: 0.52, height: 0.5, backHeight: 0.5 },
-  stool: { seat: 'round', legs: 'tapered', back: 'none', arms: false, stretchers: true, width: 0.36, depth: 0.36, height: 0.5, backHeight: 0 },
-  windsor: { seat: 'saddle', legs: 'turned', back: 'bow', arms: false, stretchers: true, rails: false, width: 0.47, depth: 0.46, height: 0.5, backHeight: 0.58, splay: 6, rake: 0.06 },
+  dining: { seat: 'square', legs: 'tapered', back: 'slat', arms: false, stretchers: true, width: 0.44, depth: 0.44, height: 0.47, backHeight: 0.46 },
+  spindle: { seat: 'square', legs: 'turned', back: 'spindle', arms: false, stretchers: true, width: 0.44, depth: 0.42, height: 0.47, backHeight: 0.48 },
+  ladder: { seat: 'square', legs: 'square', back: 'ladder', arms: false, stretchers: true, width: 0.42, depth: 0.4, height: 0.47, backHeight: 0.5 },
+  armchair: { seat: 'square', legs: 'turned', back: 'slat', arms: true, stretchers: true, width: 0.58, depth: 0.52, height: 0.47, backHeight: 0.5 },
+  stool: { seat: 'round', legs: 'tapered', back: 'none', arms: false, stretchers: true, width: 0.36, depth: 0.36, height: 0.47, backHeight: 0 },
+  windsor: { seat: 'saddle', legs: 'turned', back: 'bow', arms: false, stretchers: true, rails: false, width: 0.47, depth: 0.46, height: 0.47, backHeight: 0.58, splay: 6, rake: 0.06 },
   barstool: { seat: 'round', legs: 'turned', back: 'none', arms: false, stretchers: true, width: 0.38, depth: 0.38, height: 0.75, backHeight: 0 },
 });
 
