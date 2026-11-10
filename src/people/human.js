@@ -11,6 +11,7 @@ import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
 import { BUILDS, checkFeatures, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES } from './human/features.js';
 import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
+import { armDepth, clearArms, measure } from './human/clearance.js';
 import { carried, levelOffsets, placeEyes, SHAPE_KEYS, shapeFor, thickenBrows } from './human/shape.js';
 import { buildGlasses, SUNGLASSES } from './human/glasses.js';
 
@@ -680,6 +681,7 @@ export function createHuman(GFX, options = {}) {
 
   /** Rebuilds each mesh's triangles: those every one of whose corners is covered by something worn over it are left out. */
   function refit() {
+    clearance = null;
     const meshes = [{ m: body, layer: 0 }, ...[...worn.values()].map((w) => ({ m: w.mesh, layer: w.garment.layer }))];
     for (const { m, layer } of meshes) {
       const over = [...worn.values()].filter((w) => w.garment.layer > layer).map((w) => covered(m.data, w.garment));
@@ -764,6 +766,7 @@ export function createHuman(GFX, options = {}) {
 
   /** Gives him the shape his features now ask for: the skin, his joints, and all he wears and grows over it. */
   function reshape() {
+    clearance = null;
     shape = shapeFor(features);
     placeJoints();
     fit(body, 'body');
@@ -785,6 +788,8 @@ export function createHuman(GFX, options = {}) {
   const hands = { L: { shape: 'relaxed', amount: 1 }, R: { shape: 'relaxed', amount: 1 } };
   const held = { L: null, R: null };
   let last = null;
+  // What his arms must keep out of (clearance.js), measured when first needed after he is shaped or dressed.
+  let clearance = null;
   const M4 = new GFX.Matrix4();
 
   /** Where his shape has moved hand `S` to, at rest: a held grip goes with it. */
@@ -926,7 +931,13 @@ export function createHuman(GFX, options = {}) {
     moveBlended(state, { ...style, armed, both, heavy: style.heavy ?? 0 });
     shrug(skeleton, JOINTS);
     const grip = held.R && !held.L ? twoHanded(state) : 0;
-    if (grip) bothHands(grip);
+    clearance ??= measure([body.data, ...[...worn.values()].map((w) => w.mesh.data)], skeleton.names, skeleton.pivots);
+    if (grip) {
+      // The swinging arm kept out of his body first, then the left hand put on the grip where that leaves it.
+      skeleton.compute();
+      for (let pass = 0; pass < 3 && clearArms(skeleton, clearance, skeleton.pivots, ['R']); pass++) skeleton.compute();
+      bothHands(grip);
+    }
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
       const shape = held[S] || (S === 'L' && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
@@ -941,6 +952,11 @@ export function createHuman(GFX, options = {}) {
       : null;
     poseFace(skeleton, face, state.time, said);
     skeleton.compute();
+    // His arms kept out of his body (and what he wears), however he is shaped: those that would pass
+    // into it swung out from the shoulder just enough (with both hands on a grip, done above, before the
+    // left takes it). Checked again once one has moved: the chest breathing squashes the frame the turn
+    // is made in a little.
+    if (!grip) for (let pass = 0; pass < 3 && clearArms(skeleton, clearance, skeleton.pivots); pass++) skeleton.compute();
     // Only what shows is moved: the skin under his clothes is left where it was.
     skinDual(body.data, skeleton, body.position.array, body.normal.array, drawn(body));
     body.position.needsUpdate = true;
@@ -1112,6 +1128,8 @@ export function createHuman(GFX, options = {}) {
       if (SHAPE_KEYS.some((k) => k in change)) reshape();
       return api;
     },
+    /** How far each arm is inside his body (or what he wears) as he is posed now, by side, in metres: 0 when clear. */
+    armDepth: (o) => armDepth(skeleton, clearance ??= measure([body.data, ...[...worn.values()].map((w) => w.mesh.data)], skeleton.names, skeleton.pivots), o),
     /** How tall he stands, in metres, in the shape he has been given. */
     get height() { return shape?.height ?? figureOf(sex).height; },
     setHairColor: (c) => setLook({ hair: c }),

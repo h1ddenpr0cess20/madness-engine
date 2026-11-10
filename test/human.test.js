@@ -451,3 +451,18 @@ test('the brows stay on the brow, however often either figure is reshaped', asyn
     assert.ok(f.min[1] > FIGURES[sex].eye.center[1] - 0.005 && f.max[1] < FIGURES[sex].eye.center[1] + 0.05, `${sex}: a fresh one's brows are where they belong`);
   }
 });
+
+test('arms never pass into the body, man or woman, slim or heavy, in any clip', () => {
+  for (const sex of ['male', 'female']) {
+    const who = createHuman(GFX, { detail: 0.5, sex, glasses: null });
+    for (const f of [{}, { build: 'heavy', weight: 1 }, { build: 'slim' }]) {
+      who.customize({ build: 'average', weight: 0, ...f });
+      for (const clip of CLIPS) for (let i = 0; i < 12; i++) {
+        const t = i / 12;
+        who.pose({ clip, t, time: t * 2 });
+        const d = who.armDepth();
+        assert.ok(Math.max(d.L, d.R) < 0.002, `${sex} ${JSON.stringify(f)} ${clip}@${t.toFixed(2)}: an arm ${(Math.max(d.L, d.R) * 1000).toFixed(1)} mm in`);
+      }
+    }
+  }
+});
