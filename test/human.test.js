@@ -256,3 +256,67 @@ test('sunglasses sit on his face and move with his head', async () => {
   assert.equal(mesh(), undefined);
   assert.equal(him.features.glasses, 'none');
 });
+
+test('the woman: her own figure on the same mesh, dressed as he is, with long hair', async () => {
+  const { DIMENSIONS, FIGURES, HAIRSTYLES } = await import('../src/people/index.js');
+  const her = createHuman(GFX, { sex: 'female', detail: 0.5, glasses: null });
+  assert.equal(her.sex, 'female');
+  assert.equal(her.features.sex, 'female');
+  assert.equal(her.dimensions, DIMENSIONS.female);
+  // Long blonde hair, blue eyes, groomed brows, no beard; a sports bra under what he wears.
+  assert.deepEqual(her.hair, { hair: 'long', beard: null, brows: 'fine' });
+  assert.equal(her.look.iris, '#4f7fb8');
+  assert.ok(HAIRSTYLES.long.skinned);
+  assert.deepEqual([...her.outfit].sort(), ['bra', 'briefs', 'jacket', 'jeans', 'sneakers', 'socks', 'tshirt']);
+  // His skeleton's bones, at her joints.
+  assert.deepEqual(her.skeleton.names, man.skeleton.names);
+  assert.ok(FIGURES.female.joints.shoulder[0] < FIGURES.male.joints.shoulder[0] - 0.03, 'narrower shoulders');
+  assert.ok(FIGURES.female.joints.hip[0] > FIGURES.male.joints.hip[0], 'wider hips');
+  her.pose({ clip: 'idle', t: 0, time: 0 });
+  her.dress([]);
+  const { min, max } = boundsOf(her.body.geometry.attributes.position);
+  assert.ok(Math.abs(max[1] - 1.65) < 0.03, `she stands 1.65 m (${max[1]})`);
+  assert.ok(min[1] > -0.03 && min[1] < 0.02);
+  // The same skin as his, point for point: the same count, and his garments' coverage still hides it.
+  assert.equal(her.body.geometry.attributes.position.count, man.body.geometry.attributes.position.count);
+  const bare = her.body.geometry.index.count;
+  her.dress(['bra', 'briefs', 'tshirt', 'jeans']);
+  assert.ok(her.body.geometry.index.count < bare * 0.88, 'her clothes hide her skin');
+  // The shirt hangs off her bust: in front of the skin at the bust, and below it, not drawn in under it.
+  her.pose({ clip: 'idle', t: 0, time: 0 });
+  const front = (mesh, y0, y1) => {
+    const p = mesh.geometry.attributes.position;
+    let z = -Infinity;
+    for (let i = 0; i < p.count; i++) if (p.getY(i) > y0 && p.getY(i) < y1 && Math.abs(p.getX(i) - 0.08) < 0.02) z = Math.max(z, p.getZ(i));
+    return z;
+  };
+  const { bustOf } = await import('../src/people/human/fit.js');
+  const shirt = her.garment('tshirt'), bust = bustOf('female')[1];
+  her.remove('tshirt').remove('bra');
+  const skin = front(her.body, bust - 0.11, bust - 0.08);
+  assert.ok(front(shirt, bust - 0.11, bust - 0.08) > skin + 0.015, 'the shirt hangs off her bust, not in under it');
+  // Every clip poses her, the long hair with her.
+  const hair = her.group.children.find((c) => c.name === 'human hair');
+  for (const clip of CLIPS) {
+    her.pose({ clip, t: 0.4, time: 0.4 });
+    for (const m of [her.body, hair]) {
+      const p = m.geometry.attributes.position.array;
+      for (let i = 0; i < p.length; i += 97) assert.ok(Number.isFinite(p[i]), `${clip}`);
+    }
+  }
+  // Her hair falls past her shoulders, and lies on them (skinned), not inside them.
+  her.pose({ clip: 'idle', t: 0, time: 0 });
+  assert.ok(boundsOf(hair.geometry.attributes.position).min[1] < FIGURES.female.joints.shoulder[1] - 0.1, 'long hair');
+  assert.throws(() => her.customize({ sex: 'male' }), /chosen when the human is made/);
+  // A held weapon sits in her hand: the grip as far from her wrist as it is from his.
+  const offset = (who) => {
+    const sword = createKrystalSword(GFX);
+    who.hold(sword);
+    who.pose({ clip: 'idle', t: 0, time: 0 });
+    const hand = who.point('handR', who.skeleton.pivots[who.skeleton.index.get('handR')]);
+    const e = sword.group.matrix.elements;
+    who.release('R');
+    return Math.hypot(e[12] - hand[0], e[13] - hand[1], e[14] - hand[2]);
+  };
+  assert.ok(Math.abs(offset(her) - offset(man)) < 0.03, 'the weapon is in her hand');
+});

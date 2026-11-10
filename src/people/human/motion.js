@@ -19,8 +19,22 @@ export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'atta
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
 /** The legs' length: what every rise and fall is measured against. */
-const THIGH = JOINTS.hip[1] - JOINTS.knee[1], SHIN = JOINTS.knee[1] - JOINTS.ankle[1];
-const LEG = THIGH + SHIN;
+// The legs' lengths, and how high the hips stand: the man's, until a skeleton of another figure is posed.
+let THIGH = JOINTS.hip[1] - JOINTS.knee[1], SHIN = JOINTS.knee[1] - JOINTS.ankle[1];
+let LEG = THIGH + SHIN, HIPS = JOINTS.hips[1];
+const figures = new WeakMap();
+/** Reads the legs off skeleton `k`'s own joints (once a skeleton), so a woman's clips fit her legs. */
+function measure(k) {
+  let m = figures.get(k);
+  if (!m) {
+    const at = (n) => k.pivots?.[k.index?.get(n)];
+    const hip = at('thighL'), knee = at('shinL'), ankle = at('footL'), hips = at('hips');
+    m = hip && knee && ankle && hips ? { THIGH: hip[1] - knee[1], SHIN: knee[1] - ankle[1], HIPS: hips[1] } : { THIGH, SHIN, HIPS };
+    figures.set(k, m);
+  }
+  ({ THIGH, SHIN, HIPS } = m);
+  LEG = THIGH + SHIN;
+}
 
 /** How far the hips drop when both knees bend by these (thigh forward, knee bent) angles. */
 const drop = (thigh, knee) => THIGH * (1 - Math.cos(thigh)) + SHIN * (1 - Math.cos(knee - thigh));
@@ -300,6 +314,7 @@ function talking(k, T, { talk = 1, think = 0, listen = 0, beat = 0 } = {}, armed
 export function moveHuman(k, state = {}, style = {}) {
   const { clip = 'idle', t = 0, time = 0, seed = 0, speed = 1 } = state;
   const T = time + seed;
+  if (typeof k === 'object' && k) measure(k);
   const heavy = style.heavy ?? 0;
   const armed = style.armed ?? null;
   breathe(k, T, heavy);
@@ -374,7 +389,7 @@ export function moveHuman(k, state = {}, style = {}) {
       // Kneeling: the hips down as far as the shins are long; lying: the back of the pelvis on the ground.
       const kneel = win(t, 0, 0.3), fall = win(t, 0.3, 0.75);
       const kneelDrop = THIGH + 0.02;
-      k.move('hips', 0, -kneelDrop * kneel * (1 - fall) - (JOINTS.hips[1] - 0.11) * fall, -0.06 * kneel * (1 - fall) - 0.35 * fall);
+      k.move('hips', 0, -kneelDrop * kneel * (1 - fall) - (HIPS - 0.11) * fall, -0.06 * kneel * (1 - fall) - 0.35 * fall);
       break;
     }
     case 'sit': {

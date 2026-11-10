@@ -1,4 +1,5 @@
 import { BONE, BONES, COUNT, JOINTS, OCCLUSION, POSITION, SURFACES, UV, WEIGHT } from './data/base.js';
+import * as WOMAN from './data/female.js';
 
 /**
  * The base body: a real man's anatomy, from the MakeHuman project's base
@@ -8,7 +9,7 @@ import { BONE, BONES, COUNT, JOINTS, OCCLUSION, POSITION, SURFACES, UV, WEIGHT }
  * levels of detail (its quads were made for that).
  */
 
-function decode(b64, Type) {
+export function decode(b64, Type) {
   let bytes;
   if (typeof atob === 'function') {
     const s = atob(b64);
@@ -20,17 +21,38 @@ function decode(b64, Type) {
   return new Type(bytes.buffer, bytes.byteOffset, bytes.byteLength / Type.BYTES_PER_ELEMENT);
 }
 
-let raw = null;
-/** The baked mesh, unpacked once: rest positions, UVs, bone indices and weights, occlusion, and each surface's quads. */
-export function baseMesh() {
-  if (raw) return raw;
-  const q = decode(POSITION, Int16Array);
+/** Rest positions, unpacked from the baked int16s. */
+function positionsOf(b64) {
+  const q = decode(b64, Int16Array);
   const position = new Float32Array(COUNT * 3);
   for (let i = 0; i < COUNT; i++) {
     position[i * 3] = (q[i * 3] * 1.2) / 32767;
     position[i * 3 + 1] = (q[i * 3 + 1] * 1.2) / 32767 + 0.9;
     position[i * 3 + 2] = (q[i * 3 + 2] * 1.2) / 32767;
   }
+  return position;
+}
+
+let raw = null;
+const figures = new Map();
+/**
+ * The baked mesh, unpacked once: rest positions, UVs, bone indices and
+ * weights, occlusion, and each surface's quads. The woman (`sex`
+ * 'female') is the same mesh with her own points and occlusion: her UVs,
+ * quads, bones and weights are the man's.
+ */
+export function baseMesh(sex = 'male') {
+  if (sex !== 'male') {
+    if (sex !== 'female') throw new Error(`human: no figure ${sex}`);
+    if (WOMAN.COUNT !== COUNT) throw new Error('human: the female bake is not of the same mesh; run scripts/bake-human.mjs --female');
+    if (!figures.has(sex)) {
+      const m = baseMesh();
+      figures.set(sex, { ...m, position: positionsOf(WOMAN.POSITION), occlusion: Float32Array.from(decode(WOMAN.OCCLUSION, Uint8Array), (v) => v / 255) });
+    }
+    return figures.get(sex);
+  }
+  if (raw) return raw;
+  const position = positionsOf(POSITION);
   const uq = decode(UV, Uint16Array);
   const uv = Float32Array.from(uq, (v) => v / 65535);
   const bone = decode(BONE, Uint8Array), w8 = decode(WEIGHT, Uint8Array);
@@ -187,17 +209,24 @@ function easeArmpits(pos, faces, weights) {
 
 const levels = new Map();
 /**
- * The body's surface at `level` of subdivision (0 as baked, about 27k
+ * The body's surface (of the figure `sex`) at `level` of subdivision (0 as baked, about 27k
  * triangles; 1 smooth, about 107k), as a mesh with face-varying UVs, and
  * the mouth's and lashes' small surfaces (never subdivided).
  */
-export function bodyLevel(level) {
-  if (levels.has(level)) return levels.get(level);
-  const m = baseMesh();
-  const weights = Array.from({ length: m.count }, (_, i) => weightsOf(m, i));
-  easeArmpits(m.position, m.surfaces.body.v, weights);
+export function bodyLevel(level, sex = 'male') {
+  const key = `${sex}@${level}`;
+  if (levels.has(key)) return levels.get(key);
+  const m = baseMesh(sex);
+  let weights;
+  if (sex === 'male') {
+    weights = Array.from({ length: m.count }, (_, i) => weightsOf(m, i));
+    easeArmpits(m.position, m.surfaces.body.v, weights);
+  } else {
+    // The man's weights, eased where his armpits are: hers are the same skin.
+    weights = bodyLevel(0).weights;
+  }
   let mesh = { pos: m.position, uv: m.uv, faces: m.surfaces.body.v, uvFaces: m.surfaces.body.t, weights, occ: m.occlusion };
   for (let l = 0; l < level; l++) mesh = subdivide(mesh);
-  levels.set(level, mesh);
+  levels.set(key, mesh);
   return mesh;
 }

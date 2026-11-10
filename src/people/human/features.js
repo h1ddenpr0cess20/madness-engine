@@ -20,6 +20,8 @@ const colour = (key, label, value, { ready = false } = {}) => ({ key, label, typ
 
 export const CUSTOMIZATION = Object.freeze([
   { group: 'Body', slots: [
+    // Chosen when the human is made (createHuman's `sex`, or this feature then): a man or a woman.
+    choice('sex', 'Figure', ['male', 'female'], { ready: true }),
     choice('build', 'Build', ['average', 'slim', 'athletic', 'stocky', 'heavy']),
     slider('height', 'Height'),
     slider('muscle', 'Muscle'),

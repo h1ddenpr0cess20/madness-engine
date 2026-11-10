@@ -1,4 +1,5 @@
 import { FACE as BAKED_FACE, FINGERS as BAKED_FINGERS, JOINTS as BAKED_JOINTS } from './data/base.js';
+import * as WOMAN from './data/female.js';
 
 /**
  * The human's skeleton, at real size: an adult man 1.76 m tall, in metres,
@@ -27,20 +28,42 @@ export const EYE = Object.freeze(BAKED_FACE.eye);
 export const FINGER_NAMES = Object.freeze(['thumb', 'index', 'middle', 'ring', 'pinky']);
 export const FINGERS = Object.freeze(BAKED_FINGERS);
 
+const frozen = (o) => Object.freeze(Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Object.freeze(v)])));
+
+/**
+ * The figures a human is built as: `male` (1.76 m) and `female` (1.65 m),
+ * MakeHuman's own young man and young woman, each baked into our A-pose. They
+ * are one mesh, vertex for vertex, so only where their joints are differs:
+ * { sex, height, joints, face, eye, fingers }.
+ */
+export const FIGURES = Object.freeze({
+  male: Object.freeze({ sex: 'male', height: HEIGHT, joints: JOINTS, face: FACE, eye: EYE, fingers: FINGERS }),
+  female: Object.freeze({
+    sex: 'female', height: WOMAN.HEIGHT, joints: frozen(WOMAN.JOINTS), face: Object.freeze(WOMAN.FACE),
+    eye: Object.freeze(WOMAN.FACE.eye), fingers: Object.freeze(WOMAN.FINGERS),
+  }),
+});
+/** The figure for `sex` ('male' or 'female'). */
+export function figureOf(sex = 'male') {
+  const f = FIGURES[sex];
+  if (!f) throw new Error(`human: no figure ${sex}; choose ${Object.keys(FIGURES).join(' or ')}`);
+  return f;
+}
+
 export const mirror = (p, m) => [p[0] * m, p[1], p[2]];
 export const sideOf = (m) => (m > 0 ? 'L' : 'R');
 
 /** Where the joints of one finger are, at rest, for the side `m` (1 left, −1 right): [root, middle, end, tip]. */
-export const fingerJoints = (name, m) => FINGERS[name].joints.map((p) => mirror(p, m));
+export const fingerJoints = (name, m, fingers = FINGERS) => fingers[name].joints.map((p) => mirror(p, m));
 
 /**
- * [name, parent, pivot], parents first. Beyond the engine's movement
+ * [name, parent, pivot], parents first, for the figure `sex`. Beyond the engine's movement
  * vocabulary: the jaw (and the tongue on it), each eye and its two lids,
  * the brows and the mouth's corners; a collarbone over each arm; three bones
  * a finger; the toes.
  */
-export function bones() {
-  const J = JOINTS;
+export function bones(sex = 'male') {
+  const { joints: J, face: FACE, eye: EYE, fingers } = figureOf(sex);
   const list = [
     ['root', null, [0, 0, 0]],
     ['hips', 'root', J.hips],
@@ -73,7 +96,7 @@ export function bones() {
       [`hand${S}`, `fore${S}`, mirror(J.wrist, m)],
     );
     for (const name of FINGER_NAMES) {
-      const j = fingerJoints(name, m);
+      const j = fingerJoints(name, m, fingers);
       list.push([`${name}1${S}`, `hand${S}`, j[0]], [`${name}2${S}`, `${name}1${S}`, j[1]], [`${name}3${S}`, `${name}2${S}`, j[2]]);
     }
     list.push(

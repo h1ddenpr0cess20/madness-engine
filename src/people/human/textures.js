@@ -2,7 +2,7 @@ import { bodyLevel } from './basemesh.js';
 import { zoneOf } from './body.js';
 import { clamp, cross, fbm, noise3, smooth } from './kit.js';
 import { armDistance, EYE, FACE, FINGERS, JOINTS } from './skeleton.js';
-import { hairPaint } from './hair.js';
+import { browAt, hairPaint } from './hair.js';
 import { HEM, JACKET, jeansHeight, legAngle, neckline, SHIRT_Z, SLEEVE_RANGE, SOCKS } from './clothes.js';
 
 /**
@@ -228,7 +228,9 @@ function skinColour(tone, L, groom = {}) {
   const grown = groom.hairColour ? hex(groom.hairColour) : null;
   const base = tone;
   const red = [tone[0] * 1.0, tone[1] * 0.8, tone[2] * 0.8];
-  const lipC = [tone[0] * 0.9, tone[1] * 0.72, tone[2] * 0.72];
+  // A woman's lips a little rosier and more distinct; her face has no beard's shadow.
+  const female = !!groom.female;
+  const lipC = female ? [tone[0] * 0.88, tone[1] * 0.6, tone[2] * 0.64] : [tone[0] * 0.9, tone[1] * 0.72, tone[2] * 0.72];
   const hair = [72, 56, 46];
   const shadow = [tone[0] * 0.8, tone[1] * 0.82, tone[2] * 0.88];
   const pale = [Math.min(255, tone[0] * 1.08), Math.min(255, tone[1] * 1.02), Math.min(255, tone[2] * 1.0)];
@@ -265,7 +267,7 @@ function skinColour(tone, L, groom = {}) {
       let beard = clamp(jaw) * (s < 0.03 ? 1 : cheekline + smooth(0.05, 0.03, s) * (1 - smooth(nose[1] - 0.02, nose[1] - 0.004, y)));
       const scalp = smooth(E[1] + 0.06, E[1] + 0.085, y + (0.06 - Math.min(0.06, z)) * 0.35) * smooth(E[1] - 0.04, E[1] - 0.01, y) * (1 - front * smooth(E[1] + 0.09, E[1] + 0.06, y));
       const dots = 0.6 + 0.4 * noise3(x * 900, y * 900, z * 900);
-      c = mixc(c, shadow, clamp(beard * 0.55 + scalp * 0.22) * dots);
+      c = mixc(c, shadow, clamp((female ? 0 : beard * 0.55) + scalp * 0.22) * dots);
       // Where hair grows, its colour, streaked as the hair is.
       if (grown) {
         const { cover, shade } = hairPaint(groom.style, groom.beard, p, n);
@@ -281,7 +283,7 @@ function skinColour(tone, L, groom = {}) {
         const into = lips.above > 0 ? lips.above / lips.up : -lips.above / lips.low;
         const creases = Math.max(0, 1 - Math.abs(noise3(x * 850 + y * 60, y * 55, z * 90)) * 3.5) * smooth(0.02, 0.2, into);
         const body = (0.5 + 0.14 * G((into - 0.45) / 0.35)) * (0.92 + 0.08 * noise3(x * 300, y * 2000, z * 300));
-        c = mixc(c, lipC, lips.on * body);
+        c = mixc(c, lipC, lips.on * body * (female ? 1.2 : 1));
         c = mixc(c, [lipC[0] * 0.72, lipC[1] * 0.6, lipC[2] * 0.62], lips.on * (0.28 * creases + 0.45 * smooth(0.22, 0, into)));
         c = mixc(c, pale, 0.1 * lips.on * G((into - 0.72) / 0.12) * (lips.above > 0 ? 0.5 : 1));
       }
@@ -290,16 +292,19 @@ function skinColour(tone, L, groom = {}) {
       const inside = smooth(M[2] - 0.006, M[2] - 0.014, z) * smooth(M[2] - 0.07, M[2] - 0.06, z) * smooth(FACE.lipCorner[0] - 0.001, FACE.lipCorner[0] - 0.006, s) * G((y - M[1]) / 0.02) * smooth(0.5, 0.0, n[2]);
       c = mixc(c, [70, 26, 28], inside);
       // The brows: a band of short hairs over each eye, arched, thinning toward the tail.
-      const bx = (s - 0.008) / 0.05;
+      // (Hers groomed: the fine brow's line, as hair.js grows it.)
+      const brow = browAt(p, female), bx = brow.along;
       if (bx > -0.05 && bx < 1.05 && n[2] > 0) {
-        const mid = E[1] + 0.0205 + 0.006 * Math.sin(clamp(bx) * Math.PI * 0.85) - 0.004 * bx;
-        const half = 0.0036 * (1 - 0.5 * bx) + 0.0008;
+        const mid = brow.mid, half = brow.half;
         const across = (y - mid) / half;
         const ends = smooth(-0.05, 0.08, bx) * smooth(1.05, 0.85, bx);
         const hairs = 0.5 + 0.5 * noise3(s * 700 + y * 500, y * 250, z * 300);
-        const b = smooth(1, 0.2, Math.abs(across)) * ends * (0.4 + 0.6 * hairs) * smooth(E[2] - 0.03, E[2] - 0.01, z);
-        // (Under the brows' own hairs, when he has them: in his hair's colour, softer.)
-        c = mixc(c, grown ? grown.map((v) => v * 0.7) : hair, clamp(b) * (grown ? 0.4 : 0.55));
+        // (Hers plucked: the same hairs, with a cleaner edge.)
+        const fill = smooth(1, female ? 0.45 : 0.2, Math.abs(across)) * (0.4 + 0.6 * hairs);
+        const b = fill * ends * smooth(E[2] - 0.03, E[2] - 0.01, z);
+        // (Under the brows' own hairs, when he has them: in his hair's colour, softer; hers a shade darker, as her brows are.)
+        const browC = grown ? grown.map((v) => v * (female ? 0.45 : 0.7)) : hair;
+        c = mixc(c, browC, clamp(b) * (grown ? 0.4 : 0.55));
       }
       // The lash line round each eye: the lids' rims, darkest along the upper.
       const e = [E[0] * (x >= 0 ? 1 : -1), E[1], E[2]];
@@ -341,8 +346,10 @@ function skinColour(tone, L, groom = {}) {
       }
     } else if (zone === 'trunk') {
       // The nipples.
+      // (Painted where they are on him: the skin is one, so on her they are where hers are, a little wider.)
+      const areola = female ? 1.35 : 1;
       for (const m of [1, -1]) {
-        const d = Math.hypot(x - 0.098 * m, (y - 1.287) * 1.1);
+        const d = Math.hypot(x - 0.098 * m, (y - 1.287) * 1.1) / areola;
         if (d < 0.03 && n[2] > 0.3) c = mixc(c, [tone[0] * 0.72, tone[1] * 0.52, tone[2] * 0.52], 0.75 * smooth(0.0125, 0.0095, d) + 0.25 * smooth(0.005, 0.003, d));
       }
       // The navel's hollow.
@@ -846,12 +853,12 @@ const cache = new WeakMap();
  * skin map, made once and kept. Returns null where there is no document to
  * paint on.
  */
-export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColour = null, style = null, beard = null } = {}) {
+export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColour = null, style = null, beard = null, sex = 'male' } = {}) {
   if (typeof document === 'undefined') return null;
   let byGFX = cache.get(GFX);
   if (!byGFX) cache.set(GFX, (byGFX = new Map()));
-  const groom = style || beard ? { hairColour, style, beard } : {};
-  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}`;
+  const groom = { ...(style || beard ? { hairColour, style, beard } : {}), female: sex === 'female' };
+  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}|${sex}`;
   if (byGFX.has(key)) return byGFX.get(key);
   const garments = byGFX.get('garments') ?? (() => {
     const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps(), sock = sockMaps(), hide = leatherMaps(), ribs = ribMaps();

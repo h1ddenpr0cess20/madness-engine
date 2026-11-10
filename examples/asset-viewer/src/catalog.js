@@ -689,13 +689,19 @@ function weaponItems() {
 /** Everything on the weapons shelf, for the human to hold. */
 const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.factory, w.name])];
 
-/** The real-size, dressable human: his wardrobe, his look, his face and hands, and a weapon from the shelf to hold. */
+/** The real-size, dressable humans, a man and a woman: the wardrobe, the look, the face and hands, and a weapon from the shelf to hold. */
 function humanItems() {
-  return [{
-    id: 'people/human',
+  return [humanItem('male'), humanItem('female')];
+}
+
+/** One figure's item: `sex` 'male' (bearded) or 'female' (long blonde hair). */
+function humanItem(sex) {
+  const female = sex === 'female';
+  return {
+    id: female ? 'people/human-female' : 'people/human',
     category: 'People',
     group: 'people',
-    name: 'Human (dressable base)',
+    name: female ? 'Human, female (dressable base)' : 'Human (dressable base)',
     source: 'people/human',
     kind: 'object',
     async build() {
@@ -704,7 +710,7 @@ function humanItems() {
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
-      const man = createHuman(GFX, { beard: 'full' });
+      const man = createHuman(GFX, female ? { sex } : { beard: 'full' });
       let weapon = 'none', attack = 'slash', handL = 'relaxed';
       let pair = man.glasses ?? 'aviator';
       const style = {};
@@ -729,7 +735,8 @@ function humanItems() {
           { type: 'heading', label: group },
           ...slots.map((s) => ({
             type: s.type === 'choice' ? 'select' : s.type, label: s.label, options: s.options, min: s.min, max: s.max, step: 0.01,
-            disabled: !s.ready, title: s.ready ? '' : 'Not built yet: kept, and shown once it is',
+            // (The figure is chosen when the human is made: each has an item of its own.)
+            disabled: !s.ready || s.key === 'sex', title: s.key === 'sex' ? 'Each figure is an item of its own' : s.ready ? '' : 'Not built yet: kept, and shown once it is',
             get: () => man.features[s.key], set: (v) => man.customize({ [s.key]: v }),
           })),
         ]),
@@ -744,10 +751,10 @@ function humanItems() {
         clips,
         ui,
         environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
-        info: { Source: 'people/human', Height: '1.76 m', Outfit: man.outfit.join(', '), Bones: man.skeleton.names.length, ...countOf(man.group) },
+        info: { Source: 'people/human', Height: `${man.dimensions.height} m`, Outfit: man.outfit.join(', '), Bones: man.skeleton.names.length, ...countOf(man.group) },
       };
     },
-  }];
+  };
 }
 
 /** The wizard staff: wood, metal and topper are chosen from the viewer's option menus. */

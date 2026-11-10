@@ -211,7 +211,7 @@ export function assemble(parts, boneNames, materialOrder) {
         skinWeight[(base + v) * 4 + k] = w;
       });
     }
-    zones.push(...part.zones);
+    for (const z of part.zones) zones.push(z);
     for (const i of part.idx) buckets[mi].push(i + base);
     base += part.count;
   }

@@ -345,7 +345,8 @@ function jeansCut(p, z) {
   return waist < hem ? { f: waist, at: 'waist' } : { f: hem, at: 'hem' };
 }
 
-function jeans(detail, under = null) {
+function jeans(detail, under = null, sex = 'male') {
+  const bulging = sex === 'male' ? withBulge : (p, q) => q;
   const part = skinShell('jeans', 'denim', {
     under,
     level: detail >= 0.8 ? 1 : 0,
@@ -354,7 +355,7 @@ function jeans(detail, under = null) {
     // Straight legs: hanging from the seat and the thighs, never across the middle.
     drape: (p, q) => {
       if (q[1] > 1.04 || q[1] < 0.03) return q;
-      q = withBulge(p, q, 0.85);
+      q = bulging(p, q, 0.85);
       const { m, th } = legAngle(q);
       const y = q[1], o = legAxis(y, m), d = legDir(th, m);
       const r = Math.hypot(q[0] - o[0], q[2] - o[2]);
@@ -561,13 +562,49 @@ const withBulge = (p, q, k = 1) => {
 };
 
 /** Boxer briefs: one piece close over the seat and the tops of the thighs, a band at the waist, the legs' hems turned in. */
-function briefs(detail) {
+function briefs(detail, sex = 'male') {
   return skinShell('briefs', 'briefs', {
     level: detail >= 0.8 ? 1 : 0,
     field: (p, z) => briefsCut(p, z).f,
     ease: (p) => 0.0025 + 0.0015 * smooth(BRIEFS.waist - 0.04, BRIEFS.waist - 0.034, p[1]),
-    drape: (p, q) => withBulge(p, q),
+    // Hers lie flat; his stand forward over what the base body leaves out.
+    drape: (p, q) => (sex === 'male' ? withBulge(p, q) : q),
     edge: (p, z) => (briefsCut(p, z).at === 'waist' ? { thick: 0.004, turn: 0.025 } : { thick: 0.0025, turn: 0.012 }),
+    smooth: detail >= 0.8 ? 4 : 2,
+  });
+}
+
+// ———————————————————————————————————————————————— the sports bra
+
+/**
+ * A sports bra's outline, measured on him (it is cut on his skin and worn
+ * carried onto hers, where his chest is her bust: see fit.js): a band under
+ * the bust, a scoop in front, straps over the shoulders, the sides cut down
+ * under the arms. `band` is how high its band is; `top(x, back)` its top edge.
+ */
+export const BRA = Object.freeze({ band: 1.19 });
+export function braTop(x, z) {
+  const s = Math.abs(x), back = z < SHIRT_Z;
+  let top = back ? 1.335 : 1.345 + 0.02 * smooth(0, 0.065, s);
+  top += (1.305 - top) * smooth(0.1, 0.135, s);
+  // The straps, up over the shoulders to the neck's base.
+  const strap = smooth(0.055, 0.068, s) * smooth(0.112, 0.099, s);
+  return top + (1.52 - top) * strap;
+}
+function braCut(p, z) {
+  // (The straps run up over the shoulders onto the base of the neck's skin, so their ends are cut, not torn off where the zones meet.)
+  if (z.zone !== 'trunk' && z.zone !== 'neck') return { f: -1, at: null };
+  const band = p[1] - BRA.band, top = braTop(p[0], p[2]) - p[1];
+  return band < top ? { f: band, at: 'band' } : { f: top, at: 'top' };
+}
+
+/** A sports bra: close over the bust and round the ribs (bridged across between the breasts once on her), a firm band, straps. */
+function bra(detail) {
+  return skinShell('bra', 'briefs', {
+    level: detail >= 0.8 ? 1 : 0,
+    field: (p, z) => braCut(p, z).f,
+    ease: (p) => 0.0022 + 0.0012 * smooth(BRA.band + 0.03, BRA.band + 0.01, p[1]),
+    edge: (p, z) => (braCut(p, z).at === 'band' ? { thick: 0.0045, turn: 0.022 } : { thick: 0.003, turn: 0.01 }),
     smooth: detail >= 0.8 ? 4 : 2,
   });
 }
@@ -1174,7 +1211,7 @@ function bomber(open) {
     covers: (z) => {
       const on = z.on ?? z.zone;
       if (on === 'arm') return z.d < JACKET.cuff - OPEN;
-      if (z.zone === 'trunk' || z.zone === 'tshirt' || z.zone === 'leg' || z.zone === 'jeans' || z.zone === 'briefs') return (on === 'trunk' || on === 'leg' || on === null) && inside(z, OPEN);
+      if (z.zone === 'trunk' || z.zone === 'tshirt' || z.zone === 'leg' || z.zone === 'jeans' || z.zone === 'briefs' || z.zone === 'bra') return (on === 'trunk' || on === 'leg' || on === null) && inside(z, OPEN);
       return false;
     },
   };
@@ -1184,8 +1221,14 @@ export const GARMENTS = Object.freeze({
   briefs: {
     layer: 1,
     materials: ['briefs'],
-    build: (detail) => tag([briefs(detail)], 'briefs'),
+    build: (detail, { sex } = {}) => tag([briefs(detail, sex)], 'briefs'),
     covers: ({ zone, y }) => (zone === 'leg' || zone === 'trunk') && y > BRIEFS.legs + OPEN && y < BRIEFS.waist - OPEN,
+  },
+  bra: {
+    layer: 1,
+    materials: ['briefs'],
+    build: (detail) => tag([bra(detail)], 'bra'),
+    covers: ({ zone, y, sx = 0, z = 0 }) => zone === 'trunk' && y > BRA.band + 0.025 && y < braTop(sx, z) - 0.02,
   },
   socks: {
     layer: 1,
@@ -1208,7 +1251,7 @@ export const GARMENTS = Object.freeze({
     layer: 3,
     materials: ['denim'],
     fits: true,
-    build: (detail, { under } = {}) => tag([jeans(detail, under)], 'jeans'),
+    build: (detail, { under, sex } = {}) => tag([jeans(detail, under, sex)], 'jeans'),
     covers: ({ zone, y }) => ((zone === 'leg' || zone === 'trunk') && y > HEM_FRONT + 0.1 && y < WAIST - OPEN) || (zone === 'briefs' && y < WAIST - OPEN) || (zone === 'sneakers' && y > 0.12),
   },
   tshirt: {
@@ -1216,7 +1259,7 @@ export const GARMENTS = Object.freeze({
     materials: ['shirt'],
     fits: true,
     build: (detail, { under } = {}) => tag(shirt(detail, under), 'tshirt'),
-    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN),
+    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN) || zone === 'bra',
   },
   jacket: bomber(true),
   jacketZipped: bomber(false),
