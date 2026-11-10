@@ -78,27 +78,49 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
   // --- the etching
   let etchTexture = null;
   const etched = [];
-  if (withEtch) {
-    const canvas = etchCanvas ?? createEtchCanvas({ width: etchWidth, graticule, ...etchStyle });
-    if (canvas) {
+
+  // Planet maps may decode asynchronously. Keep the glass construction synchronous,
+  // then let callers install the correct equirectangular etching when it is ready.
+  function applyEtchCanvas(canvas) {
+    if (!canvas) {
+      for (const shell of etched) shell.visible = false;
+      return;
+    }
+
+    if (etchTexture) {
+      if (etchTexture.image !== canvas) {
+        etchTexture.image = canvas;
+        etchTexture.needsUpdate = true;
+      }
+    } else {
       etchTexture = new GFX.CanvasTexture(canvas);
       etchTexture.colorSpace = GFX.SRGBColorSpace;
       etchTexture.anisotropy = 8;
-      for (const [name, side, grow] of [['etch-near', GFX.FrontSide, 1.0015], ['etch-far', GFX.BackSide, 0.9985]]) {
-        const shell = new GFX.Mesh(
-          new GFX.SphereGeometry(R * grow, 128, 96),
-          new GFX.MeshStandardMaterial({
-            name, map: etchTexture, color: new GFX.Color('#ffffff'),
-            roughness: 0.9, metalness: 0, transparent: true, side, depthWrite: false,
-          }),
-        );
-        shell.name = name;
-        shell.renderOrder = 2;
-        shell.castShadow = false;
-        etched.push(shell);
-        spin.add(shell);
-      }
     }
+
+    if (etched.length) {
+      for (const shell of etched) shell.visible = true;
+      return;
+    }
+
+    for (const [name, side, grow] of [['etch-near', GFX.FrontSide, 1.0015], ['etch-far', GFX.BackSide, 0.9985]]) {
+      const shell = new GFX.Mesh(
+        new GFX.SphereGeometry(R * grow, 128, 96),
+        new GFX.MeshStandardMaterial({
+          name, map: etchTexture, color: new GFX.Color('#ffffff'),
+          roughness: 0.9, metalness: 0, transparent: true, side, depthWrite: false,
+        }),
+      );
+      shell.name = name;
+      shell.renderOrder = 2;
+      shell.castShadow = false;
+      etched.push(shell);
+      spin.add(shell);
+    }
+  }
+
+  if (withEtch) {
+    applyEtchCanvas(etchCanvas ?? createEtchCanvas({ width: etchWidth, graticule, ...etchStyle }));
   }
 
   // --- the mist, Krystal's, inside the glass
@@ -126,6 +148,10 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
   const api = {
     group, spin, glass, mist, mistMaterial, mood,
     get etch() { return etched; },
+    setEtchCanvas(source) {
+      applyEtchCanvas(source);
+      return api;
+    },
     get field() { return field; },
     get fieldTexture() { return fieldTexture; },
     get etchTexture() { return etchTexture; },
