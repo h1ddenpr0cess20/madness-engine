@@ -1124,6 +1124,10 @@ export class MeshStandardMaterial extends Material {
     this.emissiveIntensity = 1.0;
     this.bumpMap = null;
     this.bumpScale = 1;
+    // Over the map's layout (it needs the map and the bump map): r a relief of its own (scaled by detailScale),
+    // g the roughness (0.5 as the material's, to twice it), b how much of the bump map shows.
+    this.detailMap = null;
+    this.detailScale = 1;
     this.envMapIntensity = 1.0;
     this.flatShading = false;
     this.setValues(parameters);
@@ -1141,6 +1145,9 @@ export class MeshPhysicalMaterial extends MeshStandardMaterial {
     this.iridescence = 0;
     this.iridescenceIOR = 1.3;
     this.iridescenceThicknessRange = [100, 400];
+    // Light scattered under the surface (skin, wax): how much, and how far each colour is carried round the form.
+    this.subsurface = 0;
+    this.subsurfaceColor = new Color(0x000000);
     this.sheen = 0;
     this.sheenColor = new Color(0x000000);
     this.sheenRoughness = 1.0;

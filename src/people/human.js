@@ -171,14 +171,20 @@ function makeMaterials(GFX, look, tex) {
   const M = (name, o) => new GFX.MeshPhysicalMaterial({ name: `human ${name}`, vertexColors: true, ...o });
   const mats = {
     skin: M('skin', {
-      color: tex ? '#ffffff' : look.skin, map: tex?.skin.map ?? null, bumpMap: tex?.skin.bump ?? null, bumpScale: 0.00035, roughness: 0.5,
-      // Light scattered back out of the skin, warm and soft at the edges.
-      sheen: 0.3, sheenColor: new GFX.Color('#e8a090'), sheenRoughness: 0.4, clearcoat: 0.06, clearcoatRoughness: 0.45,
+      color: tex ? '#ffffff' : look.skin, map: tex?.skin.map ?? null, bumpMap: tex?.skin.bump ?? null, bumpScale: 0.00016, roughness: 0.52,
+      // Its detail: creases and folds, where it is glossier or rougher, where its pores are open.
+      detailMap: tex?.skin.detail ?? null, detailScale: 0.0011,
+      // Light carried under the skin and back out: red furthest, so the edge of every shadow warms.
+      subsurface: 1, subsurfaceColor: new GFX.Color().setRGB(0.42, 0.16, 0.09),
+      // The oil on it: a second, thin shine over the skin's own broad one; and the soft light off its down at the edges.
+      sheen: 0.22, sheenColor: new GFX.Color('#e8a090'), sheenRoughness: 0.4, clearcoat: 0.1, clearcoatRoughness: 0.3, specularIntensity: 0.8,
     }),
-    eye: M('eyes', { color: '#ffffff', map: tex?.eye ?? null, roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.03 }),
-    teeth: M('teeth', { color: '#e8dfcb', roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.15, sheen: 0.25, sheenColor: new GFX.Color('#fff8ea') }),
-    gums: M('gums', { color: '#c8706c', roughness: 0.4, clearcoat: 0.35, clearcoatRoughness: 0.2 }),
-    tongue: M('tongue', { color: '#94504f', roughness: 0.45, clearcoat: 0.25 }),
+    // The eye: wet and mirror-smooth over a soft white that light sinks into.
+    eye: M('eyes', { color: '#ffffff', map: tex?.eye ?? null, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.02, subsurface: 0.7, subsurfaceColor: new GFX.Color().setRGB(0.4, 0.3, 0.26) }),
+    // Enamel: glossy, wet, a little light let into it. The gums and tongue wet too, and soft with blood.
+    teeth: M('teeth', { color: '#efe7d6', roughness: 0.2, clearcoat: 0.8, clearcoatRoughness: 0.1, sheen: 0.25, sheenColor: new GFX.Color('#fff8ea'), subsurface: 0.6, subsurfaceColor: new GFX.Color().setRGB(0.3, 0.26, 0.2) }),
+    gums: M('gums', { color: '#cf7a78', roughness: 0.36, clearcoat: 0.6, clearcoatRoughness: 0.14, subsurface: 0.8, subsurfaceColor: new GFX.Color().setRGB(0.45, 0.15, 0.1) }),
+    tongue: M('tongue', { color: '#a35a5a', roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.25, subsurface: 0.8, subsurfaceColor: new GFX.Color().setRGB(0.45, 0.15, 0.1) }),
     // Hair: the strand texture's gaps cut out; a soft sheen along it, as light runs down a strand.
     // Hair, in two passes: its strands solid where the texture is (writing depth), then their soft edges
     // blended over. Its highlights run across the strands (`strands`), the way hair's do.
@@ -821,7 +827,7 @@ export function createHuman(GFX, options = {}) {
     if (change.skin || change.iris || change.hair) {
       tex = humanTextures(GFX, paintFor());
       const next = makeMaterials(GFX, look, tex);
-      for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
+      for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap, detailMap: next[n].detailMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
     }
     for (const n of ['shirt', 'shoe', 'sole', 'briefs']) if (change[n]) mats[n].color.set(change[n]);
     if (change.socks) mats.sock.color.set(change.socks);

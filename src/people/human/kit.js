@@ -83,7 +83,7 @@ export function frames(pts, ref) {
 
 /**
  * One surface of the figure, drawn with one material. Vertices carry a rest
- * position, a UV, an ambient-occlusion tint and up to four bone weights.
+ * position, a UV, an ambient-occlusion tint (a shade, or [r, g, b]) and up to four bone weights.
  */
 export class Part {
   constructor(name, material) {
@@ -203,7 +203,9 @@ export function assemble(parts, boneNames, materialOrder) {
     uv.set(part.uv, base * 2);
     for (let v = 0; v < part.count; v++) {
       const t = part.tint[v];
-      color[(base + v) * 3] = color[(base + v) * 3 + 1] = color[(base + v) * 3 + 2] = t;
+      // (A shade, or a colour of its own.)
+      if (typeof t === 'number') color[(base + v) * 3] = color[(base + v) * 3 + 1] = color[(base + v) * 3 + 2] = t;
+      else color.set(t, (base + v) * 3);
       resolveWeights(part.weights[v], boneIndex).forEach(([i, w], k) => {
         skinIndex[(base + v) * 4 + k] = i;
         skinWeight[(base + v) * 4 + k] = w;

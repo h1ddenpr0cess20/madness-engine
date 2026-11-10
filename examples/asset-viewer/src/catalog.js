@@ -706,6 +706,7 @@ function humanItems() {
       ]);
       const man = createHuman(GFX, { beard: 'full' });
       let weapon = 'none', attack = 'slash', handL = 'relaxed';
+      let pair = man.glasses ?? 'aviator';
       const style = {};
       const rearm = () => {
         man.release('R');
@@ -714,6 +715,8 @@ function humanItems() {
       const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
       const ui = [
         ...Object.keys(GARMENTS).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
+        // The sunglasses on or off at a click (which pair is chosen under Accessories, below).
+        { type: 'check', label: 'Glasses', get: () => man.glasses !== null, set: (on) => { if (man.glasses) pair = man.glasses; man.customize({ glasses: on ? pair : 'none' }); } },
         { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm(); } },
         { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove'], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
         { type: 'select', label: 'Left hand', options: Object.keys(HAND_POSES), get: () => handL, set: (v) => { handL = v; man.hands(v, { hand: 'L' }); } },

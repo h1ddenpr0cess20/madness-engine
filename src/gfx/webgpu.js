@@ -23,7 +23,7 @@ import { pmremLayout, pmremPlanes, pmremSchedule } from './pmrem.js';
 const SAMPLES = 4;
 const DEPTH_FORMAT = 'depth24plus';
 const FRAME_SIZE = 1040;
-const DRAW_SIZE = 464;
+const DRAW_SIZE = 480;
 const OBJECT_SIZE = 320;
 const ARENA_SIZE = 4 << 20;
 const ALIGN = 256;
@@ -157,6 +157,8 @@ export class WebGPUBackend {
         { binding: 2, visibility: F, sampler: { type: 'filtering' } },
         { binding: 3, visibility: F, texture: { sampleType: 'float' } },
         { binding: 4, visibility: F, sampler: { type: 'filtering' } },
+        { binding: 5, visibility: F, texture: { sampleType: 'float' } },
+        { binding: 6, visibility: F, sampler: { type: 'filtering' } },
       ],
     });
     this.builtinLayout = d.createPipelineLayout({ bindGroupLayouts: [this.frameLayout, this.drawLayout] });
@@ -410,6 +412,8 @@ export class WebGPUBackend {
     f[o + 102] = p.rotation ?? 0;
     f[o + 103] = finite ? 1 : 0;
     setMat3(f, o + 104, p.envMapRotation ?? IDENTITY3);
+    f.set(p.subsurfaceColor ?? [0, 0, 0], o + 116);
+    f[o + 119] = p.detailScale ?? 0;
   }
 
   _packObject(offset, call) {
@@ -532,7 +536,8 @@ export class WebGPUBackend {
   _drawGroup(textures) {
     const map = textures.map ? this._texture(textures.map) : null;
     const bump = textures.bumpMap ? this._texture(textures.bumpMap) : null;
-    const id = `${map?.id ?? '-'}|${bump?.id ?? '-'}`;
+    const detail = textures.detailMap ? this._texture(textures.detailMap) : null;
+    const id = `${map?.id ?? '-'}|${bump?.id ?? '-'}|${detail?.id ?? '-'}`;
     let group = this.drawGroups.get(id);
     if (!group) {
       group = this.device.createBindGroup({
@@ -543,6 +548,8 @@ export class WebGPUBackend {
           { binding: 2, resource: map ? map.sampler : this.linear },
           { binding: 3, resource: (bump ? bump.texture : this.dummy2D).createView() },
           { binding: 4, resource: bump ? bump.sampler : this.linear },
+          { binding: 5, resource: (detail ? detail.texture : this.dummy2D).createView() },
+          { binding: 6, resource: detail ? detail.sampler : this.linear },
         ],
       });
       this.drawGroups.set(id, group);
