@@ -937,7 +937,7 @@ export function createHuman(GFX, options = {}) {
     if (grip) {
       // The swinging arm kept out of his body first, then the left hand put on the grip where that leaves it.
       skeleton.compute();
-      for (let pass = 0; pass < 3 && clearArms(skeleton, clearance, skeleton.pivots, ['R']); pass++) skeleton.compute();
+      if (clearArms(skeleton, clearance, skeleton.pivots, ['R'])) skeleton.compute();
       bothHands(grip);
     }
     for (const S of ['L', 'R']) {
@@ -955,10 +955,9 @@ export function createHuman(GFX, options = {}) {
     poseFace(skeleton, face, state.time, said);
     skeleton.compute();
     // His arms kept out of his body (and what he wears), however he is shaped: those that would pass
-    // into it swung out from the shoulder just enough (with both hands on a grip, done above, before the
-    // left takes it). Checked again once one has moved: the chest breathing squashes the frame the turn
-    // is made in a little.
-    if (!grip) for (let pass = 0; pass < 3 && clearArms(skeleton, clearance, skeleton.pivots); pass++) skeleton.compute();
+    // into it swung out from the shoulder just enough, eased in so it never jolts (with both hands on a
+    // grip, done above, before the left takes it).
+    if (!grip && clearArms(skeleton, clearance, skeleton.pivots)) skeleton.compute();
     // Only what shows is moved: the skin under his clothes is left where it was.
     skinDual(body.data, skeleton, body.position.array, body.normal.array, drawn(body));
     body.position.needsUpdate = true;

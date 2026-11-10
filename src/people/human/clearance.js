@@ -55,7 +55,7 @@ export function measure(meshes, names, pivots) {
   // The trunk: from below the hip joints to the armpits, a bin every 2 cm.
   const y0 = at('thighL')[1] - 0.14, y1 = at('armL')[1] - 0.05;
   const nT = Math.max(1, Math.ceil((y1 - y0) / BIN));
-  const trunk = { ...radial(nT), y0, mid: new Float32Array(nT), owner: new Int16Array(nT).fill(-1) };
+  const trunk = { ...radial(nT), y0, mid: new Float32Array(nT), owner: new Int16Array(nT).fill(-1), bones: trunkBones };
   const votes = new Float32Array(nT * 3), zs = new Float32Array(nT), zn = new Float32Array(nT);
   const sides = ['L', 'R'];
   const thighs = {}, arms = {};
@@ -134,7 +134,8 @@ export function measure(meshes, names, pivots) {
         }
       }
     }
-    arms[S] = { shoulder: names.indexOf(`arm${S}`), parent: names.indexOf(`clavicle${S}`), spots: spots.filter((s) => s.r > 0) };
+    // Out, for this arm, is a turn about the forward axis toward its own side: + for the left (+x), − for the right.
+    arms[S] = { shoulder: names.indexOf(`arm${S}`), parent: names.indexOf(`clavicle${S}`), spots: spots.filter((s) => s.r > 0), out: S === 'L' ? 1 : -1 };
   }
   const body = { trunk, thighs, arms };
   // As he stands at rest (the pose he is modelled in) the upper arm already lies against his side, under
@@ -180,24 +181,62 @@ const outward = (M, b, d) => {
 };
 
 /** How far a ball at `p` (world) of radius `r` is inside the body (0 if it is clear); the way out of it in OUT. */
+/**
+ * How far out profile `prof` reaches at fractional bin `f` (bins counted from their starts) and angle `ang`:
+ * read between the nearest bins and sectors, so it changes smoothly as a point moves (empty ones left out).
+ */
+function reachAt(prof, f, ang) {
+  const { r, n } = prof;
+  const fb = f - 0.5, b0 = Math.floor(fb), wb = fb - b0;
+  const fs = ((ang / (Math.PI * 2)) * SECTORS % SECTORS + SECTORS) % SECTORS, s0 = Math.floor(fs), ws = fs - s0;
+  let sum = 0, w = 0;
+  for (const [b, kb] of [[b0, 1 - wb], [b0 + 1, wb]]) {
+    const bb = Math.max(0, Math.min(n - 1, b));
+    for (const [s, ks] of [[s0 % SECTORS, 1 - ws], [(s0 + 1) % SECTORS, ws]]) {
+      const v = r[bb * SECTORS + s], k = kb * ks;
+      if (v > 0 && k > 0) { sum += v * k; w += k; }
+    }
+  }
+  return w > 0 ? sum / w : 0;
+}
+
+/** `values` (one a bin) read at fractional bin `f`, between the nearest two. */
+const between = (values, n, f) => {
+  const fb = f - 0.5, b0 = Math.floor(fb), w = fb - b0;
+  const at = (b) => values[Math.max(0, Math.min(n - 1, b))];
+  return at(b0) * (1 - w) + at(b0 + 1) * w;
+};
+
+/**
+ * How far a ball at `p` (world) of radius `r` is inside the body (0 if it is clear); the way out of it in OUT.
+ * The trunk is read in each of its bones' frames and blended by how much each owns that height, so the answer
+ * changes smoothly as the arm moves over the joins between them.
+ */
 function depth(body, M, p, r) {
   let most = 0;
   const { trunk, thighs } = body;
-  for (const b of new Set(trunk.owner)) {
-    if (b < 0) continue;
+  let tw = 0, ts = 0, tout = null, tb = -1;
+  for (const b of trunk.bones) {
     const q = undo(M, b, p);
-    const i = Math.floor((q[1] - trunk.y0) / BIN);
-    if (i < 0 || i >= trunk.n || trunk.owner[i] !== b) continue;
-    const dz = q[2] - trunk.mid[i], reach = trunk.r[i * SECTORS + sectorOf(Math.atan2(q[0], dz))];
-    const d = reach > 0 ? reach + r + GAP - Math.hypot(q[0], dz) : 0;
-    if (d > most) { most = d; outward(M, b, [q[0], 0, dz]); }
+    const f = (q[1] - trunk.y0) / BIN;
+    if (f < 0 || f > trunk.n) continue;
+    // How much bone b owns this height: its share between the two nearest bins.
+    const fb = f - 0.5, b0 = Math.floor(fb), wb = fb - b0;
+    const own = (i) => (trunk.owner[Math.max(0, Math.min(trunk.n - 1, i))] === b ? 1 : 0);
+    const k = own(b0) * (1 - wb) + own(b0 + 1) * wb;
+    if (!k) continue;
+    const dz = q[2] - between(trunk.mid, trunk.n, f), reach = reachAt(trunk, f, Math.atan2(q[0], dz));
+    if (!(reach > 0)) continue;
+    ts += k * (reach + r + GAP - Math.hypot(q[0], dz)); tw += k;
+    if (k >= 0.5 || !tout) { tout = [q[0], 0, dz]; tb = b; }
   }
+  if (tw > 0 && ts / tw > most) { most = ts / tw; outward(M, tb, tout); }
   for (const T of Object.values(thighs)) {
     const q = undo(M, T.bone, p), e = [q[0] - T.hip[0], q[1] - T.hip[1], q[2] - T.hip[2]];
-    const i = Math.floor((e[0] * T.t[0] + e[1] * T.t[1] + e[2] * T.t[2] + 0.1) / BIN);
-    if (i < 0 || i >= T.n) continue;
+    const f = (e[0] * T.t[0] + e[1] * T.t[1] + e[2] * T.t[2] + 0.1) / BIN;
+    if (f < 0 || f > T.n) continue;
     const cu = e[0] * T.u[0] + e[1] * T.u[1] + e[2] * T.u[2], cw = e[0] * T.w[0] + e[1] * T.w[1] + e[2] * T.w[2];
-    const reach = T.r[i * SECTORS + sectorOf(Math.atan2(cu, cw))];
+    const reach = reachAt(T, f, Math.atan2(cu, cw));
     const d = reach > 0 ? reach + r + GAP - Math.hypot(cu, cw) : 0;
     if (d > most) { most = d; outward(M, T.bone, [0, 1, 2].map((a) => T.u[a] * cu + T.w[a] * cw)); }
   }
@@ -228,65 +267,65 @@ const axisTurn = ([x, y, z], a) => {
   return [[t * x * x + c, t * x * y - s * z, t * x * z + s * y], [t * x * y + s * z, t * y * y + c, t * y * z - s * x], [t * x * z - s * y, t * y * z + s * x, t * z * z + c]];
 };
 
+/** How soon (radians before it would touch) an arm starts to be eased out, so it never starts to move with a jolt. */
+const SOFT = 0.1;
+
 /**
  * Swings each arm (`sides`, 'L' and/or 'R') of `skeleton` (its matrices
- * worked out for the pose) from the shoulder as little as keeps it out of
- * `body` (from `measure`), up to `most` radians: out to the side (about the
- * collarbone's forward axis) or, where that does not clear it (a hand swung
- * across the front), straight out of the body where it is deepest in.
- * Returns whether any arm moved (the matrices then need working out again).
+ * worked out for the pose) out to the side from the shoulder, about the
+ * collarbone's forward axis, as little as keeps it out of `body` (from
+ * `measure`), up to `most` radians. The turn starts softly a little before
+ * the arm would touch, and grows and shrinks smoothly with the pose, so a
+ * clip is no less smooth for it. Returns whether any arm moved (the matrices
+ * then need working out again).
  */
-export function clearArms(skeleton, body, pivots, sides = ['L', 'R'], most = 0.9) {
+export function clearArms(skeleton, body, pivots, sides = ['L', 'R'], most = 0.6) {
   const M = skeleton.matrices;
   let moved = false;
   for (const S of sides) {
     const arm = body.arms[S];
     if (!arm?.spots.length) continue;
     const o = apply(M, arm.shoulder, pivots[arm.shoulder]);
-    const pts = arm.spots.map((s) => ({ p: apply(M, s.bone, s.p), r: s.r, allow: s.allow }));
-    // How far in it is turned by `angle` about the axis `k` through the shoulder; the deepest point and its way out.
-    let deep = null;
-    const inside = (k, angle) => {
-      let d = 0;
-      for (const s of pts) {
-        const p = angle ? turnAbout(s.p, o, k, angle) : s.p;
-        const x = depth(body, M, p, s.r) - s.allow;
-        if (x > d) { d = x; deep = { p, n: OUT.slice() }; }
+    const spots = arm.spots.map((s) => ({ p: apply(M, s.bone, s.p), r: s.r, allow: s.allow }));
+    const q = arm.parent * 12;
+    /** The collarbone's own axis `c` (0 sideways, 2 forward), in the world. */
+    const axisOf = (c) => { const l = Math.hypot(M[q + c], M[q + 4 + c], M[q + 8 + c]) || 1; return [M[q + c] / l, M[q + 4 + c] / l, M[q + 8 + c] / l]; };
+    /**
+     * The least turn about world axis `k` (`sgn` the way out) that keeps `pts` clear, eased in over SOFT before
+     * they would touch, up to `most`: 0 if they are clear by more than that.
+     */
+    const ease = (pts, k, sgn, limit) => {
+      const inside = (a) => {
+        let d = 0;
+        for (const s of pts) d = Math.max(d, depth(body, M, a ? turnAbout(s.p, o, k, sgn * a) : s.p, s.r) - s.allow);
+        return d;
+      };
+      const search = (lo, hi, clearAtHi) => {
+        for (let it = 0; it < 16; it++) { const m = (lo + hi) / 2; if ((inside(m) <= 0) === clearAtHi) hi = m; else lo = m; }
+        return hi;
+      };
+      let need;
+      if (inside(0) <= 0) {
+        if (inside(-SOFT) <= 0) return 0;
+        need = search(0, -SOFT, false);
+      } else {
+        need = limit;
+        for (let a = 0.02; a <= limit + 1e-9; a += 0.02) if (inside(a) <= 0) { need = search(a - 0.02, a, true); break; }
       }
-      return d;
+      return Math.max(0, Math.min(limit, need >= SOFT ? need : (need + SOFT) ** 2 / (4 * SOFT)));
     };
-    const now = inside(null, 0);
-    if (now <= 0) continue;
-    // The axes to try: the collarbone's forward axis (out to the side, either way), and the one that takes
-    // the deepest point straight out of the body.
-    const q = arm.parent * 12, kl = Math.hypot(M[q + 2], M[q + 6], M[q + 10]) || 1;
-    const axes = [[M[q + 2] / kl, M[q + 6] / kl, M[q + 10] / kl]];
-    const v = [deep.p[0] - o[0], deep.p[1] - o[1], deep.p[2] - o[2]], n = deep.n;
-    const c = [v[1] * n[2] - v[2] * n[1], v[2] * n[0] - v[0] * n[2], v[0] * n[1] - v[1] * n[0]], cl = Math.hypot(...c);
-    if (cl > 1e-6) axes.push(c.map((x) => x / cl));
-    // The least turn about any of them that clears it (stepped out, then narrowed down); if none does, the
-    // turn tried that leaves it least far in, if that is less than half as far.
-    let pick = null, best = now, fallback = null;
-    for (let a = 0.04; a <= most + 1e-9 && !pick; a += 0.04) {
-      for (const k of axes) for (const sgn of [1, -1]) {
-        if (pick) break;
-        const d = inside(k, sgn * a);
-        if (d < best) { best = d; fallback = { k, angle: sgn * a }; }
-        if (d <= 0) {
-          let lo = a - 0.04, hi = a;
-          for (let it = 0; it < 6; it++) { const m = (lo + hi) / 2; if (inside(k, sgn * m) <= 0) hi = m; else lo = m; }
-          pick = { k, angle: sgn * hi };
-        }
-      }
-    }
-    if (!pick && fallback && best < now * 0.5) pick = fallback;
-    if (!pick) continue;
-    // The turn about the world axis, as a turn of the arm in its parent's frame: R' = Pᵀ·T·P·R.
-    const P = [0, 1, 2].map((r) => [0, 1, 2].map((cc) => M[q + r * 4 + cc]));
-    const Pn = P.map((row) => row.map((x, cc) => x / Math.hypot(P[0][cc], P[1][cc], P[2][cc])));
-    const Pt = [0, 1, 2].map((r) => [0, 1, 2].map((cc) => Pn[cc][r]));
+    // First out to the side, about the collarbone's forward axis, the way out for this arm (fixed at rest);
+    // then, if that is not enough (a hand swung across the chest), forward, about its sideways axis. Each about
+    // one fixed axis, one fixed way, so the arm is never flicked from one way to another.
+    const kz = axisOf(2), kx = axisOf(0);
+    const out = ease(spots, kz, arm.out, most);
+    const turned = out ? spots.map((s) => ({ ...s, p: turnAbout(s.p, o, kz, arm.out * out) })) : spots;
+    // (Forward it may go further: a hand swung across the chest has further to come out.)
+    const fwd = ease(turned, kx, -1, most * 1.5);
+    if (!out && !fwd) continue;
+    // As turns about the parent's own axes, before the arm's own turn, in its parent's frame.
     const rot = skeleton.bone(skeleton.names[arm.shoulder]).rot;
-    const e = toEuler(mul(mul(mul(Pt, axisTurn(pick.k, pick.angle)), Pn), fromEuler(rot)));
+    const e = toEuler(mul(axisTurn([1, 0, 0], -fwd), mul(axisTurn([0, 0, 1], arm.out * out), fromEuler(rot))));
     rot[0] = e[0]; rot[1] = e[1]; rot[2] = e[2];
     moved = true;
   }
