@@ -19,12 +19,14 @@ import { castBody } from './body.js';
 export const SUNGLASSES = Object.freeze({
   aviator: {
     // A teardrop: a near-straight brow line, falling deepest toward the nose.
+    // Ray-Ban's RB3025 at size 58-14-135: a lens 58 mm across and 50 mm deep, its brow line nearly flat, the
+    // teardrop deepest toward the outer cheek, its lower edge rising up the side of the nose.
     outline: (a) => {
       const c = Math.cos(a), s = Math.sin(a);
-      const lower = s < 0 ? 1 : 0;
-      const u = 0.0285 * Math.sign(c) * Math.abs(c) ** 0.85;
-      const v = s > 0 ? 0.0185 * s ** 0.7 : -0.0275 * (-s) ** 0.9 * (1 - 0.18 * c);
-      return [u - 0.002 * lower * (-s) * (1 + c), v];
+      const lower = s < 0 ? -s : 0;
+      const u = 0.029 * Math.sign(c) * Math.abs(c) ** 0.85;
+      const v = s > 0 ? 0.019 * s ** 0.6 : -0.031 * (-s) ** 0.9 * (1 - 0.16 * c * (c > 0 ? 0.4 : -1));
+      return [u + 0.006 * lower ** 1.5, v];
     },
     rim: 0.0011,
     temple: 0.0012,
@@ -57,7 +59,7 @@ function lensPoint(uv, out = 0) {
   const z0 = -(u * u + v * v) / (2 * R);
   let p = [u, v, z0 + out];
   const cw = Math.cos(LENS.wrap), sw = Math.sin(LENS.wrap);
-  p = [p[0] * cw - p[2] * sw, p[1], p[0] * sw + p[2] * cw];
+  p = [p[0] * cw + p[2] * sw, p[1], -p[0] * sw + p[2] * cw];
   const ct = Math.cos(LENS.tilt), st = Math.sin(LENS.tilt);
   p = [p[0], p[1] * ct + p[2] * st, -p[1] * st + p[2] * ct];
   return add(LENS.center, p);
@@ -162,14 +164,17 @@ export function buildGlasses(name, detail = 1) {
   }
   // Across the nose: a wire frame's bar over the brow and its bridge between the lenses; a moulded frame's one bridge.
   const innerAt = (a, m, dv = 0) => { const e = style.outline(a); return mirrorX(lensPoint([e[0], e[1] + dv]), m); };
+  // An arch between two points: up by `rise` in the middle, and forward with the lenses' wrap.
+  const arch = (a, b, rise, ahead) => Array.from({ length: 17 }, (_, i) => {
+    const t = i / 16, k = 4 * t * (1 - t);
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t + rise * k, a[2] + (b[2] - a[2]) * t + ahead * k];
+  });
   if (style.wire) {
-    const top = [innerAt(Math.PI * 0.62, -1), [0, 1.675, 0.171], innerAt(Math.PI * 0.62, 1)];
-    tube(frame, spline(top, 16), () => 0.0012, { sides });
-    const mid = [innerAt(Math.PI * 0.93, -1), [0, 1.664, 0.168], innerAt(Math.PI * 0.93, 1)];
-    tube(frame, spline(mid, 16), () => 0.0011, { sides });
+    // The brow bar, all but straight across the lenses' tops; under it the bridge, a low arch over the nose.
+    tube(frame, arch(innerAt(Math.PI * 0.6, -1), innerAt(Math.PI * 0.6, 1), 0.0012, 0.004), () => 0.0012, { sides });
+    tube(frame, arch(innerAt(Math.PI * 0.84, -1), innerAt(Math.PI * 0.84, 1), 0.0035, 0.003), () => 0.0011, { sides });
   } else {
-    const bridge = [innerAt(Math.PI * 0.8, -1), [0, 1.668, 0.168], innerAt(Math.PI * 0.8, 1)];
-    tube(frame, spline(bridge, 16), () => style.rim * 1.1, { sides, flat: 0.6 });
+    tube(frame, arch(innerAt(Math.PI * 0.78, -1), innerAt(Math.PI * 0.78, 1), 0.003, 0.003), () => style.rim * 1.1, { sides, flat: 0.6 });
   }
   return [lens, frame];
 }
