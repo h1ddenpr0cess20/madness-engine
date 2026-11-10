@@ -274,8 +274,10 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
     const k = j * nx + i;
     if (P[v * 3 + 2] > Z[k]) Z[k] = P[v * 3 + 2];
   }
-  // The envelope: the most any cloth above, beside or below would hold it out.
+  // The envelope: the most any cloth above, beside or below would hold it out. (Each cost rounded off
+  // within `R` of its source, so the cloth domes over the fullest of the bust, not peaks there.)
   const E = new Float32Array(nx * ny).fill(-Infinity);
+  const R = 0.02, round = (d) => (d * d) / (Math.abs(d) + R);
   const RY = Math.round(0.3 / C), RX = Math.round(0.12 / C);
   for (let j = 0; j < ny; j++) {
     for (let i = 0; i < nx; i++) {
@@ -284,7 +286,7 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
       if (e === -Infinity) continue;
       for (let jj = Math.max(0, j - RY); jj < Math.min(ny, j + RY + 1); jj++) {
         const dy = (jj - j) * C;
-        const cy = dy > 0 ? down * dy : -up * dy;
+        const cy = (dy > 0 ? down : up) * round(dy);
         if (cy > 0.2) continue;
         for (let ii = Math.max(0, i - RX); ii < Math.min(nx, i + RX + 1); ii++) {
           const z = Z[jj * nx + ii];
@@ -292,7 +294,7 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
           const xs = X0 + ii * C;
           // From the source toward the middle line costs `across`; away from it, `out`.
           const toward = Math.abs(x) < Math.abs(xs) && Math.sign(x) * Math.sign(xs) >= 0;
-          const reach = z - cy - (toward ? across : out) * Math.abs(x - xs);
+          const reach = z - cy - (toward ? across : out) * round(x - xs);
           if (reach > e) e = reach;
         }
       }
@@ -340,17 +342,24 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
   };
   const position = P.slice();
   const moved = new Float32Array(data.count);
+  // Each point goes out from the middle of the body, not straight forward: where the cloth turns round
+  // the side, forward would slide it along itself, into folds.
+  const middle = joints.chest[2] - 0.08;
   let low = Infinity;
   if (hem) for (let v = 0; v < data.count; v++) if (take(v)) low = Math.min(low, P[v * 3 + 1]);
   for (let v = 0; v < data.count; v++) {
     if (!take(v)) continue;
     // Faded in from the sides, so the cloth turning round them keeps to the body: by how far round the body
     // it is (pushed forward where it faces sideways, it would stand out in points, not hang).
-    const t = Math.min(1, Math.max(0, (1.2 - Math.atan2(Math.abs(P[v * 3]), P[v * 3 + 2] - front)) / 0.45));
+    const t = Math.min(1, Math.max(0, (1.35 - Math.atan2(Math.abs(P[v * 3]), P[v * 3 + 2] - front)) / 0.6));
     const fade = Math.min(1, Math.max(0, (P[v * 3 + 2] - front) / 0.03)) * t * t * (3 - 2 * t)
       * (hem ? Math.min(1, Math.max(0, (P[v * 3 + 1] - low - hem) / hem)) : 1);
     moved[v] = lift(P[v * 3], P[v * 3 + 1]) * fade;
-    position[v * 3 + 2] += moved[v];
+    const ox = P[v * 3], oz = P[v * 3 + 2] - middle, l = Math.hypot(ox, oz) || 1;
+    // (As far forward as the envelope asks, wherever it faces the front.)
+    const k = moved[v] / Math.max(0.6, oz / l);
+    position[v * 3] += (k * ox) / l;
+    position[v * 3 + 2] += (k * oz) / l;
   }
   return { ...data, position, normal: reshade(data, position, moved) };
 }
