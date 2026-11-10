@@ -22,11 +22,11 @@ export const LEGS = Object.freeze(['square', 'tapered', 'turned', 'trestle']);
 
 /** The starting measures of each kind of table: outside, in metres. */
 export const KIND_DEFAULTS = Object.freeze({
-  dining: { shape: 'rectangle', legs: 'turned', width: 1.8, depth: 0.9, height: 0.76, apron: true, shelf: false, drawer: false },
+  dining: { shape: 'rectangle', legs: 'turned', width: 1.8, depth: 0.9, height: 0.77, apron: true, shelf: false, drawer: false },
   coffee: { shape: 'oval', legs: 'tapered', width: 1.1, depth: 0.6, height: 0.42, apron: false, shelf: true, drawer: false },
   side: { shape: 'round', legs: 'tapered', width: 0.5, depth: 0.5, height: 0.55, apron: true, shelf: false, drawer: false },
   console: { shape: 'rectangle', legs: 'square', width: 1.2, depth: 0.35, height: 0.8, apron: true, shelf: true, drawer: true },
-  desk: { shape: 'rectangle', legs: 'square', width: 1.4, depth: 0.7, height: 0.75, apron: true, shelf: false, drawer: true },
+  desk: { shape: 'rectangle', legs: 'square', width: 1.4, depth: 0.7, height: 0.77, apron: true, shelf: false, drawer: true },
   bar: { shape: 'round', legs: 'trestle', width: 0.8, depth: 0.8, height: 1.05, apron: false, shelf: false, drawer: false },
 });
 
