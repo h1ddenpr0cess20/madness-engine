@@ -264,6 +264,13 @@ weapon in his right hand the idle, walk, run and jump hold it ready.
 `'thrust'`, `'smite'`, `'punch'` or `'shove'`. Each is a keyed swing from
 ready: wind-up, strike, follow-through, recovery.
 
+A weapon made for two hands (its `handling.hands` is `'two-handed'`, see
+[Categories](weapons.md#categories)), such as a greatsword, is swung with
+both: in a slash, chop, thrust or smite the sword arm keeps the grip nearer
+the middle and the left hand closes on it below the right, then lets go for
+the recovery. A chop takes both hands whatever is held; a one-handed weapon
+is otherwise swung with one.
+
 `talk` moves his mouth as he speaks: syllables at a talking pace, each an
 open, spread, rounded or closed shape, in phrases with breaths between, the
 brows lifting on stressed ones. `man.pose({ clip: 'talk', time, yell: true })`

@@ -5,7 +5,7 @@ import * as GFX from '../src/gfx/index.js';
 import { createHuman, CLIPS, GARMENTS, HAND_POSES, HUMAN_DIMENSIONS } from '../src/people/index.js';
 import { bones } from '../src/people/human/skeleton.js';
 import { jeansPoint, legPoint, shirtPoint, trunkPoint } from '../src/people/human/clothes.js';
-import { createKrystalSword } from '../src/weapons/index.js';
+import { createGreatsword, createKrystalSword } from '../src/weapons/index.js';
 
 const man = createHuman(GFX, { detail: 0.5 });
 man.dress(['briefs', 'tshirt', 'jeans', 'sneakers']);
@@ -135,6 +135,32 @@ test('the hands shape themselves, and a held weapon goes where the hand goes', (
   assert.ok(e[5] > 0.2, 'the blade rises');
   assert.equal(man.release('R'), sword);
   man.hands('relaxed');
+});
+
+test('a two-handed weapon is swung with both hands on the grip; a one-handed one with one', () => {
+  // How far the left hand's grip is from where a second hand takes the held weapon, at t in a swing.
+  const gap = (weapon, attack, t) => {
+    man.hold(weapon);
+    man.setStyle({ attack });
+    man.pose({ clip: 'attack', t, time: 0 });
+    const b = weapon.gripBounds, y = Math.max((b.bottom + b.top) / 2, b.top - 0.05), second = Math.max(b.bottom + 0.03, y - 0.085);
+    const e = weapon.group.matrix.elements;
+    const at = [e[4] * second + e[12], e[5] * second + e[13], e[6] * second + e[14]];
+    const p = man.point('handL', [0.283, 0.79, 0.04]);
+    man.release('R');
+    return Math.hypot(p[0] - at[0], p[1] - at[1], p[2] - at[2]);
+  };
+  const great = createGreatsword(GFX), sword = createKrystalSword(GFX);
+  assert.equal(great.handling.hands, 'two-handed');
+  // At each swing's wind-up, strike and follow-through.
+  const keys = { slash: [0.24, 0.36, 0.52], chop: [0.24, 0.36, 0.52], thrust: [0.24, 0.36, 0.5], smite: [0.26, 0.38, 0.55] };
+  for (const [attack, times] of Object.entries(keys)) {
+    for (const t of times) assert.ok(gap(great, attack, t) < 0.06, `${attack} at ${t}: the left hand is on the greatsword's grip`);
+  }
+  // A one-handed sword is slashed with one hand, but chopped with two.
+  assert.ok(gap(sword, 'slash', 0.36) > 0.15, 'the left hand stays off a one-handed sword');
+  assert.ok(gap(sword, 'chop', 0.36) < 0.06, 'a chop takes both hands');
+  man.setStyle({});
 });
 
 test('every garment in the wardrobe can be worn on its own', () => {

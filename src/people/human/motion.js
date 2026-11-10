@@ -283,6 +283,54 @@ const SWINGS = {
   ],
 };
 
+/** A key's left arm, forearm and hand turned as the mirror of its right ones: where the left starts from to close on the same grip. */
+const mirrored = ([t, pose]) => {
+  // At ready the left hand is still its own.
+  if (pose === READY_R) return [t, pose];
+  const out = { ...pose };
+  for (const b of ['arm', 'fore', 'hand']) if (pose[`${b}R`]) { const [x, y, z] = pose[`${b}R`]; out[`${b}L`] = [x, -y, -z]; }
+  return [t, out];
+};
+
+/**
+ * The weapon swings with both hands on the grip (a two-handed weapon, `style.both`): the same
+ * swings, the sword arm kept nearer the middle so the left hand can reach the grip under the right,
+ * and the left arm mirroring it, from where the human closes the left hand on the grip.
+ */
+const BOTH = Object.fromEntries(Object.entries({
+  // Over the right shoulder, down through the middle and across to the left hip.
+  slash: [
+    [0, READY_R],
+    [0.24, { chest: [-0.08, -0.4, 0.05], spine: [0, -0.12, 0], armR: [-2.6, 0, -0.5], foreR: [-0.9, 0.3, 0], handR: [0.2, 0, 0], head: [0, 0.2, 0] }],
+    [0.3, { chest: [0.02, -0.05, 0], spine: [0.03, 0, 0], armR: [-2.2, 0.35, -0.25], foreR: [-0.5, 0.3, 0], handR: [0.7, 0, 0], head: [0.02, 0.05, 0] }],
+    SWINGS.slash[2],
+    SWINGS.slash[3],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+  // Straight down from overhead, the hands over the head's middle.
+  chop: [
+    [0, READY_R],
+    [0.24, { chest: [-0.22, -0.1, 0], spine: [-0.08, 0, 0], armR: [-2.85, 0, -0.3], foreR: [-1.1, 0.2, 0], handR: [-0.5, 0, 0], head: [-0.15, 0, 0] }],
+    [0.3, { chest: [0.05, 0, 0], spine: [0.03, 0, 0], armR: [-2.3, 0.3, -0.15], foreR: [-0.6, 0.25, 0], handR: [0.3, 0, 0], head: [0, 0, 0] }],
+    [0.36, { chest: [0.3, 0, 0], spine: [0.15, 0, 0], armR: [-1.45, 0.25, 0.2], foreR: [-0.2, 0.2, 0], handR: [0.85, 0, 0], head: [0.15, 0, 0] }],
+    [0.52, { chest: [0.38, 0, 0], spine: [0.2, 0, 0], armR: [-0.95, 0.2, 0.25], foreR: [-0.15, 0.2, 0], handR: [1.0, 0, 0], head: [0.2, 0, 0] }],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+  thrust: SWINGS.thrust,
+  // Overhand: up behind the head and all the way down through the middle.
+  smite: [
+    SWINGS.smite[0],
+    SWINGS.smite[1],
+    [0.32, { chest: [0.05, 0.05, 0], spine: [0.03, 0, 0], armR: [-2.3, 0.3, -0.15], foreR: [-0.7, 0.25, 0], handR: [0.4, 0, 0], head: [0, 0, 0] }],
+    SWINGS.smite[2],
+    SWINGS.smite[3],
+    [0.92, READY_R],
+    [1, READY_R],
+  ],
+}).map(([name, keys]) => [name, keys.map(mirrored)]));
+
 function attack(k, t, style) {
   const heavy = style.heavy ?? 0;
   // Heavier is slower into the swing (the same shape, later).
@@ -295,7 +343,8 @@ function attack(k, t, style) {
   k.turn('hips', 0, -0.12 * s, 0);
   k.turn('thighL', -0.4 * s, 0, 0); k.turn('shinL', 0.5 * s, 0, 0); k.turn('footL', -0.1 * s, 0, 0);
   k.turn('thighR', 0.3 * s, 0, 0); k.turn('shinR', 0.2 * s, 0, 0); k.turn('footR', 0.15 * s, 0, 0); k.turn('toesR', -0.35 * s, 0, 0);
-  keyed(k, tt, SWINGS[kind]);
+  // The chop is always made with both hands.
+  keyed(k, tt, ((style.both || kind === 'chop') && BOTH[kind]) || SWINGS[kind]);
 }
 
 function talking(k, T, { talk = 1, think = 0, listen = 0, beat = 0 } = {}, armed) {

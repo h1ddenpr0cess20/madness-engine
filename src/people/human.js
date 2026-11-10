@@ -337,8 +337,10 @@ const handAxes = (FINGERS) => Object.fromEntries(FINGER_NAMES.map((name) => {
 const HAND_AXES = Object.fromEntries(Object.entries(FIGURES).map(([sex, f]) => [sex, handAxes(f.fingers)]));
 const handAxesMale = HAND_AXES.male;
 
-// The swings made with both hands on the grip.
+// The swings made with both hands on the grip, whatever the weapon; and the swings a two-handed weapon
+// (its `handling.hands`, see weapons/categories) is always swung with both.
 const TWO_HANDED = new Set(['chop']);
+const WEAPON_SWINGS = new Set(['slash', 'chop', 'thrust', 'smite']), UNARMED = new Set(['punch', 'shove']);
 
 // Where a held grip's middle sits in the (left) hand at rest, and how its axis tilts: his, and hers (the same place in her hand).
 const GRIP_AT = [0.283, 0.79, 0.04], GRIP_TILT = -0.05;
@@ -706,9 +708,15 @@ export function createHuman(GFX, options = {}) {
     }
   }
 
-  /** How much the left hand takes the right's weapon too, in `state`: for the swings made with both hands. */
+  /**
+   * How much the left hand takes the right's weapon too, in `state`: in the swings made with both hands,
+   * and in every weapon swing of a weapon made for two.
+   */
   function twoHanded(state) {
-    if (state.clip !== 'attack' || !TWO_HANDED.has(style.attack)) return 0;
+    if (state.clip !== 'attack') return 0;
+    // As the motion does: a swing it does not know is a slash.
+    const swing = WEAPON_SWINGS.has(style.attack) || UNARMED.has(style.attack) ? style.attack : 'slash';
+    if (!(TWO_HANDED.has(swing) || (WEAPON_SWINGS.has(swing) && held.R?.hands === 'two-handed'))) return 0;
     const t = state.t ?? 0;
     return Math.min(1, Math.max(0, (t - 0.04) / 0.12)) * Math.min(1, Math.max(0, (0.88 - t) / 0.12));
   }
@@ -814,13 +822,15 @@ export function createHuman(GFX, options = {}) {
     last = state;
     skeleton.reset();
     const armed = held.R ? 'R' : null;
-    moveBlended(state, { ...style, armed, heavy: style.heavy ?? 0 });
+    // A weapon made for two hands is swung with both.
+    const both = armed && !held.L && held.R.hands === 'two-handed';
+    moveBlended(state, { ...style, armed, both, heavy: style.heavy ?? 0 });
     shrug(skeleton, JOINTS);
-    const both = held.R && !held.L ? twoHanded(state) : 0;
-    if (both) bothHands(both);
+    const grip = held.R && !held.L ? twoHanded(state) : 0;
+    if (grip) bothHands(grip);
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
-      const shape = held[S] || (S === 'L' && both > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
+      const shape = held[S] || (S === 'L' && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
         // Running, a hand that was left easy closes loosely.
         : state.clip === 'run' && want === 'relaxed' ? HAND_POSES.loose
         : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
@@ -888,7 +898,9 @@ export function createHuman(GFX, options = {}) {
     group.add(object);
     // Where a second hand takes it, below the first (toward the pommel), as far down the grip as there is.
     const second = bounds ? Math.max(bounds.bottom + 0.03, y - 0.085) : y - 0.085;
-    held[S] = { thing, object, rest, second };
+    // How many hands it is made for (a weapon's `handling`); anything else is taken as one-handed.
+    const hands = thing.handling?.hands ?? 'one-handed';
+    held[S] = { thing, object, rest, second, hands };
     if (last) pose(last);
     return api;
   }
