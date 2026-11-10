@@ -271,7 +271,8 @@ export function profile(list) {
 export function caster(part) {
   const P = part.pos, T = part.idx, CELL = 0.02;
   const cells = new Map();
-  const key = (i, j, k) => `${i},${j},${k}`;
+  // A cell as one number (cells within ±10 m of the origin at CELL 2 cm).
+  const key = (i, j, k) => ((i + 512) * 1024 + (j + 512)) * 1024 + (k + 512);
   for (let t = 0; t < T.length; t += 3) {
     const a = T[t] * 3, b = T[t + 1] * 3, c = T[t + 2] * 3;
     const lo = [0, 1, 2].map((k) => Math.floor(Math.min(P[a + k], P[b + k], P[c + k]) / CELL));

@@ -40,10 +40,8 @@ const L = LIMBS.length;
 
 const fitters = new Map();
 const G = 0.02;
-/** A cell of the grid (G across) the skin is hashed in, as one number. */
-const cellKey = (x, y, z) => ((x + 256) * 512 + (y + 256)) * 512 + (z + 256);
 
-/** His skin and hers, hashed for finding the skin near a point: where each point is on him, how far it moves to hers, and its weights. */
+/** His skin and hers, in a grid for finding the skin near a point: where each point is on him, how far it moves to hers, and its weights. */
 function fitter(sex) {
   if (fitters.has(sex)) return fitters.get(sex);
   const him = baseMesh(), her = baseMesh(sex);
@@ -60,18 +58,27 @@ function fitter(sex) {
   // Only the points some surface uses (the base mesh carries helpers we do not keep).
   const used = new Uint8Array(count);
   for (const s of Object.values(him.surfaces)) for (const v of s.v) used[v] = 1;
-  const lists = new Map();
-  for (let i = 0; i < count; i++) {
-    if (!used[i]) continue;
-    const k = cellKey(Math.floor(M[i * 3] / G), Math.floor(M[i * 3 + 1] / G), Math.floor(M[i * 3 + 2] / G));
-    if (!lists.has(k)) lists.set(k, []);
-    lists.get(k).push(i);
-  }
-  const hash = new Map([...lists].map(([k, l]) => [k, Int32Array.from(l)]));
+  // The skin's points in a grid of cells G across: each cell's points together (in the order they come),
+  // with where they are, how far each moves and its limbs alongside, so a cell is read straight through.
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < count; i++) if (used[i]) for (let a = 0; a < 3; a++) { const c = Math.floor(M[i * 3 + a] / G); lo[a] = Math.min(lo[a], c); hi[a] = Math.max(hi[a], c); }
+  const dims = [0, 1, 2].map((a) => hi[a] - lo[a] + 1);
+  const cellOf = (i) => ((Math.floor(M[i * 3] / G) - lo[0]) * dims[1] + (Math.floor(M[i * 3 + 1] / G) - lo[1])) * dims[2] + (Math.floor(M[i * 3 + 2] / G) - lo[2]);
+  const start = new Int32Array(dims[0] * dims[1] * dims[2] + 1);
+  for (let i = 0; i < count; i++) if (used[i]) start[cellOf(i) + 1]++;
+  for (let c = 0; c < start.length - 1; c++) start[c + 1] += start[c];
+  const fill = start.slice(0, -1), order = new Int32Array(start[start.length - 1]);
+  for (let i = 0; i < count; i++) if (used[i]) order[fill[cellOf(i)]++] = i;
   // Each skin point's weights summed limb by limb, for comparing with a point's own.
   const LW = new Float32Array(count * L);
   for (let i = 0; i < count; i++) for (let k = 0; k < 4; k++) if (SB[i * 4 + k] >= 0) LW[i * L + SB[i * 4 + k]] += SW[i * 4 + k];
-  const f = { M, D, SB, SW, LW, hash, sex, figure: figureOf(sex), male: figureOf('male'), acc: new Float64Array(32) };
+  const CM = new Float64Array(order.length * 3), CD = new Float64Array(order.length * 3), CL = new Float32Array(order.length * L);
+  order.forEach((v, j) => {
+    for (let a = 0; a < 3; a++) { CM[j * 3 + a] = M[v * 3 + a]; CD[j * 3 + a] = D[v * 3 + a]; }
+    for (let l = 0; l < L; l++) CL[j * L + l] = LW[v * L + l];
+  });
+  const grid = { lo, dims, start, CM, CD, CL };
+  const f = { M, D, SB, SW, LW, grid, sex, figure: figureOf(sex), male: figureOf('male'), acc: new Float64Array(32) };
   fitters.set(sex, f);
   return f;
 }
@@ -97,19 +104,26 @@ function limbSums(qb, qw, out) {
  * Σ k·e·(D − mean) is Σ k·e·D − mean·Σ k·e).
  */
 const qsum = new Float32Array(L);
+const SPAN = new Int32Array(2);
 function shiftAt(F, q, qb, qw, out, grad = null) {
-  const { M, D, LW, hash } = F;
-  const cx = Math.floor(q[0] / G), cy = Math.floor(q[1] / G), cz = Math.floor(q[2] / G);
+  const { lo, dims, start, CM, CD, CL } = F.grid;
+  const cx = Math.floor(q[0] / G) - lo[0], cy = Math.floor(q[1] / G) - lo[1], cz = Math.floor(q[2] / G) - lo[2];
+  /** Cell (i, j, k) from q's: its first point and one past its last (nothing outside the grid). */
+  const span = (i, j, k) => {
+    const x = cx + i, y = cy + j, z = cz + k;
+    if (x < 0 || y < 0 || z < 0 || x >= dims[0] || y >= dims[1] || z >= dims[2]) return 0;
+    const c = (x * dims[1] + y) * dims[2] + z;
+    SPAN[0] = start[c]; SPAN[1] = start[c + 1];
+    return SPAN[1] - SPAN[0];
+  };
   // The nearest skin in the cells round q's own, those further out until some is found.
   let near = Infinity;
   for (let r = 1; !Number.isFinite(near); r += 2) {
     if (r > 13) break;
     for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) for (let k = -r; k <= r; k++) {
-      const cell = hash.get(cellKey(cx + i, cy + j, cz + k));
-      if (!cell) continue;
-      for (let n = 0; n < cell.length; n++) {
-        const v = cell[n];
-        const d2 = (M[v * 3] - q[0]) ** 2 + (M[v * 3 + 1] - q[1]) ** 2 + (M[v * 3 + 2] - q[2]) ** 2;
+      if (!span(i, j, k)) continue;
+      for (let n = SPAN[0]; n < SPAN[1]; n++) {
+        const d2 = (CM[n * 3] - q[0]) ** 2 + (CM[n * 3 + 1] - q[1]) ** 2 + (CM[n * 3 + 2] - q[2]) ** 2;
         if (d2 < near) near = d2;
       }
     }
@@ -130,17 +144,15 @@ function shiftAt(F, q, qb, qw, out, grad = null) {
       for (let k = -reach; k <= reach; k++) {
         const dz = Math.max(0, Math.abs(k) - 1) * G;
         if (dx * dx + dy * dy + dz * dz > far) continue;
-        const cell = hash.get(cellKey(cx + i, cy + j, cz + k));
-        if (!cell) continue;
-        for (let n = 0; n < cell.length; n++) {
-          const v = cell[n];
-          const e0 = q[0] - M[v * 3], e1 = q[1] - M[v * 3 + 1], e2 = q[2] - M[v * 3 + 2];
+        if (!span(i, j, k)) continue;
+        for (let n = SPAN[0]; n < SPAN[1]; n++) {
+          const e0 = q[0] - CM[n * 3], e1 = q[1] - CM[n * 3 + 1], e2 = q[2] - CM[n * 3 + 2];
           const d2 = e0 * e0 + e1 * e1 + e2 * e2;
           if (d2 > far) continue;
           const g = Math.exp(-d2 / s2);
           let same = 1;
-          if (weighted) { same = 0; for (let l = 0; l < L; l++) { const a = qsum[l], b = LW[v * L + l]; same += a < b ? a : b; } }
-          const D0 = D[v * 3], D1 = D[v * 3 + 1], D2 = D[v * 3 + 2];
+          if (weighted) { same = 0; for (let l = 0; l < L; l++) { const a = qsum[l], b = CL[n * L + l]; same += a < b ? a : b; } }
+          const D0 = CD[n * 3], D1 = CD[n * 3 + 1], D2 = CD[n * 3 + 2];
           for (let t = 0, w = g * same; t < 2; t++, w = g) {
             if (!w) continue;
             const o = t * 16;

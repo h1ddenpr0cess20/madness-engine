@@ -1,7 +1,7 @@
 import { bodyLevel } from './basemesh.js';
 import { BONES as BAKED_BONES } from './data/base.js';
 import { withLipCorners } from './head.js';
-import { cross, dot, noise3, norm, Part, profile, smooth, sub } from './kit.js';
+import { cross, dot, len, noise3, norm, Part, profile, smooth, sub } from './kit.js';
 import { EYE, FACE } from './skeleton.js';
 
 /**
@@ -139,7 +139,8 @@ function surface() {
     for (const v of [a, b, c, d]) { n[v * 3] += q[0]; n[v * 3 + 1] += q[1]; n[v * 3 + 2] += q[2]; }
   }
   const CELL = 0.01, cells = new Map();
-  const key = (x, y, z) => `${x},${y},${z}`;
+  // A cell as one number (cells within ±5 m of the origin: the body is well inside).
+  const key = (x, y, z) => ((x + 512) * 1024 + (y + 512)) * 1024 + (z + 512);
   const near = [];
   for (let v = 0; v < count; v++) {
     if (pos[v * 3 + 1] < 1.45) continue;
@@ -271,7 +272,8 @@ function torso() {
   }
   const limb = new Set(BAKED_BONES.map((b, i) => (/^(arm|fore|hand|thumb|index|middle|ring|pinky)/.test(b) ? i : -1)).filter((i) => i >= 0));
   const CELL = 0.02, cells = new Map();
-  const key = (x, y, z) => `${x},${y},${z}`;
+  // A cell as one number (cells within ±5 m of the origin: the body is well inside).
+  const key = (x, y, z) => ((x + 512) * 1024 + (y + 512)) * 1024 + (z + 512);
   for (let v = 0; v < count; v++) {
     if (pos[v * 3 + 1] < 0.95 || !Object.keys(weights[v]).length) continue;
     // Not the arms: the hair falls behind them, and they move away from it.
@@ -369,22 +371,55 @@ function fall(style, [root, n0], L, layer, fine, rnd) {
 // The strand texture: COLUMNS clumps side by side, root at v 0, tip at v 1.
 const COLUMNS = 4;
 
+/**
+ * Which of a strand's points a card needs: its ends, every point where it
+ * bends or turns (more than `tol` off the straight line between the points
+ * kept either side, or its normal more than 0.03 rad off), and every point
+ * in `blend` (heights where its skin weights change, so it bends there as
+ * the body under it does). Where hair hangs straight the rest add nothing.
+ */
+function needed({ pts, normals }, tol = 0.0004, blend = [1.34, 1.64]) {
+  const n = pts.length, keep = new Uint8Array(n);
+  keep[0] = keep[n - 1] = 1;
+  for (let i = 0; i < n; i++) if (pts[i][1] > blend[0] && pts[i][1] < blend[1]) keep[i] = 1;
+  const split = (a, b) => {
+    let worst = 0, at = -1;
+    const ab = sub(pts[b], pts[a]), L2 = dot(ab, ab) || 1;
+    for (let i = a + 1; i < b; i++) {
+      const t = dot(sub(pts[i], pts[a]), ab) / L2;
+      const off = len(sub(sub(pts[i], pts[a]), times(ab, t)));
+      const turn = Math.acos(Math.max(-1, Math.min(1, dot(normals[i], norm(add3(times(normals[a], 1 - t), times(normals[b], t)))))));
+      const bad = Math.max(off / tol, turn / 0.03);
+      if (bad > worst) { worst = bad; at = i; }
+    }
+    if (worst > 1) { keep[at] = 1; split(a, at); split(at, b); }
+  };
+  let a = 0;
+  for (let i = 1; i < n; i++) if (keep[i]) { split(a, i); a = i; }
+  return keep;
+}
+
 /** One card into `part` along a strand: `width` across at the root, narrowing to the tip; the texture's `column`. */
-function card(part, { pts, normals }, width, column, weights, shade, rootFade = 0) {
+function card(part, strand, width, column, weights, shade, rootFade = 0) {
+  // Only the points it needs; each keeps where along the strand it was (`ts`), for the taper and shading.
+  const keep = needed(strand);
+  const all = strand.pts.length - 1;
+  const ts = [], pts = [], normals = [];
+  strand.pts.forEach((p, i) => { if (keep[i]) { ts.push(i / all); pts.push(p); normals.push(strand.normals[i]); } });
   const steps = pts.length - 1;
   // Where along the texture each point is: evenly, or (for long hair, `rootFade` metres) the texture's
   // fading-in roots kept to the first few centimetres, the rest of it spread over the length.
   const arc = [0];
   for (let i = 1; i <= steps; i++) arc.push(arc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
   const L = arc[steps] || 1;
-  const vOf = (i) => (!rootFade ? i / steps : arc[i] < rootFade ? (0.18 * arc[i]) / rootFade : 0.18 + (0.82 * (arc[i] - rootFade)) / Math.max(1e-6, L - rootFade));
+  const vOf = (i) => (!rootFade ? ts[i] : arc[i] < rootFade ? (0.18 * arc[i]) / rootFade : 0.18 + (0.82 * (arc[i] - rootFade)) / Math.max(1e-6, L - rootFade));
   // Faced out from the head, so the side seen from outside is the front, its normal the head's.
   part.grid(steps, 1, (i, j) => {
     const a = pts[Math.max(0, i - 1)], b = pts[Math.min(steps, i + 1)];
     const along = norm(sub(b, a));
     const n = normals[i];
     const side = norm(cross(along, n));
-    const t = i / steps;
+    const t = ts[i];
     const w = width * (1 - 0.55 * t ** 1.4) * (j - 0.5);
     const p = [pts[i][0] + side[0] * w, pts[i][1] + side[1] * w, pts[i][2] + side[2] * w];
     return { p, uv: [(column + 0.04 + 0.92 * j) / COLUMNS, vOf(i)], w: typeof weights === 'function' ? weights(pts[i]) : weights, tint: shade(t), n, zone: { zone: 'head', y: p[1], d: 0 } };
