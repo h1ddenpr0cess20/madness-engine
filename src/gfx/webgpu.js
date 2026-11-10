@@ -25,7 +25,7 @@ const DEPTH_FORMAT = 'depth24plus';
 const FRAME_SIZE = 1040;
 const DRAW_SIZE = 480;
 const OBJECT_SIZE = 320;
-const ARENA_SIZE = 4 << 20;
+const ARENA_SIZE = 16 << 20;
 const ALIGN = 256;
 
 const LOCATIONS = { position: 0, normal: 1, uv: 2, color: 3 };
