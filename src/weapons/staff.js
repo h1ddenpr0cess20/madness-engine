@@ -5,7 +5,7 @@ import { METALS } from '../props/metalglobe.js';
 import { createGlassGlobe } from '../props/glassglobe.js';
 import { loadMoonEtch } from '../textures/moon/map.js';
 import { loadMarsEtch } from '../textures/mars/map.js';
-import { loadJupiterEtch, loadJupiterMap } from '../textures/jupiter/map.js';
+import { createJupiterEtch, loadJupiterMap } from '../textures/jupiter/map.js';
 
 const TOPPER_LABELS = Object.freeze({
   orb: 'Krystal crystal orb',
@@ -27,7 +27,8 @@ async function loadGlassPlanetSurface(globe, kind) {
     const etch = await loadMarsEtch();
     if (etch) globe.setEtchCanvas(etch);
   } else if (kind === 'jupiter') {
-    const [etch, field] = await Promise.all([loadJupiterEtch(), loadJupiterMap()]);
+    const field = await loadJupiterMap();
+    const etch = field ? createJupiterEtch(field) : null;
     if (etch) globe.setEtchCanvas(etch);
     if (field) globe.setField(field);
   }
