@@ -611,8 +611,8 @@ $('colourcopy').onclick = async () => {
       gripColor: view.colours.gripColor ?? view.item.palette.grip,
       threadColor: view.colours.threadColor ?? view.item.palette.thread,
     };
-    code = "import * as GFX from 'madness-engine/gfx';\\n"
-      + "import { " + factory + " } from 'madness-engine/weapons';\\n\\n"
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { " + factory + " } from 'madness-engine/weapons';\n\n"
       + "const staff = " + factory + "(GFX, " + JSON.stringify(args, null, 2) + ");";
   } else if (view.item.palette?.kind === 'granite-weapon') {
     const factory = view.item.factory;
