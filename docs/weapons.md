@@ -196,43 +196,59 @@ sword.setBladeMist(false);
 
 ## Wizard staff
 
-`createStaff(GFX, options)` builds a gnarled wizard's staff about 1.7 m tall,
-carved entirely from the library's wood textures (`textures/wood`, via
-`woodBoardMaterial`), with the grain running along the staff. The shaft is a
-tapering rod with a few knots, a leather grip with crossed thread, and two
-roots entwined up toward the head. The head is a cradle of twisting, knotted
-root tendrils that grows out of the shaft, bound by winding bands, and rises
-in a ragged lip that clasps the topper. All of it is the same wood as the
-shaft (only the optional grip wrap of leather and thread is not), and `setWood()` changes it
-all at once. The `seed` shapes the gnarls: the same seed gives the same
-staff.
+`createStaff(GFX, options)` builds a gnarled wooden wizard's staff about 1.7 m
+tall, using the library's wood textures (`textures/wood`, via
+`woodBoardMaterial`). `createMetalStaff(GFX, options)` builds the same staff
+with the structure cast in a selected engine metal. The metal version keeps the
+same shaft profile, entwined roots, cradle, winding bands, tendrils and overall
+dimensions; only the structural material changes. The leather grip and crossed
+thread remain as the contrasting hand wrap.
 
-The topper is the Krystal crystal orb (the default, with its ray-marched
-visions) or, optionally, the Magic Egg's glass egg with its white/yellow mist,
-stood on its broad end with the point up. Use `topper: 'none'` for an empty
-cradle. The orb and egg are each built the first time they are shown.
+The wooden staff accepts `species` (any `WOOD_SPECIES`, default `walnut`) and
+`finish` (`raw`, `sanded`, `lacquered`, default `lacquered`), and
+`setWood()` changes the structural wood. The metal staff accepts `metal`,
+defaults to `gold`, and `setMetal()` changes its finish. Available metal
+names are the keys of `METALS`: `steel`, `silver`, `gold`, `copper`,
+`bronze`, `brass`, `titanium`, `chrome`, `platinum`, `rose gold`,
+`iron` and `pewter`. The metal surface uses the engine's reflective physical
+metal material and therefore benefits from a scene environment.
+
+The topper can be the Krystal crystal orb (the default, with its ray-marched
+visions), the Magic Egg's glass egg, the Madness marble with its 3D spark, or
+the glass globe, Moon, Mars and Jupiter. All four glass-planet toppers use the
+shared glass-globe construction with mist enabled; Moon and Mars use their
+existing etched relief maps, Earth uses the globe's existing etching, and
+Jupiter adds its cloud map inside the glass. Use `topper: 'none'` for an empty
+cradle. Assets are built lazily when first selected. Planetary surface images
+load asynchronously; await `staff.topperReady` after selecting one when code
+needs to wait for its surface to finish loading.
 
 | Option | Choices | Default |
 |---|---|---|
 | `species` | any `WOOD_SPECIES` (walnut, oak, mahogany, maple, cherry, ash, pine, teak) | `walnut` |
 | `finish` | `raw`, `sanded`, `lacquered` | `lacquered` |
+| `metal` | any key of `METALS` | `gold` on `createMetalStaff` |
 | `wrap` | `true` or `false`: the leather and thread wrap on the grip (`setWrap()` toggles it) | `true` |
 | `gripColor`, `threadColor` | six-digit hex, for the wrap | `#3a2418`, `#e2b857` |
-| `topper` | `orb`, `egg`, `none` | `orb` |
+| `topper` | `orb`, `egg`, `marble`, `globe`, `moon`, `mars`, `jupiter`, `none` | `orb` |
 | `vine` | `true` or `false`: the roots entwined up the shaft (fixed at creation) | `true` |
 | `tendrils` | whole number from 8 to 32: how many roots make the cradle (fixed at creation) | `18` |
 | `seed` | any number: shapes the gnarls (fixed at creation) | `7` |
 
 ```js
 import * as GFX from 'madness-engine/gfx';
-import { createStaff } from 'madness-engine/weapons';
+import { createStaff, createMetalStaff } from 'madness-engine/weapons';
 
-const staff = createStaff(GFX, { species: 'cherry', topper: 'egg' });
-scene.add(staff.group);
+const wood = createStaff(GFX, { species: 'cherry', topper: 'egg' });
+const metal = createMetalStaff(GFX, { metal: 'gold', topper: 'jupiter' });
+scene.add(wood.group, metal.group);
 
-staff.setTopper('orb');
-staff.setWood('oak', 'sanded');
-staff.setGripColor('#25364a').setThreadColor('#a7e6ff');
+wood.setTopper('marble');
+wood.setWood('oak', 'sanded');
+metal.setMetal('rose gold');
+metal.setTopper('moon');
+await metal.topperReady;
+metal.setGripColor('#25364a').setThreadColor('#a7e6ff');
 ```
 
 ## Magic Egg Sword, Dagger and Greatsword
