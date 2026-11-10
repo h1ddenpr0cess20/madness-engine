@@ -1157,12 +1157,16 @@ function jacket(detail, under, open) {
 
 /** How far inside a garment's openings the skin under it is kept, so looking in at a collar, cuff or hem never shows a hole. */
 const OPEN = 0.06;
+/** How far in from a jacket's open front edge what is under it is kept: well within the facing turned in there (2.5 cm), so it is never seen. */
+const FRONT_CLEAR = 0.012;
 
 /** The leather bomber, worn open or zipped: either is worn in the one `outer` slot. */
 function bomber(open) {
   const inside = ({ y, sx = 0, z = 0 }, margin) => {
     const th = Math.atan2(sx, z - SHIRT_Z);
-    const shut = !open || Math.cos(th) < 0.2 || Math.abs(sx) - frontGap(y) > margin;
+    // At the open fronts only the facing turned in behind the edge needs clearing, not the whole margin:
+    // the cloth under further in is hidden, or it shows through as the arms lift the leather off it.
+    const shut = !open || Math.cos(th) < 0.2 || Math.abs(sx) - frontGap(y) > Math.min(margin, FRONT_CLEAR);
     return y > JACKET.hem + margin && y < jacketNeck(th) - margin * 0.5 && shut;
   };
   return {
