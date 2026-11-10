@@ -56,7 +56,7 @@ range follows their own measured reach.
 | Broadsword | one-handed | medium | 0.85 m |
 | Greatsword | two-handed | long | 1.24 m |
 | Morningstar | one-handed | medium | 0.94 m |
-| Wizard staff | one-handed | ranged | not banded |
+| Wizard staff | two-handed | ranged | not banded |
 
 ```js
 import * as GFX from 'madness-engine/gfx';
@@ -306,6 +306,12 @@ const planetMaps = { mars: await loadGlassPlanetMaps('mars') };
 const golden = createStaff(GFX, { metal: 'gold', topper: 'mars', planetMaps });
 golden.setMetal('rose gold');
 ```
+
+It is a two-handed weapon (`handling.hands`), and ranged. Its `gripBounds`
+are the leather grip, 0.8 to 1.1 m up from its foot: a human holds it there,
+upright at its side when it stands or walks, and swings it with both hands
+on the grip, as a quarterstaff is (`man.hold(createStaff(GFX))`).
+
 
 `staff.info` reports the wood or the metal, and the topper by its name (for
 example `Glass Mars`).

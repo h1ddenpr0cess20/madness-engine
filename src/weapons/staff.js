@@ -46,10 +46,11 @@ const TOPPER_LABELS = Object.freeze({
 });
 
 /**
- * The staff's handling: held in one hand, as the engine's wizard and doomlord
- * figures hold theirs, and ranged, a focus for spells rather than a melee reach.
+ * The staff's handling: held in both hands (a staff that long is wielded with
+ * two, as a quarterstaff is), and ranged, a focus for spells rather than a
+ * melee reach.
  */
-export const STAFF_HANDLING = handlingOf({ hands: HANDS.ONE, ranged: true });
+export const STAFF_HANDLING = handlingOf({ hands: HANDS.TWO, ranged: true });
 
 const GRIP_Y = [0.8, 1.1];
 const HEAD_Y = 1.55;
@@ -463,6 +464,8 @@ export function createStaff(GFX, {
     get tendrils() { return tendrils; },
     get seed() { return seed; },
     handling: STAFF_HANDLING,
+    /** Where along it (its own y, from its foot) the leather grip runs: a hand takes it there. */
+    gripBounds: Object.freeze({ bottom: GRIP_Y[0], top: GRIP_Y[1] }),
     get dimensions() {
       return Object.freeze({ ...STAFF_DIMENSIONS, overallLength: dims(), tendrils, unit: 'm' });
     },

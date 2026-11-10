@@ -45,7 +45,7 @@ const CASES = [
   ['createBroadsword', 'one-handed', 'medium'],
   ['createGreatsword', 'two-handed', 'long'],
   ['createMorningstar', 'one-handed', 'medium'],
-  ['createStaff', 'one-handed', 'ranged'],
+  ['createStaff', 'two-handed', 'ranged'],
   ['createBananaDagger', 'one-handed', 'short'],
   ['createBananaBroadsword', 'one-handed', 'medium'],
   ['createKrystalDagger', 'one-handed', 'short'],

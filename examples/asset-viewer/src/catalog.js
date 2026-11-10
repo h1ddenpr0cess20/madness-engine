@@ -628,8 +628,28 @@ function weaponItems() {
   }));
 }
 
+/** A staff topper's name for a menu: 'jupiter-etched' → 'Jupiter (etched)', 'orb' → 'Krystal orb'. */
+const topperName = (t) => ({ orb: 'Krystal orb', egg: 'glass egg', 'jupiter-etched': 'Jupiter (etched)' }[t] ?? `${t[0].toUpperCase()}${t.slice(1)}`);
+
+/** The staves for the human to hold: the wooden one with each topper, the metal one with the orb and the egg. */
+const HUMAN_STAVES = [
+  ...STAFF_TOPPERS.filter((t) => t !== 'none').map((t) => [`staff:wood:${t}`, `Wizard Staff, ${topperName(t)}`]),
+  ...['orb', 'egg'].map((t) => [`staff:gold:${t}`, `Metal Wizard Staff, ${topperName(t)}`]),
+];
+
 /** Everything on the weapons shelf, for the human to hold. */
-const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.factory, w.name])];
+const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.factory, w.name]), ...HUMAN_STAVES];
+
+/** A staff from a `staff:wood|gold:topper` choice, its planet's maps loaded first if it has one. */
+async function humanStaff(choice) {
+  const [, kind, topper] = choice.split(':');
+  const [{ createStaff }, planets] = await Promise.all([
+    import('../../../src/weapons/staff.js'),
+    import('../../../src/props/glass-planets.js'),
+  ]);
+  const planetMaps = planets.GLASS_PLANET_NAMES.includes(topper) ? { [topper]: await planets.loadGlassPlanetMaps(topper) } : {};
+  return createStaff(GFX, { ...(kind === 'gold' ? { metal: 'gold' } : {}), topper, planetMaps });
+}
 
 /** The real-size, dressable humans, a man and a woman: the wardrobe, the look, the face and hands, and a weapon from the shelf to hold. */
 function humanItems() {
@@ -656,9 +676,14 @@ function humanItem(sex) {
       let weapon = 'none', attack = 'slash', handL = 'relaxed';
       let pair = man.glasses ?? 'aviator';
       const style = {};
-      const rearm = () => {
+      // (A staff may load its planet's maps first: only the latest choice is put in his hand.)
+      let arming = 0;
+      const rearm = async () => {
+        const mine = ++arming;
         man.release('R');
-        if (weapon !== 'none') man.hold(weapons[weapon](GFX, {}));
+        if (weapon === 'none') return;
+        const thing = weapon.startsWith('staff:') ? await humanStaff(weapon) : weapons[weapon](GFX, {});
+        if (mine === arming) man.hold(thing);
       };
       const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
       const ui = [
