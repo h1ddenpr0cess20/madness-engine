@@ -76,6 +76,22 @@ test('the glass planets reuse the glass globe factory and all start with mist en
 });
 
 test('the metal staff preserves the wooden staff design while using the selected engine metal throughout its structure', () => {
+  const defaultStaff = createMetalStaff(GFX, { topper: 'none', tendrils: 12 });
+  assert.equal(defaultStaff.metal, 'gold', 'gold is the default metal finish');
+  const woodReference = createStaff(GFX, { topper: 'none', tendrils: 12 });
+  assert.deepEqual(
+    [...defaultStaff.shaft.geometry.attributes.position.array],
+    [...woodReference.shaft.geometry.attributes.position.array],
+    'the metal version keeps the exact same shaft geometry',
+  );
+  const metalRoots = defaultStaff.head.children.find((child) => child.name === 'metal tendril 1');
+  const woodRoots = woodReference.head.children.find((child) => child.name === 'root tendril 1');
+  assert.deepEqual(
+    [...metalRoots.geometry.attributes.position.array],
+    [...woodRoots.geometry.attributes.position.array],
+    'the metal version keeps the exact same carved root geometry',
+  );
+
   const staff = createMetalStaff(GFX, { metal: 'copper', tendrils: 12 });
   assert.equal(staff.materialType, 'metal');
   assert.equal(staff.metal, 'copper');
