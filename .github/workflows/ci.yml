@@ -152,11 +152,12 @@ jobs:
             const waitForTopper = async (kind) => {
               await topperSelect.selectOption(kind);
               await page.waitForFunction(
-                () => document.querySelector('#busy')?.style.display === 'none'
-                  && !document.querySelector('#err')?.textContent,
+                () => document.querySelector('#busy')?.style.display === 'none',
                 null,
                 { timeout: 120000 },
               );
+              const errorText = await page.locator('#err').textContent();
+              if (errorText) throw new Error(errorText);
               await page.waitForTimeout(500);
             };
 
