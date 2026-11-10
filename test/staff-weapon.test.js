@@ -83,6 +83,10 @@ test('the glass planets reuse the glass globe factory and all start with mist en
     speed: 0.22, swirl: 2, churn: 0.5, glow: 2.1, core: 0.15,
     hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], bands: 0, duo: null,
   });
+  assert.equal(staff.moon.spinRate, 0.12);
+  assert.equal(staff.mars.spinRate, 0.12);
+  assert.ok(Math.abs(staff.moon.spin.rotation.x) < 1e-9);
+  assert.ok(Math.abs(staff.mars.spin.rotation.x - (-5 * Math.PI / 180)) < 1e-9);
 
   staff.setTopper('jupiter');
   await staff.topperReady;
@@ -91,6 +95,8 @@ test('the glass planets reuse the glass globe factory and all start with mist en
     speed: 0.22, swirl: 2, churn: 0.5, glow: 0.4, core: 0.02,
     hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], bands: 0, duo: null,
   });
+  assert.equal(staff.jupiter.spinRate, 0.12);
+  assert.ok(Math.abs(staff.jupiter.spin.rotation.x - (-22 * Math.PI / 180)) < 1e-9);
 
   staff.setTopper('jupiter-etched');
   await staff.topperReady;

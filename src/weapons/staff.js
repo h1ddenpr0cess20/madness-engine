@@ -21,24 +21,35 @@ const TOPPER_LABELS = Object.freeze({
 
 /** Use the same planet surfaces and mist settings as the existing asset-viewer assets. */
 async function loadGlassPlanetSurface(globe, kind) {
-  if (kind === 'moon') {
+  if (kind === 'globe') {
+    globe.orient(40, -95);
+    globe.spinRate = 0.12;
+  } else if (kind === 'moon') {
     const etch = await loadMoonEtch();
     if (etch) globe.setEtchCanvas(etch);
     globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 2.1, core: 0.15 });
+    globe.orient(0, 0);
+    globe.spinRate = 0.12;
   } else if (kind === 'mars') {
     const etch = await loadMarsEtch();
     if (etch) globe.setEtchCanvas(etch);
     globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 2.1, core: 0.15 });
+    globe.orient(-5, -90);
+    globe.spinRate = 0.12;
   } else if (kind === 'jupiter') {
     // The existing glass Jupiter: clear glass, pale internal mist, and the cloud image drifting as a field.
     const field = await loadJupiterMap();
     if (field) globe.setField(field, { shell: 0.9, glow: 1.3 }).refreshField();
     globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 0.4, core: 0.02 });
+    globe.orient(-22, 0);
+    globe.spinRate = 0.12;
   } else if (kind === 'jupiter-etched') {
     // The separate etched Jupiter: cloud zones in the glass and the existing banded, multi-colour mist.
     const etch = await loadJupiterEtch();
     if (etch) globe.setEtchCanvas(etch);
     globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.02, 0.62, 0.78]], glow: 2.4, core: 0.1, swirl: 0.6 });
+    globe.orient(-22, 0);
+    globe.spinRate = 0.12;
   }
 }
 
