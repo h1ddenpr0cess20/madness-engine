@@ -14,7 +14,7 @@ import { JOINTS } from './skeleton.js';
  * `heavy` (0..1, slower and deeper).
  */
 
-export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'talk', 'yell']);
+export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'flip', 'talk', 'yell']);
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
@@ -508,6 +508,8 @@ export function moveHuman(k, state = {}, style = {}) {
       k.turn('head', -0.2 * up, 0, 0);
       break;
     }
+    // Flipping a coin: standing easy (the hand that flips it, the coin and the head are posed by the human).
+    case 'flip':
     case 'idle':
     default: idle(k, T, armed);
   }

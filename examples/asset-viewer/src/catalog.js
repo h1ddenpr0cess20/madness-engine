@@ -230,7 +230,8 @@ const HEROES = [
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   )), null, { metal: METAL_CHOICES }],
   ['glass egg (debater)', () => Promise.all([import('../../../src/heroes/debater-egg/index.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
-    h.createGlassEgg({ GFX }),
+    // Its mist in it, as the glass things that have one are shown.
+    h.createGlassEgg({ GFX, mist: true }),
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   ))],
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
@@ -639,8 +640,11 @@ const HUMAN_STAVES = [
 
 /** The other things a human can carry: a book (open, to read), every hero (on the palm), the coins (between thumb and forefinger). */
 const HUMAN_CARRIES = [
-  ['book', 'Book of Madness'],
+  ['book', 'Book of Madness, open'],
+  ['book:shut', 'Book of Madness, shut'],
   ...HEROES.map(([name]) => [`hero:${name}`, `Hero: ${name}`]),
+  // The planets, in glass, metal and resin.
+  ...MOVING.filter(([name]) => /globe|earth|mars|moon|jupiter/.test(name)).map(([name]) => [`planet:${name}`, `Planet: ${name.replace('glass globe', 'glass earth')}`]),
   ['coin:claude', 'Coin: Claude'], ['coin:bitcoin', 'Coin: Bitcoin'], ['coin:political', 'Coin: political'],
 ];
 
@@ -650,13 +654,14 @@ const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.facto
 const HUMAN_LEFT = [['none', 'Nothing'], ...WEAPON_ASSETS.filter((w) => w.hands !== 'two-handed').map((w) => [w.factory, w.name]), ...HUMAN_CARRIES.filter(([v]) => v !== 'book')];
 
 /**
- * Something for the human to carry from a `HUMAN_CARRIES` choice, at the size it is held at: { thing, how }.
- * A hero is a ball about 9 cm across on the palm; a coin 2.5 cm across, pinched; the book 13 cm a page, open.
+ * Something for the human to carry from a `HUMAN_CARRIES` choice, at the size it is held at: { thing, how, open }.
+ * A hero is a ball about 9 cm across on the palm; a coin 2.5 cm across, pinched (and flipped with the `flip`
+ * clip); the book 13 cm a page, open in both hands or shut in one.
  */
 async function humanCarry(choice) {
-  if (choice === 'book') {
+  if (choice === 'book' || choice === 'book:shut') {
     const { createBook } = await import('../../../src/props/book.js');
-    return { thing: createBook(GFX, { size: 0.45, pageCount: 60 }), how: 'book' };
+    return { thing: createBook(GFX, { size: 0.45, pageCount: 60 }), how: 'book', open: choice === 'book' };
   }
   if (choice.startsWith('coin:')) {
     const kind = choice.slice(5);
@@ -668,13 +673,24 @@ async function humanCarry(choice) {
     const mod = kind === 'bitcoin' ? await import('../../../src/props/bitcoin-coin.js') : await import('../../../src/props/political-coin.js');
     return { thing: (kind === 'bitcoin' ? mod.createBitcoinCoin : mod.createPoliticalCoin)(GFX, { radius }), how: 'pinch' };
   }
-  const [, make] = HEROES.find(([name]) => `hero:${name}` === choice);
+  // A hero, or a planet, on the palm: a ball about 9 cm across (a planet 10), and still: it does not turn in his hand.
+  const planet = choice.startsWith('planet:');
+  const make = planet ? MOVING.find(([name]) => `planet:${name}` === choice)[3] : HEROES.find(([name]) => `hero:${name}` === choice)[1];
   const made = await make({});
+  if (made && 'spinRate' in made) made.spinRate = 0;
+  // An avatar (Alan) held still: it does not look about or float in his hand.
+  if (made?.made && 'still' in made.made) made.made.still = true;
+  // A hero with a mist in it (the glass egg, the jewel rock) carried with its mist showing.
+  if (!planet && typeof made?.setMist === 'function') made.setMist(true);
   made?.pose?.(0);
   const object = objectOf(made);
   object.position.set(0, 0, 0);
+  // Sized by itself, not by the glow round it (Alan's aura is a sprite three and a half times his width).
+  const glows = [];
+  object.traverse((o) => { if (o.isSprite && o.visible) { glows.push(o); o.visible = false; } });
   const { size } = boundsOf(object);
-  object.scale.multiplyScalar(0.09 / Math.max(...size));
+  for (const o of glows) o.visible = true;
+  object.scale.multiplyScalar((planet ? 0.1 : 0.09) / Math.max(...size));
   return { thing: object, how: 'palm' };
 }
 
@@ -728,11 +744,11 @@ function humanItem(sex) {
         const choice = S === 'R' ? weapon : weaponL;
         man.release(S);
         if (choice === 'none') return;
-        const { thing, how } = await humanHeld(choice, weapons);
+        const { thing, how, open = true } = await humanHeld(choice, weapons);
         if (mine !== arming[S]) return;
-        // A book takes both hands: whatever the left held is put down.
-        if (how === 'book') weaponL = 'none';
-        man.hold(thing, { hand: S, how });
+        // A book open takes both hands: whatever the left held is put down.
+        if (how === 'book' && open) weaponL = 'none';
+        man.hold(thing, { hand: S, how, open });
       };
       const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
       const ui = [

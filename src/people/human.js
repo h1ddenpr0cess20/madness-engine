@@ -341,7 +341,9 @@ export const HAND_POSES = Object.freeze({
   // A coin between the thumb and forefinger: the others tucked out of the way.
   pinch: { curl: [0.85, 0.95, 0.5], thumb: 0.62, spread: 0, each: { index: [0.42, 0.55, 0.3] } },
   // A book's edge: the fingers under its board, the thumb over the page.
-  book: { curl: [0.18, 0.22, 0.12], thumb: 0.05, spread: 0.15 },
+  book: { curl: [0.04, 0.06, 0.04], thumb: 0.05, spread: 0.15 },
+  // A shut book by its edge: the fingers over one board, the thumb on the other.
+  tome: { curl: [0.42, 0.35, 0.2], thumb: 0.55, spread: 0.05 },
 });
 
 /** Euler angles (for Rz·Ry·Rx, as the rig turns) of the turn by `angle` about unit `axis`. */
@@ -945,6 +947,9 @@ export function createHuman(GFX, options = {}) {
     // Reading: the head bowed to the page.
     const reading = held.R?.how === 'book';
     if (reading) { skeleton.turn('neck', 0.12, 0, 0); skeleton.turn('head', 0.26, 0, 0); }
+    // Flipping a coin, the head goes up after it and down again.
+    const flight = flipping(state) ? coinFlight(state.t ?? 0) : null;
+    if (flight) skeleton.turn('head', 0.18 - 0.9 * flight.up, 0, 0);
     carryPose(state);
     clearance ??= measure([body.data, ...[...worn.values()].map((w) => w.mesh.data)], skeleton.names, skeleton.pivots);
     if (grip) {
@@ -956,7 +961,7 @@ export function createHuman(GFX, options = {}) {
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
       const how = held.R?.how === 'book' ? 'book' : held[S]?.how;
-      const shape = how && how !== 'grip' ? HAND_POSES[{ palm: 'cup', pinch: 'pinch', book: 'book' }[how]]
+      const shape = how && how !== 'grip' ? HAND_POSES[{ palm: 'cup', pinch: 'pinch', book: 'book', tome: 'tome' }[how]]
         : held[S] || (S === 'L' && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
         // Running, a hand that was left easy closes loosely.
         : state.clip === 'run' && want === 'relaxed' ? HAND_POSES.loose
@@ -968,13 +973,14 @@ export function createHuman(GFX, options = {}) {
       : state.clip === 'talk' || state.speaking ? speech(state.time ?? 0, { amount: state.talk ?? 1, loud: state.yell ? 1 : state.loud ?? 0 })
       : null;
     // Reading, the eyes are down on the page.
-    poseFace(skeleton, reading ? { ...face, look: [face.look[0], face.look[1] - 0.32] } : face, state.time, said);
+    const lookDown = reading ? 0.32 : flight ? 0.3 - 1.2 * flight.up : 0;
+    poseFace(skeleton, lookDown ? { ...face, look: [face.look[0], face.look[1] - lookDown] } : face, state.time, said);
     skeleton.compute();
     // His arms kept out of his body (and what he wears), however he is shaped: those that would pass
     // into it swung out from the shoulder just enough, eased in so it never jolts (with both hands on a
     // grip, done above, before the left takes it).
     // (Not an arm carrying something: it is where it carries it.)
-    const free = ['L', 'R'].filter((S) => !carrying(S));
+    const free = ['L', 'R'].filter((S) => !carrying(S) || held[S]?.how === 'tome');
     if (!grip && free.length && clearArms(skeleton, clearance, skeleton.pivots, free)) skeleton.compute();
     // Only what shows is moved: the skin under his clothes is left where it was.
     skinDual(body.data, skeleton, body.position.array, body.normal.array, drawn(body));
@@ -1011,13 +1017,15 @@ export function createHuman(GFX, options = {}) {
    * guard; anything else at `grip` along its own y. Its own +y points the
    * way the thumb does out of the fist.
    */
-  function hold(thing, { hand = 'R', grip = null, how = null } = {}) {
+  function hold(thing, { hand = 'R', grip = null, how = null, open = true } = {}) {
     const S = hand === 'L' || hand === 'left' ? 'L' : 'R';
     const object = thing.group ?? thing;
     // How it is held: by its grip (a weapon), on the palm (a ball), between thumb and forefinger (a coin), or
     // open in both hands (a book). Said, or told by what it is.
     const kind = how ?? thing.holdAs ?? (typeof thing.turnTo === 'function' ? 'book' : thing.handling || thing.gripBounds ? 'grip' : 'palm');
     if (!['grip', 'palm', 'pinch', 'book'].includes(kind)) throw new Error(`human: hold how ${kind}? choose grip, palm, pinch or book`);
+    // A book shut is carried in one hand at his side; open, it is read in both.
+    if (kind === 'book' && !open) return carry(thing, object, 'tome', S);
     if (kind !== 'grip') return carry(thing, object, kind, S);
     release(S);
     const bounds = thing.gripBounds;
@@ -1054,6 +1062,10 @@ export function createHuman(GFX, options = {}) {
   function carry(thing, object, how, S) {
     if (how === 'book') { release('L'); release('R'); S = 'R'; } else release(S);
     if (held.R?.how === 'book') release('R');
+    // Held still: a globe or a coin that turns on its own (its `spinRate`) does not turn in his hand.
+    if (typeof thing.spinRate === 'number') thing.spinRate = 0;
+    // Shut before it is measured, if it is to be carried shut; opened at its middle, to be read.
+    if (how === 'tome') thing.pose?.({ open: 0, turn: 0 });
     // How big it is, and where its middle is from its origin, at the size it was given.
     object.updateMatrixWorld(true);
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity], v = new GFX.Vector3();
@@ -1061,7 +1073,8 @@ export function createHuman(GFX, options = {}) {
     const own = new GFX.Matrix4().makeScale(object.scale.x, object.scale.y, object.scale.z);
     object.traverse((o) => {
       const p = o.geometry?.attributes?.position;
-      if (!p || o.visible === false) return;
+      // (Not a glow round it: a sprite is drawn to face the camera, not as big as its quad.)
+      if (!p || o.visible === false || o.isSprite) return;
       const to = new GFX.Matrix4().multiplyMatrices(inv, o.matrixWorld).premultiply(own);
       for (let i = 0; i < p.count; i += Math.max(1, Math.floor(p.count / 4000))) {
         v.set(p.getX(i), p.getY(i), p.getZ(i)).applyMatrix4(to);
@@ -1071,14 +1084,28 @@ export function createHuman(GFX, options = {}) {
     });
     const middle = Number.isFinite(lo[0]) ? lo.map((l, a) => (l + hi[a]) / 2) : [0, 0, 0];
     const radius = Number.isFinite(lo[0]) ? Math.max(...hi.map((h, a) => h - lo[a])) / 2 : 0.05;
+    const size = Number.isFinite(lo[0]) ? hi.map((h, a) => h - lo[a]) : [0.1, 0.1, 0.1];
     // A book opens at its middle, to be read.
     if (how === 'book') thing.pose?.({ open: 1, turn: Math.floor((thing.dimensions?.leaves ?? 2) / 2) });
     object.matrixAutoUpdate = false;
     group.add(object);
-    held[S] = { thing, object, how, hands: 'none', middle, radius, scale: object.scale.clone(), solved: {} };
+    held[S] = { thing, object, how, hands: 'none', middle, radius, size, scale: object.scale.clone(), solved: {} };
     if (last) pose(last);
     return api;
   }
+
+  /**
+   * A coin flipped (the `flip` clip, `t` 0..1): flicked up off the thumb, turning over and over, caught again
+   * and held up. How high above the hand it is (metres) and how far it has turned (radians).
+   */
+  const FLIP = { from: 0.2, to: 0.68, height: 0.45, turns: 6 };
+  function coinFlight(t) {
+    const s = (t - FLIP.from) / (FLIP.to - FLIP.from);
+    if (!(s > 0 && s < 1)) return { up: 0, turn: 0, flying: false };
+    return { up: FLIP.height * 4 * s * (1 - s), turn: s * FLIP.turns * Math.PI * 2, flying: true };
+  }
+  /** Which hand has a coin being flipped, in `state`, or null. */
+  const flipping = (state) => (state?.clip === 'flip' ? ['R', 'L'].find((S) => held[S]?.how === 'pinch') ?? null : null);
 
   /** Whether hand `S` is carrying something, not holding it by a grip (a book takes both). */
   const carrying = (S) => (held[S] && held[S].how !== 'grip') || held.R?.how === 'book';
@@ -1104,18 +1131,29 @@ export function createHuman(GFX, options = {}) {
       bookAt = bookPlace(C, eyesRest(), eyes, state.clip === 'read' ? { ahead: 0.3, below: 0.34 } : { ahead: 0.32, below: 0.3 });
     } else bookAt = null;
     for (const [S, m] of [['L', 1], ['R', -1]]) {
-      if (!carrying(S)) continue;
+      if (!carrying(S) || (held[S]?.how === 'tome' && held.R?.how !== 'book')) continue;
       const f = handFrame(J, figure.fingers, m);
       const h = book ?? held[S];
       let aim;
       if (h.how === 'book') {
         const { middle, across, face, up } = bookAt;
         const w = (h.thing.dimensions?.width ?? 0.3) * h.scale.x * 0.92, ht = (h.thing.dimensions?.height ?? 0.42) * h.scale.x;
-        const to = [0, 1, 2].map((a) => middle[a] + across[a] * m * w - up[a] * ht * 0.18 - face[a] * 0.016);
+        // Each hand under its own edge, low on the page, flat under the board (its fingers kept out of the pages).
+        const to = [0, 1, 2].map((a) => middle[a] + across[a] * m * w - up[a] * ht * 0.18 - face[a] * 0.03);
         aim = { point: f.centre, to, dirs: [[f.palm, face, 0.012], [f.along, across.map((v) => -m * v), 0.008]] };
       } else if (h.how === 'palm') {
         const to = applyAt(C, [m * J.shoulder[0] * 0.78, J.elbow[1] + 0.03, J.elbow[2] + 0.3]);
         aim = { point: f.centre, to, dirs: [[f.palm, [0, 1, 0], 0.02], [f.along, normV(turnBy(C, [0, 0, 1])), 0.008]] };
+      } else if (flipping(state) === S) {
+        // Flipping it: the hand out in front at the waist, palm up, a little flick up as it lets go and a
+        // reach up to take it back, then raised to look at it.
+        const t = state.t ?? 0, flick = Math.exp(-(((t - FLIP.from) / 0.05) ** 2)), take = Math.exp(-(((t - FLIP.to) / 0.06) ** 2));
+        const show = Math.min(1, Math.max(0, (t - FLIP.to - 0.05) / 0.2));
+        const low = [m * 0.13, J.elbow[1] + 0.08 + 0.04 * flick + 0.05 * take, J.elbow[2] + 0.3];
+        const high = [m * 0.15, J.shoulder[1] - 0.06, J.shoulder[2] + 0.3];
+        const to = applyAt(C, low.map((v, a) => v + (high[a] - v) * show));
+        const point = [0, 1, 2].map((a) => f.centre[a] + f.along[a] * 0.075);
+        aim = { point, to, dirs: [[f.palm, [0, 1, 0], 0.02 * (1 - show)], [f.along, normV(turnBy(C, [0, 0.2 + 0.65 * show, 1])), 0.01]] };
       } else {
         const to = applyAt(C, [m * 0.15, J.shoulder[1] - 0.06, J.shoulder[2] + 0.3]);
         const point = [0, 1, 2].map((a) => f.centre[a] + f.along[a] * 0.075);
@@ -1136,7 +1174,17 @@ export function createHuman(GFX, options = {}) {
       const scale = new GFX.Matrix4().makeScale(h.scale.x, h.scale.y, h.scale.z);
       if (h.how === 'book') {
         const { middle, across, face, up } = bookAt;
-        M.makeBasis(new GFX.Vector3(...across), new GFX.Vector3(...face), new GFX.Vector3(...up)).setPosition(new GFX.Vector3(...middle)).multiply(scale);
+        // (Turned half round in its own plane: the book's pages run head-first along its −z, so its +z goes
+        // toward him, the first page on his left.)
+        M.makeBasis(new GFX.Vector3(...across.map((v) => -v)), new GFX.Vector3(...face), new GFX.Vector3(...up.map((v) => -v))).setPosition(new GFX.Vector3(...middle)).multiply(scale);
+      } else if (h.how === 'tome') {
+        // Shut, between the thumb and the fingers, its boards against them: its spine in the palm's heel and
+        // its fore-edge out past the fingertips, hanging along his side.
+        const f = handFrame(JOINTS, figure.fingers, m), H = boneAt(skeleton, `hand${S}`);
+        const across = normV(turnBy(H, f.along)), face = normV(turnBy(H, f.palm));
+        const up = normV(crossV(across, face));
+        const at = applyAt(H, f.centre).map((v, a) => v + face[a] * (h.size[1] / 2 + 0.012) + across[a] * (h.size[0] / 2 - 0.06));
+        M.makeBasis(new GFX.Vector3(...across), new GFX.Vector3(...face), new GFX.Vector3(...up)).setPosition(new GFX.Vector3(...at)).multiply(scale);
       } else if (h.how === 'palm') {
         const f = handFrame(JOINTS, figure.fingers, m), H = boneAt(skeleton, `hand${S}`);
         const up = normV(turnBy(H, f.palm)), fwd0 = normV(turnBy(H, f.along));
@@ -1153,7 +1201,14 @@ export function createHuman(GFX, options = {}) {
         y = normV(y.map((v, i) => v - z[i] * yz));
         const x = crossV(y, z);
         const at = [0, 1, 2].map((i) => (a[i] + b[i]) / 2 + y[i] * h.radius * 0.55);
-        M.makeBasis(new GFX.Vector3(...x), new GFX.Vector3(...y), new GFX.Vector3(...z)).setPosition(new GFX.Vector3(...at)).multiply(scale);
+        M.makeBasis(new GFX.Vector3(...x), new GFX.Vector3(...y), new GFX.Vector3(...z)).setPosition(new GFX.Vector3(...at));
+        // Flipped, it goes up off the thumb and comes down again, turning over and over about its width.
+        const flight = flipping(last) === S ? coinFlight(last.t ?? 0) : null;
+        if (flight?.flying) {
+          M.setPosition(new GFX.Vector3(at[0], at[1] + flight.up, at[2]));
+          M.multiply(new GFX.Matrix4().makeRotationX(flight.turn));
+        }
+        M.multiply(scale);
       }
       // (Its middle where it is put, not its origin: a hero's origin may be anywhere in it.)
       if (h.how !== 'book') M.multiply(new GFX.Matrix4().makeTranslation(-h.middle[0] / h.scale.x, -h.middle[1] / h.scale.y, -h.middle[2] / h.scale.z));

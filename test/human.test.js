@@ -551,3 +551,28 @@ test('dual wielding: a weapon in each hand, ready in both, struck one-two', () =
   who.release('L');
   who.setStyle({});
 });
+
+test('a coin flipped goes up turning and comes back to the hand; a shut book is carried in one', () => {
+  const who = createHuman(GFX, { detail: 0.5, glasses: null });
+  const coin = new GFX.Group();
+  const disc = new GFX.Mesh(new GFX.CylinderGeometry(0.0125, 0.0125, 0.002, 24), new GFX.MeshStandardMaterial());
+  disc.rotation.x = Math.PI / 2;
+  coin.add(disc);
+  coin.spinRate = 0.9;
+  who.hold(coin, { how: 'pinch' });
+  assert.equal(coin.spinRate, 0, 'held still: it does not turn in his hand');
+  assert.ok(CLIPS.includes('flip'));
+  const y = (t) => { who.pose({ clip: 'flip', t, time: t }); return coin.matrix.elements[13]; };
+  const before = y(0.05), top = y(0.44), after = y(0.75);
+  assert.ok(top > before + 0.3, `up in the air (${before.toFixed(2)} to ${top.toFixed(2)})`);
+  assert.ok(Math.abs(after - before) < 0.15, 'and back in the hand');
+
+  const book = { group: new GFX.Group(), dimensions: { width: 0.135, height: 0.19, leaves: 30 }, turnTo() {}, pose({ open }) { this.opened = open; } };
+  book.group.add(new GFX.Mesh(new GFX.BoxGeometry(0.135, 0.03, 0.19), new GFX.MeshStandardMaterial()));
+  who.hold(book, { how: 'book', open: false, hand: 'L' });
+  assert.equal(book.opened, 0, 'shut');
+  assert.equal(who.held('R'), coin, 'one hand: the other still has its coin');
+  who.pose({ clip: 'walk', t: 0.3, time: 0.3 });
+  const at = book.group.matrix.elements.slice(12, 15), hand = who.point('handL', who.skeleton.pivots[who.skeleton.index.get('handL')]);
+  assert.ok(Math.hypot(at[0] - hand[0], at[1] - hand[1], at[2] - hand[2]) < 0.15, 'in the left hand');
+});

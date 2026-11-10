@@ -313,11 +313,13 @@ yourself in `style.after(skeleton, state)`, which runs after the clip.
 
 `man.pose({ clip, t, time, seed, speed })`, every frame. Clips (`CLIPS`):
 `idle`, `walk`, `run`, `jump`, `leap`, `attack`, `cast`, `hit`, `ko`,
-`win`, `sit`, `read`, `talk`, `yell`. Their cadences match the cast's (a walk's stride at
+`win`, `sit`, `read`, `flip`, `talk`, `yell`. Their cadences match the cast's (a walk's stride at
 9 rad/s × speed, a run's at 15), worked out for his real size. With a
 weapon in his right hand the idle, walk, run and jump hold it ready; with
 one in each hand, both. `read` is `sit`, a little forward, the head bowed
-to a book held open in both hands.
+to a book held open in both hands. `flip` flips the coin he holds: off the
+thumb from a palm-up hand at the waist, up about 45 cm turning over and over,
+caught again and held up to look at, his head and eyes following it.
 
 `man.setStyle({ attack, heavy })`: `attack` is `'slash'`, `'chop'`,
 `'thrust'`, `'smite'`, `'punch'` or `'shove'`. Each is a keyed swing from
@@ -374,15 +376,17 @@ A hand holding something takes the grip shape.
 - `'palm'`: a ball (a hero, say) on the upturned palm, out in front, the
   fingers cupped under it.
 - `'pinch'`: a coin between the thumb and forefinger, held up to be looked
-  at, its faces against them.
+  at, its faces against them (the `flip` clip flips it).
 - `'book'`: a book (`createBook` from `madness-engine/props/book`, or
   anything with `turnTo`) opened at its middle and held in both hands, a
   reading distance below the eyes with its pages turned to face them, the
   head bowed and the eyes down to it. Standing, walking, or with the `read`
-  clip, sitting.
+  clip, sitting. With `open: false` it is shut and carried in one hand by
+  its side, the fingers over one board and the thumb on the other.
 
 What is held keeps the size it was given (scale a hero to fit the hand
-first). The carrying hands are brought where they carry it by turning the
+first), and is held still: a globe or coin that turns on its own
+(`spinRate`) stops. The carrying hands are brought where they carry it by turning the
 arm, forearm and hand as little as gets them there, starting from where
 they were the frame before, so they move smoothly (`people/human/carry.js`).
 `man.release(hand)` gives it back; `man.held(hand)` says what is there.
@@ -413,5 +417,5 @@ they were the frame before, so they move smoothly (`people/human/carry.js`).
 | `people/human/kit.js` | The modelling kit: grids, normals, assembly. |
 
 The asset viewer lists him, and her (**Human, female**), under **People**, with his wardrobe, colours,
-what each hand holds (**Holds**: a weapon, a staff, the book, a hero or a coin; **Left holds**: a second
-weapon to wield both, a hero or a coin), the attack, his left hand and his face to set.
+what each hand holds (**Holds**: a weapon, a staff, the book open or shut, a hero, a planet or a coin; **Left
+holds**: a second weapon to wield both, the book shut, a hero, a planet or a coin), the attack, his left hand and his face to set.

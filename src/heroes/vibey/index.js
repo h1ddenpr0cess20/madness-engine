@@ -426,13 +426,20 @@ export function createStar({ stage, GFX, metal = null }) {
 
   if (metal !== null) applyMetal(metal);
 
+  // Held still (`still`, as in a hand), it keeps the pose it has: no float, spin or squash.
+  let still = false, posed = false;
   (function loop() {
     requestAnimationFrame(loop);
+    if (still && posed) return;
     frame();
+    posed = true;
   })();
 
   const api = {
     get state() { return state; },
+    /** Whether it is held still: true keeps it as it is, false lets it move again. */
+    get still() { return still; },
+    set still(on) { still = Boolean(on); },
     setState(next) {
       if (!Object.hasOwn(MOODS, next) || next === state) return;
       state = next;
