@@ -15,6 +15,7 @@ import { texture } from '../../../src/textures/painters.js';
 import { paintRoom } from '../../../src/textures/rooms/studio.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { diverse } from '../../../src/characters/person.js';
+import { GLASS_PLANET_NAMES } from '../../../src/props/glass-planets.js';
 import { boundsOf, loadCatalog, METAL_CHOICES } from './catalog.js';
 import { randomBowlingBallPalette } from './bowling-ball-palettes.js';
 
@@ -515,7 +516,9 @@ function colourGroup(item) {
     $('weaponmetalrows').append(row); $('weaponmetalrows').style.display = 'grid';
   }
   $('colourhint').textContent = isStaff
-    ? 'Choose the colour of the leather wrap on the grip and of its crossed thread, then press Apply. Wood, finish and topper are in the options above.'
+    ? (item.palette.metal
+      ? 'Choose the color of the leather wrap on the grip and of its crossed thread, then press Apply. The metal and topper are in the options above.'
+      : 'Choose the color of the leather wrap on the grip and of its crossed thread, then press Apply. Wood, finish and topper are in the options above.')
     : isGraniteWeapon
     ? 'The blade, guard and fused handle are granite; choose its granite colourway and the leather wrap colour.'
     : isWeapon
@@ -588,9 +591,17 @@ $('colourcopy').onclick = async () => {
       + (options.metal ?? 'steel') + "', gripColor: '"
       + (view.colours.gripColor ?? '#633b2c') + "' });";
   } else if (view.item.palette?.kind === 'staff') {
+    const topper = options.topper ?? 'orb';
+    const planet = GLASS_PLANET_NAMES.includes(topper);
+    const wood = view.item.palette.metal
+      ? "metal: '" + (options.metal ?? 'steel') + "'"
+      : "species: '" + (options.species ?? 'walnut') + "', finish: '" + (options.finish ?? 'lacquered') + "'";
     code = "import * as GFX from 'madness-engine/gfx';\n"
+      + (planet ? "import { loadGlassPlanetMaps } from 'madness-engine/props/glass-planets';\n" : '')
       + "import { createStaff } from 'madness-engine/weapons';\n\n"
-      + "const staff = createStaff(GFX, { gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip) + "', threadColor: '"
+      + (planet ? "const planetMaps = { " + topper + ": await loadGlassPlanetMaps('" + topper + "') };\n" : '')
+      + "const staff = createStaff(GFX, { " + wood + ", topper: '" + topper + "'" + (planet ? ', planetMaps' : '')
+      + ", gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip) + "', threadColor: '"
       + (view.colours.threadColor ?? view.item.palette.thread) + "' });";
   } else if (view.item.palette?.kind === 'granite-weapon') {
     const factory = view.item.factory;

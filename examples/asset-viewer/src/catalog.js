@@ -18,6 +18,7 @@ import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
 import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
+import { STAFF_TOPPERS } from '../../../src/weapons/staff.js';
 import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
 import { dress, extraItems } from './extras.js';
 
@@ -258,6 +259,15 @@ async function avatar(path, fn, buildOptions = {}) {
 /** What an avatar brings with it to be shown in: its reflections and its sky. */
 const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.sky ?? null });
 
+/** A planet in glass, as the library makes it (props/glass-planets), at `radius` and on the frame the viewer shows it in. */
+async function glassPlanet(name, radius) {
+  const m = await import('../../../src/props/glass-planets.js');
+  const globe = m.createGlassPlanet(GFX, name, { radius, ...(await m.loadGlassPlanetMaps(name)) });
+  // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
+  const mesh = globe.mist;
+  return Object.assign(globe, { frame: { center: [0, 0, 0], radius: radius * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
+}
+
 /**
  * Props that move as a part of what they are: Krystal, the crystal ball, its cloud turning and churning inside it.
  * And the debate's frying pan, which is a prop but not a sculpt.
@@ -265,60 +275,12 @@ const dressOf = (made) => ({ environment: made?.environment ?? null, sky: made?.
 const MOVING = [
   ['book', 'Animated props', 'book of madness', ({ pages = 80 } = {}) => bookItem(pages), 'props/book', { pages: PAGE_CHOICES }],
   ['krystal', 'Animated props', 'crystal ball', () => avatar('../../../src/heroes/krystal/index.js', 'createKrystal')],
-  ['glass globe', 'Animated props', 'Earth', () => import('../../../src/props/glassglobe.js').then((m) => {
-    const globe = m.createGlassGlobe(GFX, { radius: 0.6, mist: true, animate: true });
-    globe.orient(40, -95);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: 0.65 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
-  ['glass mars', 'Animated props', 'Mars', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/mars/map.js')]).then(async ([m, mars]) => {
-    // Mars at its true size beside the Earth globe: 0.532 of its radius, its MOLA surface etched in the glass.
-    const r = m.RADIUS * mars.SIZE_VS_EARTH;
-    const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await mars.loadMarsEtch() });
-    // Rust: the palette's warm end, with the blue taken out of it.
-    globe.setMist({ hue: 0.04, spread: 0.1, tint: [1, 1.15, 0.18], glow: 2.1, core: 0.15 });
-    globe.orient(-5, -90);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
-  ['glass moon', 'Animated props', 'Moon', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/moon/map.js')]).then(async ([m, moon]) => {
-    // The Moon at its true size beside the Earth globe: 0.273 of its radius, its LOLA surface etched in the glass.
-    const r = m.RADIUS * moon.SIZE_VS_EARTH;
-    const globe = m.createGlassGlobe(GFX, { radius: r, mist: true, animate: true, etchCanvas: await moon.loadMoonEtch() });
-    // White: the palette's most neutral hue, with the tint balancing its three channels to grey-white.
-    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 2.1, core: 0.15 });
-    globe.orient(0, 0);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: r * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
-  ['glass jupiter', 'Animated props', 'Jupiter', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
-    // Shown at the Earth globe's size: Jupiter is 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
-    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, etch: false, mist: true, animate: true });
-    // White mist swirls inside, as the planet's pale zones are; the photograph's clouds drift over it as the field.
-    globe.setMist({ hue: 0.7071, spread: 0, tint: [1.761, 1, 1.76], glow: 0.4, core: 0.02 });
-    globe.setField(await jupiter.loadJupiterMap(), { shell: 0.9, glow: 1.3 }).refreshField();
-    globe.orient(-22, 0);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
-  ['glass jupiter etched', 'Animated props', 'Jupiter', () => Promise.all([import('../../../src/props/glassglobe.js'), import('../../../src/textures/jupiter/map.js')]).then(async ([m, jupiter]) => {
-    // The alternate: the zones and belts etched in the glass, and the mist in belts that shear sideways, in the planet's rust-red and blue-green.
-    const globe = m.createGlassGlobe(GFX, { radius: m.RADIUS, mist: true, animate: true, etchCanvas: await jupiter.loadJupiterEtch() });
-    globe.setMist({ bands: 1, duo: [[1, 0.3, 0.16], [1, 0.93, 0.82], [0.02, 0.62, 0.78]], glow: 2.4, core: 0.1, swirl: 0.6 });
-    globe.orient(-22, 0);
-    globe.spinRate = 0.12;
-    // The mesh, kept before `mist` below replaces it with the toggle: `get` reads the mesh, not the toggle.
-    const mesh = globe.mist;
-    return Object.assign(globe, { frame: { center: [0, 0, 0], radius: m.RADIUS * 1.08 }, mist: { get: () => mesh.visible, set: (on) => globe.setMist({}, on) } });
-  }), 'props/glassglobe'],
+  ['glass globe', 'Animated props', 'Earth', () => glassPlanet('earth', 0.6)],
+  ['glass mars', 'Animated props', 'Mars', async () => glassPlanet('mars', 0.6 * (await import('../../../src/textures/mars/map.js')).SIZE_VS_EARTH)],
+  ['glass moon', 'Animated props', 'Moon', async () => glassPlanet('moon', 0.6 * (await import('../../../src/textures/moon/map.js')).SIZE_VS_EARTH)],
+  // Jupiter is shown at the Earth globe's size: 11 Earths across, too big to sit beside it. Its clouds are a photograph's, laid out on the sphere.
+  ['glass jupiter', 'Animated props', 'Jupiter', () => glassPlanet('jupiter', 0.6)],
+  ['glass jupiter etched', 'Animated props', 'Jupiter', () => glassPlanet('jupiter-etched', 0.6)],
   // The same planets in solid metal, their relief raised; the metal is the viewer's `metal` option.
   ...[
     ['metal earth', 'Earth', () => import('../../../src/textures/earth/map.js'), 'loadEarthRelief', [40, -95], {}, { bump: -8, soften: 0.6, height: 0.022, segments: [768, 512] }],
@@ -686,7 +648,30 @@ function weaponItems() {
   }));
 }
 
-/** The wizard staff: wood, metal and topper are chosen from the viewer's option menus. */
+/**
+ * Stands a staff up from the viewer's choices. `wood` is `{ species, finish }` for the wooden staff or `{ metal }` for
+ * the metal one, passed on its own: the viewer hands every item all the options, and the other kind's must not leak in.
+ * A planet topper is given its maps first.
+ */
+async function buildStaff(wood, { topper = 'orb', vine = 'roots', wrap = 'on', colours = {} } = {}) {
+  const [{ createStaff }, metals, planets] = await Promise.all([
+    import('../../../src/weapons/staff.js'),
+    import('../../../src/props/metalglobe.js'),
+    import('../../../src/props/glass-planets.js'),
+  ]);
+  const planetMaps = planets.GLASS_PLANET_NAMES.includes(topper)
+    ? { [topper]: await planets.loadGlassPlanetMaps(topper) }
+    : {};
+  const made = createStaff(GFX, { ...wood, topper, planetMaps, vine: vine === 'roots', wrap: wrap === 'on',
+    gripColor: colours.gripColor ?? '#3a2418', threadColor: colours.threadColor ?? '#e2b857' });
+  return {
+    object: made.group,
+    environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+    info: { Source: 'weapons/staff#createStaff', ...made.info, ...countOf(made.group) },
+  };
+}
+
+/** The wizard staff: wood, topper and wrap are chosen from the viewer's option menus. */
 function staffItem() {
   return {
     id: 'weapons/wizard-staff',
@@ -697,24 +682,36 @@ function staffItem() {
     kind: 'object',
     palette: { kind: 'staff', grip: '#3a2418', thread: '#e2b857' },
     options: {
-      topper: ['orb', 'egg', 'none'],
+      topper: [...STAFF_TOPPERS],
       species: ['walnut', ...Object.keys(WOOD_SPECIES).filter((k) => k !== 'walnut')],
       finish: ['lacquered', ...WOOD_FINISHES.filter((k) => k !== 'lacquered')],
       wrap: ['on', 'off'],
       vine: ['roots', 'none'],
     },
-    async build({ topper = 'orb', species = 'walnut', finish = 'lacquered', vine = 'roots', wrap = 'on', colours = {} } = {}) {
-      const [{ createStaff }, metals] = await Promise.all([
-        import('../../../src/weapons/staff.js'),
-        import('../../../src/props/metalglobe.js'),
-      ]);
-      const made = createStaff(GFX, { topper, species, finish, vine: vine === 'roots', wrap: wrap === 'on',
-        gripColor: colours.gripColor ?? '#3a2418', threadColor: colours.threadColor ?? '#e2b857' });
-      return {
-        object: made.group,
-        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
-        info: { Source: 'weapons/staff#createStaff', ...made.info, ...countOf(made.group) },
-      };
+    build({ species = 'walnut', finish = 'lacquered', ...rest } = {}) {
+      return buildStaff({ species, finish }, rest);
+    },
+  };
+}
+
+/** The same staff in metal: its wooden parts (shaft, roots and head) take one of the metal finishes. */
+function metalStaffItem() {
+  return {
+    id: 'weapons/metal-wizard-staff',
+    category: 'Weapons',
+    group: 'Staff Set',
+    name: 'Metal Wizard Staff',
+    source: 'weapons/staff',
+    kind: 'object',
+    palette: { kind: 'staff', grip: '#3a2418', thread: '#e2b857', metal: true },
+    options: {
+      topper: [...STAFF_TOPPERS],
+      metal: METAL_CHOICES,
+      wrap: ['on', 'off'],
+      vine: ['roots', 'none'],
+    },
+    build({ metal = 'steel', ...rest } = {}) {
+      return buildStaff({ metal }, rest);
     },
   };
 }
@@ -764,7 +761,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
-  items.push(...weaponItems(), staffItem());
+  items.push(...weaponItems(), staffItem(), metalStaffItem());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
