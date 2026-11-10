@@ -150,6 +150,8 @@ async function show(item) {
     const saved = view.weaponMetals[item.id] ?? {};
     options.bladeMetal = saved.bladeMetal ?? item.palette.bladeMetal ?? 'steel';
     options.hiltMetal = saved.hiltMetal ?? item.palette.hiltMetal ?? 'steel';
+  } else if (changingItem && item.palette?.kind === 'staff' && item.materialType === 'metal') {
+    options.metal = view.weaponMetals[item.id]?.metal ?? 'gold';
   } else if (changingItem && item.palette?.kind === 'morningstar') {
     const saved = view.weaponMetals[item.id] ?? {};
     options.metal = saved.metal ?? item.palette.metal ?? 'steel';
@@ -355,7 +357,13 @@ function animGroup(built) {
     const numeric = values.every((v) => typeof v === 'number');
     if (!values.includes(options[name])) options[name] = values.default ?? values[0];
     select.value = options[name];
-    select.onchange = () => { options[name] = numeric ? Number(select.value) : select.value; show(view.item); };
+    select.onchange = () => {
+      options[name] = numeric ? Number(select.value) : select.value;
+      if (name === 'metal' && view.item.materialType === 'metal') {
+        view.weaponMetals[view.item.id] = { ...view.weaponMetals[view.item.id], metal: select.value };
+      }
+      show(view.item);
+    };
     const label = ({ bladeMetal: 'Blade metal', hiltMetal: 'Hilt metal' })[name] ?? name.replace(/([A-Z])/g, ' $1');
     $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, label), select));
   }
@@ -515,7 +523,9 @@ function colourGroup(item) {
     $('weaponmetalrows').append(row); $('weaponmetalrows').style.display = 'grid';
   }
   $('colourhint').textContent = isStaff
-    ? 'Choose the colour of the leather wrap on the grip and of its crossed thread, then press Apply. Wood, finish and topper are in the options above.'
+    ? (item.materialType === 'metal'
+      ? 'Choose the metal finish and glass topper in the options above. The leather wrap and crossed thread remain separately customizable.'
+      : 'Choose the wood species, finish and topper in the options above. The leather wrap and crossed thread remain separately customizable.')
     : isGraniteWeapon
     ? 'The blade, guard and fused handle are granite; choose its granite colourway and the leather wrap colour.'
     : isWeapon
@@ -588,10 +598,22 @@ $('colourcopy').onclick = async () => {
       + (options.metal ?? 'steel') + "', gripColor: '"
       + (view.colours.gripColor ?? '#633b2c') + "' });";
   } else if (view.item.palette?.kind === 'staff') {
-    code = "import * as GFX from 'madness-engine/gfx';\n"
-      + "import { createStaff } from 'madness-engine/weapons';\n\n"
-      + "const staff = createStaff(GFX, { gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip) + "', threadColor: '"
-      + (view.colours.threadColor ?? view.item.palette.thread) + "' });";
+    const metalStaff = view.item.materialType === 'metal';
+    const factory = metalStaff ? 'createMetalStaff' : 'createStaff';
+    const args = {
+      topper: options.topper ?? 'orb',
+      ...(metalStaff ? { metal: options.metal ?? 'gold' } : {
+        species: options.species ?? 'walnut',
+        finish: options.finish ?? 'lacquered',
+      }),
+      vine: (options.vine ?? 'roots') === 'roots',
+      wrap: (options.wrap ?? 'on') === 'on',
+      gripColor: view.colours.gripColor ?? view.item.palette.grip,
+      threadColor: view.colours.threadColor ?? view.item.palette.thread,
+    };
+    code = "import * as GFX from 'madness-engine/gfx';\\n"
+      + "import { " + factory + " } from 'madness-engine/weapons';\\n\\n"
+      + "const staff = " + factory + "(GFX, " + JSON.stringify(args, null, 2) + ");";
   } else if (view.item.palette?.kind === 'granite-weapon') {
     const factory = view.item.factory;
     const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
