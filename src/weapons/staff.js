@@ -177,8 +177,8 @@ export function createStaff(GFX, {
   materialType = 'wood',
   metal = 'steel',
 } = {}) {
-  if (!Object.hasOwn(WOOD_SPECIES, species)) throw new Error(`no wood called ${species}; choose ${Object.keys(WOOD_SPECIES).join(', ')}`);
-  if (!WOOD_FINISHES.includes(finish)) throw new Error(`no wood finish called ${finish}; choose ${WOOD_FINISHES.join(', ')}`);
+  if (materialType === 'wood' && !Object.hasOwn(WOOD_SPECIES, species)) throw new Error(`no wood called ${species}; choose ${Object.keys(WOOD_SPECIES).join(', ')}`);
+  if (materialType === 'wood' && !WOOD_FINISHES.includes(finish)) throw new Error(`no wood finish called ${finish}; choose ${WOOD_FINISHES.join(', ')}`);
   if (!['wood', 'metal'].includes(materialType)) throw new Error(`no staff material called ${materialType}; choose wood or metal`);
   if (!Object.hasOwn(METALS, metal)) throw new Error(`no metal called ${metal}; choose ${Object.keys(METALS).join(', ')}`);
   if (!STAFF_TOPPERS.includes(topper)) throw new Error(`no topper called ${topper}; choose ${STAFF_TOPPERS.join(', ')}`);
@@ -477,7 +477,7 @@ export function createStaff(GFX, {
     get materialType() { return materialType; },
     get metal() { return materialType === 'metal' ? selectedMetal : null; },
     get species() { return materialType === 'wood' ? woodSpecies : null; },
-    get finish() { return woodFinish; },
+    get finish() { return materialType === 'wood' ? woodFinish : null; },
     get gripColor() { return `#${leather.color.getHexString()}`; },
     get threadColor() { return `#${thread.color.getHexString()}`; },
     get wrap() { return wrapOn; },
