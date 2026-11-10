@@ -18,6 +18,36 @@ const TOPPER_LABELS = Object.freeze({
   none: 'none',
 });
 
+/** Planet-specific palettes for the mist inside each etched glass world. */
+const PLANET_MISTS = Object.freeze({
+  moon: Object.freeze({
+    hue: 0.60,
+    spread: 0.08,
+    tint: Object.freeze([0.78, 0.87, 1]),
+    glow: 0.72,
+    core: 0.16,
+  }),
+  mars: Object.freeze({
+    hue: 0.08,
+    spread: 0.08,
+    tint: Object.freeze([1, 0.58, 0.38]),
+    glow: 0.82,
+    core: 0.22,
+  }),
+  jupiter: Object.freeze({
+    hue: 0.15,
+    spread: 0,
+    tint: Object.freeze([1, 0.96, 0.88]),
+    glow: 0.88,
+    bands: 1,
+    duo: Object.freeze([
+      Object.freeze([1, 0.30, 0.20]),
+      Object.freeze([0.92, 0.84, 0.70]),
+      Object.freeze([0.12, 0.72, 0.68]),
+    ]),
+  }),
+});
+
 /** Attach the repository's real planetary surface data to a staff-sized glass globe. */
 async function loadGlassPlanetSurface(globe, kind) {
   if (kind === 'moon') {
@@ -432,6 +462,7 @@ export function createStaff(GFX, {
           animate: true,
           seed,
         });
+        if (PLANET_MISTS[kind]) asset.setMist(PLANET_MISTS[kind]);
         asset.group.name = `${kind} glass staff topper`;
         asset.spin.name = `${kind} surface`;
         const ready = loadGlassPlanetSurface(asset, kind)

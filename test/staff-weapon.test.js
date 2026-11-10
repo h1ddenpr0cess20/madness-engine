@@ -73,6 +73,29 @@ test('the glass planets reuse the glass globe factory and all start with mist en
     assert.equal(planet.glass.material.transmission, 1, `${kind} uses the shared transmissive glass`);
     assert.equal(visibleToppers(staff).length, 1);
   }
+
+  // The Moon's mist is cool silver-blue, Mars is warm rust, and Jupiter has
+  // the engine's red/cream/teal belt palette rather than the generic Krystal hue.
+  staff.moon.update(0);
+  assert.equal(staff.moon.mistMaterial.uniforms.uHue.value, 0.60);
+  assert.deepEqual(
+    [staff.moon.mistMaterial.uniforms.uTint.value.x, staff.moon.mistMaterial.uniforms.uTint.value.y, staff.moon.mistMaterial.uniforms.uTint.value.z],
+    [0.78, 0.87, 1],
+  );
+  staff.mars.update(0);
+  assert.equal(staff.mars.mistMaterial.uniforms.uHue.value, 0.08);
+  assert.deepEqual(
+    [staff.mars.mistMaterial.uniforms.uTint.value.x, staff.mars.mistMaterial.uniforms.uTint.value.y, staff.mars.mistMaterial.uniforms.uTint.value.z],
+    [1, 0.58, 0.38],
+  );
+  staff.jupiter.update(0);
+  assert.equal(staff.jupiter.mistMaterial.uniforms.uBands.value, 1);
+  assert.equal(staff.jupiter.mistMaterial.uniforms.uDuo.value, 1);
+  assert.deepEqual(
+    [staff.jupiter.mistMaterial.uniforms.uDuoB.value.x, staff.jupiter.mistMaterial.uniforms.uDuoB.value.y, staff.jupiter.mistMaterial.uniforms.uDuoB.value.z],
+    [0.92, 0.84, 0.70],
+    'Jupiter has cream zones between its red and teal belts',
+  );
 });
 
 test('the metal staff preserves the wooden staff design while using the selected engine metal throughout its structure', () => {
