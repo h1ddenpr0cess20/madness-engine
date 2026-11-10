@@ -223,7 +223,8 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
       mist.updateWorldMatrix?.(true, false);
       u.uCenter.value.setFromMatrixPosition(mist.matrixWorld);
       // Marched in the world: its sphere as big as the globe is drawn, however it has been scaled.
-      u.uShape.value.setFromMatrixScale(mist.matrixWorld);
+      // (Not when marched in its own frame, where its shape is set once.)
+      if (!u.uLocal?.value) u.uShape.value.setFromMatrixScale(mist.matrixWorld);
     },
 
     dispose() {
