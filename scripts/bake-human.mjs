@@ -4,7 +4,7 @@
  * MakeHuman project's base mesh, morph targets, skeleton and skin weights,
  * all released as CC0 (public domain) by the MakeHuman team.
  *
- *     node scripts/bake-human.mjs [cacheDir]
+ *     node scripts/bake-human.mjs [cacheDir] [--shapes-only]
  *
  * What it does:
  *  1. Reads the base mesh (all quads) and blends the young male targets of
@@ -17,13 +17,19 @@
  *     strongest for each vertex; works out every joint the rig turns about.
  *  5. Bakes each vertex's ambient occlusion (how much of the sky it sees).
  *  6. Writes the result as one compact module.
+ *  7. Bakes the character creator's shapes (features.js) from MakeHuman's
+ *     modelling targets: each one's offsets at his size and in his pose,
+ *     vertex by vertex, and how far it moves each of his joints, into
+ *     src/people/human/data/shapes.js. `--shapes-only` writes just that.
  */
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const SOURCE = 'https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data';
-const cache = process.argv[2] ?? join(tmpdir(), 'makehuman-cache');
+const args = process.argv.slice(2);
+const SHAPES_ONLY = args.includes('--shapes-only');
+const cache = args.find((a) => !a.startsWith('--')) ?? join(tmpdir(), 'makehuman-cache');
 mkdirSync(cache, { recursive: true });
 
 async function fetchText(path) {
@@ -96,11 +102,13 @@ for (const [path, w] of Object.entries(MIX)) {
 }
 
 // ————————————————————————————————————————————— 2. to size
+let SCALE = 1;
 {
   const body = new Set(groups.body.flat().map((c) => c[0]));
   let lo = Infinity, hi = -Infinity;
   for (const i of body) { lo = Math.min(lo, pos[i][1]); hi = Math.max(hi, pos[i][1]); }
   const s = HEIGHT / (hi - lo);
+  SCALE = s;
   for (const p of pos) { p[0] *= s; p[1] = (p[1] - lo) * s; p[2] *= s; }
 }
 
@@ -306,6 +314,118 @@ const weights = order.map((v) => {
   const t = list.reduce((s, [, w]) => s + w, 0);
   return list.map(([n, w]) => [ourIndex.get(n), w / t]);
 });
+
+// ————————————————————————————————————————————— 7. the character creator's shapes
+// Each is a sum of MakeHuman's modelling targets (features.js says which, and how much). A target
+// moves the vertices of its wide A-pose at its own size; each offset is scaled to him and turned as
+// the vertex was turned into our pose, by its own skin weights. A joint moves as the vertices it sits
+// among do: MakeHuman's joints are the middles of sets of helper vertices, so each moves by their mean.
+{
+  const { shapeRecipes } = await import('../src/people/human/features.js');
+  const lin = world.map((M) => [M[0].slice(0, 3), M[1].slice(0, 3), M[2].slice(0, 3)]);
+  const turned = (R, q) => [0, 1, 2].map((a) => R[a][0] * q[0] + R[a][1] * q[1] + R[a][2] * q[2]);
+  /** MakeHuman's offset `d` at vertex `i`, at his size and in his pose. */
+  const onHim = (i, d) => {
+    const q = scale(d, SCALE), vb = vertexBones[i];
+    if (!vb.length) return q;
+    const out = [0, 0, 0];
+    for (const [b, w] of vb) { const t = turned(lin[b], q); for (let a = 0; a < 3; a++) out[a] += t[a] * w; }
+    return out;
+  };
+  const targets = new Map();
+  async function target(name) {
+    if (!targets.has(name)) {
+      const d = new Map();
+      for (const line of (await fetchText(`targets/${name}.target`)).split('\n')) {
+        if (!line || line[0] === '#') continue;
+        const [i, x, y, z] = line.trim().split(/\s+/).map(Number);
+        d.set(i, [x, y, z]);
+      }
+      targets.set(name, d);
+    }
+    return targets.get(name);
+  }
+  // Our bones' pivots, by the MakeHuman bone whose head they are.
+  const HEADS = { hips: 'spine05', spine: 'spine03', chest: 'spine01', neck: 'neck01', head: 'neck03', jaw: 'jaw', tongue: 'tongue01' };
+  for (const S of ['L', 'R']) {
+    Object.assign(HEADS, {
+      [`brow${S}`]: `oculi01.${S}`, [`clavicle${S}`]: `clavicle.${S}`, [`arm${S}`]: `upperarm01.${S}`, [`fore${S}`]: `lowerarm01.${S}`,
+      [`hand${S}`]: `wrist.${S}`, [`thigh${S}`]: `upperleg02.${S}`, [`shin${S}`]: `lowerleg01.${S}`, [`foot${S}`]: `foot.${S}`, [`toes${S}`]: `toe3-1.${S}`,
+    });
+    ['thumb', 'index', 'middle', 'ring', 'pinky'].forEach((f, k) => { for (const n of [1, 2, 3]) HEADS[`${f}${n}${S}`] = `finger${k + 1}-${n}.${S}`; });
+  }
+  // The pivots on the skin (the mouth's) move as the few vertices nearest them do.
+  const mirrorX = (p) => [-p[0], p[1], p[2]];
+  const bodyAll = [...new Set(groups.body.flat().map((c) => c[0]))];
+  const nearest = (p, n = 6) => bodyAll.map((i) => [i, len(sub(posed[i], p))]).sort((a, b) => a[1] - b[1]).slice(0, n).map(([i]) => i);
+  const SKIN_PIVOTS = { lipUpper: nearest(FACE.mouth), lipLower: nearest(FACE.mouth), lipCornerL: nearest(FACE.lipCorner), lipCornerR: nearest(mirrorX(FACE.lipCorner)) };
+  const EYES = { L: [...new Set(groups['helper-l-eye'].flat().map((c) => c[0]))], R: [...new Set(groups['helper-r-eye'].flat().map((c) => c[0]))] };
+  const mean = (list) => { const c = [0, 0, 0]; for (const p of list) for (let a = 0; a < 3; a++) c[a] += p[a] / list.length; return c; };
+  const r5 = (v) => v.map((x) => Math.round(x * 1e5) / 1e5);
+  const b64 = (typed) => Buffer.from(typed.buffer, typed.byteOffset, typed.byteLength).toString('base64');
+  const out = {};
+  let bytes = 0;
+  for (const [name, recipe] of Object.entries(shapeRecipes())) {
+    // The recipe's targets summed, on MakeHuman's vertices.
+    const raw = new Map();
+    for (const [t, w] of Object.entries(recipe)) {
+      for (const [i, d] of await target(t)) {
+        const r = raw.get(i) ?? [0, 0, 0];
+        r[0] += d[0] * w; r[1] += d[1] * w; r[2] += d[2] * w;
+        raw.set(i, r);
+      }
+    }
+    const at = (i) => (raw.has(i) ? onHim(i, raw.get(i)) : [0, 0, 0]);
+    // His vertices it moves.
+    const idx = [], ds = [];
+    let most = 0;
+    order.forEach((v, j) => {
+      if (!raw.has(v)) return;
+      const d = onHim(v, raw.get(v));
+      if (len(d) < 2e-5) return;
+      idx.push(j); ds.push(d);
+      most = Math.max(most, Math.abs(d[0]), Math.abs(d[1]), Math.abs(d[2]));
+    });
+    // A byte an axis where that is a quarter of a millimetre or finer, two bytes where it is not.
+    const wide = most / 127 > 0.00025;
+    const q = most / (wide ? 32767 : 127) || 1;
+    const index = Uint16Array.from(idx), offset = new (wide ? Int16Array : Int8Array)(ds.length * 3);
+    ds.forEach((d, k) => { for (let a = 0; a < 3; a++) offset[k * 3 + a] = Math.round(d[a] / q); });
+    // His joints it moves.
+    const pivots = {};
+    const put = (bone, d) => { if (len(d) >= 2e-5) pivots[bone] = r5(d); };
+    for (const [bone, mh] of Object.entries(HEADS)) {
+      const b = mbIndex.get(mh);
+      const vs = skel.joints[skel.bones[mh].head];
+      put(bone, turned(lin[b], scale(mean(vs.map((i) => raw.get(i) ?? [0, 0, 0])), SCALE)));
+    }
+    for (const [bone, vs] of Object.entries(SKIN_PIVOTS)) put(bone, mean(vs.map(at)));
+    // The eyes: where each moves to, and how much bigger it grows.
+    const eyes = {};
+    for (const [S, vs] of Object.entries(EYES)) {
+      const dc = mean(vs.map(at));
+      const c = mean(vs.map((i) => posed[i]));
+      for (const b of ['eye', 'lidUp', 'lidLow']) put(`${b}${S}`, dc);
+      const grow = vs.reduce((s, i) => s + dot(sub(at(i), dc), norm(sub(posed[i], c))), 0) / vs.length;
+      if (Math.abs(grow) > 1e-5) eyes[S] = Math.round(grow * 1e5) / 1e5;
+    }
+    out[name] = { q: Number(q.toPrecision(6)), bits: wide ? 16 : 8, i: b64(index), d: b64(offset), pivots, ...(Object.keys(eyes).length ? { eyes } : {}) };
+    bytes += index.byteLength + offset.byteLength;
+    console.log('shape', name.padEnd(20), 'vertices', String(idx.length).padStart(6), 'most', (most * 1000).toFixed(1), 'mm', Object.keys(eyes).length ? `eyes ${JSON.stringify(eyes)}` : '');
+  }
+  const text = `// Generated by scripts/bake-human.mjs from the MakeHuman project's modelling targets,
+// released as CC0 (public domain) by the MakeHuman team (makehumancommunity.org).
+// Do not edit by hand. Each shape (features.js names them) is the vertices it
+// moves (\`i\`, base64 Uint16 indices into data/base.js), their offsets (\`d\`,
+// base64 Int8 or Int16, as \`bits\` says, × \`q\` metres, in his pose), how far it moves each of his joints
+// (\`pivots\`, metres) and how much it grows each eye's radius (\`eyes\`).
+export const SHAPES = ${JSON.stringify(out)};
+`;
+  mkdirSync('src/people/human/data', { recursive: true });
+  writeFileSync('src/people/human/data/shapes.js', text);
+  console.log('shapes', Object.keys(out).length, 'raw bytes', bytes, 'file bytes', text.length);
+  if (SHAPES_ONLY) process.exit(0);
+}
 
 // ————————————————————————————————————————————— 5. ambient occlusion
 // The teeth and tongue a little further back, so smoothing the lips never shows them through.

@@ -197,7 +197,8 @@ test('the character creator: every slot has a default, the built ones change him
   const him = createHuman(GFX, { detail: 0.5, features: { hair: 'none', beard: 'full', noseShape: 'aquiline', skin: '#8a5a3c' } });
   assert.deepEqual(him.hair, { hair: null, beard: 'full', brows: 'natural' });
   assert.equal(him.look.skin, '#8a5a3c');
-  assert.equal(him.features.noseShape, 'aquiline', 'a slot not built yet is kept');
+  assert.equal(him.features.noseShape, 'aquiline', 'a shape slot is kept as set');
+  assert.equal(him.features.tattoo, 'none', 'a slot not built yet is kept');
   him.customize({ eyeSize: 0.4, hairColour: '#c8a060', hair: 'sidePart' });
   assert.equal(him.features.eyeSize, 0.4);
   assert.equal(him.look.hair, '#c8a060');
@@ -255,4 +256,69 @@ test('sunglasses sit on his face and move with his head', async () => {
   him.customize({ glasses: 'none' });
   assert.equal(mesh(), undefined);
   assert.equal(him.features.glasses, 'none');
+});
+
+test('every shape slot is baked: each recipe in features.js is in data/shapes.js, and nothing else is', async () => {
+  const { shapeRecipes, SLOTS } = await import('../src/people/human/features.js');
+  const { SHAPES } = await import('../src/people/human/data/shapes.js');
+  assert.deepEqual(Object.keys(SHAPES).sort(), Object.keys(shapeRecipes()).sort(), 'rebake with scripts/bake-human.mjs --shapes-only');
+  for (const k of ['height', 'muscle', 'weight', 'shoulders', 'face', 'jaw', 'eyeShape', 'eyeSize', 'noseShape', 'mouthShape', 'earShape', 'browArch']) {
+    assert.ok(SLOTS[k].ready, `${k} is built`);
+  }
+  for (const k of ['age', 'freckles', 'scars', 'tattoo', 'moustache', 'stubble', 'lipColour']) assert.ok(!SLOTS[k].ready, `${k} is not built yet`);
+});
+
+test('the creator shapes him: the skin, his joints, his eyes and all he wears follow, and he stays on the ground', () => {
+  const him = createHuman(GFX, { detail: 0.5, outfit: ['briefs', 'tshirt', 'jeans', 'sneakers'], beard: 'full' });
+  const mesh = (n) => him.group.children.find((m) => m.name === `human ${n}`);
+  const rest = (n) => mesh(n).geometry.attributes.position.array.slice();
+  const before = { body: rest('body'), tshirt: rest('tshirt'), beard: rest('beard'), hair: rest('hair') };
+  const head = him.skeleton.pivots[him.skeleton.index.get('head')].slice();
+  assert.equal(him.height, HUMAN_DIMENSIONS.height);
+
+  him.customize({ height: 1 });
+  assert.ok(him.height > 1.86 && him.height < 1.92, `taller: ${him.height}`);
+  assert.ok(him.skeleton.pivots[him.skeleton.index.get('head')][1] > head[1] + 0.08, 'his head joint rises with him');
+  assert.ok(Math.abs(boundsOf(mesh('body').geometry.attributes.position).min[1]) < 0.003, 'his soles stay on the ground');
+  assert.ok(boundsOf(mesh('hair').geometry.attributes.position).min[1] > boundsOf({ array: before.hair, count: before.hair.length / 3 }).min[1] + 0.08, 'his hair rises with his head');
+
+  // Heavier: the shirt goes out with the belly under it.
+  him.customize({ height: 0, weight: 1 });
+  const front = (a) => { let z = -Infinity; for (let i = 0; i < a.length; i += 3) if (a[i + 1] > 1.0 && a[i + 1] < 1.15 && Math.abs(a[i]) < 0.05) z = Math.max(z, a[i + 2]); return z; };
+  assert.ok(front(rest('body')) > front(before.body) + 0.01, 'his belly comes forward');
+  assert.ok(front(rest('tshirt')) > front(before.tshirt) + 0.01, 'and his shirt with it');
+
+  // A nose shape moves the nose and nothing far from it.
+  him.customize({ weight: 0, noseShape: 'hooked' });
+  const body = rest('body');
+  let near = 0, far = 0;
+  for (let i = 0; i < body.length; i += 3) {
+    const d = Math.hypot(body[i] - before.body[i], body[i + 1] - before.body[i + 1], body[i + 2] - before.body[i + 2]);
+    if (before.body[i + 1] < 1.5) far = Math.max(far, d); else near = Math.max(near, d);
+  }
+  assert.ok(near > 0.005 && far < 1e-6, `the nose: ${near} near, ${far} below the face`);
+
+  // Eyes further apart: the eyeballs and their bones go too.
+  him.customize({ noseShape: 'straight', eyeSpacing: 1 });
+  const eyeL = him.skeleton.pivots[him.skeleton.index.get('eyeL')], eyeR = him.skeleton.pivots[him.skeleton.index.get('eyeR')];
+  assert.ok(eyeL[0] - eyeR[0] > 2 * 0.0298 + 0.002, 'the eyes are set wider apart');
+
+  // Back as he was: exactly as baked.
+  him.customize({ eyeSpacing: 0 });
+  assert.deepEqual(rest('body'), before.body);
+  assert.deepEqual(rest('beard'), before.beard);
+  assert.deepEqual(him.skeleton.pivots[him.skeleton.index.get('head')], head);
+});
+
+test('a build sets the body sliders off from where they are, and a held weapon goes with his hand', () => {
+  const him = createHuman(GFX, { detail: 0.5, features: { build: 'stocky' }, glasses: null });
+  assert.ok(him.height < HUMAN_DIMENSIONS.height - 0.02, `a stocky build is shorter: ${him.height}`);
+  const sword = createKrystalSword(GFX);
+  him.hold(sword);
+  him.pose({ clip: 'idle', t: 0, time: 0 });
+  const at = (o) => [o.matrix.elements[12], o.matrix.elements[13], o.matrix.elements[14]];
+  const low = at(sword.group ?? sword);
+  him.customize({ build: 'average', height: 1 });
+  const high = at(sword.group ?? sword);
+  assert.ok(high[1] - low[1] > 0.04, `the grip rises with the hand: ${low[1]} to ${high[1]}`);
 });

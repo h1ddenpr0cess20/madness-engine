@@ -8,8 +8,9 @@ import { BONES as BAKED_BONES } from './human/data/base.js';
 import { DEFAULT_OUTFIT, GARMENTS } from './human/clothes.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
-import { checkFeatures, CUSTOMIZATION, DEFAULT_FEATURES } from './human/features.js';
+import { BUILDS, checkFeatures, CUSTOMIZATION, DEFAULT_FEATURES } from './human/features.js';
 import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
+import { carried, levelOffsets, placeEyes, SHAPE_KEYS, shapeFor, thickenBrows } from './human/shape.js';
 import { buildGlasses, SUNGLASSES } from './human/glasses.js';
 
 /**
@@ -38,7 +39,7 @@ import { buildGlasses, SUNGLASSES } from './human/glasses.js';
  * `hands` set the rest, and `pose` takes them on every frame.
  */
 
-export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, DEFAULT_FEATURES };
+export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, DEFAULT_FEATURES, BUILDS };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 
 const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'gums', 'tongue', 'lash'];
@@ -66,6 +67,8 @@ function skinPart(level) {
   }
   const part = new Part('body', 'skin');
   const ids = new Map();
+  // Which of the level's vertices each of the part's is (a vertex is split where its UVs are).
+  const src = [];
   const corner = (v, t) => {
     const key = v * 4194304 + t;
     let id = ids.get(key);
@@ -77,6 +80,7 @@ function skinPart(level) {
       const ao = occ[v];
       id = part.vertex(p, [uv[t * 2], uv[t * 2 + 1]], withLipCorners(named, p), 0.3 + 0.7 * Math.pow(ao, 0.75), [n[v * 3] / l, n[v * 3 + 1] / l, n[v * 3 + 2] / l], zoneOf(weights[v], p));
       ids.set(key, id);
+      src.push(v);
     }
     return id;
   };
@@ -87,7 +91,22 @@ function skinPart(level) {
     if (len(sub(v[0], v[2])) <= len(sub(v[1], v[3]))) part.idx.push(q[0], q[1], q[2], q[0], q[2], q[3]);
     else part.idx.push(q[0], q[1], q[3], q[1], q[2], q[3]);
   }
+  part.src = Uint32Array.from(src);
   return part;
+}
+
+/** The skin's normals at `level` with its vertices at `pos`, as skinPart works them out: one a vertex of the level. */
+function levelNormals(level, pos) {
+  const { faces } = bodyLevel(level);
+  const n = new Float32Array(pos.length);
+  for (let f = 0; f < faces.length; f += 4) {
+    const a = faces[f] * 3, b = faces[f + 1] * 3, c = faces[f + 2] * 3, d = faces[f + 3] * 3;
+    const ux = pos[c] - pos[a], uy = pos[c + 1] - pos[a + 1], uz = pos[c + 2] - pos[a + 2];
+    const vx = pos[d] - pos[b], vy = pos[d + 1] - pos[b + 1], vz = pos[d + 2] - pos[b + 2];
+    const qx = uy * vz - uz * vy, qy = uz * vx - ux * vz, qz = ux * vy - uy * vx;
+    for (const o of [a, b, c, d]) { n[o] += qx; n[o + 1] += qy; n[o + 2] += qz; }
+  }
+  return n;
 }
 
 /** The base body's mesh data at `detail`, made once and shared. */
@@ -96,7 +115,12 @@ function bodyData(detail) {
   const key = `body@${level}`;
   if (!builds.has(key)) {
     const parts = [skinPart(level), buildEyes(detail), ...buildMouth(detail)];
-    builds.set(key, { data: assemble(parts, NAMES, BODY_MATERIALS) });
+    const data = assemble(parts, NAMES, BODY_MATERIALS);
+    // Where each of its parts is, for reshaping him: the skin (and which vertex of the level each of
+    // its vertices is), the eyes, and the mouth's teeth, gums and tongue.
+    const skin = parts[0].count, eyes = skin + parts[1].count;
+    data.skin = { src: parts[0].src, level, eyes: [skin, eyes], mouth: [eyes, data.count] };
+    builds.set(key, { data });
   }
   return builds.get(key);
 }
@@ -457,6 +481,60 @@ export function createHuman(GFX, options = {}) {
   const body = skinnedMesh(GFX, base, BODY_MATERIALS.map((n) => mats[n]), 'human body');
   group.add(body.mesh);
 
+  // His shape, from the creator's choices (shape.js): null while he is as baked. Every mesh keeps the
+  // data it was made from (`source`, shared with everyone made the same) and is moved on from that.
+  let shape = shapeFor(features);
+  const restPivots = skeleton.pivots.map((p) => p.slice());
+
+  /** The skin, eyes and mouth as `shape` has them. */
+  function bodyRest(src) {
+    const { skin } = src;
+    const level = levelOffsets(shape.delta, skin.level);
+    const position = src.position.slice(), normal = src.normal.slice();
+    const at = bodyLevel(skin.level).pos.slice();
+    for (let i = 0; i < at.length; i++) at[i] += level[i];
+    const n = levelNormals(skin.level, at);
+    for (let i = 0; i < skin.src.length; i++) {
+      const v = skin.src[i] * 3, o = i * 3;
+      position[o] += level[v]; position[o + 1] += level[v + 1]; position[o + 2] += level[v + 2];
+      const l = Math.hypot(n[v], n[v + 1], n[v + 2]) || 1;
+      normal[o] = n[v] / l; normal[o + 1] = n[v + 1] / l; normal[o + 2] = n[v + 2] / l;
+    }
+    placeEyes(position, skin.eyes[0], skin.eyes[1], shape);
+    carried(src, shape.delta, { k: 8, from: skin.mouth[0], to: skin.mouth[1], into: position });
+    return { position, normal };
+  }
+
+  /**
+   * Puts mesh `m` (`kind`: 'body', 'hair', 'beard', 'brows', 'glasses' or a garment) in his shape: its
+   * rest data moved on from what it was made as, and its buffers set to that until he is posed.
+   */
+  function fit(m, kind) {
+    m.source ??= m.data;
+    const src = m.source;
+    if (!shape) m.data = src;
+    else if (kind === 'body') m.data = { ...src, ...bodyRest(src) };
+    else {
+      const start = kind === 'brows' ? thickenBrows(src.position, shape.browThickness) : src.position.slice();
+      const k = kind === 'glasses' ? 24 : kind === 'hair' ? 6 : 4;
+      m.data = { ...src, position: carried(src, shape.delta, { k, into: start }) };
+    }
+    m.position.array.set(m.data.position);
+    m.normal.array.set(m.data.normal);
+    m.position.needsUpdate = m.normal.needsUpdate = true;
+    return m;
+  }
+
+  /** His joints where his shape has them. */
+  function placeJoints() {
+    skeleton.pivots = restPivots.map((p, b) => {
+      const d = shape?.pivots[skeleton.names[b]];
+      return d ? [p[0] + d[0], p[1] + d[1], p[2] + d[2]] : p;
+    });
+  }
+  placeJoints();
+  fit(body, 'body');
+
   // His hair, beard and brows: the hair rides the head bone as a whole; the beard and brows are skinned,
   // so they move with the jaw, the lips and the brows.
   const groomed = { hair: null, beard: null, brows: null };
@@ -467,7 +545,7 @@ export function createHuman(GFX, options = {}) {
       if (groomed[kind]) group.remove(groomed[kind].mesh.mesh, groomed[kind].edges);
       groomed[kind] = null;
       if (!name) continue;
-      const m = skinnedMesh(GFX, hairData(kind, name, detail), [mats.hair], `human ${kind}`);
+      const m = fit(skinnedMesh(GFX, hairData(kind, name, detail), [mats.hair], `human ${kind}`), kind);
       // Its soft edges: the same cards, blended over, drawn after everything solid.
       const edges = new GFX.Mesh(m.geometry, [mats.hairEdge]);
       edges.name = `human ${kind} edges`;
@@ -489,7 +567,7 @@ export function createHuman(GFX, options = {}) {
     if (glasses) group.remove(glasses.mesh.mesh);
     glasses = null;
     if (!name) return;
-    const m = skinnedMesh(GFX, glassesData(name, detail), [mats.lens, mats.frameMetal, mats.frameAcetate], 'human sunglasses');
+    const m = fit(skinnedMesh(GFX, glassesData(name, detail), [mats.lens, mats.frameMetal, mats.frameAcetate], 'human sunglasses'), 'glasses');
     m.mesh.matrixAutoUpdate = false;
     m.mesh.receiveShadow = true;
     group.add(m.mesh);
@@ -504,8 +582,9 @@ export function createHuman(GFX, options = {}) {
 
   /** Which of `data`'s vertices `garment` covers, worked out once. */
   function covered(data, garment) {
-    let byGarment = coverage.get(data);
-    if (!byGarment) coverage.set(data, (byGarment = new Map()));
+    // By its zones, which a reshaped copy of the data shares.
+    let byGarment = coverage.get(data.zones);
+    if (!byGarment) coverage.set(data.zones, (byGarment = new Map()));
     if (!byGarment.has(garment)) byGarment.set(garment, Uint8Array.from(data.zones, (z) => (garment.covers(z) ? 1 : 0)));
     return byGarment.get(garment);
   }
@@ -548,7 +627,7 @@ export function createHuman(GFX, options = {}) {
   /** Makes the mesh for garment `g` as it fits over what he has on under it. */
   function make(name, g, data = garmentData(name, g, detail, below(g.layer))) {
     const materials = g.materials.map((n) => mats[n] ?? g.materialFor?.(GFX, n) ?? mats.shirt);
-    const m = skinnedMesh(GFX, data, materials, `human ${name}`);
+    const m = fit(skinnedMesh(GFX, data, materials, `human ${name}`), name);
     group.add(m.mesh);
     return m;
   }
@@ -564,7 +643,7 @@ export function createHuman(GFX, options = {}) {
     const over = [...worn].filter(([, w]) => w.garment.fits && w.garment.layer > layer).sort(([, a], [, b]) => a.garment.layer - b.garment.layer);
     for (const [name, w] of over) {
       const data = garmentData(name, w.garment, detail, below(w.garment.layer));
-      if (data === w.mesh.data) continue;
+      if (data === (w.mesh.source ?? w.mesh.data)) continue;
       drop(w.mesh);
       w.mesh = make(name, w.garment, data);
     }
@@ -594,6 +673,17 @@ export function createHuman(GFX, options = {}) {
     return true;
   }
 
+  /** Gives him the shape his features now ask for: the skin, his joints, and all he wears and grows over it. */
+  function reshape() {
+    shape = shapeFor(features);
+    placeJoints();
+    fit(body, 'body');
+    for (const kind of ['hair', 'beard', 'brows']) if (groomed[kind]) fit(groomed[kind].mesh, kind);
+    if (glasses) fit(glasses.mesh, 'glasses');
+    for (const [name, w] of worn) fit(w.mesh, name);
+    if (last) pose(last);
+  }
+
   function remove(name) {
     if (!unwear(name)) return api;
     refit();
@@ -608,6 +698,14 @@ export function createHuman(GFX, options = {}) {
   let last = null;
   const M4 = new GFX.Matrix4();
 
+  /** Where his shape has moved hand `S` to, at rest: a held grip goes with it. */
+  const handShift = (S) => shape?.pivots[`hand${S}`] ?? [0, 0, 0];
+  /** A held thing's rest matrix, in the hand where his shape has it. */
+  function restOf(h, S) {
+    const [x, y, z] = handShift(S);
+    return new GFX.Matrix4().makeTranslation(x, y, z).multiply(h.rest);
+  }
+
   /** Puts a held thing where its hand is now. */
   function placeHeld() {
     for (const S of ['L', 'R']) {
@@ -615,7 +713,7 @@ export function createHuman(GFX, options = {}) {
       if (!h) continue;
       const o = skeleton.index.get(`hand${S}`) * 12, B = skeleton.matrices;
       M4.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
-      h.object.matrix.multiplyMatrices(M4, h.rest);
+      h.object.matrix.multiplyMatrices(M4, shape ? restOf(h, S) : h.rest);
       h.object.matrixWorldNeedsUpdate = true;
     }
   }
@@ -637,12 +735,12 @@ export function createHuman(GFX, options = {}) {
     skeleton.compute();
     const o = skeleton.index.get('handR') * 12, B = skeleton.matrices;
     M4.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
-    const world = new GFX.Matrix4().multiplyMatrices(M4, h.rest);
+    const world = new GFX.Matrix4().multiplyMatrices(M4, shape ? restOf(h, 'R') : h.rest);
     const target = new GFX.Vector3(0, h.second, 0).applyMatrix4(world);
     const axis = new GFX.Vector3(0, 1, 0).transformDirection(world);
     // The right hand's back (rest −x for the right hand): the left's (rest +x) goes the same way.
     const back = new GFX.Vector3(B[o] * -1, B[o + 4] * -1, B[o + 8] * -1).normalize();
-    const grip = mirror(GRIP_AT, 1), along = [0, GRIP_TILT, 1];
+    const grip = mirror(GRIP_AT, 1).map((v, a) => v + handShift('L')[a]), along = [0, GRIP_TILT, 1];
     const bonesL = ['armL', 'foreL', 'handL'];
     const start = bonesL.map((b) => skeleton.bone(b).rot.slice());
     const dirOf = (name, d) => {
@@ -907,8 +1005,11 @@ export function createHuman(GFX, options = {}) {
       for (const k of ['hair', 'beard', 'brows']) if (k in change) groom[k] = none(change[k]);
       if (Object.keys(groom).length) setHair(groom);
       if ('glasses' in change) api.setGlasses(none(change.glasses));
+      if (SHAPE_KEYS.some((k) => k in change)) reshape();
       return api;
     },
+    /** How tall he stands, in metres, in the shape he has been given. */
+    get height() { return shape?.height ?? HEIGHT; },
     setHairColor: (c) => setLook({ hair: c }),
     setShirtColor: (c) => setLook({ shirt: c }),
     setJeansColor: (c) => setLook({ denim: c }),
