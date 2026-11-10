@@ -685,15 +685,34 @@ async function humanCarry(choice) {
   // An avatar (Alan) held still: it does not look about or float in his hand.
   if (made?.made && 'still' in made.made) made.made.still = true;
   made?.pose?.(0);
+  // The yarn ball, wound up: in a hand there is no route for its strand to lie along, so none of it is laid out.
+  if (made?.laid && made?.ball) made.laid.visible = false;
   const object = objectOf(made);
   object.position.set(0, 0, 0);
-  // Sized by itself, not by the glow round it (Alan's aura is a sprite three and a half times his width).
-  const glows = [];
-  object.traverse((o) => { if (o.isSprite && o.visible) { glows.push(o); o.visible = false; } });
-  const { size } = boundsOf(object);
-  for (const o of glows) o.visible = true;
+  // Sized by what of it is drawn: not the glow round it (Alan's aura and Vibey's halos are sprites several times
+  // their width), nor the part of a strand not yet laid (the yarn ball's runs the whole of its route).
+  const size = drawnSize(object);
   object.scale.multiplyScalar((planet ? 0.1 : 0.09) / Math.max(...size));
   return { thing: object, how: 'palm' };
+}
+
+/** How big `object` is as drawn: its visible meshes (not sprites), each only as far as its draw range goes. */
+function drawnSize(object) {
+  object.updateMatrixWorld(true);
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity], v = new GFX.Vector3();
+  object.traverseVisible((o) => {
+    const g = o.geometry, p = g?.attributes?.position;
+    if (!p || o.isSprite) return;
+    const index = g.index?.array ?? null, { start = 0, count = Infinity } = g.drawRange ?? {};
+    const to = Math.min(index ? index.length : p.count, start + count), step = Math.max(1, Math.floor((to - start) / 4000));
+    for (let k = start; k < to; k += step) {
+      const i = index ? index[k] : k;
+      v.set(p.getX(i), p.getY(i), p.getZ(i)).applyMatrix4(o.matrixWorld);
+      lo[0] = Math.min(lo[0], v.x); lo[1] = Math.min(lo[1], v.y); lo[2] = Math.min(lo[2], v.z);
+      hi[0] = Math.max(hi[0], v.x); hi[1] = Math.max(hi[1], v.y); hi[2] = Math.max(hi[2], v.z);
+    }
+  });
+  return Number.isFinite(lo[0]) ? hi.map((h, a) => h - lo[a]) : [0.1, 0.1, 0.1];
 }
 
 /** Something for a human's hand from a menu choice: a weapon, a staff, or anything carried. */

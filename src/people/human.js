@@ -52,6 +52,18 @@ export const DIMENSIONS = Object.freeze({
 /** The woman's outfit, unless told otherwise: the man's, with a sports bra under the t-shirt. */
 export const DEFAULT_OUTFIT_FEMALE = Object.freeze(['bra', ...DEFAULT_OUTFIT]);
 
+/**
+ * The vertices of `geometry` it draws (as many as 4000 of them, spread through it): only those its draw
+ * range takes in, so a strand drawn only as far as it has been laid (the yarn ball's) is not measured whole.
+ */
+function* drawnVertices(geometry) {
+  const count = geometry.attributes.position.count, index = geometry.index?.array ?? null;
+  const { start = 0, count: n = Infinity } = geometry.drawRange ?? {};
+  const from = Math.max(0, start), to = Math.min(index ? index.length : count, from + n);
+  const step = Math.max(1, Math.floor((to - from) / 4000));
+  for (let k = from; k < to; k += step) yield index ? index[k] : k;
+}
+
 /** Each figure's weight as baked, worked out when first asked for. */
 const baseMass = {};
 const BODY_MATERIALS = ['skin', 'eye', 'teeth', 'gums', 'tongue', 'lash'];
@@ -982,7 +994,8 @@ export function createHuman(GFX, options = {}) {
     // into it swung out from the shoulder just enough, eased in so it never jolts (with both hands on a
     // grip, done above, before the left takes it).
     // (Not an arm carrying something: it is where it carries it.)
-    const free = ['L', 'R'].filter((S) => !carrying(S) || held[S]?.how === 'tome');
+    // (An arm carrying on its own hand is kept clear too; only the hands on an open book stay where it is.)
+    const free = ['L', 'R'].filter((S) => !carrying(S) || (held.R?.how !== 'book' && held[S]?.how !== 'book'));
     if (!grip && free.length && clearArms(skeleton, clearance, skeleton.pivots, free)) skeleton.compute();
     // Only what shows is moved: the skin under his clothes is left where it was.
     skinDual(body.data, skeleton, body.position.array, body.normal.array, drawn(body));
@@ -1073,12 +1086,12 @@ export function createHuman(GFX, options = {}) {
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity], v = new GFX.Vector3();
     const inv = new GFX.Matrix4().copy(object.matrixWorld).invert();
     const own = new GFX.Matrix4().makeScale(object.scale.x, object.scale.y, object.scale.z);
-    object.traverse((o) => {
+    object.traverseVisible((o) => {
       const p = o.geometry?.attributes?.position;
       // (Not a glow round it: a sprite is drawn to face the camera, not as big as its quad.)
-      if (!p || o.visible === false || o.isSprite) return;
+      if (!p || o.isSprite) return;
       const to = new GFX.Matrix4().multiplyMatrices(inv, o.matrixWorld).premultiply(own);
-      for (let i = 0; i < p.count; i += Math.max(1, Math.floor(p.count / 4000))) {
+      for (const i of drawnVertices(o.geometry)) {
         v.set(p.getX(i), p.getY(i), p.getZ(i)).applyMatrix4(to);
         lo[0] = Math.min(lo[0], v.x); lo[1] = Math.min(lo[1], v.y); lo[2] = Math.min(lo[2], v.z);
         hi[0] = Math.max(hi[0], v.x); hi[1] = Math.max(hi[1], v.y); hi[2] = Math.max(hi[2], v.z);

@@ -502,6 +502,13 @@ test('carrying: a ball on the palm, a coin between thumb and forefinger, a book 
   assert.ok(at(ball)[1] > hand[1] + 0.02, 'the ball sits up on the palm');
   assert.ok(dist(at(ball), hand) < 0.15, 'in the hand');
   assert.ok(at(ball)[2] > 0.2, 'held out in front');
+  // The arm carrying it is kept out of his body as a free one is (its forearm not in his side), heavy or not.
+  who.customize({ build: 'heavy', weight: 1.5 });
+  for (const clip of ['idle', 'walk']) for (let i = 0; i < 8; i++) {
+    who.pose({ clip, t: i / 8, time: i / 8 });
+    assert.ok(who.armDepth().R < 0.006, `${clip}: the carrying arm clear of his side (${(who.armDepth().R * 1000).toFixed(1)} mm in)`);
+  }
+  who.customize({ build: 'average', weight: 0 });
 
   const coin = new GFX.Group();
   const disc = new GFX.Mesh(new GFX.CylinderGeometry(0.0125, 0.0125, 0.002, 24), new GFX.MeshStandardMaterial());
