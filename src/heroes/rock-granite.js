@@ -104,9 +104,11 @@ function laySurface(p) {
   return uv;
 }
 
-/** The granite stone alone: `heroes/rock`'s shape, finely sampled, with its own surface in the colour asked for. */
-export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, colour = 'grey' } = {}) {
-  if (!(colour in GRANITES)) throw new Error(`rock-granite: no granite called ${colour}; there is ${GRANITE_CHOICES.join(', ')}`);
+/**
+ * The stone's shape alone, with no material: `heroes/rock`'s shape, finely sampled, with its grain's uv and its
+ * large-scale tone by vertex (`color`). The jewel rock (`heroes/rock-jewel`) is cut to this same shape.
+ */
+export function createGraniteStone(GFX, { detail = GRANITE_DETAIL } = {}) {
   const geometry = new GFX.IcosahedronGeometry(1, detail).toNonIndexed();
   const planes = cuttingPlanes(GFX);
 
@@ -140,6 +142,13 @@ export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, colour = 'g
   geometry.setAttribute('uv', new GFX.BufferAttribute(laySurface(p), 2));
   geometry.setAttribute('color', new GFX.BufferAttribute(colors, 3));
   geometry.computeVertexNormals();
+  return geometry;
+}
+
+/** The granite stone alone: `heroes/rock`'s shape, finely sampled, with its own surface in the colour asked for. */
+export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, colour = 'grey' } = {}) {
+  if (!(colour in GRANITES)) throw new Error(`rock-granite: no granite called ${colour}; there is ${GRANITE_CHOICES.join(', ')}`);
+  const geometry = createGraniteStone(GFX, { detail });
 
   const { map, bump } = granite(GFX, colour);
   const material = new GFX.MeshStandardMaterial({
