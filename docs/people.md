@@ -54,8 +54,10 @@ read her legs' lengths off it, and a weapon is held at the same place in
 her hand.
 
 She starts in `DEFAULT_OUTFIT_FEMALE`: his outfit with a sports bra (`bra`,
-cut from the chest, bridged across, a band and straps) under the t-shirt.
-Her wardrobe (`GARMENTS_FEMALE`, used by `wear` on her) is his in the
+cut from the chest, bridged across, a band held close round her ribs and
+straps) under the t-shirt. The bra is hers only, and a beard his: `wear('bra')`
+on him and a beard for her are refused. Her wardrobe (`GARMENTS_FEMALE`, used
+by `wear` on her; `garmentsFor(sex)` gives either) is his in the
 women's cut (`WOMENS_CUT`, said in his measures, since it is cut on him and
 carried onto her): a fitted t-shirt, a little shorter, its sleeves shorter
 and close; slim jeans, close down the whole leg (over the socks' cuffs and
@@ -171,7 +173,8 @@ spacing, tilt, depth, colour), the brows, the nose (shape, width, length,
 bridge, tip), the mouth (shape, width, each lip, colour), the ears (shape,
 size, angle), the hair and the facial hair. Each slot is a choice, a slider
 (−1 to 1, 0 the average) or a colour, with its default, and `ready` says
-whether he is built to show it yet.
+whether he is built to show it yet. A group with a `figure` is that figure's
+only (the facial hair is his); `customizationFor(sex)` leaves out the other's.
 
 ```js
 const him = createHuman(GFX, { features: { hair: 'sidePart', beard: 'full', skin: '#8a5a3c' } });

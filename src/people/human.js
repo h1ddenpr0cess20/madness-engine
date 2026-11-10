@@ -9,7 +9,7 @@ import { BONES as BAKED_BONES } from './human/data/base.js';
 import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor } from './human/clothes.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
-import { checkFeatures, CUSTOMIZATION, DEFAULT_FEATURES } from './human/features.js';
+import { checkFeatures, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES } from './human/features.js';
 import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
 import { buildGlasses, SUNGLASSES } from './human/glasses.js';
 
@@ -39,7 +39,7 @@ import { buildGlasses, SUNGLASSES } from './human/glasses.js';
  * `hands` set the rest, and `pose` takes them on every frame.
  */
 
-export { CLIPS, GARMENTS, GARMENTS_FEMALE, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, DEFAULT_FEATURES, FIGURES };
+export { CLIPS, GARMENTS, GARMENTS_FEMALE, garmentsFor, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES, FIGURES };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 /** Each figure's measures (metres), as HUMAN_DIMENSIONS gives the man's. */
 export const DIMENSIONS = Object.freeze({
@@ -165,7 +165,7 @@ function fitted(key, sex, make) {
 // (Her t-shirt and bomber are fitted: under the bust they come back in to her waist, bridging only just below it;
 // the bomber never comes in faster than the shirt under it.)
 const HANGS = {
-  bra: { down: 1.4, across: 0.25, up: 1.6 },
+  bra: { down: 1.4, across: 0.25, up: 1.6, hem: 0.02 },
   tshirt: { down: 0.35, across: 0.35, up: 1.4 },
   jacket: { down: 0.35, across: 0.3, up: 1.2 },
   jacketZipped: { down: 0.35, across: 0.3, up: 1.2 },
@@ -518,7 +518,9 @@ export function createHuman(GFX, options = {}) {
   const sex = options.sex ?? options.features?.sex ?? 'male';
   const figure = figureOf(sex);
   const { detail = 1, outfit = sex === 'female' ? DEFAULT_OUTFIT_FEMALE : DEFAULT_OUTFIT, look: lookIn = {} } = options;
-  const features = { ...DEFAULT_FEATURES, ...(sex === 'female' ? FEMALE_FEATURES : {}), ...checkFeatures({ ...options.features }), sex };
+  const features = { ...DEFAULT_FEATURES, ...(sex === 'female' ? FEMALE_FEATURES : {}), ...checkFeatures({ ...options.features }, sex), sex };
+  // (A beard is his: she has none.)
+  if (sex !== 'male' && options.beard) throw new Error('human: a beard is for the male figure only');
   const none = (v) => (v === 'none' ? null : v);
   const look = { ...DEFAULT_LOOK, skin: features.skin, iris: features.iris, hair: features.hairColour, ...lookIn };
   let grooming = {
@@ -657,7 +659,7 @@ export function createHuman(GFX, options = {}) {
   function wear(nameOrGarment, garment = null) {
     const name = typeof nameOrGarment === 'string' ? nameOrGarment : nameOrGarment.name;
     const g = garment ?? (typeof nameOrGarment === 'object' ? nameOrGarment : wardrobe[name] ?? custom.get(name));
-    if (!g) throw new Error(`human: no garment called ${name}; choose ${Object.keys(GARMENTS).join(', ')} or pass one of your own`);
+    if (!g) throw new Error(`human: no garment called ${name}; choose ${Object.keys(wardrobe).join(', ')} or pass one of your own`);
     if (worn.has(name)) return api;
     if (g !== wardrobe[name]) custom.set(name, g);
     // One thing in each slot: a jacket worn open takes the place of one worn closed.
@@ -924,6 +926,7 @@ export function createHuman(GFX, options = {}) {
 
   /** Gives him the haircut `hair` (one of `HAIRSTYLES`, or null for none), the beard `beard` (one of `BEARDS`, or null) and the brows `brows` (one of `BROWS`); any left out stays. */
   function setHair(next = {}) {
+    if (sex !== 'male' && next.beard) throw new Error('human: a beard is for the male figure only');
     groom({ ...grooming, ...next });
     tex = humanTextures(GFX, paintFor());
     if (tex) Object.assign(mats.skin, { map: tex.skin.map }), mats.skin.needsUpdate = true;
@@ -983,7 +986,7 @@ export function createHuman(GFX, options = {}) {
     },
     /** Sets any of the creator's choices: `{ noseShape: 'aquiline', hair: 'sidePart', eyeSize: 0.3 }`. */
     customize(change) {
-      checkFeatures(change);
+      checkFeatures(change, sex);
       if ('sex' in change && change.sex !== sex) throw new Error('human: the figure is chosen when the human is made: createHuman(GFX, { sex })');
       Object.assign(features, change);
       const colours = {};

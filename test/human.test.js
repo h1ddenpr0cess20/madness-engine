@@ -308,6 +308,13 @@ test('the woman: her own figure on the same mesh, in the women\'s cut of his clo
   her.pose({ clip: 'idle', t: 0, time: 0 });
   assert.ok(boundsOf(hair.geometry.attributes.position).min[1] < FIGURES.female.joints.shoulder[1] - 0.1, 'long hair');
   assert.throws(() => her.customize({ sex: 'male' }), /chosen when the human is made/);
+  // Each has their own: a bra is hers, a beard his.
+  assert.throws(() => her.customize({ beard: 'full' }), /male figure only/);
+  assert.throws(() => her.setHair({ beard: 'full' }), /male figure only/);
+  assert.throws(() => man.wear('bra'), /no garment called bra/);
+  const { customizationFor, garmentsFor } = await import('../src/people/index.js');
+  assert.ok(!customizationFor('female').some((g) => g.slots.some((s) => s.key === 'beard')) && customizationFor('male').some((g) => g.slots.some((s) => s.key === 'beard')));
+  assert.ok('bra' in garmentsFor('female') && !('bra' in garmentsFor('male')));
   // A held weapon sits in her hand: the grip as far from her wrist as it is from his.
   const offset = (who) => {
     const sword = createKrystalSword(GFX);

@@ -1285,12 +1285,6 @@ export const GARMENTS = Object.freeze({
     build: (detail, { sex } = {}) => tag([briefs(detail, sex)], 'briefs'),
     covers: ({ zone, y }) => (zone === 'leg' || zone === 'trunk') && y > BRIEFS.legs + OPEN && y < BRIEFS.waist - OPEN,
   },
-  bra: {
-    layer: 1,
-    materials: ['briefs'],
-    build: (detail) => tag([bra(detail)], 'bra'),
-    covers: ({ zone, y, sx = 0, z = 0 }) => zone === 'trunk' && y > BRA.band + 0.025 && y < braTop(sx, z) - 0.02,
-  },
   socks: {
     layer: 1,
     materials: ['sock'],
@@ -1337,8 +1331,15 @@ export const WOMENS_CUT = Object.freeze({
   jacket: Object.freeze({ ...JACKET, hem: 1.0, over: 0.005 }),
 });
 
-/** Her wardrobe: his, with the women's cut of the t-shirt, the jeans and the bomber. */
+/** Her wardrobe: his, with a sports bra, and the women's cut of the t-shirt, the jeans and the bomber. */
 export const GARMENTS_FEMALE = Object.freeze({
+  briefs: GARMENTS.briefs,
+  bra: {
+    layer: 1,
+    materials: ['briefs'],
+    build: (detail) => tag([bra(detail)], 'bra'),
+    covers: ({ zone, y, sx = 0, z = 0 }) => zone === 'trunk' && y > BRA.band + 0.025 && y < braTop(sx, z) - 0.02,
+  },
   ...GARMENTS,
   tshirt: {
     ...GARMENTS.tshirt,

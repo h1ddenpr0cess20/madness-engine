@@ -12,6 +12,9 @@ import { SUNGLASSES } from './glasses.js';
  * a viewer can offer them now and they take effect as each is built: a
  * nose shape is a set of offsets on the nose's vertices, an eye shape on the
  * lids', a build on the body's.
+ *
+ * A group with a `figure` is that figure's only (facial hair is his): see
+ * `customizationFor`.
  */
 
 const choice = (key, label, options, { ready = false, value = options[0] } = {}) => ({ key, label, type: 'choice', options, default: value, ready });
@@ -80,7 +83,7 @@ export const CUSTOMIZATION = Object.freeze([
     choice('hair', 'Style', ['none', ...Object.keys(HAIRSTYLES)], { ready: true, value: 'sidePart' }),
     colour('hairColour', 'Colour', '#3b2a1f', { ready: true }),
   ] },
-  { group: 'Facial hair', slots: [
+  { group: 'Facial hair', figure: 'male', slots: [
     choice('beard', 'Beard', ['none', ...Object.keys(BEARDS)], { ready: true, value: 'none' }),
     choice('moustache', 'Moustache', ['with beard', 'none', 'chevron', 'handlebar', 'pencil', 'walrus']),
     slider('stubble', 'Stubble', { min: 0, max: 1, value: 0.5 }),
@@ -90,17 +93,29 @@ export const CUSTOMIZATION = Object.freeze([
   ] },
 ]);
 
+/** What a creator offers the figure `sex` ('male' or 'female'): every group but the other figure's own. */
+export function customizationFor(sex) {
+  return CUSTOMIZATION.filter((g) => !g.figure || g.figure === sex);
+}
+
+/** The figure a slot is only for, by key (none for most). */
+const FIGURE_OF = Object.fromEntries(CUSTOMIZATION.flatMap((g) => (g.figure ? g.slots.map((s) => [s.key, g.figure]) : [])));
+
 /** Every slot, by key. */
 export const SLOTS = Object.freeze(Object.fromEntries(CUSTOMIZATION.flatMap((g) => g.slots).map((s) => [s.key, s])));
 
 /** Every slot's default. */
 export const DEFAULT_FEATURES = Object.freeze(Object.fromEntries(Object.values(SLOTS).map((s) => [s.key, s.default])));
 
-/** `change` checked against the slots: unknown keys, options and out-of-range values are refused. */
-export function checkFeatures(change) {
+/**
+ * `change` checked against the slots: unknown keys, options and out-of-range values are refused, and
+ * so is anything but the default of a slot that is another figure's (a beard for her), for `sex`.
+ */
+export function checkFeatures(change, sex = null) {
   for (const [key, value] of Object.entries(change)) {
     const s = SLOTS[key];
     if (!s) throw new Error(`human: no feature called ${key}; choose ${Object.keys(SLOTS).join(', ')}`);
+    if (sex && FIGURE_OF[key] && FIGURE_OF[key] !== sex && value !== s.default) throw new Error(`human: ${key} is for the ${FIGURE_OF[key]} figure only`);
     if (s.type === 'choice' && !s.options.includes(value)) throw new Error(`human: ${key} is one of ${s.options.join(', ')}, not ${value}`);
     if (s.type === 'range' && !(typeof value === 'number' && value >= s.min && value <= s.max)) throw new Error(`human: ${key} runs ${s.min} to ${s.max}, not ${value}`);
     if (s.type === 'color' && !/^#[0-9a-f]{6}$/i.test(value)) throw new Error(`human: ${key} is a #rrggbb colour, not ${value}`);

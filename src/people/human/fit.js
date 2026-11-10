@@ -252,11 +252,12 @@ export function bustOf(sex) {
  * comes in for each metre it falls; small, so it falls nearly straight), in
  * toward the middle at `across` (bridging between the breasts), and back up
  * toward the collar at `up`. Out toward the sides it follows the body, as it
- * did. Only ever outward: each point is moved forward by as much as the cloth
+ * did. A garment with a `hem` (how high, in metres, from its lowest edge)
+ * holds to the body there, as a bra's band does. Only ever outward: each point is moved forward by as much as the cloth
  * in front of it, inside and out alike, so its hems, turns and layers keep
  * their thickness.
  */
-export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, only = (z) => z.on !== 'arm' } = {}) {
+export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, hem = 0, only = (z) => z.on !== 'arm' } = {}) {
   if (sex === 'male') return data;
   const apex = bustOf(sex);
   const { joints } = figureOf(sex);
@@ -301,13 +302,30 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
   // How far forward each cell's cloth goes, smoothed a little so it rounds into the rest.
   let L = new Float32Array(nx * ny);
   for (let k = 0; k < L.length; k++) L[k] = Z[k] === -Infinity ? 0 : Math.max(0, E[k] - Z[k]);
+  // The cells with no cloth facing forward (an edge turning under, the sides) take their neighbors',
+  // so cloth there moves with the cloth beside it rather than tearing away from it.
+  const has = new Uint8Array(nx * ny);
+  for (let k = 0; k < L.length; k++) has[k] = Z[k] !== -Infinity;
+  for (let pass = 0; pass < 4; pass++) {
+    const was = has.slice();
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      if (was[j * nx + i]) continue;
+      let s = 0, n = 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const a = i + di, b = j + dj;
+        if (a < 0 || b < 0 || a >= nx || b >= ny || !was[b * nx + a]) continue;
+        s += L[b * nx + a]; n++;
+      }
+      if (n) { L[j * nx + i] = s / n; has[j * nx + i] = 1; }
+    }
+  }
   for (let pass = 0; pass < 3; pass++) {
     const next = new Float32Array(L.length);
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
       let s = 0, n = 0;
       for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
         const a = i + di, b = j + dj;
-        if (a < 0 || b < 0 || a >= nx || b >= ny || Z[b * nx + a] === -Infinity) continue;
+        if (a < 0 || b < 0 || a >= nx || b >= ny || !has[b * nx + a]) continue;
         s += L[b * nx + a]; n++;
       }
       next[j * nx + i] = n ? s / n : 0;
@@ -322,10 +340,15 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
   };
   const position = P.slice();
   const moved = new Float32Array(data.count);
+  let low = Infinity;
+  if (hem) for (let v = 0; v < data.count; v++) if (take(v)) low = Math.min(low, P[v * 3 + 1]);
   for (let v = 0; v < data.count; v++) {
     if (!take(v)) continue;
-    // Faded in from the sides, so the cloth turning round them keeps to the body.
-    const fade = Math.min(1, Math.max(0, (P[v * 3 + 2] - front) / 0.03));
+    // Faded in from the sides, so the cloth turning round them keeps to the body: by how far round the body
+    // it is (pushed forward where it faces sideways, it would stand out in points, not hang).
+    const t = Math.min(1, Math.max(0, (1.2 - Math.atan2(Math.abs(P[v * 3]), P[v * 3 + 2] - front)) / 0.45));
+    const fade = Math.min(1, Math.max(0, (P[v * 3 + 2] - front) / 0.03)) * t * t * (3 - 2 * t)
+      * (hem ? Math.min(1, Math.max(0, (P[v * 3 + 1] - low - hem) / hem)) : 1);
     moved[v] = lift(P[v * 3], P[v * 3 + 1]) * fade;
     position[v * 3 + 2] += moved[v];
   }

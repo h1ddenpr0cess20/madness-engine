@@ -669,7 +669,7 @@ function humanItem(sex) {
     source: 'people/human',
     kind: 'object',
     async build() {
-      const [{ createHuman, CLIPS: clips, GARMENTS, HAND_POSES, CUSTOMIZATION }, weapons, metals] = await Promise.all([
+      const [{ createHuman, CLIPS: clips, garmentsFor, HAND_POSES, customizationFor }, weapons, metals] = await Promise.all([
         import('../../../src/people/human.js'),
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
@@ -684,7 +684,7 @@ function humanItem(sex) {
       };
       const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
       const ui = [
-        ...Object.keys(GARMENTS).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
+        ...Object.keys(garmentsFor(sex)).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
         // The sunglasses on or off at a click (which pair is chosen under Accessories, below).
         { type: 'check', label: 'Glasses', get: () => man.glasses !== null, set: (on) => { if (man.glasses) pair = man.glasses; man.customize({ glasses: on ? pair : 'none' }); } },
         { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm(); } },
@@ -695,7 +695,7 @@ function humanItem(sex) {
         { type: 'color', label: 'Sneakers', get: () => man.look.shoe, set: (c) => man.setShoeColor(c) },
         face('jaw'), face('blink'), face('smile'), face('brows'),
         // The character creator, slot by slot: those not built yet are shown, kept, and greyed out.
-        ...CUSTOMIZATION.flatMap(({ group, slots }) => [
+        ...customizationFor(sex).flatMap(({ group, slots }) => [
           { type: 'heading', label: group },
           ...slots.map((s) => ({
             type: s.type === 'choice' ? 'select' : s.type, label: s.label, options: s.options, min: s.min, max: s.max, step: 0.01,
