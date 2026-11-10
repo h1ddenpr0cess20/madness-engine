@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import * as GFX from '../src/gfx/index.js';
 import { createHuman, CLIPS, GARMENTS, HAND_POSES, HUMAN_DIMENSIONS } from '../src/people/index.js';
-import { bones } from '../src/people/human/skeleton.js';
+import { bones, FINGERS } from '../src/people/human/skeleton.js';
 import { jeansPoint, legPoint, shirtPoint, trunkPoint } from '../src/people/human/clothes.js';
 import { createGreatsword, createKrystalSword } from '../src/weapons/index.js';
 
@@ -488,4 +488,66 @@ test('a shape that moves only the legs lifts all of him with it, the eyes too', 
   const grew = him.height - HUMAN_DIMENSIONS.height;
   assert.ok(grew > 0.02, `longer legs make him taller: ${grew}`);
   assert.ok(Math.abs(eye() - before - grew) < 0.005, 'his eyes rise as much as he does');
+});
+
+test('carrying: a ball on the palm, a coin between thumb and forefinger, a book open in both hands to read', () => {
+  const who = createHuman(GFX, { detail: 0.5, glasses: null });
+  const at = (o) => [o.matrix.elements[12], o.matrix.elements[13], o.matrix.elements[14]];
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  const ball = new GFX.Group();
+  ball.add(new GFX.Mesh(new GFX.SphereGeometry(0.045, 16, 12), new GFX.MeshStandardMaterial()));
+  who.hold(ball, { how: 'palm' });
+  who.pose({ clip: 'idle', t: 0.3, time: 0.3 });
+  const hand = who.point('handR', who.skeleton.pivots[who.skeleton.index.get('handR')]);
+  assert.ok(at(ball)[1] > hand[1] + 0.02, 'the ball sits up on the palm');
+  assert.ok(dist(at(ball), hand) < 0.15, 'in the hand');
+  assert.ok(at(ball)[2] > 0.2, 'held out in front');
+
+  const coin = new GFX.Group();
+  const disc = new GFX.Mesh(new GFX.CylinderGeometry(0.0125, 0.0125, 0.002, 24), new GFX.MeshStandardMaterial());
+  disc.rotation.x = Math.PI / 2;
+  coin.add(disc);
+  who.hold(coin, { how: 'pinch', hand: 'L' });
+  who.pose({ clip: 'idle', t: 0.3, time: 0.3 });
+  const tips = [who.point('index3L', FINGERS.index.joints[3]), who.point('thumb3L', FINGERS.thumb.joints[3])];
+  const mid = [0, 1, 2].map((a) => (tips[0][a] + tips[1][a]) / 2);
+  assert.ok(dist(at(coin), mid) < 0.02, 'the coin is between the thumb and forefinger');
+  assert.ok(at(coin)[1] > 1.2, 'held up to be looked at');
+
+  const book = { group: new GFX.Group(), dimensions: { width: 0.135, height: 0.19, leaves: 30 }, turnTo() {}, pose() {} };
+  book.group.add(new GFX.Mesh(new GFX.BoxGeometry(0.27, 0.01, 0.19), new GFX.MeshStandardMaterial()));
+  who.hold(book);
+  assert.equal(who.held('L'), null, 'a book takes both hands');
+  for (const clip of ['idle', 'read']) {
+    for (let i = 0; i < 10; i++) who.pose({ clip, t: 0.6 + i / 60, time: i / 60 });
+    const middle = at(book.group), eyes = who.point('head', [0, 1.66, 0.13]);
+    const face = [book.group.matrix.elements[4], book.group.matrix.elements[5], book.group.matrix.elements[6]];
+    const toEyes = [0, 1, 2].map((a) => eyes[a] - middle[a]), l = Math.hypot(...toEyes);
+    assert.ok(face.reduce((s, v, a) => s + v * toEyes[a], 0) / l > 0.95, `${clip}: the pages face the eyes`);
+    assert.ok(l > 0.25 && l < 0.5, `${clip}: a reading distance from them (${l.toFixed(2)} m)`);
+    for (const [S, m] of [['L', 1], ['R', -1]]) {
+      const h = who.point(`hand${S}`, who.skeleton.pivots[who.skeleton.index.get(`hand${S}`)]);
+      assert.ok(dist(h, middle) < 0.3 && (h[0] - middle[0]) * m > 0.05, `${clip}: the ${S} hand at its own edge`);
+    }
+  }
+  who.pose({ clip: 'read', t: 1, time: 1 });
+  assert.ok(who.skeleton.pivots[who.skeleton.index.get('hips')][1] + who.skeleton.bone('hips').move[1] < 0.75, 'read is sitting down');
+  assert.ok(CLIPS.includes('read'));
+});
+
+test('dual wielding: a weapon in each hand, ready in both, struck one-two', () => {
+  const who = createHuman(GFX, { detail: 0.5, glasses: null });
+  who.hold(createKrystalSword(GFX));
+  who.hold(createKrystalSword(GFX), { hand: 'L' });
+  who.setStyle({ attack: 'slash' });
+  const hand = (S) => who.point(`hand${S}`, who.skeleton.pivots[who.skeleton.index.get(`hand${S}`)]);
+  who.pose({ clip: 'idle', t: 0, time: 0 });
+  assert.ok(hand('L')[2] > 0.25 && hand('R')[2] > 0.25, 'both held ready, out in front');
+  // The right swings first (high at its wind-up), the left after (high at its own).
+  who.pose({ clip: 'attack', t: 0.16, time: 0 });
+  assert.ok(hand('R')[1] > hand('L')[1] + 0.4, 'the right winds up first');
+  who.pose({ clip: 'attack', t: 0.5, time: 0 });
+  assert.ok(hand('L')[1] > hand('R')[1] + 0.4, 'then the left');
+  who.release('L');
+  who.setStyle({});
 });

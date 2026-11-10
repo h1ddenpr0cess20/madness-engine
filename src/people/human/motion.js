@@ -9,12 +9,12 @@ import { JOINTS } from './skeleton.js';
  * shoulders swing against the hips, the head stays level as he goes, the
  * foot rolls off its toes.
  *
- * `style`: `armed` ('R' or 'L', the hand that holds a weapon ready),
+ * `style`: `armed` ('R' or 'L', the hand that holds a weapon ready; 'both' for a weapon in each),
  * `attack` ('slash', 'chop', 'thrust', 'smite', 'punch', 'shove'),
  * `heavy` (0..1, slower and deeper).
  */
 
-export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'talk', 'yell']);
+export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'talk', 'yell']);
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
@@ -47,6 +47,11 @@ function hangArms(k, out = 0) {
   k.turn('foreR', -0.16, -0.25, 0);
 }
 
+/** The sides `armed` names: 'R', 'L', or 'both' (a weapon in each hand). */
+const armedSides = (armed) => (armed === 'both' ? ['L', 'R'] : armed ? [armed] : []);
+/** Whether side `S` holds a weapon ready. */
+const isArmed = (armed, S) => armed === S || armed === 'both';
+
 /** A weapon held ready in the hand on side `S`: the arm forward, the elbow bent, the blade up and out. */
 function ready(k, S, amount = 1) {
   const m = S === 'L' ? 1 : -1;
@@ -78,7 +83,7 @@ function idle(k, T, armed) {
   k.turn('footR', -0.02, 0, -sway * 0.025);
   k.turn('neck', Math.sin(T * 0.5) * 0.03, Math.sin(T * 0.31) * 0.12, 0);
   k.turn('head', Math.sin(T * 0.43) * 0.04, Math.sin(T * 0.37) * 0.1, 0);
-  if (armed) ready(k, armed);
+  for (const S of armedSides(armed)) ready(k, S);
 }
 
 function walk(k, T, speed, heavy, armed) {
@@ -98,10 +103,12 @@ function walk(k, T, speed, heavy, armed) {
     k.turn(`foot${S}`, -a * 0.22 + swing * 0.15, 0, 0);
     k.turn(`toes${S}`, Math.max(0, -a) * Math.max(0, -m * c) * -0.5, 0, 0);
   }
-  // The arms against the legs.
-  k.turn('armL', g * 0.38, 0, 0);
-  k.turn('foreL', -0.12 - Math.max(0, g) * 0.35, 0, 0);
-  if (armed === 'R') { ready(k, 'R', 0.8); k.turn('armR', -g * 0.08, 0, 0); } else {
+  // The arms against the legs (an armed one held ready, swinging a little).
+  if (isArmed(armed, 'L')) { ready(k, 'L', 0.8); k.turn('armL', g * 0.08, 0, 0); } else {
+    k.turn('armL', g * 0.38, 0, 0);
+    k.turn('foreL', -0.12 - Math.max(0, g) * 0.35, 0, 0);
+  }
+  if (isArmed(armed, 'R')) { ready(k, 'R', 0.8); k.turn('armR', -g * 0.08, 0, 0); } else {
     k.turn('armR', -g * 0.38, 0, 0);
     k.turn('foreR', -0.12 - Math.max(0, -g) * 0.35, 0, 0);
   }
@@ -168,7 +175,7 @@ function run(k, T, speed, heavy, armed) {
   // The arms against the legs: elbows bent near square, the hands swinging from the hip up to the chest,
   // a little in across the body going forward. Each follows the other side's thigh.
   for (const [S, m, other] of [['L', 1, R], ['R', -1, L]]) {
-    if (armed === S) { ready(k, S, 0.9); k.turn(`arm${S}`, 0.15 * other[0], 0, 0); continue; }
+    if (isArmed(armed, S)) { ready(k, S, 0.9); k.turn(`arm${S}`, 0.15 * other[0], 0, 0); continue; }
     const swing = other[0]; // − when that leg is forward: then this arm is forward too
     // Elbows kept in by the sides; the forearms pointing ahead and a little in, not out.
     k.turn(`arm${S}`, 0.15 + swing * 1.1, 0, -m * (0.07 + 0.04 * Math.max(0, -swing)));
@@ -197,9 +204,12 @@ function jump(k, t, leap, armed) {
   k.turn('chest', 0.12 * bent - 0.08 * tuck, 0, 0);
   k.turn('head', -0.25 * bent - 0.1 * tuck, 0, 0);
   const back = bent * (1 - give), fwd = give * 0.75;
-  k.turn('armL', 0.9 * back - 0.55 * fwd + (leap ? -1.4 : -2.4) * tuck, 0, 0.3 * tuck);
-  k.turn('foreL', -0.3 * back - 0.5 * fwd - 0.2 * tuck, 0, 0);
-  if (armed === 'R') ready(k, 'R');
+  if (isArmed(armed, 'L')) ready(k, 'L');
+  else {
+    k.turn('armL', 0.9 * back - 0.55 * fwd + (leap ? -1.4 : -2.4) * tuck, 0, 0.3 * tuck);
+    k.turn('foreL', -0.3 * back - 0.5 * fwd - 0.2 * tuck, 0, 0);
+  }
+  if (isArmed(armed, 'R')) ready(k, 'R');
   else {
     k.turn('armR', 0.9 * back - 0.55 * fwd + (leap ? 0.9 : -2.4) * tuck, 0, -0.3 * tuck);
     k.turn('foreR', -0.3 * back - 0.5 * fwd - 0.2 * tuck, 0, 0);
@@ -343,12 +353,31 @@ function attack(k, t, style) {
   k.turn('hips', 0, -0.12 * s, 0);
   k.turn('thighL', -0.4 * s, 0, 0); k.turn('shinL', 0.5 * s, 0, 0); k.turn('footL', -0.1 * s, 0, 0);
   k.turn('thighR', 0.3 * s, 0, 0); k.turn('shinR', 0.2 * s, 0, 0); k.turn('footR', 0.15 * s, 0, 0); k.turn('toesR', -0.35 * s, 0, 0);
+  // A weapon in each hand: a one-two, the right striking over the first two-thirds of the clip and the left,
+  // the mirror of the same swing, over the last two-thirds, as the right recovers; the body turning with each.
+  if (style.armed === 'both' && SWINGS[kind] && !['punch', 'shove'].includes(kind)) {
+    keyed(k, Math.min(1, tt / 0.65), SWINGS[kind].map(([t, pose]) => [t, rightOnly(pose)]));
+    keyed(k, Math.max(0, (tt - 0.35) / 0.65), SWINGS[kind].map(([t, pose]) => [t, leftMirror(pose)]));
+    return;
+  }
   // The chop is always made with both hands.
   keyed(k, tt, ((style.both || kind === 'chop') && BOTH[kind]) || SWINGS[kind]);
 }
 
+/** A swing's key with the left arm left out (it swings its own way, dual wielding). */
+const rightOnly = (pose) => Object.fromEntries(Object.entries(pose).filter(([b]) => !/^(arm|fore|hand)L$/.test(b)));
+/** A swing's key mirrored onto the left: the right arm's turns as the left's, the body's turns the other way. */
+function leftMirror(pose) {
+  const out = {};
+  for (const [b, [x, y, z]] of Object.entries(pose)) {
+    if (/^(arm|fore|hand)R$/.test(b)) out[b.replace(/R$/, 'L')] = [x, -y, -z];
+    else if (/^(chest|spine|head)$/.test(b)) out[b] = [0, -y * 0.8, -z * 0.8];
+  }
+  return out;
+}
+
 function talking(k, T, { talk = 1, think = 0, listen = 0, beat = 0 } = {}, armed) {
-  const free = armed === 'R' ? ['L'] : ['L', 'R'];
+  const free = ['L', 'R'].filter((S) => !isArmed(armed, S));
   for (const S of free) {
     const m = S === 'L' ? 1 : -1, ph = T * (S === 'L' ? 1.7 : 1.3) + (S === 'L' ? 0 : 2);
     const g = (Math.sin(ph) * 0.5 + 0.5) * talk;
@@ -388,7 +417,7 @@ export function moveHuman(k, state = {}, style = {}) {
       k.turn('neck', 0.25 * on + shake, 0, 0);
       k.turn('head', -0.32 * on - shake, 0, 0);
       for (const [S, m] of [['L', 1], ['R', -1]]) {
-        if (armed === S) { ready(k, S, 1); continue; }
+        if (isArmed(armed, S)) { ready(k, S, 1); continue; }
         k.turn(`arm${S}`, 0.22 + 0.12 * on, 0, m * 0.04);
         k.turn(`fore${S}`, -0.35 - 0.2 * on, m * 0.3, 0);
         k.turn(`clavicle${S}`, 0, 0, m * 0.05 * on);
@@ -423,7 +452,7 @@ export function moveHuman(k, state = {}, style = {}) {
       const back = win(t, 0, 0.08) * (1 - win(t, 0.3, 0.7));
       k.move('root', 0, 0, -0.08 * back);
       k.move('hips', 0, -0.025 * back, 0);
-      if (armed) ready(k, armed, 1 - 0.3 * back);
+      for (const S of armedSides(armed)) ready(k, S, 1 - 0.3 * back);
       break;
     }
     case 'ko': {
@@ -441,9 +470,23 @@ export function moveHuman(k, state = {}, style = {}) {
       k.move('hips', 0, -kneelDrop * kneel * (1 - fall) - (HIPS - 0.11) * fall, -0.06 * kneel * (1 - fall) - 0.35 * fall);
       break;
     }
-    case 'sit': {
+    case 'sit': case 'read': {
       // Onto a seat as high as the knee: the thighs level, the shins straight down, the hands on the thighs.
+      // Reading, the same, a little forward over the book, the head bowed to it and the hands up holding it
+      // (where a book is held, the hands are brought to its edges: see carry.js).
       const s = win(t, 0, 0.45);
+      if (clip === 'read') {
+        k.move('hips', 0, -drop(1.52 * s, 1.52 * s) * 0.92, -0.06 * s);
+        k.turn('thighL', -1.52 * s, 0, 0.1 * s); k.turn('shinL', 1.5 * s, 0, -0.03 * s);
+        k.turn('thighR', -1.52 * s, 0, -0.1 * s); k.turn('shinR', 1.5 * s, 0, 0.03 * s);
+        k.turn('spine', 0.06 * s, 0, 0); k.turn('chest', 0.05 * s, 0, 0);
+        k.turn('armL', -0.35 * s, 0, 0.1 * s); k.turn('foreL', -1.5 * s, 0, 0);
+        k.turn('armR', -0.35 * s, 0, -0.1 * s); k.turn('foreR', -1.5 * s, 0, 0);
+        // Breathing slowly, the head now and then following the line down the page.
+        k.turn('neck', 0.1 * s, 0, 0);
+        k.turn('head', (0.18 + 0.03 * Math.sin(T * 0.6)) * s, 0.05 * Math.sin(T * 0.23), 0);
+        break;
+      }
       k.move('hips', 0, -drop(1.52 * s, 1.52 * s) * 0.92, -0.06 * s);
       k.turn('thighL', -1.52 * s, 0, 0.06 * s); k.turn('shinL', 1.52 * s, 0, 0);
       k.turn('thighR', -1.52 * s, 0, -0.06 * s); k.turn('shinR', 1.52 * s, 0, 0);

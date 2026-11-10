@@ -637,8 +637,53 @@ const HUMAN_STAVES = [
   ...['orb', 'egg'].map((t) => [`staff:gold:${t}`, `Metal Wizard Staff, ${topperName(t)}`]),
 ];
 
-/** Everything on the weapons shelf, for the human to hold. */
-const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.factory, w.name]), ...HUMAN_STAVES];
+/** The other things a human can carry: a book (open, to read), every hero (on the palm), the coins (between thumb and forefinger). */
+const HUMAN_CARRIES = [
+  ['book', 'Book of Madness'],
+  ...HEROES.map(([name]) => [`hero:${name}`, `Hero: ${name}`]),
+  ['coin:claude', 'Coin: Claude'], ['coin:bitcoin', 'Coin: Bitcoin'], ['coin:political', 'Coin: political'],
+];
+
+/** Everything on the weapons shelf, and all else he can carry, for the human to hold. */
+const HUMAN_WEAPONS = [['none', 'Nothing'], ...WEAPON_ASSETS.map((w) => [w.factory, w.name]), ...HUMAN_STAVES, ...HUMAN_CARRIES];
+/** What the left hand can hold besides: a one-handed weapon (dual wielding), a hero or a coin. */
+const HUMAN_LEFT = [['none', 'Nothing'], ...WEAPON_ASSETS.filter((w) => w.hands !== 'two-handed').map((w) => [w.factory, w.name]), ...HUMAN_CARRIES.filter(([v]) => v !== 'book')];
+
+/**
+ * Something for the human to carry from a `HUMAN_CARRIES` choice, at the size it is held at: { thing, how }.
+ * A hero is a ball about 9 cm across on the palm; a coin 2.5 cm across, pinched; the book 13 cm a page, open.
+ */
+async function humanCarry(choice) {
+  if (choice === 'book') {
+    const { createBook } = await import('../../../src/props/book.js');
+    return { thing: createBook(GFX, { size: 0.45, pageCount: 60 }), how: 'book' };
+  }
+  if (choice.startsWith('coin:')) {
+    const kind = choice.slice(5);
+    const radius = 0.0125;
+    if (kind === 'claude') {
+      const [{ createCoin }, texture] = await Promise.all([import('../../../src/props/coin.js'), import('../../../src/textures/coin/logo.js')]);
+      return { thing: createCoin(GFX, { radius, logo: await texture.loadCoinLogo() }), how: 'pinch' };
+    }
+    const mod = kind === 'bitcoin' ? await import('../../../src/props/bitcoin-coin.js') : await import('../../../src/props/political-coin.js');
+    return { thing: (kind === 'bitcoin' ? mod.createBitcoinCoin : mod.createPoliticalCoin)(GFX, { radius }), how: 'pinch' };
+  }
+  const [, make] = HEROES.find(([name]) => `hero:${name}` === choice);
+  const made = await make({});
+  made?.pose?.(0);
+  const object = objectOf(made);
+  object.position.set(0, 0, 0);
+  const { size } = boundsOf(object);
+  object.scale.multiplyScalar(0.09 / Math.max(...size));
+  return { thing: object, how: 'palm' };
+}
+
+/** Something for a human's hand from a menu choice: a weapon, a staff, or anything carried. */
+async function humanHeld(choice, weapons) {
+  if (choice.startsWith('staff:')) return { thing: await humanStaff(choice), how: 'grip' };
+  if (HUMAN_CARRIES.some(([v]) => v === choice)) return humanCarry(choice);
+  return { thing: weapons[choice](GFX, {}), how: 'grip' };
+}
 
 /** A staff from a `staff:wood|gold:topper` choice, its planet's maps loaded first if it has one. */
 async function humanStaff(choice) {
@@ -673,24 +718,30 @@ function humanItem(sex) {
         import('../../../src/props/metalglobe.js'),
       ]);
       const man = createHuman(GFX, female ? { sex } : { beard: 'full' });
-      let weapon = 'none', attack = 'slash', handL = 'relaxed';
+      let weapon = 'none', weaponL = 'none', attack = 'slash', handL = 'relaxed';
       let pair = man.glasses ?? 'aviator';
       const style = {};
-      // (A staff may load its planet's maps first: only the latest choice is put in his hand.)
-      let arming = 0;
-      const rearm = async () => {
-        const mine = ++arming;
-        man.release('R');
-        if (weapon === 'none') return;
-        const thing = weapon.startsWith('staff:') ? await humanStaff(weapon) : weapons[weapon](GFX, {});
-        if (mine === arming) man.hold(thing);
+      // (A staff, coin or hero may load first: only the latest choice for each hand is put in it.)
+      const arming = { R: 0, L: 0 };
+      const rearm = async (S = 'R') => {
+        const mine = ++arming[S];
+        const choice = S === 'R' ? weapon : weaponL;
+        man.release(S);
+        if (choice === 'none') return;
+        const { thing, how } = await humanHeld(choice, weapons);
+        if (mine !== arming[S]) return;
+        // A book takes both hands: whatever the left held is put down.
+        if (how === 'book') weaponL = 'none';
+        man.hold(thing, { hand: S, how });
       };
       const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
       const ui = [
         ...Object.keys(garmentsFor(sex)).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
         // The sunglasses on or off at a click (which pair is chosen under Accessories, below).
         { type: 'check', label: 'Glasses', get: () => man.glasses !== null, set: (on) => { if (man.glasses) pair = man.glasses; man.customize({ glasses: on ? pair : 'none' }); } },
-        { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm(); } },
+        { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm('R'); } },
+        // The left hand's own: a second weapon to wield both, a hero or a coin (not while reading a book).
+        { type: 'select', label: 'Left holds', options: HUMAN_LEFT, get: () => weaponL, set: (v) => { weaponL = v; if (weapon === 'book') { weapon = 'none'; man.release('R'); } rearm('L'); } },
         { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove'], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
         { type: 'select', label: 'Left hand', options: Object.keys(HAND_POSES), get: () => handL, set: (v) => { handL = v; man.hands(v, { hand: 'L' }); } },
         { type: 'color', label: 'T-shirt', get: () => man.look.shirt, set: (c) => man.setShirtColor(c) },
