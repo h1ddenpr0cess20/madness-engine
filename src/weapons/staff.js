@@ -3,6 +3,7 @@ import { woodBoardMaterial } from '../props/wood-board.js';
 import { createKrystalOrbPommel, createMagicEggPommel, metalMaterial } from './common.js';
 import { METALS } from '../props/metalglobe.js';
 import { createGlassPlanet, GLASS_PLANET_NAMES } from '../props/glass-planets.js';
+import { createJewelBoulder, JEWEL_CHOICES } from '../heroes/rock-jewel.js';
 
 /**
  * A gnarled wizard's staff carved entirely from the library's wood textures.
@@ -28,7 +29,8 @@ export const STAFF_DIMENSIONS = Object.freeze({
 });
 
 /** The planets in glass are toppers too: `earth`, `mars`, `moon`, `jupiter`, `jupiter-etched` (see `props/glass-planets`). */
-export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', ...GLASS_PLANET_NAMES, 'none']);
+/** A gem is a topper too: `sapphire`, `ruby`, and the rest of `JEWEL_CHOICES`, each the jewel stone in its color, with its mist. */
+export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', ...GLASS_PLANET_NAMES, ...JEWEL_CHOICES, 'none']);
 
 const TOPPER_LABELS = Object.freeze({
   orb: 'Krystal crystal orb',
@@ -38,6 +40,7 @@ const TOPPER_LABELS = Object.freeze({
   moon: 'Glass Moon',
   jupiter: 'Glass Jupiter',
   'jupiter-etched': 'Glass Jupiter (etched)',
+  ...Object.fromEntries(JEWEL_CHOICES.map((name) => [name, `${name[0].toUpperCase()}${name.slice(1)} (jewel)`])),
   none: 'none',
 });
 
@@ -387,6 +390,11 @@ export function createStaff(GFX, {
       if (kind === 'orb') {
         const asset = createKrystalOrbPommel(GFX, STAFF_DIMENSIONS.orbRadius);
         toppers.orb = { asset, object: asset.group };
+      } else if (JEWEL_CHOICES.includes(kind)) {
+        // A jewel is the granite's own shape, cut to the orb's size, with its mist inside.
+        const asset = createJewelBoulder(GFX, { colour: kind, mist: true });
+        asset.mesh.scale.setScalar(STAFF_DIMENSIONS.orbRadius / 0.9);
+        toppers[kind] = { asset, object: asset.mesh };
       } else if (GLASS_PLANET_NAMES.includes(kind)) {
         // A planet is drawn at the orb's radius, the size its cradle is cut for; the Moon and Mars are not to scale beside the Earth.
         const asset = createGlassPlanet(GFX, kind, { radius: STAFF_DIMENSIONS.orbRadius, ...planetMaps[kind] });

@@ -281,6 +281,7 @@ The balls the games are played as, each with what it is made of.
 | `heroes/morningstar` | `morningstar` (metroll, metrlol) | The head of a morning star: a ball of dark forged steel with square spikes set into it, the kind on the end of a chain in a museum. |
 | `heroes/nat/geometry` | `geometry` (dungeon-roller) | Nat's d20, copied from `nat/src/client/nat/geometry.js`. |
 | `heroes/rock` | `rock` (rocknroller, rocknroller-ii, rocknroller-iii, metroll) | Rock. |
+| `heroes/rock-jewel` | `createJewelRock`, `createJewelBoulder`, `JEWELS` (engine) | The granite stone's shape, cut from a translucent gem instead: clear glass tinted by its color, the granite's grain sampled in 3D as inclusions, with no picture laid on it, and a mist of the same color inside. Ten colors (`JEWEL_CHOICES`: sapphire, ruby, emerald, amber, amethyst, topaz, aquamarine, garnet, peridot, tourmaline), or any hex as `color`; `setColour()` and `setMist()`. |
 | `heroes/yarn/ball` | `ball` (catroller) | As the tube in `model.js`: sides round it, and ply phase per metre over the texture's tile. |
 | `heroes/yarn/model` | `model` (catroller) | Carol's body: the wound ball and the strand laid out behind it, as two tubes built once, and `pose(s)` — everything about how she looks follows from how far along the floor she has rolled. |
 | `heroes/yarn/path` | `path` (catroller) | Where the ball rolls: a gentle S on the diagonal, from the back of the room on the left toward the front on the right of the camera's usual seat — she comes forward to talk, and goes back when it i… |

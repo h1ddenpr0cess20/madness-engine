@@ -20,6 +20,7 @@ import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
 import { STAFF_TOPPERS } from '../../../src/weapons/staff.js';
 import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
+import { JEWEL_CHOICES } from '../../../src/heroes/rock-jewel.js';
 import { dress, extraItems } from './extras.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
@@ -217,6 +218,7 @@ const HEROES = [
   )), null, { metal: METAL_CHOICES }],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
   ['rock (granite)', ({ colour = 'grey' } = {}) => import('../../../src/heroes/rock-granite.js').then((m) => m.createGraniteRock(GFX, { colour })), null, { colour: GRANITE_CHOICES }],
+  ['rock (jewel)', ({ colour = 'sapphire', mist = 'on' } = {}) => import('../../../src/heroes/rock-jewel.js').then((m) => m.createJewelRock(GFX, { colour, mist: mist === 'on' })), null, { colour: JEWEL_CHOICES, mist: ['on', 'off'] }],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
   ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],

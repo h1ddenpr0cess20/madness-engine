@@ -216,6 +216,10 @@ clouds as a colored field in the glass) and `jupiter-etched` (its zones and
 belts etched into it). Use `topper: 'none'` for an empty cradle. Each topper is
 built the first time it is shown.
 
+A gem topper is the granite stone's shape cut from translucent glass in the gem's
+color, with the granite's grain painted in as inclusions and a mist of the same
+color inside (`heroes/rock-jewel`). Each is drawn at the orb's size.
+
 Every planet is drawn at the orb's radius, the size its cradle is cut for, so
 the Moon and Mars are not to scale beside the Earth on a staff. Mars, the Moon
 and the etched Jupiter need their etching, and the field Jupiter its clouds;
@@ -235,7 +239,7 @@ unchanged. `setMetal()` changes the finish, and `setWood()` puts the wood back.
 | `metal` | `null` for wood, or any `METALS` finish (steel, silver, gold, copper, bronze, brass, titanium, chrome, platinum, rose gold, iron, pewter) | `null` |
 | `wrap` | `true` or `false`: the leather and thread wrap on the grip (`setWrap()` toggles it) | `true` |
 | `gripColor`, `threadColor` | six-digit hex, for the wrap | `#3a2418`, `#e2b857` |
-| `topper` | `orb`, `egg`, `earth`, `mars`, `moon`, `jupiter`, `jupiter-etched`, `none` | `orb` |
+| `topper` | `orb`, `egg`, the planets (`earth`, `mars`, `moon`, `jupiter`, `jupiter-etched`), the gems (`sapphire`, `ruby`, `emerald`, `amber`, `amethyst`, `topaz`, `aquamarine`, `garnet`, `peridot`, `tourmaline`), `none` | `orb` |
 | `planetMaps` | `{ [planet]: maps }`, from `loadGlassPlanetMaps(planet)`, for a planet topper | `{}` |
 | `vine` | `true` or `false`: the roots entwined up the shaft (fixed at creation) | `true` |
 | `tendrils` | whole number from 8 to 32: how many roots make the cradle (fixed at creation) | `18` |

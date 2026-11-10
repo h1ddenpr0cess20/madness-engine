@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import * as GFX from '../src/gfx/index.js';
 import { createStaff, STAFF_DIMENSIONS, STAFF_TOPPERS } from '../src/weapons/index.js';
 import { WOOD_SPECIES } from '../src/textures/wood.js';
+import { JEWEL_CHOICES, JEWELS } from '../src/heroes/rock-jewel.js';
 
 const visibleToppers = (staff) => staff.head.children
   .find((c) => c.name === 'staff topper').children.filter((c) => c.visible);
@@ -69,7 +70,7 @@ test('the staff rejects unknown choices', () => {
   assert.throws(() => createStaff(GFX, { topper: 'cube' }), /no topper called/);
   assert.throws(() => createStaff(GFX, { tendrils: 2 }), RangeError);
   assert.throws(() => createStaff(GFX, { gripColor: 'red' }), TypeError);
-  assert.deepEqual([...STAFF_TOPPERS], ['orb', 'egg', 'earth', 'mars', 'moon', 'jupiter', 'jupiter-etched', 'none']);
+  assert.deepEqual([...STAFF_TOPPERS], ['orb', 'egg', 'earth', 'mars', 'moon', 'jupiter', 'jupiter-etched', ...JEWEL_CHOICES, 'none']);
   assert.throws(() => createStaff(GFX, { metal: 'tin' }), /no metal called tin/);
 });
 
@@ -178,4 +179,15 @@ test('the grip wrap is optional', () => {
   bare.setWrap(true);
   assert.ok([bare.grip, bare.gripThread, bare.gripThread2].every((m) => m.visible));
   assert.equal(createStaff(GFX).wrap, true);
+});
+
+test('each gem is a topper: the jewel stone in its color, with its mist, cradled like the orb', () => {
+  for (const gem of ['sapphire', 'ruby', 'emerald', 'amber']) {
+    const staff = createStaff(GFX, { topper: gem });
+    assert.equal(staff.topper, gem);
+    assert.equal(staff.topperAsset.colour, JEWELS[gem]);
+    assert.ok(staff.topperAsset.mist, `${gem}: the mist is built`);
+    assert.equal(visibleToppers(staff)[0], staff.topperAsset.mesh);
+    assert.ok(staff.info.Topper.toLowerCase().startsWith(gem));
+  }
 });
