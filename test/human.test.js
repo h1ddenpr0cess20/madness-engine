@@ -257,7 +257,7 @@ test('sunglasses sit on his face and move with his head', async () => {
   assert.equal(him.features.glasses, 'none');
 });
 
-test('the woman: her own figure on the same mesh, dressed as he is, with long hair', async () => {
+test('the woman: her own figure on the same mesh, in the women\'s cut of his clothes, with long hair', async () => {
   const { DIMENSIONS, FIGURES, HAIRSTYLES } = await import('../src/people/index.js');
   const her = createHuman(GFX, { sex: 'female', detail: 0.5, glasses: null });
   assert.equal(her.sex, 'female');
@@ -293,8 +293,8 @@ test('the woman: her own figure on the same mesh, dressed as he is, with long ha
   const { bustOf } = await import('../src/people/human/fit.js');
   const shirt = her.garment('tshirt'), bust = bustOf('female')[1];
   her.remove('tshirt').remove('bra');
-  const skin = front(her.body, bust - 0.11, bust - 0.08);
-  assert.ok(front(shirt, bust - 0.11, bust - 0.08) > skin + 0.015, 'the shirt hangs off her bust, not in under it');
+  const skin = front(her.body, bust - 0.09, bust - 0.06);
+  assert.ok(front(shirt, bust - 0.09, bust - 0.06) > skin + 0.008, 'the shirt bridges below her bust, not drawn in under it');
   // Every clip poses her, the long hair with her.
   const hair = her.group.children.find((c) => c.name === 'human hair');
   for (const clip of CLIPS) {

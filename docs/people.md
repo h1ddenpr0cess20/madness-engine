@@ -54,8 +54,15 @@ read her legs' lengths off it, and a weapon is held at the same place in
 her hand.
 
 She starts in `DEFAULT_OUTFIT_FEMALE`: his outfit with a sports bra (`bra`,
-cut from the chest, bridged across, a band and straps) under the t-shirt;
-her briefs and jeans lie flat in front. `FEMALE_FEATURES` are her defaults:
+cut from the chest, bridged across, a band and straps) under the t-shirt.
+Her wardrobe (`GARMENTS_FEMALE`, used by `wear` on her) is his in the
+women's cut (`WOMENS_CUT`, said in his measures, since it is cut on him and
+carried onto her): a fitted t-shirt, a little shorter, its sleeves shorter
+and close; slim jeans, close down the whole leg (over the socks' cuffs and
+the briefs, which they hide); the bomber cropped to the waist and fitted,
+not bloused. Her briefs lie flat in front. Her t-shirt and bomber hang off
+her bust and come back in to her waist; the bomber never comes in faster
+than the shirt under it, and hides the shirt nearly to its hem. `FEMALE_FEATURES` are her defaults:
 long blonde hair, blue eyes, groomed brows, no beard. Her skin has no
 shaved shadow, and her lips are a little rosier. The figure is fixed when
 she is made; `customize({ sex })` refuses to change it.

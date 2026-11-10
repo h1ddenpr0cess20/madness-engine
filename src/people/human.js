@@ -6,7 +6,7 @@ import { buildEyes, buildMouth, withLipCorners } from './human/head.js';
 import { bodyLevel } from './human/basemesh.js';
 import { zoneOf } from './human/body.js';
 import { BONES as BAKED_BONES } from './human/data/base.js';
-import { DEFAULT_OUTFIT, GARMENTS } from './human/clothes.js';
+import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor } from './human/clothes.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
 import { checkFeatures, CUSTOMIZATION, DEFAULT_FEATURES } from './human/features.js';
@@ -39,7 +39,7 @@ import { buildGlasses, SUNGLASSES } from './human/glasses.js';
  * `hands` set the rest, and `pose` takes them on every frame.
  */
 
-export { CLIPS, GARMENTS, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, DEFAULT_FEATURES, FIGURES };
+export { CLIPS, GARMENTS, GARMENTS_FEMALE, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, DEFAULT_FEATURES, FIGURES };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 /** Each figure's measures (metres), as HUMAN_DIMENSIONS gives the man's. */
 export const DIMENSIONS = Object.freeze({
@@ -162,11 +162,13 @@ function fitted(key, sex, make) {
 }
 
 /** The garments worn on the trunk, which hang off a bust: how freely each does. */
+// (Her t-shirt and bomber are fitted: under the bust they come back in to her waist, bridging only just below it;
+// the bomber never comes in faster than the shirt under it.)
 const HANGS = {
   bra: { down: 1.4, across: 0.25, up: 1.6 },
-  tshirt: { down: 0.3, across: 0.35, up: 1.4 },
-  jacket: { down: 0.22, across: 0.3, up: 1.2 },
-  jacketZipped: { down: 0.22, across: 0.3, up: 1.2 },
+  tshirt: { down: 0.35, across: 0.35, up: 1.4 },
+  jacket: { down: 0.35, across: 0.3, up: 1.2 },
+  jacketZipped: { down: 0.35, across: 0.3, up: 1.2 },
 };
 
 /**
@@ -176,13 +178,13 @@ const HANGS = {
  */
 function garmentData(name, garment, detail, below, sex = 'male') {
   const over = garment.fits && below.names.length;
-  const key = garment === GARMENTS[name] ? `${name}:${sex}@${detail}${over ? `/${below.names.join('+')}` : ''}` : null;
+  const key = garment === garmentsFor(sex)[name] ? `${name}:${sex}@${detail}${over ? `/${below.names.join('+')}` : ''}` : null;
   if (key && builds.has(key)) return builds.get(key);
   const parts = garment.build(detail, { under: over ? below.lift : null, sex });
   let data = assemble(parts, NAMES, garment.materials);
   // Made on him, worn by her: carried onto her, and hung from her bust.
   if (sex !== 'male') {
-    data = fitData(data, sex);
+    data = fitData(data, sex, { surface: true });
     const h = garment.hang ?? HANGS[name];
     if (h) data = hang(data, sex, h);
   }
@@ -531,6 +533,8 @@ export function createHuman(GFX, options = {}) {
   let tex = humanTextures(GFX, paintFor());
   let mats = makeMaterials(GFX, look, tex);
   const skeleton = new Skeleton(bones(sex));
+  // His wardrobe, or hers (the women's cut of the t-shirt, jeans and bomber).
+  const wardrobe = garmentsFor(sex);
   const JOINTS = figure.joints;
   const body = skinnedMesh(GFX, base, BODY_MATERIALS.map((n) => mats[n]), 'human body');
   group.add(body.mesh);
@@ -652,10 +656,10 @@ export function createHuman(GFX, options = {}) {
 
   function wear(nameOrGarment, garment = null) {
     const name = typeof nameOrGarment === 'string' ? nameOrGarment : nameOrGarment.name;
-    const g = garment ?? (typeof nameOrGarment === 'object' ? nameOrGarment : GARMENTS[name] ?? custom.get(name));
+    const g = garment ?? (typeof nameOrGarment === 'object' ? nameOrGarment : wardrobe[name] ?? custom.get(name));
     if (!g) throw new Error(`human: no garment called ${name}; choose ${Object.keys(GARMENTS).join(', ')} or pass one of your own`);
     if (worn.has(name)) return api;
-    if (g !== GARMENTS[name]) custom.set(name, g);
+    if (g !== wardrobe[name]) custom.set(name, g);
     // One thing in each slot: a jacket worn open takes the place of one worn closed.
     if (g.slot) for (const [other, w] of [...worn]) if (w.garment.slot === g.slot) unwear(other);
     worn.set(name, { garment: g, mesh: make(name, g) });
@@ -1005,7 +1009,7 @@ export function createHuman(GFX, options = {}) {
     point: (name, p) => skeleton.point(name, p),
   };
   // Put on from the inside out, so nothing is fitted twice.
-  const layerOf = (n) => (GARMENTS[n]?.layer ?? 0);
+  const layerOf = (n) => (wardrobe[n]?.layer ?? 0);
   for (const name of [...outfit].sort((a, b) => layerOf(a) - layerOf(b))) wear(name);
   pose({ clip: 'idle', t: 0, time: 0 });
   return api;

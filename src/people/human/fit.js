@@ -20,9 +20,22 @@ import { bones, figureOf } from './skeleton.js';
 
 const NAMES = bones().map(([n]) => n);
 const index = new Map(NAMES.map((n, i) => [n, i]));
-// The lips' own bones are the head's and the jaw's, for telling what skin a point lies on.
-const AS = { lipUpper: 'head', lipLower: 'jaw', lipCornerL: 'head', lipCornerR: 'head' };
-const canonical = NAMES.map((n) => index.get(AS[n] ?? n));
+/**
+ * What part of the body each bone moves, for telling which skin a point lies on: the trunk, the head,
+ * each arm, each leg. Compared limb by limb, not bone by bone, a point on the left thigh follows the left
+ * thigh and not the right one beside it, but one down a leg follows the leg smoothly from shin to foot.
+ */
+const LIMB = (n) => {
+  const S = /[LR]$/.test(n) && !/^(eye|lid|brow|lipCorner)/.test(n) ? n.at(-1) : '';
+  const b = n.replace(/[LR]$/, '');
+  if (['thigh', 'shin', 'foot', 'toes'].includes(b)) return `leg${S}`;
+  if (['arm', 'fore', 'hand'].includes(b) || /^(thumb|index|middle|ring|pinky)\d$/.test(b)) return `arm${S}`;
+  if (['root', 'hips', 'spine', 'chest', 'clavicle'].includes(b)) return 'trunk';
+  if (b === 'neck') return 'neck';
+  return 'head';
+};
+const LIMBS = [...new Set(NAMES.map(LIMB))];
+const canonical = NAMES.map((n) => LIMBS.indexOf(LIMB(n)));
 
 const fitters = new Map();
 const G = 0.02;
@@ -40,7 +53,7 @@ function fitter(sex) {
   for (let i = 0; i < count; i++) {
     for (let k = 0; k < 4; k++) {
       const x = him.weight[i * 4 + k];
-      if (x > 0) { SB[i * 4 + k] = index.get(BAKED_BONES[him.bone[i * 4 + k]]); SW[i * 4 + k] = x; }
+      if (x > 0) { SB[i * 4 + k] = canonical[index.get(BAKED_BONES[him.bone[i * 4 + k]])]; SW[i * 4 + k] = x; }
     }
   }
   // Only the points some surface uses (the base mesh carries helpers we do not keep).
@@ -60,14 +73,14 @@ function fitter(sex) {
 }
 
 /** How alike a point's weights (bones `qb`, weights `qw`, four each) are to skin point `v`'s: 1 the same, 0 nothing shared. */
+const sums = new Float32Array(LIMBS.length * 2);
 function alike(F, qb, qw, v) {
   if (!qb) return 1;
+  sums.fill(0);
+  for (let a = 0; a < 4; a++) if (qb[a] >= 0) sums[qb[a] * 2] += qw[a];
+  for (let c = 0; c < 4; c++) { const b = F.SB[v * 4 + c]; if (b >= 0) sums[b * 2 + 1] += F.SW[v * 4 + c]; }
   let s = 0;
-  for (let a = 0; a < 4; a++) {
-    const b = qb[a];
-    if (b < 0) continue;
-    for (let c = 0; c < 4; c++) if (F.SB[v * 4 + c] === b) { s += Math.min(qw[a], F.SW[v * 4 + c]); break; }
-  }
+  for (let l = 0; l < LIMBS.length; l++) s += Math.min(sums[l * 2], sums[l * 2 + 1]);
   return s;
 }
 
@@ -152,7 +165,7 @@ function weightsOf(data, v, qb, qw) {
 export function fitPoint(p, sex, bone = null) {
   if (sex === 'male') return p.slice();
   const F = fitter(sex);
-  const qb = bone === null ? null : Int16Array.of(index.get(bone), -1, -1, -1), qw = Float32Array.of(1, 0, 0, 0);
+  const qb = bone === null ? null : Int16Array.of(canonical[index.get(bone)], -1, -1, -1), qw = Float32Array.of(1, 0, 0, 0);
   const s = shiftAt(F, p, qb, qw, [0, 0, 0]);
   return [p[0] + s[0], p[1] + s[1], p[2] + s[2]];
 }
@@ -163,7 +176,7 @@ export function fitPoint(p, sex, bone = null) {
  * normals are turned as the surface is (by the move's own gradient). The
  * eyes go whole, to where hers are and at her size. All else is shared.
  */
-export function fitData(data, sex) {
+export function fitData(data, sex, { surface = false } = {}) {
   if (sex === 'male') return data;
   const F = fitter(sex);
   const { figure: fig, male } = F;
@@ -201,13 +214,19 @@ export function fitData(data, sex) {
     const c0 = [J[1][1] * J[2][2] - J[1][2] * J[2][1], J[1][2] * J[2][0] - J[1][0] * J[2][2], J[1][0] * J[2][1] - J[1][1] * J[2][0]];
     const c1 = [J[0][2] * J[2][1] - J[0][1] * J[2][2], J[0][0] * J[2][2] - J[0][2] * J[2][0], J[0][1] * J[2][0] - J[0][0] * J[2][1]];
     const c2 = [J[0][1] * J[1][2] - J[0][2] * J[1][1], J[0][2] * J[1][0] - J[0][0] * J[1][2], J[0][0] * J[1][1] - J[0][1] * J[1][0]];
-    let nx = c0[0] * n[0] + c1[0] * n[1] + c2[0] * n[2];
-    let ny = c0[1] * n[0] + c1[1] * n[1] + c2[1] * n[2];
-    let nz = c0[2] * n[0] + c1[2] * n[1] + c2[2] * n[2];
+    // (The cofactors are det J times the inverse transpose: where the move turns space inside out, det J < 0, turn it back.)
+    const det = Math.sign(J[0][0] * c0[0] + J[0][1] * c0[1] + J[0][2] * c0[2]) || 1;
+    let nx = det * (c0[0] * n[0] + c1[0] * n[1] + c2[0] * n[2]);
+    let ny = det * (c0[1] * n[0] + c1[1] * n[1] + c2[1] * n[2]);
+    let nz = det * (c0[2] * n[0] + c1[2] * n[1] + c2[2] * n[2]);
     const l = Math.hypot(nx, ny, nz);
     if (!(l > 1e-9)) { nx = n[0]; ny = n[1]; nz = n[2]; } else { nx /= l; ny /= l; nz /= l; }
     normal[v * 3] = nx; normal[v * 3 + 1] = ny; normal[v * 3 + 2] = nz;
   }
+  // A surface (cloth, the mouth) shades by its own new shape: the move's gradient jumps a little where
+  // the skin it follows changes (from the shin to the foot, say), and its normals would show that as a seam.
+  // (Faced the way his faced: a turned hem faces in.)
+  if (surface) return { ...data, position, normal: reshade(data, position, new Float32Array(data.count).fill(1)) };
   return { ...data, position, normal };
 }
 
