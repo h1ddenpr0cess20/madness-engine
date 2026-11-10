@@ -21,16 +21,16 @@ const TOPPER_LABELS = Object.freeze({
 /** Planet-specific palettes for the mist inside each etched glass world. */
 const PLANET_MISTS = Object.freeze({
   moon: Object.freeze({
-    hue: 0.60,
+    hue: 0.54,
     spread: 0.08,
-    tint: Object.freeze([0.78, 0.87, 1]),
-    glow: 0.72,
+    tint: Object.freeze([0.90, 0.96, 1]),
+    glow: 0.78,
     core: 0.16,
   }),
   mars: Object.freeze({
-    hue: 0.08,
+    hue: 0.925,
     spread: 0.08,
-    tint: Object.freeze([1, 0.58, 0.38]),
+    tint: Object.freeze([1, 0.90, 0.72]),
     glow: 0.82,
     core: 0.22,
   }),

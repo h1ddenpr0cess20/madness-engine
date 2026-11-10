@@ -157,6 +157,17 @@ jobs:
               { timeout: 120000 },
             );
             await page.waitForTimeout(1200);
+            const jupiterSurface = await page.evaluate(() => {
+              const root = window.assetViewer?.view?.built?.object;
+              const planet = root?.getObjectByName('jupiter glass staff topper');
+              return {
+                etchedShells: ['etch-near', 'etch-far'].filter((name) => planet?.getObjectByName(name)?.visible).length,
+                cloudField: Boolean(planet?.getObjectByName('field')?.visible),
+              };
+            });
+            if (jupiterSurface.etchedShells !== 2 || !jupiterSurface.cloudField) {
+              throw new Error(`Jupiter should render both etched glass shells and its cloud field: ${JSON.stringify(jupiterSurface)}`);
+            }
             await page.screenshot({ path: 'artifacts/wizard-staff-metal-jupiter.png', fullPage: true });
 
             if (errors.length) throw new Error(errors.join('\\n'));
