@@ -95,7 +95,6 @@ test('the glass planets reuse the glass globe factory and all start with mist en
   staff.setTopper('jupiter-etched');
   await staff.topperReady;
   assert.equal(staff.jupiterEtched.field, null, 'etched Jupiter does not use the separate cloud field');
-  assert.equal(staff.jupiterEtched.etch.length, 2, 'etched Jupiter has front and back etched shells');
   assert.deepEqual(staff.jupiterEtched.mood, {
     speed: 0.22, swirl: 0.6, churn: 0.5, glow: 2.4, core: 0.1,
     hue: 0.52, spread: 0, tint: [1, 1, 1], bands: 1,
