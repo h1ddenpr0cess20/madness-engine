@@ -476,7 +476,7 @@ function denimMaps() {
 
 // ———————————————————————————————————————————————— the socks
 
-/** Crew socks: a fine knit, the cuff ribbed, the heel and toe knit denser and a shade darker. */
+/** Crew socks: a fine knit, the cuff ribbed, the heel knit denser and a shade darker. */
 function sockMaps() {
   const map = canvasOf(bodyPixels(1024, (p, n, zone) => {
     let c = 236 + 8 * noise3(p[0] * 400, p[1] * 400, p[2] * 400);
@@ -490,8 +490,7 @@ function sockMaps() {
     if (zone === 'foot') {
       const ankle = JOINTS.ankle[2];
       const heel = smooth(ankle - 0.02, ankle - 0.04, p[2]) * smooth(0.09, 0.07, p[1]);
-      const toe = smooth(0.13, 0.16, p[2] - ankle);
-      c -= 26 * Math.max(heel, toe);
+      c -= 26 * heel;
     }
     return [c, c, c];
   }, [236, 236, 236]), 1024);

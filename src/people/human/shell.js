@@ -23,7 +23,8 @@ import { Part } from './kit.js';
  *   hangs instead, if it hangs loose (across a hollow, off the chest); or `q`.
  * - `folds(p, zone)`: a little more off the skin, for creases.
  * - `edge(p, zone)`: the turned edge at a cut there: { thick, turn } (the
- *   cloth's doubled thickness, and how far the turn-up goes inside).
+ *   cloth's doubled thickness, and how far the turn-up goes inside), or null
+ *   for none (where the garment carries on in a piece of its own).
  * - `smooth`: passes of smoothing over how far the cloth stands off the skin.
  * - `under`: for a garment worn over others, how far off the skin the
  *   garments under it already stand, by skin vertex (see `part.lift`); it
@@ -32,6 +33,8 @@ import { Part } from './kit.js';
  * - `thick`: the cloth's own thickness, for what is worn over it.
  * - `shade`: how much of the skin's shading in its creases the cloth keeps
  *   (1 all of it, as cloth lying on them does; less for one standing off).
+ * - `settle(q, p, zone)`: after each stiff pass, where cloth at `q` goes back to
+ *   (onto a shape it is stretched over), so smoothing slides it along that.
  * - `line(q, p, zone)`: for a vertex of the cut at `q` (from skin point `p`),
  *   where on its true line it belongs (a straight front edge), or null.
  * - `stiff`: passes of smoothing over the cloth's shape itself, for a stiff
@@ -169,7 +172,10 @@ export function skinShell(name, material, spec) {
       return c ? [q[0] * 0.5 + (x / c) * 0.5, q[1] * 0.5 + (y / c) * 0.5, q[2] * 0.5 + (z / c) * 0.5] : q;
     });
     for (let i = 0; i < at.length; i++) {
-      const b = B[i], q = next[i];
+      const b = B[i];
+      let q = next[i];
+      // Put back onto whatever shape the garment hangs on there (a sock's toe box), so it slides over it.
+      if (spec.settle) q = spec.settle(q, b.p, zone[verts[i]]);
       const k = Math.max(0, floor[i] - ((q[0] - b.p[0]) * b.n[0] + (q[1] - b.p[1]) * b.n[1] + (q[2] - b.p[2]) * b.n[2]));
       at[i] = [q[0] + b.n[0] * k, q[1] + b.n[1] * k, q[2] + b.n[2] * k];
     }
@@ -318,6 +324,8 @@ export function skinShell(name, material, spec) {
     return ids3;
   };
   for (const e of cut) {
+    // Where the garment wants no turned edge (it carries on in another piece), the cut is left open.
+    if (!edge(B[used.get(e.a)].p, zone[e.a]) || !edge(B[used.get(e.b)].p, zone[e.b])) continue;
     // The kept quad runs a → b; the strip runs back b → a beyond it.
     const A0 = corner(e.a, e.ta), B0 = corner(e.b, e.tb);
     const ra = rimOf(e.a, e.ta), rb = rimOf(e.b, e.tb);

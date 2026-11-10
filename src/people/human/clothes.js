@@ -591,7 +591,138 @@ export const SOCKS = Object.freeze({ top: 0.205, rib: 0.035 });
 function socksCut(p, z) {
   if (z.zone !== 'foot' && z.zone !== 'leg') return -1;
   if (z.zone === 'leg' && p[1] > SOCKS.top + 0.1) return -1;
-  return SOCKS.top - p[1];
+  // The knit over the toes is its own cap (see `toeCap`): the shell stops across the ball of the foot.
+  const toes = z.zone === 'foot' ? toeCut() - p[2] : Infinity;
+  return Math.min(SOCKS.top - p[1], toes);
+}
+
+const toeBoxes = new Map();
+/**
+ * A sock's toe box (side `m`): the convex hull of the front of the foot,
+ * as the half-spaces round it (how far the foot reaches along each of many
+ * directions, none of them back toward the heel). Knit stretched over the
+ * toes lies on it, across the gaps between them.
+ */
+function toeBox(m) {
+  if (toeBoxes.has(m)) return toeBoxes.get(m);
+  const pts = footPoints(m, 0.08);
+  let front = -Infinity, back = Infinity;
+  for (const p of pts) { front = Math.max(front, p[2]); back = Math.min(back, p[2]); }
+  const z0 = back + (front - back) * 0.6;
+  const toes = pts.filter((p) => p[2] > z0 - 0.02);
+  const dirs = [];
+  const N = 600;
+  for (let i = 0; i < N; i++) {
+    const y = 1 - (2 * (i + 0.5)) / N, r = Math.sqrt(1 - y * y), a = i * Math.PI * (3 - Math.sqrt(5));
+    const d = [Math.cos(a) * r, y, Math.sin(a) * r];
+    if (d[2] < -0.2) continue;
+    let h = -Infinity;
+    for (const p of toes) h = Math.max(h, dot(d, p));
+    dirs.push({ d, h });
+  }
+  // Its middle, across and up: the axis the knit is projected out from.
+  let cx = 0, cy = 0;
+  for (const p of toes) { cx += p[0] / toes.length; cy += p[1] / toes.length; }
+  const v = { dirs, z0, front, cx, cy };
+  toeBoxes.set(m, v);
+  return v;
+}
+
+/** Where, along the foot (by z), the sock's shell ends and its toe cap begins. */
+const toeCut = () => toeBox(1).z0 + 0.012;
+
+/** Where the line from `c` along unit `d` leaves a toe box (its planes `dirs`). */
+function onBox(dirs, c, d) {
+  let t = Infinity;
+  for (const { d: n, h } of dirs) {
+    const along = dot(n, d);
+    if (along > 1e-6) t = Math.min(t, (h - dot(n, c)) / along);
+  }
+  return add(c, scale(d, t));
+}
+
+/**
+ * The sock's toe (side `m`), added to its shell `part`: rings lofted from the shell's open edge across the
+ * ball of the foot (`loop`, its vertex ids in order round it) onto the toe box, closing to a point at the tip:
+ * one smooth stretch of knit over all the toes. In the same part, so its shading runs on across the join.
+ */
+function toeCap(part, loop, m, detail) {
+  const { dirs, cx, cy } = toeBox(m);
+  const zc = toeCut(), c = [cx, cy, zc];
+  const P = (i) => [part.pos[i * 3], part.pos[i * 3 + 1], part.pos[i * 3 + 2]];
+  const ring = loop.map(P);
+  const ankle = mirror(JOINTS.ankle, m);
+  const J = Math.round(14 * detail) + 4;
+  const ease = 0.0013;
+  // The skin's UV scale here (UV per metre round the edge), so the cap's knit is the same size as the shell's.
+  let du = 0, dp = 0;
+  for (let k = 0; k < loop.length; k++) {
+    const a = loop[k], b = loop[(k + 1) % loop.length];
+    du += Math.hypot(part.uv[a * 2] - part.uv[b * 2], part.uv[a * 2 + 1] - part.uv[b * 2 + 1]);
+    dp += len(sub(P(a), P(b)));
+  }
+  const perMetre = du / (dp || 1);
+  const along = new Array(ring.length + 1).fill(0), prev = [];
+  part.grid(J, ring.length, (j, k) => {
+    const kk = k % ring.length, q = ring[kk];
+    const th = Math.atan2(q[1] - cy, q[0] - cx);
+    // Out from the cut's middle across it at the edge (j = 0), turning forward to the tip.
+    const phi = (Math.PI / 2) * (1 - j / J);
+    const d = [Math.sin(phi) * Math.cos(th), Math.sin(phi) * Math.sin(th), Math.cos(phi)];
+    let p = onBox(dirs, c, d);
+    p = add(p, scale(d, ease));
+    // The first rings eased from the shell's own edge onto the box.
+    const flat = onBox(dirs, c, [Math.cos(th), Math.sin(th), 0]);
+    const keep = 1 - smooth(0, 0.5, j / J);
+    p = add(p, scale(sub(q, add(flat, scale([Math.cos(th), Math.sin(th), 0], ease))), keep));
+    if (j === 0) p = q;
+    const w = j === 0 ? part.weights[loop[kk]] : skinWeightsAt(p, { only: zoneIs('foot') }) ?? part.weights[loop[kk]];
+    // Its UV: the edge's own, carried on toward the tip by how far along the cap it is.
+    // (Rows are made in turn, so each column's last point is the row before's.)
+    if (j > 0) along[k] += len(sub(p, prev[k]));
+    prev[k] = p;
+    const uv = [part.uv[loop[kk] * 2], part.uv[loop[kk] * 2 + 1] + along[k] * perMetre];
+    return { p, uv, w, tint: part.tint[loop[kk]], zone: { zone: 'foot', y: p[1], d: p[2] - ankle[2], x: Math.abs(p[0]), sx: p[0], z: p[2] } };
+  });
+}
+
+/**
+ * The ids of the shell's open edge across the ball of foot `m`, in order round it. Vertices are matched by
+ * place, so where the skin's UVs split a vertex (a seam) the cloth is still counted as one piece there.
+ */
+function toeLoop(part, m) {
+  const keyOf = (i) => `${Math.round(part.pos[i * 3] * 1e5)},${Math.round(part.pos[i * 3 + 1] * 1e5)},${Math.round(part.pos[i * 3 + 2] * 1e5)}`;
+  const id = new Map(), rep = [];
+  const at = (i) => { const k = keyOf(i); if (!id.has(k)) { id.set(k, rep.length); rep.push(i); } return id.get(k); };
+  const count = new Map();
+  for (let t = 0; t < part.idx.length; t += 3) {
+    for (let e = 0; e < 3; e++) {
+      const a = at(part.idx[t + e]), b = at(part.idx[t + ((e + 1) % 3)]);
+      if (a === b) continue;
+      const key = a < b ? `${a},${b}` : `${b},${a}`;
+      count.set(key, (count.get(key) ?? 0) + 1);
+    }
+  }
+  // The sock's only openings are its cuff and this: the one low down, on this side.
+  const near = (v) => part.pos[rep[v] * 3] * m > 0 && part.pos[rep[v] * 3 + 1] < 0.12;
+  const next = new Map();
+  for (const [key, c] of count) {
+    if (c !== 1) continue;
+    const [a, b] = key.split(',').map(Number);
+    if (!near(a) || !near(b)) continue;
+    (next.get(a) ?? next.set(a, []).get(a)).push(b);
+    (next.get(b) ?? next.set(b, []).get(b)).push(a);
+  }
+  const start = next.keys().next().value;
+  if (start === undefined) return [];
+  const loop = [start];
+  let prev = -1, cur = start;
+  for (;;) {
+    const n = (next.get(cur) ?? []).find((x) => x !== prev);
+    if (n === undefined || n === start || loop.length > 2000) break;
+    loop.push(n); prev = cur; cur = n;
+  }
+  return loop.map((v) => rep[v]);
 }
 
 /** Crew socks: close knit over each foot and up the shin, a ribbed cuff that grips a touch looser. */
@@ -600,13 +731,23 @@ function socks(detail, under) {
     level: detail >= 0.8 ? 1 : 0,
     field: socksCut,
     ease: (p) => 0.0011 + 0.0007 * smooth(SOCKS.top - SOCKS.rib - 0.004, SOCKS.top - SOCKS.rib, p[1]),
-    edge: () => ({ thick: 0.0022, turn: 0.012 }),
+    // At the cuff a turned edge; across the ball of the foot none (the toe cap carries on from there).
+    edge: (p) => (p[1] > 0.12 ? { thick: 0.0022, turn: 0.012 } : null),
     smooth: detail >= 0.8 ? 3 : 2,
-    // Knit stretched over the toes, rounding them off rather than following each.
-    stiff: detail >= 0.8 ? 14 : 7,
+    stiff: detail >= 0.8 ? 6 : 3,
     under,
     thick: 0.0012,
   });
+}
+
+/** Crew socks, each with its toe cap. */
+function socksWithToes(detail, under) {
+  const part = socks(detail, under);
+  for (const m of [1, -1]) {
+    const loop = toeLoop(part, m);
+    if (loop.length > 8) toeCap(part, loop, m, detail);
+  }
+  return part;
 }
 
 /**
@@ -1050,7 +1191,7 @@ export const GARMENTS = Object.freeze({
     layer: 1,
     materials: ['sock'],
     fits: true,
-    build: (detail, { under } = {}) => tag([socks(detail, under)], 'socks'),
+    build: (detail, { under } = {}) => tag([socksWithToes(detail, under)], 'socks'),
     covers: ({ zone, y }) => zone === 'foot' || (zone === 'leg' && y < SOCKS.top - OPEN * 0.5),
   },
   sneakers: {
