@@ -1,6 +1,36 @@
 import { WOOD_FINISHES, WOOD_SPECIES } from '../textures/wood.js';
 import { woodBoardMaterial } from '../props/wood-board.js';
-import { createKrystalOrbPommel, createMagicEggPommel } from './common.js';
+import { createKrystalOrbPommel, createMagicEggPommel, createWeaponPommelMarble } from './common.js';
+import { createGlassGlobe } from '../props/glassglobe.js';
+import { loadMoonEtch } from '../textures/moon/map.js';
+import { loadMarsEtch } from '../textures/mars/map.js';
+import { loadJupiterEtch, loadJupiterMap } from '../textures/jupiter/map.js';
+
+const TOPPER_LABELS = Object.freeze({
+  orb: 'Krystal crystal orb',
+  egg: 'Glass egg',
+  marble: 'Madness marble',
+  globe: 'Glass globe',
+  moon: 'Glass Moon',
+  mars: 'Glass Mars',
+  jupiter: 'Glass Jupiter',
+  none: 'none',
+});
+
+/** Attach the repository's real planetary surface data to a staff-sized glass globe. */
+async function loadGlassPlanetSurface(globe, kind) {
+  if (kind === 'moon') {
+    const etch = await loadMoonEtch();
+    if (etch) globe.setEtchCanvas(etch);
+  } else if (kind === 'mars') {
+    const etch = await loadMarsEtch();
+    if (etch) globe.setEtchCanvas(etch);
+  } else if (kind === 'jupiter') {
+    const [etch, field] = await Promise.all([loadJupiterEtch(), loadJupiterMap()]);
+    if (etch) globe.setEtchCanvas(etch);
+    if (field) globe.setField(field);
+  }
+}
 
 /**
  * A gnarled wizard's staff carved entirely from the library's wood textures.
@@ -23,7 +53,7 @@ export const STAFF_DIMENSIONS = Object.freeze({
   unit: 'm',
 });
 
-export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', 'none']);
+export const STAFF_TOPPERS = Object.freeze(['orb', 'egg', 'marble', 'globe', 'moon', 'mars', 'jupiter', 'none']);
 
 const GRIP_Y = [0.8, 1.1];
 const HEAD_Y = 1.55;
@@ -362,8 +392,8 @@ export function createStaff(GFX, {
     if (!toppers[kind]) {
       if (kind === 'orb') {
         const asset = createKrystalOrbPommel(GFX, STAFF_DIMENSIONS.orbRadius);
-        toppers.orb = { asset, object: asset.group };
-      } else {
+        toppers.orb = { asset, object: asset.group, ready: Promise.resolve(asset) };
+      } else if (kind === 'egg') {
         const asset = createMagicEggPommel(GFX, STAFF_DIMENSIONS.eggHalfHeight / STAFF_DIMENSIONS.eggScale);
         // The sword's egg hangs point-down; stand it on its broad end by turning it end over end about its centre.
         const holder = new GFX.Group();
@@ -376,7 +406,31 @@ export function createStaff(GFX, {
         asset.mist.material.uniforms.uShape.value.multiplyScalar(STAFF_DIMENSIONS.eggScale);
         asset.glass.material.thickness *= STAFF_DIMENSIONS.eggScale;
         asset.glass.material.attenuationDistance *= STAFF_DIMENSIONS.eggScale;
-        toppers.egg = { asset, object: holder };
+        toppers.egg = { asset, object: holder, ready: Promise.resolve(asset) };
+      } else if (kind === 'marble') {
+        const asset = createWeaponPommelMarble(GFX, STAFF_DIMENSIONS.orbRadius);
+        // The shared pommel factory places marbles on a surface; the staff's
+        // root cradle instead holds this one around its centre.
+        asset.group.position.y = 0;
+        toppers.marble = { asset, object: asset.group, ready: Promise.resolve(asset) };
+      } else {
+        const asset = createGlassGlobe(GFX, {
+          radius: STAFF_DIMENSIONS.orbRadius,
+          mist: true,
+          etch: kind === 'globe',
+          animate: true,
+          seed,
+        });
+        asset.group.name = `${kind} glass staff topper`;
+        asset.spin.name = `${kind} surface`;
+        const ready = loadGlassPlanetSurface(asset, kind)
+          .then(() => asset)
+          .catch((error) => {
+            asset.surfaceLoadError = error;
+            return asset;
+          });
+        asset.ready = ready;
+        toppers[kind] = { asset, object: asset.group, ready };
       }
       topperHolder.add(toppers[kind].object);
     }
@@ -404,6 +458,12 @@ export function createStaff(GFX, {
     get topperAsset() { return toppers[topperKind]?.asset ?? null; },
     get orb() { return toppers.orb?.asset ?? null; },
     get egg() { return toppers.egg?.asset ?? null; },
+    get marble() { return toppers.marble?.asset ?? null; },
+    get madnessMarble() { return toppers.marble?.asset ?? null; },
+    get globe() { return toppers.globe?.asset ?? null; },
+    get moon() { return toppers.moon?.asset ?? null; },
+    get mars() { return toppers.mars?.asset ?? null; },
+    get jupiter() { return toppers.jupiter?.asset ?? null; },
     get species() { return woodSpecies; },
     get finish() { return woodFinish; },
     get gripColor() { return `#${leather.color.getHexString()}`; },
@@ -419,7 +479,7 @@ export function createStaff(GFX, {
       return {
         'Staff length': `${dims().toFixed(2)} m`,
         Wood: `${woodSpecies} (${woodFinish})`,
-        Topper: topperKind === 'orb' ? 'Krystal crystal orb' : topperKind === 'egg' ? 'Glass egg' : 'none',
+        Topper: TOPPER_LABELS[topperKind],
         Tendrils: String(tendrils),
         Scale: '1 world unit = 1 metre',
       };
