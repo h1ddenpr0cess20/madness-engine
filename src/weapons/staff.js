@@ -42,21 +42,6 @@ async function loadGlassPlanetSurface(globe, kind) {
   }
 }
 
-/** Attach the repository's real planetary surface data to a staff-sized glass globe. */
-async function loadGlassPlanetSurface(globe, kind) {
-  if (kind === 'moon') {
-    const etch = await loadMoonEtch();
-    if (etch) globe.setEtchCanvas(etch);
-  } else if (kind === 'mars') {
-    const etch = await loadMarsEtch();
-    if (etch) globe.setEtchCanvas(etch);
-  } else if (kind === 'jupiter') {
-    const field = await loadJupiterMap();
-    const etch = field ? createJupiterEtch(field) : null;
-    if (etch) globe.setEtchCanvas(etch);
-    if (field) globe.setField(field);
-  }
-}
 
 /**
  * A gnarled wizard's staff with a wood or solid-metal structure. Its head is a
@@ -456,7 +441,6 @@ export function createStaff(GFX, {
           animate: true,
           seed,
         });
-        if (PLANET_MISTS[kind]) asset.setMist(PLANET_MISTS[kind]);
         asset.group.name = `${kind} glass staff topper`;
         asset.spin.name = `${kind} surface`;
         const ready = loadGlassPlanetSurface(asset, kind)
