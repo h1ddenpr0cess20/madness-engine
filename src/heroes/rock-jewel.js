@@ -34,6 +34,9 @@ export const JEWELS = Object.freeze({
 });
 export const JEWEL_CHOICES = Object.keys(JEWELS);
 
+/** The stone's radius as `heroes/rock` draws it at its source size (`createRock` scales from it). */
+const SOURCE_RADIUS = 0.95;
+
 /** The mist's sphere, inside the stone, in the stone's own units (the stone is at least 0.75 from its middle). */
 export const MIST_RADIUS = 0.62;
 /** How fast the mist flows: the vision's own pace, as the glass globe's mood gives it. */
@@ -144,7 +147,7 @@ function creaseNormals(GFX, geometry) {
  * The jewel stone alone: `{ mesh, geometry, material, glass, mist, setColour, setMist }`. `mesh` is a group of the glass
  * and its mist, and both move together, so the stone is drawn at whatever scale its parent gives it.
  */
-export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mist = true, detail = GRANITE_DETAIL } = {}) {
+export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mist = true, detail = GRANITE_DETAIL, size = 1 } = {}) {
   let hex = jewelHex(colour, color);
   const geometry = createGraniteStone(GFX, { detail });
   // No uv: the granite's projected uvs seam along the cut planes, and a clear gem shows the seams as lines.
@@ -163,7 +166,10 @@ export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mis
     thickness: 0.9,
     ior: 1.76,
     attenuationColor: new GFX.Color(hex),
-    attenuationDistance: 0.9,
+    // The engine's transmission scales the thickness with the model's scale (shaders/glsl/chunks/transmission.glsl.js), but
+    // not the absorption, so the absorption is set with the size: a gem's color is then the same at any size. At 0.25 of the
+    // stone's size, the light through its middle keeps about half of its strongest colors, so the stone reads as colored glass.
+    attenuationDistance: 0.25 * size,
     // Off, as the orb's glass is: the glass must not hide the mist inside it.
     depthWrite: false,
     // A gem lit from within: a faint glow in its own color, as the orb's mist gives, so it reads against a dark room.
@@ -239,11 +245,12 @@ export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mis
 }
 
 /** A jewel rock: `createRock`, with the jewel stone in the color asked for and its mist. `colour` is a `JEWELS` name. */
-export function createJewelRock(GFX, { colour = 'sapphire', color = null, mist = true, ...opts } = {}) {
+export function createJewelRock(GFX, { colour = 'sapphire', color = null, mist = true, radius = 0.45, ...opts } = {}) {
   let asset = null;
   const rock = createRock(GFX, {
     ...opts,
-    boulder: (G) => (asset = createJewelBoulder(G, { colour, color, mist })),
+    radius,
+    boulder: (G) => (asset = createJewelBoulder(G, { colour, color, mist, size: radius / SOURCE_RADIUS })),
   });
   // A getter, defined as one: Object.assign would copy its value once, and the color would stop following the stone.
   Object.defineProperty(rock, 'colour', { get: () => asset.colour, enumerable: true });

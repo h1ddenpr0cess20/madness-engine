@@ -392,8 +392,9 @@ export function createStaff(GFX, {
         toppers.orb = { asset, object: asset.group };
       } else if (JEWEL_CHOICES.includes(kind)) {
         // A jewel is the granite's own shape, cut to the orb's size, with its mist inside.
-        const asset = createJewelBoulder(GFX, { colour: kind, mist: true });
-        asset.mesh.scale.setScalar(STAFF_DIMENSIONS.orbRadius / 0.9);
+        const scale = STAFF_DIMENSIONS.orbRadius / 0.9;
+        const asset = createJewelBoulder(GFX, { colour: kind, mist: true, size: scale });
+        asset.mesh.scale.setScalar(scale);
         toppers[kind] = { asset, object: asset.mesh };
       } else if (GLASS_PLANET_NAMES.includes(kind)) {
         // A planet is drawn at the orb's radius, the size its cradle is cut for; the Moon and Mars are not to scale beside the Earth.
