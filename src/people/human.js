@@ -1,7 +1,7 @@
 import { Skeleton, skinDual } from '../models/rig.js';
 import { assemble, cross, len, Part, sub } from './human/kit.js';
 import { bones, figureOf, FIGURES, FINGER_NAMES, HEIGHT, mirror, sideOf } from './human/skeleton.js';
-import { fitData, fitPoint, hang } from './human/fit.js';
+import { fitData, fitPoint, hang, wrap } from './human/fit.js';
 import { buildEyes, buildMouth, withLipCorners } from './human/head.js';
 import { bodyLevel } from './human/basemesh.js';
 import { zoneOf } from './human/body.js';
@@ -161,11 +161,11 @@ function fitted(key, sex, make) {
   return builds.get(k);
 }
 
-/** The garments worn on the trunk, which hang off a bust: how freely each does. */
+/** The garments worn on the trunk, which hang off a bust: how freely each does (the bra, close, is wrapped over it instead: see wrap). */
 // (Her t-shirt and bomber are fitted: under the bust they come back in to her waist, bridging only just below it;
 // the bomber never comes in faster than the shirt under it.)
 const HANGS = {
-  bra: { down: 1.4, across: 0.25, up: 1.6, hem: 0.02 },
+  bra: { ball: 0.05, hem: 0.015 },
   tshirt: { down: 0.35, across: 0.35, up: 1.4 },
   jacket: { down: 0.35, across: 0.3, up: 1.2 },
   jacketZipped: { down: 0.35, across: 0.3, up: 1.2 },
@@ -186,7 +186,7 @@ function garmentData(name, garment, detail, below, sex = 'male') {
   if (sex !== 'male') {
     data = fitData(data, sex, { surface: true });
     const h = garment.hang ?? HANGS[name];
-    if (h) data = hang(data, sex, h);
+    if (h) data = h.ball ? wrap(data, sex, h) : hang(data, sex, h);
   }
   // How far off the skin it stands, by skin vertex, for what goes over it.
   for (const part of parts) {

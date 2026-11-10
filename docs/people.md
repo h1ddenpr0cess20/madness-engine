@@ -54,8 +54,11 @@ read her legs' lengths off it, and a weapon is held at the same place in
 her hand.
 
 She starts in `DEFAULT_OUTFIT_FEMALE`: his outfit with a sports bra (`bra`,
-cut from the chest, bridged across, a band held close round her ribs and
-straps) under the t-shirt. The bra is hers only, and a beard his: `wear('bra')`
+cut from the chest, a band held close round her ribs and straps) under the
+t-shirt. The bra is not hung but wrapped (`wrap`): kept clear of her skin,
+then filled out between her breasts and under them as far as a 5 cm ball
+rolled over her front cannot reach, as a stretched knit lies; past the
+fullest of them it follows her round her sides. The bra is hers only, and a beard his: `wear('bra')`
 on him and a beard for her are refused. Her wardrobe (`GARMENTS_FEMALE`, used
 by `wear` on her; `garmentsFor(sex)` gives either) is his in the
 women's cut (`WOMENS_CUT`, said in his measures, since it is cut on him and

@@ -636,7 +636,7 @@ export const BRA = Object.freeze({ band: 1.19 });
 export function braTop(x, z) {
   const s = Math.abs(x), back = z < SHIRT_Z;
   let top = back ? 1.335 : 1.345 + 0.02 * smooth(0, 0.065, s);
-  top += (1.305 - top) * smooth(0.1, 0.135, s);
+  top += (1.27 - top) * smooth(0.1, 0.135, s);
   // The straps, up over the shoulders to the neck's base.
   const strap = smooth(0.055, 0.068, s) * smooth(0.112, 0.099, s);
   return top + (1.52 - top) * strap;

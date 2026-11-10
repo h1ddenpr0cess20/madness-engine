@@ -252,12 +252,11 @@ export function bustOf(sex) {
  * comes in for each metre it falls; small, so it falls nearly straight), in
  * toward the middle at `across` (bridging between the breasts), and back up
  * toward the collar at `up`. Out toward the sides it follows the body, as it
- * did. A garment with a `hem` (how high, in metres, from its lowest edge)
- * holds to the body there, as a bra's band does. Only ever outward: each point is moved forward by as much as the cloth
+ * did. Only ever outward: each point is moved forward by as much as the cloth
  * in front of it, inside and out alike, so its hems, turns and layers keep
  * their thickness.
  */
-export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, hem = 0, only = (z) => z.on !== 'arm' } = {}) {
+export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, only = (z) => z.on !== 'arm' } = {}) {
   if (sex === 'male') return data;
   const apex = bustOf(sex);
   const { joints } = figureOf(sex);
@@ -274,10 +273,8 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
     const k = j * nx + i;
     if (P[v * 3 + 2] > Z[k]) Z[k] = P[v * 3 + 2];
   }
-  // The envelope: the most any cloth above, beside or below would hold it out. (Each cost rounded off
-  // within `R` of its source, so the cloth domes over the fullest of the bust, not peaks there.)
+  // The envelope: the most any cloth above, beside or below would hold it out.
   const E = new Float32Array(nx * ny).fill(-Infinity);
-  const R = 0.02, round = (d) => (d * d) / (Math.abs(d) + R);
   const RY = Math.round(0.3 / C), RX = Math.round(0.12 / C);
   for (let j = 0; j < ny; j++) {
     for (let i = 0; i < nx; i++) {
@@ -286,7 +283,7 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
       if (e === -Infinity) continue;
       for (let jj = Math.max(0, j - RY); jj < Math.min(ny, j + RY + 1); jj++) {
         const dy = (jj - j) * C;
-        const cy = (dy > 0 ? down : up) * round(dy);
+        const cy = dy > 0 ? down * dy : -up * dy;
         if (cy > 0.2) continue;
         for (let ii = Math.max(0, i - RX); ii < Math.min(nx, i + RX + 1); ii++) {
           const z = Z[jj * nx + ii];
@@ -294,7 +291,7 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
           const xs = X0 + ii * C;
           // From the source toward the middle line costs `across`; away from it, `out`.
           const toward = Math.abs(x) < Math.abs(xs) && Math.sign(x) * Math.sign(xs) >= 0;
-          const reach = z - cy - (toward ? across : out) * round(x - xs);
+          const reach = z - cy - (toward ? across : out) * Math.abs(x - xs);
           if (reach > e) e = reach;
         }
       }
@@ -304,30 +301,13 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
   // How far forward each cell's cloth goes, smoothed a little so it rounds into the rest.
   let L = new Float32Array(nx * ny);
   for (let k = 0; k < L.length; k++) L[k] = Z[k] === -Infinity ? 0 : Math.max(0, E[k] - Z[k]);
-  // The cells with no cloth facing forward (an edge turning under, the sides) take their neighbors',
-  // so cloth there moves with the cloth beside it rather than tearing away from it.
-  const has = new Uint8Array(nx * ny);
-  for (let k = 0; k < L.length; k++) has[k] = Z[k] !== -Infinity;
-  for (let pass = 0; pass < 4; pass++) {
-    const was = has.slice();
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      if (was[j * nx + i]) continue;
-      let s = 0, n = 0;
-      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
-        const a = i + di, b = j + dj;
-        if (a < 0 || b < 0 || a >= nx || b >= ny || !was[b * nx + a]) continue;
-        s += L[b * nx + a]; n++;
-      }
-      if (n) { L[j * nx + i] = s / n; has[j * nx + i] = 1; }
-    }
-  }
   for (let pass = 0; pass < 3; pass++) {
     const next = new Float32Array(L.length);
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
       let s = 0, n = 0;
       for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
         const a = i + di, b = j + dj;
-        if (a < 0 || b < 0 || a >= nx || b >= ny || !has[b * nx + a]) continue;
+        if (a < 0 || b < 0 || a >= nx || b >= ny || Z[b * nx + a] === -Infinity) continue;
         s += L[b * nx + a]; n++;
       }
       next[j * nx + i] = n ? s / n : 0;
@@ -342,26 +322,177 @@ export function hang(data, sex, { down = 0.3, across = 0.35, up = 1.6, out = 4, 
   };
   const position = P.slice();
   const moved = new Float32Array(data.count);
-  // Each point goes out from the middle of the body, not straight forward: where the cloth turns round
-  // the side, forward would slide it along itself, into folds.
-  const middle = joints.chest[2] - 0.08;
-  let low = Infinity;
-  if (hem) for (let v = 0; v < data.count; v++) if (take(v)) low = Math.min(low, P[v * 3 + 1]);
   for (let v = 0; v < data.count; v++) {
     if (!take(v)) continue;
-    // Faded in from the sides, so the cloth turning round them keeps to the body: by how far round the body
-    // it is (pushed forward where it faces sideways, it would stand out in points, not hang).
-    const t = Math.min(1, Math.max(0, (1.35 - Math.atan2(Math.abs(P[v * 3]), P[v * 3 + 2] - front)) / 0.6));
-    const fade = Math.min(1, Math.max(0, (P[v * 3 + 2] - front) / 0.03)) * t * t * (3 - 2 * t)
-      * (hem ? Math.min(1, Math.max(0, (P[v * 3 + 1] - low - hem) / hem)) : 1);
+    // Faded in from the sides, so the cloth turning round them keeps to the body.
+    const fade = Math.min(1, Math.max(0, (P[v * 3 + 2] - front) / 0.03));
     moved[v] = lift(P[v * 3], P[v * 3 + 1]) * fade;
-    const ox = P[v * 3], oz = P[v * 3 + 2] - middle, l = Math.hypot(ox, oz) || 1;
-    // (As far forward as the envelope asks, wherever it faces the front.)
-    const k = moved[v] / Math.max(0.6, oz / l);
-    position[v * 3] += (k * ox) / l;
-    position[v * 3 + 2] += (k * oz) / l;
+    position[v * 3 + 2] += moved[v];
   }
   return { ...data, position, normal: reshade(data, position, moved) };
+}
+
+/**
+ * Wraps the front of a close garment (`data`, already on her) as a stretched
+ * knit lies over a bust, a sports bra: as a ball of `ball` radius rolled over
+ * her front would leave it. It fills what the ball cannot reach (between the
+ * breasts, the crease under them, round the nipples) and leaves the rest,
+ * every outward curve, where it was. Only ever forward, and only between
+ * the fullest of the breasts: out past them it follows her round her sides,
+ * as a close knit does, and is not slid along itself into folds. Within `hem` of its lowest edge it
+ * holds to the body (the band). First it is kept `ease` clear of her skin
+ * (made on his flat chest and carried over, it can sink into the tips).
+ */
+export function wrap(data, sex, { ball = 0.05, hem = 0, ease = 0.0025, only = (z) => z.on !== 'arm' } = {}) {
+  if (sex === 'male') return data;
+  const { joints } = figureOf(sex);
+  const apex = bustOf(sex);
+  const C = 0.004, X0 = -0.22, nx = Math.round((-2 * X0) / C) + 1;
+  // (Over the bust: elsewhere it lies on him much as on her.)
+  const P = clear(data, sex, ease, (v) => only(data.zones[v] ?? {}) && data.position[v * 3 + 2] > joints.chest[2] - 0.02
+    && Math.abs(Math.abs(data.position[v * 3]) - apex[0]) < 0.05 && Math.abs(data.position[v * 3 + 1] - apex[1]) < 0.07);
+  const pushed = new Float32Array(data.count);
+  for (let v = 0; v < data.count; v++) pushed[v] = Math.hypot(P[v * 3] - data.position[v * 3], P[v * 3 + 1] - data.position[v * 3 + 1], P[v * 3 + 2] - data.position[v * 3 + 2]);
+  const front = joints.chest[2] - 0.02;
+  let Y0 = Infinity, Y1 = -Infinity;
+  const take = (v) => P[v * 3 + 2] > front && only(data.zones[v] ?? {}) && Math.abs(P[v * 3]) < -X0;
+  for (let v = 0; v < data.count; v++) if (take(v)) { Y0 = Math.min(Y0, P[v * 3 + 1]); Y1 = Math.max(Y1, P[v * 3 + 1]); }
+  if (Y0 > Y1) return data;
+  const pad = Math.ceil(ball / C) + 2;
+  Y0 -= pad * C; Y1 += pad * C;
+  const ny = Math.ceil((Y1 - Y0) / C) + 1;
+  // How far forward the cloth is, cell by cell (its outermost layer).
+  const Z = new Float32Array(nx * ny).fill(-Infinity);
+  for (let v = 0; v < data.count; v++) {
+    if (!take(v)) continue;
+    const k = Math.round((P[v * 3 + 1] - Y0) / C) * nx + Math.round((P[v * 3] - X0) / C);
+    if (P[v * 3 + 2] > Z[k]) Z[k] = P[v * 3 + 2];
+  }
+  // Carried on past its edges and into its gaps, as it was going, so the ball rolls off them as it would off more of it.
+  const F = Z.slice();
+  for (let pass = 0; pass < pad; pass++) {
+    const was = F.slice();
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      if (was[j * nx + i] !== -Infinity) continue;
+      let s = 0, n = 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const a = i + di, b = j + dj;
+        if (a < 0 || b < 0 || a >= nx || b >= ny || was[b * nx + a] === -Infinity) continue;
+        s += was[b * nx + a]; n++;
+      }
+      if (n) F[j * nx + i] = s / n;
+    }
+  }
+  // The ball rolled over it: the highest it rests at over each cell (a dilation), then where its front reaches (an erosion).
+  const r = Math.ceil(ball / C), cap = [];
+  for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+    const d2 = (di * di + dj * dj) * C * C;
+    if (d2 <= ball * ball) cap.push([di, dj, Math.sqrt(ball * ball - d2)]);
+  }
+  const D = new Float32Array(nx * ny).fill(-Infinity);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    let m = -Infinity;
+    for (const [di, dj, h] of cap) {
+      const a = i + di, b = j + dj;
+      if (a < 0 || b < 0 || a >= nx || b >= ny) continue;
+      const z = F[b * nx + a] + h;
+      if (z > m) m = z;
+    }
+    D[j * nx + i] = m;
+  }
+  const L = new Float32Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const k = j * nx + i;
+    if (F[k] === -Infinity) continue;
+    let m = Infinity;
+    for (const [di, dj, h] of cap) {
+      const a = i + di, b = j + dj;
+      if (a < 0 || b < 0 || a >= nx || b >= ny) continue;
+      const z = D[b * nx + a] - h;
+      if (z < m) m = z;
+    }
+    L[k] = m === Infinity ? 0 : Math.max(0, m - F[k]);
+  }
+  // As far as the cloth there faces forward (by its slope, so every layer of it, a turned hem's too, moves as one).
+  for (let j = 1; j < ny - 1; j++) for (let i = 1; i < nx - 1; i++) {
+    const k = j * nx + i;
+    const gx = (F[k + 1] - F[k - 1]) / (2 * C), gy = (F[k + nx] - F[k - nx]) / (2 * C);
+    if (!Number.isFinite(gx) || !Number.isFinite(gy)) { L[k] = 0; continue; }
+    const t = Math.min(1, Math.max(0, (1 / Math.hypot(1, gx, gy) - 0.25) / 0.35));
+    L[k] *= t * t * (3 - 2 * t);
+  }
+  const at = (G, x, y) => {
+    const fx = (x - X0) / C, fy = (y - Y0) / C;
+    const i = Math.max(0, Math.min(nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(ny - 2, Math.floor(fy)));
+    const a = Math.min(1, Math.max(0, fx - i)), b = Math.min(1, Math.max(0, fy - j));
+    return (G[j * nx + i] * (1 - a) + G[j * nx + i + 1] * a) * (1 - b) + (G[(j + 1) * nx + i] * (1 - a) + G[(j + 1) * nx + i + 1] * a) * b;
+  };
+  // The outermost cloth, where there is any (its gaps and beyond as carried on), for how deep under it each point is.
+  const top = F.map((z) => (z === -Infinity ? 0 : z));
+  const low = Y0 + pad * C;
+  const position = P.slice();
+  const moved = new Float32Array(data.count);
+  for (let v = 0; v < data.count; v++) {
+    if (!take(v)) continue;
+    const fade = Math.min(1, Math.max(0, (P[v * 3 + 2] - front) / 0.03))
+      * Math.min(1, Math.max(0, (apex[0] + 0.015 - Math.abs(P[v * 3])) / 0.025))
+      * (hem ? Math.min(1, Math.max(0, (P[v * 3 + 1] - low - hem) / hem)) : 1);
+    // Up to the wrapped surface, a point under the outermost cloth (in a crease, a turned hem) keeping no more than a
+    // hem's depth under it: the cloth in the crease comes out to bridge it, not left folded in.
+    const x = P[v * 3], y = P[v * 3 + 1], surface = at(top, x, y);
+    const under = Math.min(Math.max(0, surface - P[v * 3 + 2]), 0.006);
+    // (Only where the wrap lifts it: elsewhere, at her sides say, cloth behind is just more of the cloth going round.)
+    const l = at(L, x, y);
+    moved[v] = Math.max(0, surface + l - under - P[v * 3 + 2]) * Math.min(1, l / 0.004) * fade;
+    position[v * 3 + 2] += moved[v];
+  }
+  for (let v = 0; v < data.count; v++) moved[v] += pushed[v];
+  return { ...data, position, normal: reshade(data, position, moved) };
+}
+
+/**
+ * The points of `data` that `which` picks, kept `ease` out from her skin
+ * (along the skin's normal) where they face the way it does: the cloth's
+ * outer side. A copy of the positions.
+ */
+function clear(data, sex, ease, which) {
+  const { pos, faces } = bodyLevel(1, sex);
+  const n = new Float32Array(pos.length);
+  for (let f = 0; f < faces.length; f += 4) {
+    const [a, b, c, d] = [faces[f], faces[f + 1], faces[f + 2], faces[f + 3]];
+    const u = [pos[c * 3] - pos[a * 3], pos[c * 3 + 1] - pos[a * 3 + 1], pos[c * 3 + 2] - pos[a * 3 + 2]];
+    const w = [pos[d * 3] - pos[b * 3], pos[d * 3 + 1] - pos[b * 3 + 1], pos[d * 3 + 2] - pos[b * 3 + 2]];
+    const q = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+    for (const v of [a, b, c, d]) { n[v * 3] += q[0]; n[v * 3 + 1] += q[1]; n[v * 3 + 2] += q[2]; }
+  }
+  const CELL = 0.01, cells = new Map();
+  const key = (x, y, z) => (x + 512) * 1048576 + (y + 512) * 1024 + (z + 512);
+  for (let v = 0; v < pos.length / 3; v++) {
+    if (pos[v * 3 + 1] < 0.9 || pos[v * 3 + 1] > 1.5) continue;
+    const k = key(Math.floor(pos[v * 3] / CELL), Math.floor(pos[v * 3 + 1] / CELL), Math.floor(pos[v * 3 + 2] / CELL));
+    if (!cells.has(k)) cells.set(k, []);
+    cells.get(k).push(v);
+  }
+  const P = data.position.slice(), N = data.normal;
+  for (let v = 0; v < data.count; v++) {
+    if (!which(v)) continue;
+    const p = [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]];
+    const cx = Math.floor(p[0] / CELL), cy = Math.floor(p[1] / CELL), cz = Math.floor(p[2] / CELL);
+    let best = -1, bd = Infinity;
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) {
+      for (const s of cells.get(key(cx + i, cy + j, cz + k)) ?? []) {
+        const d = (pos[s * 3] - p[0]) ** 2 + (pos[s * 3 + 1] - p[1]) ** 2 + (pos[s * 3 + 2] - p[2]) ** 2;
+        if (d < bd) { bd = d; best = s; }
+      }
+    }
+    if (best < 0) continue;
+    const l = Math.hypot(n[best * 3], n[best * 3 + 1], n[best * 3 + 2]) || 1;
+    const sn = [n[best * 3] / l, n[best * 3 + 1] / l, n[best * 3 + 2] / l];
+    if (sn[0] * N[v * 3] + sn[1] * N[v * 3 + 1] + sn[2] * N[v * 3 + 2] <= 0) continue;
+    const d = (p[0] - pos[best * 3]) * sn[0] + (p[1] - pos[best * 3 + 1]) * sn[1] + (p[2] - pos[best * 3 + 2]) * sn[2];
+    if (d < ease) for (let c = 0; c < 3; c++) P[v * 3 + c] += sn[c] * (ease - d);
+  }
+  return P;
 }
 
 /**
