@@ -466,6 +466,7 @@ export function createStaff(GFX, {
     gripThread2,
     get topper() { return topperKind; },
     get topperAsset() { return toppers[topperKind]?.asset ?? null; },
+    get topperReady() { return toppers[topperKind]?.ready ?? Promise.resolve(null); },
     get orb() { return toppers.orb?.asset ?? null; },
     get egg() { return toppers.egg?.asset ?? null; },
     get marble() { return toppers.marble?.asset ?? null; },
