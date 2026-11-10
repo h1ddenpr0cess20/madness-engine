@@ -434,3 +434,20 @@ test('the woman is shaped by her own shapes, in her pose and at her size', () =>
   her.customize({ height: 0, build: 'average', noseShape: 'straight' });
   assert.deepEqual(body().array.slice(), before, 'back as she was');
 });
+
+test('the brows stay on the brow, however often either figure is reshaped', async () => {
+  const { FIGURES } = await import('../src/people/index.js');
+  for (const sex of ['male', 'female']) {
+    const who = createHuman(GFX, { detail: 0.5, sex, glasses: null });
+    const brows = () => boundsOf(who.group.children.find((m) => m.name === 'human brows').geometry.attributes.position);
+    const eye = (s) => FIGURES[sex].eye.center[1] + (s - FIGURES[sex].height);
+    for (const height of [1, 0.5, 1, -1, 1]) who.customize({ height, build: 'heavy' });
+    who.pose({ clip: 'idle', t: 0, time: 0 });
+    const b = brows();
+    assert.ok(b.min[1] > eye(who.height) - 0.005 && b.max[1] < eye(who.height) + 0.05, `${sex}: brows over the eyes (${b.min[1].toFixed(3)}..${b.max[1].toFixed(3)}, eye ${eye(who.height).toFixed(3)})`);
+    // And anyone made after carries none of it.
+    const fresh = createHuman(GFX, { detail: 0.5, sex, glasses: null });
+    const f = boundsOf(fresh.group.children.find((m) => m.name === 'human brows').geometry.attributes.position);
+    assert.ok(f.min[1] > FIGURES[sex].eye.center[1] - 0.005 && f.max[1] < FIGURES[sex].eye.center[1] + 0.05, `${sex}: a fresh one's brows are where they belong`);
+  }
+});

@@ -336,9 +336,10 @@ export function placeEyes(position, from, to, shape) {
 /**
  * The brows' cards thickened by `k` (−1..1) about the line each brow runs
  * along: drawn wider up and down it, and standing further off the skin.
+ * Always a new array: the brows' own data is shared, and is never written.
  */
 export function thickenBrows(position, k) {
-  if (!k) return position;
+  if (!k) return position.slice();
   const n = position.length / 3;
   // The brow's middle line: its height and depth, bin by bin along it.
   const BINS = 12;
