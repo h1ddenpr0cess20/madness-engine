@@ -32,6 +32,8 @@ import { Part } from './kit.js';
  * - `thick`: the cloth's own thickness, for what is worn over it.
  * - `shade`: how much of the skin's shading in its creases the cloth keeps
  *   (1 all of it, as cloth lying on them does; less for one standing off).
+ * - `line(q, p, zone)`: for a vertex of the cut at `q` (from skin point `p`),
+ *   where on its true line it belongs (a straight front edge), or null.
  * - `stiff`: passes of smoothing over the cloth's shape itself, for a stiff
  *   one (leather) that rounds over the body's forms instead of showing them.
  *
@@ -198,6 +200,36 @@ export function skinShell(name, material, spec) {
       next.set(i, [0, 1, 2].map((k) => at[i][k] * 0.5 + (a[k] + b[k]) * 0.25));
     }
     for (const [i, p] of next) at[i] = p;
+  }
+  // Where the garment says an edge must run true (`line`), its cut put on that line, and the rings of cloth
+  // next to it eased in after it, so the edge is straight and what is beside it smooth.
+  if (spec.line) {
+    const fixed = new Map();
+    for (const v of along.keys()) {
+      const i = used.get(v);
+      if (i === undefined) continue;
+      const q = spec.line(at[i], B[i].p, zone[v]);
+      if (q) fixed.set(i, q);
+    }
+    for (const [i, q] of fixed) at[i] = q;
+    // Rings of neighbours out from it, each relaxed toward the average of its own, the edge held.
+    let ring = new Set(fixed.keys());
+    const near = new Map();
+    for (let r = 1; r <= 3; r++) {
+      const next = new Set();
+      for (const i of ring) for (const j of nbr[i]) if (!fixed.has(j) && !near.has(j)) { near.set(j, r); next.add(j); }
+      ring = next;
+    }
+    for (let pass = 0; pass < 8; pass++) {
+      const moved = new Map();
+      for (const [i, r] of near) {
+        let x = 0, y = 0, z = 0, c = 0;
+        for (const j of nbr[i]) { x += at[j][0]; y += at[j][1]; z += at[j][2]; c++; }
+        const k = 0.6 / r;
+        moved.set(i, [at[i][0] + (x / c - at[i][0]) * k, at[i][1] + (y / c - at[i][1]) * k, at[i][2] + (z / c - at[i][2]) * k]);
+      }
+      for (const [i, q] of moved) at[i] = q;
+    }
   }
 
   // The part: one vertex for each skin vertex and UV it uses.

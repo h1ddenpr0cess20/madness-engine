@@ -633,10 +633,13 @@ const ELBOW_D = armDistance(JOINTS.elbow, 1), WRIST_D = armDistance(JOINTS.wrist
 export const JACKET = Object.freeze({ hem: 0.955, band: 0.065, cuff: WRIST_D - 0.008, cuffBand: 0.06, collar: 0.036, gap: 0.05, over: 0.011 });
 /** Where the leather ends over the waistband, tucked into it. */
 const LEATHER_HEM = JACKET.hem + JACKET.band - 0.025;
-/** The jacket's neckline: at the base of the neck, a little under the t-shirt's. */
-const jacketNeck = (th) => neckline(th) - 0.006;
-/** Half the space between the open fronts at height `y`: a little wider at the top, where the collar parts. */
-const frontGap = (y) => JACKET.gap + 0.02 * smooth(1.3, 1.46, y);
+/**
+ * The jacket's neckline: close round the base of the neck. In front and behind, a little under the t-shirt's;
+ * at the sides, up over the slope of the shoulders to where the neck itself begins (as measured: 2.5 cm up), and level from there round the back.
+ */
+const jacketNeck = (th) => neckline(th) - 0.006 + 0.03 * (Math.cos(th) < 0 ? 1 : (Math.sin(th) ** 2) ** 0.6);
+/** Half the space between the open fronts (at any height: they hang straight). */
+const frontGap = () => JACKET.gap;
 
 /** The jacket's outline on the body (by part: the leather, the waistband, the cuffs), and which edge is nearest. */
 function jacketCut(p, z, open, part) {
@@ -781,12 +784,25 @@ function jacketShell(detail, under, open) {
     smooth: detail >= 0.8 ? 7 : 4,
     stiff: detail >= 0.8 ? 16 : 8,
     shade: 0.3,
+    line: frontLine(open, 'leather'),
     under,
     gap: 0.0035,
     bridge: 10,
     thick: 0.0025,
   });
 }
+
+/**
+ * For a jacket worn open, its fronts' edges run straight down: each vertex of the cut there put on the line
+ * `frontGap` out from the middle (keeping its height and how far forward it is).
+ */
+const frontLine = (open, part) => (open ? (q, p, z) => {
+  // On the front's cut, or at a corner of it (where the hem meets it).
+  const cut = jacketCut(p, z, open, part).at;
+  if (cut !== 'front' && !(Math.abs(Math.atan2(p[0], p[2] - SHIRT_Z)) < 1.3 && Math.abs(p[0]) - frontGap(p[1]) < 0.008)) return null;
+  const s = q[0] >= 0 ? 1 : -1;
+  return [s * frontGap(q[1]), q[1], q[2]];
+} : null);
 
 /** The knit rib at the waist (`band`) or the wrists (`cuffs`): snug, a few millimetres thick. */
 function ribShell(detail, under, open, part) {
@@ -805,6 +821,7 @@ function ribShell(detail, under, open, part) {
     edge: () => ({ thick: 0.0035, turn: 0.015 }),
     smooth: 3,
     stiff: 4,
+    line: frontLine(open, part),
     under,
     gap: 0.0015,
     thick: 0.003,
@@ -868,15 +885,26 @@ function jacketTrims(shell, open) {
   const along = (n, fn) => Array.from({ length: n + 1 }, (_, i) => fn(i / n)).filter(Boolean);
 
   // The collar: round the neckline from one front to the other, standing up the neck, its top rolled.
-  const a0 = open ? Math.asin(clamp(frontGap(1.47) / 0.07)) : 0, ring = [];
+  const ring = [];
+  // On the neck's skin at the neckline, out past the t-shirt's collar and the leather.
+  const base = (th) => {
+    const y = jacketNeck(th), out = [Math.sin(th), 0, Math.cos(th)];
+    const r = castBody([0, y, SHIRT_Z], out, { only: zoneIs('neck', 'trunk'), far: 0.2 });
+    return r === null ? null : { y, out, r, p: [out[0] * (r + 0.011), y, SHIRT_Z + out[2] * (r + 0.011)] };
+  };
+  // Open, it runs from one front's edge round to the other's: from the angle where it reaches the edge.
+  let a0 = 0;
+  if (open) {
+    let lo = 0, hi = Math.PI / 2;
+    for (let it = 0; it < 30; it++) { const mid = (lo + hi) / 2, b = base(mid); if (b && Math.abs(b.p[0]) < frontGap(b.y)) lo = mid; else hi = mid; }
+    a0 = hi;
+  }
   const N = 96;
   for (let i = 0; i <= N; i++) {
     const th = a0 + (i / N) * (Math.PI * 2 - 2 * a0);
-    // On the neck's skin at the neckline, out past the t-shirt's collar and the leather.
-    const y = jacketNeck(th), out = [Math.sin(th), 0, Math.cos(th)];
-    const r = castBody([0, y, SHIRT_Z], out, { only: zoneIs('neck', 'trunk'), far: 0.2 });
-    if (r === null) continue;
-    const p = [out[0] * (r + 0.011), y, SHIRT_Z + out[2] * (r + 0.011)];
+    const b = base(th);
+    if (!b) continue;
+    const { y, out, r, p } = b;
     // Its top closes on the neck itself, a finger's width off it.
     const rt = castBody([0, y + JACKET.collar, SHIRT_Z], out, { only: zoneIs('neck', 'head'), far: 0.2 }) ?? r;
     const top = [out[0] * (rt + 0.009), y + JACKET.collar, SHIRT_Z + out[2] * (rt + 0.009)];
@@ -890,11 +918,18 @@ function jacketTrims(shell, open) {
   };
   const rows = ring.map(profile);
   const C = rows[0]?.length - 1;
+  if (open && rows.length > 1) {
+    // Each end closed: a flat face across the collar, square to the front's edge.
+    for (const i of [0, rows.length - 1]) {
+      const r = rows[i], c = r.reduce((a, p) => add(a, scale(p, 1 / r.length)), [0, 0, 0]);
+      collar.grid(1, C, (k, j) => ({ p: k === 0 ? r[j] : c, uv: [j / C, 0], w: ring[i].w, tint: 0.8 }), { flip: i !== 0 });
+    }
+  }
   if (rows.length > 1) {
     let L = 0;
     collar.grid(rows.length - 1, C, (i, j) => {
       if (j === 0 && i > 0) L += len(sub(ring[i].p, ring[i - 1].p));
-      return { p: rows[i][j], uv: [j / C, L * 260], w: ring[i].w, tint: j >= 5 ? 0.6 : 1 };
+      return { p: rows[i][j], uv: [j / C, L * 40], w: ring[i].w, tint: j >= 5 ? 0.6 : 1 };
     }, { flip: true });
   }
 
@@ -907,27 +942,76 @@ function jacketTrims(shell, open) {
       // Down the edge of each front, the slider left at the bottom on his left.
       const fz = along(200, (t) => {
         const y = jacketNeck(0.4) - 0.01 - (jacketNeck(0.4) - 0.01 - JACKET.hem - 0.004) * t;
-        for (let e = 0.012; e < 0.035; e += 0.004) {
+        for (let e = 0.0055; e < 0.03; e += 0.003) {
           const h = front(s * (frontGap(y) + e), y);
           if (h && h.p[2] > SHIRT_Z) return h;
         }
         return null;
       });
-      zip(tape, metal, fz, { pull: s > 0 });
+      zip(tape, metal, fz, { pull: false });
     }
   }
   // The hip pockets: a slanting welt each side, a lip of leather with the opening's shadow above it.
   for (const s of [-1, 1]) {
     const a = [s * 0.075, LEATHER_HEM + 0.025], b = [s * 0.125, LEATHER_HEM + 0.15];
     const pts = along(30, (t) => front(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t));
-    strip(welts, pts.map((h) => ({ ...h, p: add(h.p, scale(h.n, 0.001)) })), 0.016, (u, x) => 0.0035 * Math.sqrt(Math.max(0, 1 - x ** 6)));
+    strip(welts, pts.map((h) => ({ ...h, p: add(h.p, scale(h.n, 0.0004)) })), 0.012, (u, x) => 0.0016 * Math.sqrt(Math.max(0, 1 - x ** 4)));
   }
   return [collar, tape, metal, welts];
 }
 
+/**
+ * The rib waistband: a band round the body over the t-shirt, from the hem up `JACKET.band`, its cross-section
+ * a rounded strip 5 mm thick; open, its two ends square, flush with the fronts' edges.
+ */
+function waistband(detail, open) {
+  const band = new Part('waistband', 'ribTrim');
+  const { cloth } = shirtShape();
+  const outR = (y, th) => cloth.at(y, th) + shirtFolds(y, th) + 0.007 - 0.0025 * smooth(JACKET.hem + 0.02, JACKET.hem, y);
+  // The angle round the body where the band reaches the front's edge.
+  let a0 = 0;
+  if (open) {
+    let lo = 0, hi = Math.PI / 2;
+    const y = JACKET.hem + JACKET.band / 2;
+    for (let it = 0; it < 30; it++) { const mid = (lo + hi) / 2; if (Math.sin(mid) * outR(y, mid) < frontGap(y)) lo = mid; else hi = mid; }
+    a0 = hi;
+  }
+  // Round its cross-section: up the outside, over the top, down the inside, under the bottom.
+  const T = 0.005, H = JACKET.band;
+  const section = [[0, 0.0015], [0, 0.2], [0, 0.5], [0, 0.8], [0, 0.98], [0.5, 1], [1, 0.98], [1, 0.5], [1, 0.02], [0.5, 0], [0, 0.0015]];
+  const M = Math.round(160 * detail) + 32;
+  const at = (k, j) => {
+    const th = a0 + (k / M) * (Math.PI * 2 - 2 * a0);
+    const [d, h] = section[j];
+    const y = JACKET.hem + H * h;
+    const r = outR(y, th) - T * d - 0.0015 * Math.sin(Math.PI * h) * (1 - d);
+    let x = Math.sin(th) * r;
+    // Open, its ends' last columns brought onto the edge, square.
+    if (open && (k === 0 || k === M)) x = Math.sign(x) * frontGap(y);
+    return [x, y, SHIRT_Z + Math.cos(th) * r];
+  };
+  const L = Math.PI * 2 * 0.16;
+  band.grid(M, section.length - 1, (k, j) => {
+    const p = at(k, j);
+    return { p, uv: [section[j][1], (k / M) * L * 40], w: clothWeights(zoneIs('trunk', 'leg'))(p), tint: section[j][0] > 0.5 ? 0.6 : 1 };
+  });
+  if (open) {
+    // Each end closed, a flat face across the strip.
+    for (const k of [0, M]) {
+      const ring = section.map((_, j) => at(k, j));
+      const c = ring.reduce((a, p) => add(a, scale(p, 1 / ring.length)), [0, 0, 0]);
+      band.grid(1, section.length - 1, (i, j) => {
+        const p = i === 0 ? ring[j] : c;
+        return { p, uv: [section[j][1], 0], w: clothWeights(zoneIs('trunk', 'leg'))(p), tint: 0.8 };
+      }, { flip: k === 0 });
+    }
+  }
+  return band;
+}
+
 function jacket(detail, under, open) {
   const shell = jacketShell(detail, under, open);
-  return [shell, ribShell(detail, under, open, 'band'), ribShell(detail, under, open, 'cuffs'), ...jacketTrims(shell, open)];
+  return [shell, waistband(detail, open), ribShell(detail, under, open, 'cuffs'), ...jacketTrims(shell, open)];
 }
 
 /** How far inside a garment's openings the skin under it is kept, so looking in at a collar, cuff or hem never shows a hole. */
