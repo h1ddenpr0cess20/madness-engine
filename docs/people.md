@@ -193,8 +193,9 @@ skin under them, and never tear at a seam. They are painted on the body's
 UV layout by position, as the skin is. The sneakers are built on a last
 measured off the foot.
 
-Layers: briefs 1, sneakers 2, jeans 3, t-shirt 4 (worn untucked over the
-jeans). A garment of your own has the same shape as those in `GARMENTS`:
+Layers: briefs 1, shoes 2, jeans (and any trousers, shorts or skirt) 3, t-shirt
+(and any shirt, tank or dress) 4, a sweater or hoodie 4.5, jackets 5, belts 6, hats 8
+(worn untucked over the jeans). A garment of your own has the same shape as those in `GARMENTS`:
 
 ```js
 man.wear('apron', {
@@ -208,6 +209,43 @@ man.wear('apron', {
 Colours change live: `setSkin`, `setEyeColor`, `setShirtColor`,
 `setJeansColor` (a tint over the indigo), `setShoeColor`, `setHairColor`,
 or `setLook({...})`.
+
+## The later wardrobe
+
+More to wear, all from the same patterns, in `people/human/outfits.js` (`garmentsFor(sex)` lists
+either wardrobe):
+
+| | Names |
+|---|---|
+| Martial | `giTop` (a crossed front, wide sleeves), `giPants` (loose, to mid-calf), `belt` (a cloth belt with a knot and ends: its colour is `look.belt`) |
+| The business suit | `dressShirt`, `tie`, `blazer` / `blazerButtoned` (notch lapels), `trousers`, `dressBelt`, `dressShoes` |
+| Casual | `tank`, `sweater`, `hoodie` (hood down), `denimJacket` / `denimJacketButtoned`, `shorts`, `boots` |
+| Hats | `cap`, `beanie`, `fedora`, `cowboy`, `topHat` |
+| Hers only | `dress`, `miniDress`, `skirt`, `miniSkirt` |
+
+Nothing is a new way of making cloth. The shirts, jackets, sweater and hoodie are the
+bomber's pattern with other measures (`JACKET`: length, sleeves, collar, trims, and
+the cloth). The trousers, shorts and the gi's pants are the jeans with other hems and
+fullness. The tank and the dress's bodice are cut from the skin like the sports bra;
+the belt and the tie are cut from the skin and fitted over whatever is under them, so
+they stand off it by what it stands off the skin. So they layer by the same rules.
+
+Each garment has a `slot` (`top`, `legs`, `outer`, `mid`, `shoes`, `belt`, `tie`,
+`head`) and wearing one takes off what is in the same slot; a dress is in two, `top`
+and `legs`. A sweater or hoodie (`mid`) goes under a jacket (`outer`) and over a
+shirt (`top`), and each is fitted over what is under it.
+
+The skirts are the one new shape: a loft hung from the hips that bridges the legs and
+is kept outside the widest the body is at each height. Near the body it takes the
+skin's own weights, so it moves as the skin does at the hip's crease; farther out it
+rides on the thighs, each side on its own, so a stride or a kick lifts it with the leg.
+
+A hat is carried by the head as the hair is, and hides the hair it covers: it says
+which points of the hair it lies over (`hairHides`, in his rest shape), and the cards
+touching them are not drawn while it is worn; take it off and the hair is whole.
+
+Colours: `setLook({ wool, poplin, tie, tank, knit, hoodie, gi, canvas, dress, belt,
+beltLeather, dressShoe, boot, cap, beanie, felt, cowboyFelt, topHatFelt, hatBand })`.
 
 ## Character creator
 
@@ -557,7 +595,8 @@ her skeleton, so every stance and kick fits her too. Hands take the shape the st
 | `people/human/hair.js` | Hair and beards: where each grows, its length and combing, the cards, the strand texture. |
 | `people/human/teeth.js` | The teeth and gums, tooth by tooth, sized from average adult crowns. |
 | `people/human/body.js` | Measuring the body: rays onto its skin, zones, skin weights for cloth, the feet. |
-| `people/human/clothes.js` | The wardrobe: briefs, sports bra, socks, t-shirt, jeans, sneakers, bomber. |
+| `people/human/clothes.js` | The first wardrobe: briefs, sports bra, socks, t-shirt, jeans, sneakers, bomber; the patterns the rest are made from. |
+| `people/human/outfits.js` | The later wardrobe: gi, suit, jackets, dresses and skirts, hats. |
 | `people/human/shell.js` | Garments cut from the skin: outline, ease, drape, turned edges. |
 | `people/human/textures.js` | Skin painted on the body's UVs, eyes, jersey, denim and sneakers. |
 | `people/human/motion.js` | The clips. |

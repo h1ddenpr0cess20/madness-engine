@@ -6,7 +6,7 @@ import { buildEyes, buildMouth, withLipCorners } from './human/head.js';
 import { bodyLevel } from './human/basemesh.js';
 import { zoneOf } from './human/body.js';
 import { BONES as BAKED_BONES } from './human/data/base.js';
-import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor } from './human/clothes.js';
+import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor, OUTFIT_HANGS, TAIL_GARMENTS } from './human/outfits.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
 import { BLADE_MOVES, fightHands, MOVES, stanceTakesBoth } from './human/martial.js';
@@ -230,6 +230,7 @@ const HANGS = {
   tshirt: { down: 0.35, across: 0.35, up: 1.4 },
   jacket: { down: 0.35, across: 0.3, up: 1.2 },
   jacketZipped: { down: 0.35, across: 0.3, up: 1.2 },
+  ...OUTFIT_HANGS,
 };
 
 /**
@@ -266,6 +267,23 @@ const DEFAULT_LOOK = Object.freeze({
   skin: '#b98a70', iris: '#5a4632', hair: '#3b2a1f',
   shirt: '#8f9399', denim: '#ffffff', shoe: '#2c2c30', sole: '#efece6', briefs: '#2a2b30',
   socks: '#e9e7e1', jacket: '#3a2a22', rib: '#232224',
+  // The rest of the wardrobe (see FABRICS).
+  wool: '#2d323d', poplin: '#eef0f4', tie: '#7d1d2a', tank: '#d8d9dd', knit: '#6b2d3a', hoodie: '#3b4a5f', gi: '#f1eee6', canvas: '#a8997a',
+  dress: '#8a2440', belt: '#141416', beltLeather: '#2b1b12', dressShoe: '#17110d', boot: '#4a3220',
+  cap: '#2a4a7a', beanie: '#7a2c2c', felt: '#463a2f', cowboyFelt: '#8a6a44', topHatFelt: '#17171a', hatBand: '#18181a',
+});
+
+/**
+ * The cloth of the later garments: its look colour (`of`, if another's), roughness, how much it shines at the
+ * edges, and whether it is rough-woven (it takes the t-shirt's weave for its bump).
+ */
+const FABRICS = Object.freeze({
+  wool: { rough: 0.85, sheen: 0.3, weave: 'twill', stripe: true }, poplin: { rough: 0.8, sheen: 0.5, weave: 'plain' }, tie: { rough: 0.45, sheen: 0.9, weave: 'twill' }, tank: { rough: 0.9, sheen: 0.7, weave: 'knit', scale: 0.00015 },
+  knit: { rough: 0.95, sheen: 0.8, weave: 'knit', scale: 0.0007 }, knitRib: { of: 'knit', rough: 0.95, sheen: 0.8 }, knitRibTrim: { of: 'knit', rough: 0.95, sheen: 0.8, tile: true },
+  hoodie: { rough: 0.95, sheen: 0.7, weave: 'felt', scale: 0.0006 }, hoodieRib: { of: 'hoodie', rough: 0.95, sheen: 0.7 }, hoodieRibTrim: { of: 'hoodie', rough: 0.95, sheen: 0.7, tile: true },
+  gi: { rough: 0.9, sheen: 0.5, weave: 'coarse', scale: 0.0005 }, canvas: { rough: 0.9, sheen: 0.3, weave: 'coarse', scale: 0.0005 }, dress: { rough: 0.5, sheen: 0.8, weave: 'plain', scale: 0.0002 }, belt: { rough: 0.8, sheen: 0.4, weave: 'coarse' },
+  cap: { rough: 0.9, sheen: 0.4, weave: 'twill' }, beanie: { rough: 0.95, sheen: 0.8, weave: 'knit', scale: 0.0007 }, felt: { rough: 0.95, sheen: 0.5, weave: 'felt', scale: 0.0008 }, cowboyFelt: { rough: 0.95, sheen: 0.5, weave: 'felt', scale: 0.0008 },
+  topHatFelt: { rough: 0.6, sheen: 0.4, weave: 'felt' }, hatBand: { rough: 0.6, sheen: 0.5 },
 });
 
 /** The hair's sheen: its own colour, a third of the way to white. */
@@ -332,6 +350,14 @@ function makeMaterials(GFX, look, tex) {
     lens: M('lenses', { color: '#1b2026', roughness: 0.03, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.02, specularIntensity: 1, transparent: true, opacity: 0.86, depthWrite: false, side: GFX.DoubleSide }),
     frameMetal: M('frame', { color: '#cfae63', metalness: 1, roughness: 0.22 }),
     frameAcetate: M('frame', { color: '#121214', roughness: 0.18, clearcoat: 0.9, clearcoatRoughness: 0.1 }),
+    ...Object.fromEntries(Object.entries(FABRICS).map(([n, f]) => [n, M(n, {
+      color: look[f.of ?? n], roughness: f.rough, sheen: f.sheen, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.6, side: GFX.DoubleSide,
+      map: f.tile ? tex?.rib.tile ?? null : f.stripe ? tex?.wool.map ?? null : null, bumpMap: f.weave ? tex?.fabric[f.weave] ?? null : null, bumpScale: f.scale ?? 0.0004,
+    })])),
+    beltLeather: M('belt leather', leather(GFX, look, tex, { color: look.beltLeather })),
+    dressShoe: M('dress shoes', { color: look.dressShoe, roughness: 0.28, clearcoat: 0.7, clearcoatRoughness: 0.15 }),
+    bootSole: M('boot soles', { color: '#2a211b', roughness: 0.85 }),
+    boot: M('boots', { color: look.boot, bumpMap: tex?.leather.bump ?? null, bumpScale: 0.0008, roughness: 0.6, clearcoat: 0.12 }),
     metal: M('hardware', { color: '#c4c6ca', metalness: 1, roughness: 0.26, clearcoat: 0.2 }),
   };
   return mats;
@@ -740,6 +766,41 @@ export function createHuman(GFX, options = {}) {
     return byGarment.get(garment);
   }
 
+  /**
+   * Draws the hair a hat does not cover: each hat says which of his hair's points it covers (`hairHides`, in
+   * his rest shape, so it is worked out on his hair and applies as well to hers, point for point), and a card
+   * with any of them under a hat is not drawn.
+   */
+  function trimHair() {
+    const h = groomed.hair;
+    if (!h) return;
+    const hats = [...worn.values()].filter((w) => w.garment.hairHides);
+    const m = h.mesh;
+    let hidden = null;
+    if (hats.length) {
+      const P = hairData('hair', h.name, detail, 'male').position;
+      hidden = new Uint8Array(m.data.count);
+      for (let v = 0; v < hidden.length; v++) {
+        const p = [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]];
+        hidden[v] = hats.some((w) => w.garment.hairHides(p)) ? 1 : 0;
+      }
+    }
+    const out = [], groups = [];
+    m.data.triangles.forEach((tris, materialIndex) => {
+      const start = out.length;
+      for (let t = 0; t < tris.length; t += 3) {
+        const a = tris[t], b = tris[t + 1], c = tris[t + 2];
+        if (hidden && (hidden[a] || hidden[b] || hidden[c])) continue;
+        out.push(a, b, c);
+      }
+      if (out.length > start) groups.push({ start, count: out.length - start, materialIndex });
+    });
+    m.geometry.setIndex(new GFX.BufferAttribute(Uint32Array.from(out), 1));
+    m.geometry.clearGroups?.();
+    if (!m.geometry.clearGroups) m.geometry.groups = [];
+    for (const g of groups) m.geometry.addGroup(g.start, g.count, g.materialIndex);
+  }
+
   /** Rebuilds each mesh's triangles: those every one of whose corners is covered by something worn over it are left out. */
   function refit() {
     clearance = null;
@@ -762,6 +823,7 @@ export function createHuman(GFX, options = {}) {
       if (!m.geometry.clearGroups) m.geometry.groups = [];
       for (const g of groups) m.geometry.addGroup(g.start, g.count, g.materialIndex);
     }
+    trimHair();
   }
 
   /** What is worn under layer `layer`: their names, and how far off the skin the outermost of them stands at each skin vertex. */
@@ -808,7 +870,8 @@ export function createHuman(GFX, options = {}) {
     if (worn.has(name)) return api;
     if (g !== wardrobe[name]) custom.set(name, g);
     // One thing in each slot: a jacket worn open takes the place of one worn closed.
-    if (g.slot) for (const [other, w] of [...worn]) if (w.garment.slot === g.slot) unwear(other);
+    const slots = [].concat(g.slot ?? []);
+    if (slots.length) for (const [other, w] of [...worn]) if ([].concat(w.garment.slot ?? []).some((s) => slots.includes(s))) unwear(other);
     worn.set(name, { garment: g, mesh: make(name, g) });
     refitOver(g.layer);
     refit();
@@ -1061,7 +1124,7 @@ export function createHuman(GFX, options = {}) {
       fileUnder(cells, under.length - 1, P, list);
     }
   }
-  const tails = new Set(['tshirt', 'jacket', 'jacketZipped'].map((n) => wardrobe[n]).filter(Boolean));
+  const tails = new Set(['tshirt', 'jacket', 'jacketZipped', ...TAIL_GARMENTS].map((n) => wardrobe[n]).filter(Boolean));
   const cellOf = (x, y, z) => ((Math.floor(x / TAIL.reach) * 73856093) ^ (Math.floor(y / TAIL.reach) * 19349663) ^ (Math.floor(z / TAIL.reach) * 83492791)) | 0;
   /** Files vertices `list` (at `P`) of the `l`th layer under in `cells`. */
   function fileUnder(cells, l, P, list) {
@@ -1573,6 +1636,8 @@ export function createHuman(GFX, options = {}) {
     if (change.jacket) for (const n of ['leather', 'leatherTrim']) mats[n].color.set(change.jacket);
     if (change.rib) for (const n of ['rib', 'ribTrim']) mats[n].color.set(change.rib);
     if (change.denim) mats.denim.color.set(change.denim);
+    for (const [n, f] of Object.entries(FABRICS)) if (change[f.of ?? n]) mats[n].color.set(change[f.of ?? n]);
+    for (const n of ['beltLeather', 'dressShoe', 'boot']) if (change[n]) mats[n].color.set(change[n]);
     if (change.hair) {
       for (const m of [mats.hair, mats.hairEdge]) {
         m.color.set(change.hair);
@@ -1586,6 +1651,7 @@ export function createHuman(GFX, options = {}) {
   function setHair(next = {}) {
     if (sex !== 'male' && next.beard) throw new Error('human: a beard is for the male figure only');
     groom({ ...grooming, ...next });
+    trimHair();
     tex = humanTextures(GFX, paintFor());
     if (tex) Object.assign(mats.skin, { map: tex.skin.map }), mats.skin.needsUpdate = true;
     if (last) pose(last);

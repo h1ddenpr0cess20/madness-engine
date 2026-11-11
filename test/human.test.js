@@ -681,3 +681,91 @@ test('the wave is a hello: one arm lifted out, the forearm rocking; it works for
   const ends = wide({ clip: 'wave', t: 0, time: 0.4 }), mid = wide({ clip: 'wave', t: 0.5, time: 0.4 });
   assert.ok(mid.w > ends.w + 0.1);
 });
+
+test('the later wardrobe: his and hers can each be worn on its own, and the dresses and skirts are hers only', async () => {
+  const { garmentsFor } = await import('../src/people/index.js');
+  const her = createHuman(GFX, { detail: 0.5, sex: 'female', glasses: null });
+  for (const name of Object.keys(garmentsFor('female'))) {
+    her.dress([name]);
+    assert.ok(her.garment(name).geometry.index.count > 0, `hers: ${name}`);
+  }
+  for (const name of ['dress', 'miniDress', 'skirt', 'miniSkirt']) {
+    assert.ok(!(name in GARMENTS), `${name} is not in his wardrobe`);
+    assert.throws(() => man.wear(name), /no garment called/);
+  }
+  for (const name of ['giTop', 'giPants', 'belt', 'blazer', 'dressShirt', 'tie', 'trousers', 'hoodie', 'sweater', 'denimJacket', 'tank', 'shorts', 'boots', 'dressShoes', 'cap', 'beanie', 'fedora', 'cowboy', 'topHat']) {
+    assert.ok(name in GARMENTS && name in garmentsFor('female'), `${name} is in both wardrobes`);
+  }
+  man.dress(['briefs', 'tshirt', 'jeans', 'sneakers']);
+});
+
+test('one thing to each slot: a dress takes the place of a top and trousers, boots of shoes, a hat of a hat', async () => {
+  const her = createHuman(GFX, { detail: 0.5, sex: 'female', glasses: null });
+  her.dress(['briefs', 'tshirt', 'jeans', 'sneakers']);
+  her.wear('dress');
+  assert.deepEqual(her.outfit.sort(), ['briefs', 'dress', 'sneakers']);
+  her.wear('boots').wear('fedora').wear('cap');
+  assert.ok(her.outfit.includes('boots') && !her.outfit.includes('sneakers'));
+  assert.ok(her.outfit.includes('cap') && !her.outfit.includes('fedora'));
+  her.wear('sweater').wear('blazer');
+  assert.ok(her.outfit.includes('sweater') && her.outfit.includes('blazer'), 'a jacket goes over a sweater');
+  her.wear('tshirt');
+  assert.ok(!her.outfit.includes('dress'), 'a t-shirt takes a dress off');
+});
+
+test('a jacket over a shirt hides what it covers, and stands outside it', () => {
+  const him = createHuman(GFX, { detail: 0.5, outfit: ['briefs', 'dressShirt', 'trousers'], glasses: null });
+  const radius = (mesh) => {
+    const P = mesh.geometry.attributes.position.array;
+    let r = 0;
+    for (const v of new Set(mesh.geometry.index.array)) if (P[v * 3 + 1] > 1.15 && P[v * 3 + 1] < 1.25 && P[v * 3 + 2] > 0.03) r = Math.max(r, Math.hypot(P[v * 3], P[v * 3 + 2] - 0.028));
+    return r;
+  };
+  him.pose({ clip: 'idle', t: 0, time: 0 });
+  const alone = him.garment('dressShirt').geometry.index.count, shirtR = radius(him.garment('dressShirt'));
+  him.wear('blazerButtoned');
+  him.pose({ clip: 'idle', t: 0, time: 0 });
+  assert.ok(him.garment('dressShirt').geometry.index.count < alone * 0.6, 'the blazer hides most of the shirt');
+  assert.ok(radius(him.garment('blazerButtoned')) > shirtR + 0.005, 'and stands outside where the shirt was');
+});
+
+test('a hat hides the hair it covers, and gives it back when it comes off', () => {
+  for (const sex of ['male', 'female']) {
+    const who = createHuman(GFX, { detail: 0.5, sex, hair: 'afro', glasses: null });
+    const hair = () => who.group.children.find((c) => c.name === 'human hair').geometry.index.count;
+    const full = hair();
+    for (const hat of ['cap', 'beanie', 'fedora', 'cowboy', 'topHat']) {
+      who.dress([hat]);
+      assert.ok(hair() < full * 0.8, `${sex}: a ${hat} covers most of an afro`);
+      who.remove(hat);
+      assert.equal(hair(), full, `${sex}: and the hair is whole again`);
+    }
+  }
+});
+
+test('the skirt moves with the legs and stays out of the briefs under it', () => {
+  const her = createHuman(GFX, { detail: 0.5, sex: 'female', glasses: null });
+  her.dress(['bra', 'briefs', 'tank', 'skirt']);
+  // A thigh lifts: the hem on that side goes up with it.
+  her.pose({ clip: 'idle', t: 0, time: 0 });
+  const P = her.garment('skirt').geometry.attributes.position.array;
+  const hem = [...new Set(her.garment('skirt').geometry.index.array)].filter((v) => P[v * 3 + 1] < 0.55);
+  const mean = () => hem.reduce((s, v) => s + P[v * 3 + 1], 0) / hem.length;
+  const rest = mean();
+  her.setStyle({ attack: 'front-kick' });
+  her.pose({ clip: 'attack', t: 0.5, time: 0.5 });
+  const kick = mean();
+  assert.ok(hem.length > 50 && kick > rest + 0.03, `the hem lifts with the leg (${rest.toFixed(2)} to ${kick.toFixed(2)})`);
+  her.setStyle({});
+});
+
+test('a dress shirt is tucked in (under the trousers, which the belt goes over); a t-shirt hangs over the belt', async () => {
+  const { garmentsFor } = await import('../src/people/index.js');
+  const w = garmentsFor('male');
+  assert.ok(w.dressShirt.layer < w.trousers.layer && w.trousers.layer < w.dressBelt.layer, 'shirt, trousers, belt, from the inside out');
+  assert.ok(w.dressBelt.layer < w.tshirt.layer, 'an untucked t-shirt is over the belt');
+  const him = createHuman(GFX, { detail: 0.5, outfit: ['briefs', 'trousers', 'dressBelt'], glasses: null });
+  const belt = him.garment('dressBelt').geometry.index.count;
+  him.wear('tshirt');
+  assert.ok(him.garment('dressBelt').geometry.index.count < belt, 'the t-shirt hides the belt under it');
+});

@@ -639,6 +639,36 @@ function shirtMaps() {
   return { map, bump };
 }
 
+// ———————————————————————————————————————————————— the later cloths
+
+/** The weaves of the later garments, as repeating tiles for their bump: a twill's diagonal, a fine plain weave, a coarse canvas, a chunky knit, felt. */
+function fabricTiles() {
+  const tile = (n, fn) => paint(n, n, (u, v) => { const h = fn(u, v); return [h, h, h]; });
+  const TAU = Math.PI * 2;
+  return {
+    twill: tile(128, (u, v) => 128 + 46 * Math.sin((u + v) * 24 * TAU / 2) + 14 * Math.sin((u - v) * 96 * TAU / 2) + 6 * noise3(u * 40, v * 40, 1)),
+    plain: tile(128, (u, v) => 128 + 34 * Math.cos(u * 48 * TAU) * Math.cos(v * 48 * TAU) + 8 * noise3(u * 30, v * 30, 2)),
+    coarse: tile(128, (u, v) => 128 + 52 * Math.cos(u * 16 * TAU) * Math.cos(v * 16 * TAU) + 12 * noise3(u * 24, v * 24, 3)),
+    // Rows of V stitches, chunky: the way a sweater is knit.
+    knit: tile(128, (u, v) => {
+      const cols = 8, rows = 8, cu = (u * cols) % 1, cv = (v * rows) % 1, vshape = Math.abs(cu - 0.5) * 2;
+      return 128 + 80 * Math.cos((cv + vshape * 0.55) * TAU) * 0.5 - 46 * G((cu - 0.5) / 0.12);
+    }),
+    felt: tile(128, (u, v) => 128 + 30 * noise3(u * 90, v * 90, 4) + 18 * noise3(u * 24, v * 24, 5)),
+  };
+}
+
+/** The suit's cloth: off-white to be tinted, a faint chalk pinstripe up it (up the arms and legs too, as it is cut). */
+function woolMap() {
+  const size = 1024;
+  const rgba = bodyPixels(size, (p) => {
+    const x = p[0] * 71, stripe = G((((x % 1) + 1) % 1 - 0.5) / 0.05);
+    const c = 236 + 8 * noise3(p[0] * 220, p[1] * 220, p[2] * 220) - 17 * stripe;
+    return [c, c, c];
+  }, [236, 236, 236]);
+  return canvasOf(rgba, size);
+}
+
 // ———————————————————————————————————————————————— the jeans
 
 /** The jeans: indigo, faded where they wear (thighs, knees), with every seam and pocket topstitched in gold. */
@@ -861,6 +891,7 @@ export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 
   const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}|${sex}`;
   if (byGFX.has(key)) return byGFX.get(key);
   const garments = byGFX.get('garments') ?? (() => {
+    const fabrics = fabricTiles(), suit = woolMap();
     const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps(), sock = sockMaps(), hide = leatherMaps(), ribs = ribMaps();
     const g = {
       shirt: { map: texture(GFX, shirt.map), bump: texture(GFX, shirt.bump, { color: false, repeat: [140, 140] }) },
@@ -868,6 +899,12 @@ export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 
       sock: { map: texture(GFX, sock.map), bump: texture(GFX, sock.bump, { color: false, repeat: [160, 160] }) },
       leather: { map: texture(GFX, hide.map), bump: texture(GFX, hide.bump, { color: false, repeat: [24, 24] }) },
       rib: { map: texture(GFX, ribs.map), tile: texture(GFX, ribs.tile, { repeat: [1, 1] }) },
+      fabric: {
+        twill: texture(GFX, fabrics.twill, { color: false, repeat: [150, 150] }), plain: texture(GFX, fabrics.plain, { color: false, repeat: [220, 220] }),
+        coarse: texture(GFX, fabrics.coarse, { color: false, repeat: [90, 90] }), knit: texture(GFX, fabrics.knit, { color: false, repeat: [60, 60] }),
+        felt: texture(GFX, fabrics.felt, { color: false, repeat: [120, 120] }),
+      },
+      wool: { map: texture(GFX, suit) },
       shoe: texture(GFX, shoes.upper),
       sole: texture(GFX, shoes.sole),
       pores: texture(GFX, poreTile(), { color: false, repeat: [44, 44] }),

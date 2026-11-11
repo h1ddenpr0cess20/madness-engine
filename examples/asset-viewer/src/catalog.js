@@ -749,7 +749,7 @@ function humanItem(sex) {
     source: 'people/human',
     kind: 'object',
     async build() {
-      const [{ createHuman, CLIPS: clips, garmentsFor, HAND_POSES, customizationFor }, { STANCES, MOVES, BOWS }, { DANCES }, weapons, metals] = await Promise.all([
+      const [{ createHuman, CLIPS: clips, garmentsFor, HAND_POSES, customizationFor, DEFAULT_OUTFIT, DEFAULT_OUTFIT_FEMALE }, { STANCES, MOVES, BOWS }, { DANCES }, weapons, metals] = await Promise.all([
         import('../../../src/people/human.js'),
         import('../../../src/people/human/martial.js'),
         import('../../../src/people/human/dance.js'),
@@ -776,8 +776,47 @@ function humanItem(sex) {
         if (!man.held(S === 'R' ? 'L' : 'R')) { if (S === 'R') weaponL = 'none'; else weapon = 'none'; }
       };
       const face = (key) => ({ type: 'range', label: key[0].toUpperCase() + key.slice(1), min: key === 'smile' || key === 'brows' ? -1 : 0, max: 1, step: 0.01, get: () => man.faceState[key], set: (v) => man.face({ [key]: v }) });
+      const wardrobe = garmentsFor(sex);
+      const WARDROBE_GROUPS = [
+        ['Underneath', [['Briefs', ['briefs']], ['Sports bra', ['bra']], ['Socks', ['socks']]]],
+        ['Clothes', [
+          ['Top', ['tshirt', 'dressShirt', 'tank', 'giTop']],
+          ['Sweater', ['sweater', 'hoodie']],
+          ['Legs', ['jeans', 'trousers', 'shorts', 'giPants', 'skirt', 'miniSkirt']],
+          ['Dress', ['dress', 'miniDress']],
+          ['Jacket', ['jacket', 'jacketZipped', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned']],
+        ]],
+        ['Shoes and hat', [['Shoes', ['sneakers', 'dressShoes', 'boots']], ['Hat', ['cap', 'beanie', 'fedora', 'cowboy', 'topHat']]]],
+        ['Extras', [['Tie', ['tie']], ['Belt', ['belt', 'dressBelt']]]],
+      ];
+      // (A dress takes a top and legs off itself: see slots.)
+      const presets = {
+        Default: sex === 'female' ? DEFAULT_OUTFIT_FEMALE : DEFAULT_OUTFIT,
+        'Business suit': [...(sex === 'female' ? ['bra'] : []), 'briefs', 'socks', 'dressShirt', 'tie', 'blazer', 'trousers', 'dressBelt', 'dressShoes'],
+        Gi: ['briefs', ...(sex === 'female' ? ['bra'] : []), 'giTop', 'giPants', 'belt'],
+        Casual: [...(sex === 'female' ? ['bra'] : []), 'briefs', 'socks', 'hoodie', 'jeans', 'sneakers', 'beanie'],
+        Summer: [...(sex === 'female' ? ['bra'] : []), 'briefs', 'socks', 'tank', 'shorts', 'sneakers', 'cap'],
+        ...(sex === 'female' ? { 'Sun dress': ['bra', 'briefs', 'dress', 'boots'], 'Skirt and jacket': ['bra', 'briefs', 'socks', 'tank', 'skirt', 'denimJacket', 'sneakers'] } : {}),
+        Western: [...(sex === 'female' ? ['bra'] : []), 'briefs', 'socks', 'dressShirt', 'jeans', 'dressBelt', 'boots', 'cowboy'],
+        'Bare': [],
+      };
       const ui = [
-        ...Object.keys(garmentsFor(sex)).map((g) => ({ type: 'check', label: g[0].toUpperCase() + g.slice(1), get: () => man.outfit.includes(g), set: (on) => (on ? man.wear(g) : man.remove(g)) })),
+        // The wardrobe by what it is worn as: a whole outfit at a click, then one choice for each place on the body
+        // (wearing one takes off what it replaces), then the small things that are worn or not.
+        { type: 'heading', label: 'Outfit' },
+        { type: 'select', label: 'Preset', options: ['(choose)', ...Object.keys(presets)], get: () => '(choose)', set: (v) => { if (presets[v]) man.dress(presets[v]); } },
+        ...WARDROBE_GROUPS.flatMap(([heading, rows]) => [
+          { type: 'heading', label: heading },
+          ...rows.flatMap(([label, names]) => {
+            const have = names.filter((n) => n in wardrobe);
+            if (!have.length) return [];
+            const own = () => have.find((n) => man.outfit.includes(n)) ?? 'none';
+            const nice = (n) => n.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+            // One thing, on or off, as a checkbox; several, one at a time, as a menu.
+            if (have.length === 1) return [{ type: 'check', label: label, get: () => man.outfit.includes(have[0]), set: (on) => (on ? man.wear(have[0]) : man.remove(have[0])) }];
+            return [{ type: 'select', label, options: [['none', 'None'], ...have.map((n) => [n, nice(n)])], get: own, set: (v) => { const was = own(); if (was !== 'none') man.remove(was); if (v !== 'none') man.wear(v); } }];
+          }),
+        ]),
         // The sunglasses on or off at a click (which pair is chosen under Accessories, below).
         { type: 'check', label: 'Glasses', get: () => man.glasses !== null, set: (on) => { if (man.glasses) pair = man.glasses; man.customize({ glasses: on ? pair : 'none' }); } },
         { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm('R'); } },
@@ -790,9 +829,29 @@ function humanItem(sex) {
         { type: 'select', label: 'Dance', options: DANCES, get: () => style.dance ?? DANCES[0], set: (v) => { style.dance = v; } },
         { type: 'select', label: 'Bow', options: Object.keys(BOWS), get: () => style.bow ?? 'rei', set: (v) => { style.bow = v; } },
         { type: 'select', label: 'Left hand', options: Object.keys(HAND_POSES), get: () => handL, set: (v) => { handL = v; man.hands(v, { hand: 'L' }); } },
+        { type: 'heading', label: 'Colors' },
         { type: 'color', label: 'T-shirt', get: () => man.look.shirt, set: (c) => man.setShirtColor(c) },
         { type: 'color', label: 'Jeans tint', get: () => man.look.denim, set: (c) => man.setJeansColor(c) },
         { type: 'color', label: 'Sneakers', get: () => man.look.shoe, set: (c) => man.setShoeColor(c) },
+        { type: 'color', label: 'Suit and trousers', get: () => man.look.wool, set: (c) => man.setLook({ wool: c }) },
+        { type: 'color', label: 'Dress shirt', get: () => man.look.poplin, set: (c) => man.setLook({ poplin: c }) },
+        { type: 'color', label: 'Tie', get: () => man.look.tie, set: (c) => man.setLook({ tie: c }) },
+        { type: 'color', label: 'Dress', get: () => man.look.dress, set: (c) => man.setLook({ dress: c }) },
+        { type: 'color', label: 'Sweater', get: () => man.look.knit, set: (c) => man.setLook({ knit: c }) },
+        { type: 'color', label: 'Hoodie', get: () => man.look.hoodie, set: (c) => man.setLook({ hoodie: c }) },
+        { type: 'color', label: 'Tank top', get: () => man.look.tank, set: (c) => man.setLook({ tank: c }) },
+        { type: 'color', label: 'Gi', get: () => man.look.gi, set: (c) => man.setLook({ gi: c }) },
+        { type: 'color', label: 'Belt', get: () => man.look.belt, set: (c) => man.setLook({ belt: c }) },
+        { type: 'color', label: 'Cap', get: () => man.look.cap, set: (c) => man.setLook({ cap: c }) },
+        { type: 'color', label: 'Shorts', get: () => man.look.canvas, set: (c) => man.setLook({ canvas: c }) },
+        { type: 'color', label: 'Dress belt', get: () => man.look.beltLeather, set: (c) => man.setLook({ beltLeather: c }) },
+        { type: 'color', label: 'Dress shoes', get: () => man.look.dressShoe, set: (c) => man.setLook({ dressShoe: c }) },
+        { type: 'color', label: 'Boots', get: () => man.look.boot, set: (c) => man.setLook({ boot: c }) },
+        { type: 'color', label: 'Cowboy hat', get: () => man.look.cowboyFelt, set: (c) => man.setLook({ cowboyFelt: c }) },
+        { type: 'color', label: 'Top hat', get: () => man.look.topHatFelt, set: (c) => man.setLook({ topHatFelt: c }) },
+        { type: 'color', label: 'Hat band', get: () => man.look.hatBand, set: (c) => man.setLook({ hatBand: c }) },
+        { type: 'color', label: 'Beanie', get: () => man.look.beanie, set: (c) => man.setLook({ beanie: c }) },
+        { type: 'color', label: 'Felt hats', get: () => man.look.felt, set: (c) => man.setLook({ felt: c }) },
         face('jaw'), face('blink'), face('smile'), face('brows'),
         // The character creator, slot by slot: those not built yet are shown, kept, and greyed out.
         ...customizationFor(sex).flatMap(({ group, slots }) => [
