@@ -890,11 +890,12 @@ function robotItem() {
     source: 'people/robot',
     kind: 'object',
     async build() {
-      const [{ createRobot, RESIN_COLORS, SHELLS }, { ROBOT_BUILDS }, { CLIPS: clips }, { STANCES, MOVES }, weapons, metals, { WOOD_SPECIES }] = await Promise.all([
+      const [{ createRobot, RESIN_COLORS, SHELLS }, { ROBOT_BUILDS }, { CLIPS: clips }, { STANCES, MOVES, BOWS }, { DANCES }, weapons, metals, { WOOD_SPECIES }] = await Promise.all([
         import('../../../src/people/robot.js'),
         import('../../../src/people/robot-build.js'),
         import('../../../src/people/human.js'),
         import('../../../src/people/human/martial.js'),
+        import('../../../src/people/human/dance.js'),
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
         import('../../../src/textures/wood.js'),
@@ -932,6 +933,8 @@ function robotItem() {
         { type: 'select', label: 'Left holds', options: HUMAN_LEFT, get: () => weaponL, set: (v) => { weaponL = v; if (weapon === 'book') { weapon = 'none'; bot.release('R'); } rearm('L'); } },
         { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove', ...MOVES], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
         { type: 'select', label: 'Stance', options: ['(the move\'s own)', ...STANCES], get: () => style.stance ?? '(the move\'s own)', set: (v) => { style.stance = STANCES.includes(v) ? v : undefined; } },
+        { type: 'select', label: 'Dance', options: DANCES, get: () => style.dance ?? DANCES[0], set: (v) => { style.dance = v; } },
+        { type: 'select', label: 'Bow', options: Object.keys(BOWS), get: () => style.bow ?? 'rei', set: (v) => { style.bow = v; } },
       ];
       bot.setStyle(style);
       return {
