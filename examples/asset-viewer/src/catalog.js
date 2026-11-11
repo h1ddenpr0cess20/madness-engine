@@ -793,6 +793,18 @@ function humanItem(sex) {
         { type: 'color', label: 'T-shirt', get: () => man.look.shirt, set: (c) => man.setShirtColor(c) },
         { type: 'color', label: 'Jeans tint', get: () => man.look.denim, set: (c) => man.setJeansColor(c) },
         { type: 'color', label: 'Sneakers', get: () => man.look.shoe, set: (c) => man.setShoeColor(c) },
+        { type: 'color', label: 'Suit and trousers', get: () => man.look.wool, set: (c) => man.setLook({ wool: c }) },
+        { type: 'color', label: 'Dress shirt', get: () => man.look.poplin, set: (c) => man.setLook({ poplin: c }) },
+        { type: 'color', label: 'Tie', get: () => man.look.tie, set: (c) => man.setLook({ tie: c }) },
+        { type: 'color', label: 'Dress', get: () => man.look.dress, set: (c) => man.setLook({ dress: c }) },
+        { type: 'color', label: 'Sweater', get: () => man.look.knit, set: (c) => man.setLook({ knit: c }) },
+        { type: 'color', label: 'Hoodie', get: () => man.look.hoodie, set: (c) => man.setLook({ hoodie: c }) },
+        { type: 'color', label: 'Tank top', get: () => man.look.tank, set: (c) => man.setLook({ tank: c }) },
+        { type: 'color', label: 'Gi', get: () => man.look.gi, set: (c) => man.setLook({ gi: c }) },
+        { type: 'color', label: 'Belt', get: () => man.look.belt, set: (c) => man.setLook({ belt: c }) },
+        { type: 'color', label: 'Cap', get: () => man.look.cap, set: (c) => man.setLook({ cap: c }) },
+        { type: 'color', label: 'Beanie', get: () => man.look.beanie, set: (c) => man.setLook({ beanie: c }) },
+        { type: 'color', label: 'Felt hats', get: () => man.look.felt, set: (c) => man.setLook({ felt: c }) },
         face('jaw'), face('blink'), face('smile'), face('brows'),
         // The character creator, slot by slot: those not built yet are shown, kept, and greyed out.
         ...customizationFor(sex).flatMap(({ group, slots }) => [
