@@ -370,6 +370,8 @@ export const HAND_POSES = Object.freeze({
   point: { curl: [1.0, 1.0, 0.4], thumb: 0.9, spread: 0, straight: ['index'] },
   // The hand held flat, edge on, the thumb tucked in beside it (a knife-hand).
   blade: { curl: [0, 0.03, 0.02], thumb: 0.55, spread: 0 },
+  // The fingers hooked and spread, as a tiger's claw.
+  claw: { curl: [0.45, 0.6, 0.35], thumb: 0.35, spread: 0.7 },
   // A ball on the palm: the fingers round under it.
   cup: { curl: [0.38, 0.45, 0.3], thumb: 0.35, spread: 0.3 },
   // A coin between the thumb and forefinger: the others tucked out of the way.
@@ -891,7 +893,7 @@ export function createHuman(GFX, options = {}) {
    * of the way) so the left hand closes on the right hand's weapon below
    * it, along the grip, its knuckles the same way as the right's.
    */
-  function bothHands(amount) {
+  function bothHands(amount, clear = 0) {
     const h = held.R;
     skeleton.compute();
     const o = skeleton.index.get('handR') * 12, B = skeleton.matrices;
@@ -913,7 +915,8 @@ export function createHuman(GFX, options = {}) {
       const p = skeleton.point('handL', grip);
       const dp = (p[0] - target.x) ** 2 + (p[1] - target.y) ** 2 + (p[2] - target.z) ** 2;
       const da = 1 - dirOf('handL', along).dot(axis), db = 1 - dirOf('handL', [1, 0, 0]).dot(back);
-      return dp + 0.004 * da + 0.0015 * db;
+      // And the arm kept out of the body (and what he wears) on the way there: the elbow goes out, not in.
+      return dp + 0.004 * da + 0.0015 * db + (clear ? clear * armDepth(skeleton, clearance).L ** 2 : 0);
     };
     let best = cost(), step = 0.25;
     for (let it = 0; it < 40 && step > 0.004; it++) {
@@ -1184,7 +1187,8 @@ export function createHuman(GFX, options = {}) {
       // The swinging arm kept out of his body first, then the left hand put on the grip where that leaves it.
       skeleton.compute();
       if (clearArms(skeleton, clearance, skeleton.pivots, ['R'])) skeleton.compute();
-      bothHands(grip);
+      // (The fighting stances and moves keep the arm out of the body on the way; the old swings are as they were.)
+      bothHands(grip, state.clip === 'stance' || (state.clip === 'attack' && MOVES.includes(style.attack)) ? 25 : 0);
     }
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;

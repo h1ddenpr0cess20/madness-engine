@@ -7,6 +7,7 @@ import { Skeleton } from '../src/models/rig.js';
 import { bones } from '../src/people/human/skeleton.js';
 import { moveHuman } from '../src/people/human/motion.js';
 import { BOWS as BOW_DATA, mirrorPose, STANCE_DATA } from '../src/people/human/martial.js';
+import { DANCES, DANCE_DATA } from '../src/people/human/dance.js';
 import { createKrystalSword } from '../src/weapons/index.js';
 
 const posed = (sex, state, style = {}) => {
@@ -24,15 +25,16 @@ const rots = (k) => k.pose.flatMap((p) => [...p.rot, ...p.move]);
 
 test('the fighting vocabulary is listed', () => {
   assert.ok(CLIPS.includes('stance') && CLIPS.includes('bow'));
-  for (const s of ['boxing', 'karate', 'horse', 'crane', 'muaythai', 'taekwondo', 'fencing', 'kendo', 'hasso', 'waki', 'gedan', 'taiji']) assert.ok(STANCES.includes(s), s);
-  for (const m of ['jab', 'cross', 'hook', 'uppercut', 'elbow', 'palm', 'shuto', 'front-kick', 'roundhouse', 'side-kick', 'knee', 'back-kick', 'rising', 'sweep', 'lunge', 'parry', 'riposte', 'whirl']) assert.ok(MOVES.includes(m), m);
-  assert.deepEqual([...BLADE_MOVES].sort(), ['lunge', 'parry', 'riposte', 'rising', 'sweep', 'whirl']);
+  for (const s of ['boxing', 'karate', 'horse', 'crane', 'muaythai', 'taekwondo', 'fencing', 'kendo', 'hasso', 'waki', 'gedan', 'taiji', 'tiger', 'cat', 'wingchun', 'beckon', 'seiza', 'jodan', 'iai']) assert.ok(STANCES.includes(s), s);
+  for (const m of ['jab', 'cross', 'hook', 'uppercut', 'elbow', 'palm', 'shuto', 'front-kick', 'roundhouse', 'side-kick', 'knee', 'back-kick', 'rising', 'sweep', 'lunge', 'parry', 'riposte', 'whirl', 'chain-punch', 'tiger-claw', 'crane-strike', 'sweep-kick', 'high-block', 'low-block', 'nukitsuke', 'chiburi', 'noto', 'men']) assert.ok(MOVES.includes(m), m);
+  assert.deepEqual([...BLADE_MOVES].sort(), ['chiburi', 'lunge', 'men', 'noto', 'nukitsuke', 'parry', 'riposte', 'rising', 'sweep', 'whirl']);
   assert.deepEqual(Object.keys(BOWS), Object.keys(BOW_DATA));
+  assert.ok(BOWS.zarei, 'the kneeling bow');
 });
 
 test('every stance has its feet on the floor, for him and for her, whichever foot leads', () => {
   for (const sex of ['male', 'female']) {
-    for (const stance of STANCES) {
+    for (const stance of STANCES.filter((s) => !STANCE_DATA[s].kneeling)) {
       for (const lead of ['L', 'R']) {
         const k = posed(sex, { clip: 'stance', time: 0.7 }, { stance, lead, armed: STANCE_DATA[stance].armed ? lead : null });
         const [l, r] = soles(k);
@@ -41,6 +43,19 @@ test('every stance has its feet on the floor, for him and for her, whichever foo
         if (stance !== 'crane') assert.ok(Math.max(l, r) < 0.04, `${sex} ${stance} ${lead}: the other foot is down too (${Math.max(l, r)})`);
       }
     }
+  }
+});
+
+test('seiza and the kneeling bow rest on the knees, with the hips down on the heels', () => {
+  for (const sex of ['male', 'female']) {
+    const knee = (k) => ['L', 'R'].map((S) => k.point(`shin${S}`, k.pivots[k.index.get(`shin${S}`)])[1]);
+    const hips = (k) => k.point('hips', k.pivots[k.index.get('hips')])[1];
+    const sit = posed(sex, { clip: 'stance', time: 0 }, { stance: 'seiza' });
+    for (const y of knee(sit)) assert.ok(Math.abs(y - 0.05) < 0.003, `${sex}: a knee is on the floor (${y})`);
+    assert.ok(hips(sit) < 0.35, `${sex}: sat back on the heels (hips at ${hips(sit).toFixed(2)})`);
+    const down = posed(sex, { clip: 'bow', t: 0.5, bow: 'zarei' });
+    for (const y of knee(down)) assert.ok(Math.abs(y - 0.05) < 0.003, `${sex}: and still on them bowing`);
+    assert.ok(down.point('head', down.pivots[down.index.get('head')])[1] < sit.point('head', sit.pivots[sit.index.get('head')])[1] - 0.06, `${sex}: the head goes down`);
   }
 });
 
@@ -58,7 +73,8 @@ test('a stance mirrored is the mirror of it', () => {
 });
 
 test('every move leaves from its stance and comes back to it, and the feet stay planted at both ends', () => {
-  for (const move of MOVES) {
+  // (The sheathing starts with the sword drawn, and ends in the stance.)
+  for (const move of MOVES.filter((m) => m !== 'noto')) {
     const home = { unarmed: null };
     const style = { attack: move, armed: BLADE_MOVES.includes(move) ? 'R' : null };
     const at0 = posed('male', { clip: 'attack', t: 0, time: 0 }, style), at1 = posed('male', { clip: 'attack', t: 1, time: 0 }, style);
@@ -88,9 +104,8 @@ test('a kick lifts the foot and keeps the other planted, and a punch reaches', (
 
 test('the bow folds from the hips and comes back up', () => {
   const head = (t, bow) => { const k = posed('male', { clip: 'bow', t, bow }); return k.point('head', k.pivots[k.index.get('head')]); };
-  const up = head(0, 'rei');
   for (const bow of Object.keys(BOWS)) {
-    const down = head(0.5, bow), back = head(1, bow);
+    const up = head(0, bow), down = head(0.5, bow), back = head(1, bow);
     assert.ok(down[1] < up[1] - 0.01 && down[2] > up[2] + 0.03, `${bow}: the head goes down and forward`);
     assert.ok(Math.hypot(back[0] - up[0], back[1] - up[1], back[2] - up[2]) < 0.005, `${bow}: and back up`);
   }
@@ -119,4 +134,51 @@ test('he fights in his body: stances, moves and a bow pose the mesh, a blade hel
   for (const move of BLADE_MOVES) { man.setStyle({ attack: move, stance: undefined }); for (const t of [0.2, 0.45, 0.8]) { man.pose({ clip: 'attack', t, time: 0 }); finite(); } }
   man.release('R');
   man.setStyle({});
+});
+
+test('no stance, move or bow puts an arm through his body, man or woman, slim or heavy', () => {
+  for (const [sex, build] of [['male', 'average'], ['male', 'heavy'], ['female', 'average'], ['female', 'heavy']]) {
+    const who = createHuman(GFX, { detail: 0.5, sex, glasses: null });
+    who.customize({ build, weight: build === 'heavy' ? 1 : 0 });
+    const check = (what, state, style) => {
+      who.setStyle(style);
+      who.pose(state);
+      const d = who.armDepth();
+      // (A couple of millimetres: the same tolerance as the other clips, a little over for the sword's second hand.)
+      assert.ok(Math.max(d.L, d.R) < 0.005, `${sex} ${build} ${what}: an arm ${(Math.max(d.L, d.R) * 1000).toFixed(1)} mm in`);
+    };
+    for (const stance of STANCES.filter((s) => !STANCE_DATA[s].armed)) check(`stance ${stance}`, { clip: 'stance', time: 0.5 }, { stance });
+    for (const move of MOVES.filter((m) => !BLADE_MOVES.includes(m))) for (const t of [0.1, 0.22, 0.34, 0.46, 0.7]) check(`${move}@${t}`, { clip: 'attack', t, time: 0 }, { attack: move });
+    for (const bow of Object.keys(BOWS)) for (const t of [0.15, 0.3, 0.5, 0.7]) check(`bow ${bow}@${t}`, { clip: 'bow', t, bow }, {});
+    // With a sword in the hand: the blade stances and moves, the second hand on the grip in kendo and hasso.
+    who.hold(createKrystalSword(GFX));
+    for (const stance of STANCES.filter((s) => STANCE_DATA[s].armed)) check(`stance ${stance}`, { clip: 'stance', time: 0.5 }, { stance });
+    for (const move of BLADE_MOVES) for (const t of [0.1, 0.22, 0.34, 0.46, 0.7]) check(`${move}@${t}`, { clip: 'attack', t, time: 0 }, { attack: move });
+    who.release('R');
+  }
+});
+
+test('every dance loops exactly, keeps its feet down and moves', () => {
+  for (const sex of ['male', 'female']) {
+    for (const name of DANCES) {
+      const at = (t) => posed(sex, { clip: 'dance', time: t, dance: name });
+      const period = DANCE_DATA[name].period;
+      for (const t of [0, 0.31, 0.77]) {
+        const a = rots(at(t)), b = rots(at(t + period));
+        // (To within the breathing, which has a beat of its own: the collarbones' hundredth of a radian.)
+        a.forEach((v, i) => assert.ok(Math.abs(v - b[i]) < 0.03, `${sex} ${name}: a whole loop on is the same pose (bone value ${i}: ${v} then ${b[i]})`));
+      }
+      let moved = 0;
+      for (let i = 0; i < 16; i++) {
+        const k = at((i / 16) * period), [l, r] = soles(k);
+        assert.ok(Math.abs(Math.min(l, r)) < 0.004, `${sex} ${name}@${i}: a foot on the floor`);
+        const p = k.point('handL', k.pivots[k.index.get('handL')]), q = at(0).point('handL', k.pivots[k.index.get('handL')]);
+        moved = Math.max(moved, Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]));
+      }
+      assert.ok(moved > 0.03, `${sex} ${name}: it moves`);
+    }
+  }
+  // Faster is the same dance sooner.
+  const slow = rots(posed('male', { clip: 'dance', time: 0.4, speed: 1, dance: 'bounce' })), fast = rots(posed('male', { clip: 'dance', time: 0.2, speed: 2, dance: 'bounce' }));
+  slow.forEach((v, i) => assert.ok(Math.abs(v - fast[i]) < 0.03));
 });

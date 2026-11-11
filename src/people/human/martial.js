@@ -91,7 +91,7 @@ export const STANCE_DATA = {
     pose: stand([0, 0.15], { c: 1.45, out: 0.1, knee: 1.5 }, { c: 0.05, out: 0, knee: 0.2 }, {
       footL: [0.75, 0, 0], spine: [-0.03, 0, 0], neck: [0, -0.15, 0],
       armL: [-0.6, -0.2, 0.35], foreL: [-1.1, -0.3, 0], handL: [1.0, 0, 0],
-      armR: [0.1, 0, -2.0], foreR: [-0.25, 0, 0], handR: [0, 0, 0.4],
+      armR: [0.1, 0, -1.65], foreR: [-0.25, 0, 0], handR: [0, 0, 0.4],
     }),
   },
   // Muay Thai: upright and light on the lead foot, the weight back, the gloves up at the temples, elbows tight.
@@ -125,7 +125,7 @@ export const STANCE_DATA = {
     lead: 'R', armed: true, both: true, hands: 'fist',
     pose: stand([0.03, 0], { c: 0.2, out: 0.02, knee: 0.3 }, { c: -0.15, out: 0.03, knee: 0.35, toe: 0.05 }, {
       footL: [-0.25, 0, 0], spine: [0.02, 0, 0],
-      armR: [-0.55, 0.15, -0.05], foreR: [-0.9, 0.15, 0], handR: [0.85, 0, 0],
+      armR: [-0.62, 0.2, -0.12], foreR: [-1.22, 0.1, 0], handR: [1.24, 0, 0],
     }),
   },
   // Hasso: the sword upright by the right side of the head, both hands near the shoulder, ready to cut down.
@@ -133,7 +133,7 @@ export const STANCE_DATA = {
     lead: 'R', armed: true, both: true, hands: 'fist',
     pose: stand([0.03, 0.15], { c: 0.2, out: 0.02, knee: 0.35 }, { c: -0.2, out: 0.03, knee: 0.4, toe: 0.3 }, {
       spine: [0, -0.1, 0], chest: [0, -0.1, 0], neck: [0, 0.1, 0],
-      armR: [-1.0, 0, -0.55], foreR: [-2.1, 0.25, 0], handR: [1.4, 0, 0],
+      armR: [-0.85, 0, -1.05], foreR: [-1.9, 0, 0], handR: [1.3, 0, 0],
     }),
   },
   // Waki-gamae: the blade hidden behind the right hip, the point back and low, the left hand forward and open to hide its length.
@@ -141,7 +141,7 @@ export const STANCE_DATA = {
     lead: 'L', armed: true, hands: 'blade',
     pose: stand([0.05, -0.6], { c: 0.35, out: 0.1, knee: 0.55 }, { c: -0.2, out: 0.15, knee: 0.5, toe: 0.5 }, {
       spine: [0.08, 0.2, 0], chest: [0.05, 0.2, 0], neck: [0.05, 0.3, 0], head: [0, 0.2, 0],
-      armR: [0.15, -1.5, -0.2], foreR: [-0.6, -1.4, 0], handR: [0.5, 0, 0],
+      armR: [0.15, -1.5, -0.45], foreR: [-0.6, -1.4, 0], handR: [0.5, 0, 0],
       armL: [-1.0, -0.15, 0.2], foreL: [-0.5, -0.2, 0],
     }),
   },
@@ -161,6 +161,74 @@ export const STANCE_DATA = {
       '@hips': [0, 0, -0.05], spine: [0, 0.2, 0], chest: [0, 0.15, 0], neck: [0, 0.15, 0],
       armL: [-1.0, -0.4, 0.25], foreL: [-1.35, -0.6, 0], handL: [0.2, 0, 0.2],
       armR: [-0.3, 0.3, -0.35], foreR: [-0.9, 0.5, 0], handR: [-0.3, 0, 0],
+    }),
+  },
+  // Tiger: a long bow stance (gong bu), the front hand a claw raking low, the other claw raised by the head.
+  tiger: {
+    lead: 'L', hands: 'claw',
+    pose: stand([0, -0.25], { c: 0.8, out: 0.18, knee: 1.15 }, { c: -0.5, out: 0.2, knee: 0.1, toe: 0.55 }, {
+      '@hips': [0, 0, -0.08], spine: [0.04, 0.12, 0], chest: [0.02, 0.12, 0], neck: [0, 0.1, 0],
+      armL: [-0.75, -0.25, 0.25], foreL: [-1.0, -0.3, 0], handL: [0.3, 0, 0],
+      armR: [-0.5, 0.3, -0.6], foreR: [-1.9, 0.15, 0], handR: [0.2, 0, 0],
+    }),
+  },
+  // The cat (xu bu): all the weight on the bent back leg, the front foot light, only its ball on the floor; one palm forward, the other hooked back.
+  cat: {
+    lead: 'L', bounce: [0.006, 2.5], hands: 'open',
+    pose: stand([0, -0.55], { c: 0.55, out: 0.1, knee: 0.3 }, { c: 0.4, out: 0.2, knee: 1.15, toe: 0.7 }, {
+      '@hips': [0, 0, -0.14], footL: [0.5, 0, 0], spine: [0, 0.2, 0], chest: [0, 0.2, 0], neck: [0, 0.2, 0], head: [0, 0.1, 0],
+      armL: [-1.0, -0.1, 0.18], foreL: [-0.6, -0.25, 0], handL: [-0.2, 0, 0],
+      armR: [-0.1, 0.4, -0.35], foreR: [-1.6, 0.3, 0], handR: [0.5, 0, 0],
+    }),
+  },
+  // Wing Chun's stance (yi ji kim yeung ma): upright, the knees bent and turned in, the toes in, one hand
+  // palm up before the chest (tan sao) and the other guarding it at the centre line.
+  wingchun: {
+    lead: 'L', hands: 'open',
+    pose: stand([0.02, -0.25], { c: 0.45, out: 0.04, knee: 0.85, toe: -0.35 }, { c: 0.3, out: 0.04, knee: 0.75, toe: -0.35 }, {
+      spine: [0, 0.1, 0], chest: [0, 0.12, 0],
+      armL: [-0.55, -0.3, 0.12], foreL: [-1.3, -0.5, 0], handL: [0.1, 0, 0.4],
+      armR: [-0.4, 0.25, -0.2], foreR: [-1.5, 0.7, 0], handR: [0.1, 0, 0],
+    }),
+  },
+  // Come on: weight loose and easy, the lead hand out palm up, the wrist beckoning, the chin up.
+  beckon: {
+    lead: 'L', bounce: [0.008, 3], hands: 'open',
+    pose: stand([0.02, -0.35], { c: 0.3, out: 0.12, knee: 0.45 }, { c: -0.15, out: 0.14, knee: 0.5, toe: 0.5 }, {
+      spine: [-0.03, 0.1, 0], chest: [-0.03, 0.1, 0], neck: [-0.1, 0.3, 0], head: [-0.05, 0.2, 0.08],
+      armL: [-1.0, -0.05, 0.3], foreL: [-0.55, -0.1, 0], handL: [0, 0, 0.8],
+      armR: [-0.15, 0.2, -0.3], foreR: [-0.9, 0.3, 0],
+    }),
+    // The hand drawn in and flicked out again.
+    animate: (k, T) => { const w = Math.sin(T * 7) * 0.5 + 0.5; k.turn('handL', 0.2 - 0.6 * w, 0, 0); k.turn('foreL', 0, 0, 0); },
+  },
+  // Seiza: kneeling, sitting back on the heels, the back straight, the hands on the thighs: how a samurai sits.
+  seiza: {
+    lead: 'L', kneeling: true, hands: 'open',
+    pose: {
+      hips: [0.02, 0, 0, ], spine: [-0.02, 0, 0], neck: [0, 0, 0],
+      thighL: [-1.25, 0, 0.06], shinL: [2.8, 0, 0], footL: [1.4, 0, 0],
+      thighR: [-1.25, 0, -0.06], shinR: [2.8, 0, 0], footR: [1.4, 0, 0],
+      '@hips': [0, 0, -0.12],
+      armL: [-0.45, -0.05, 0.2], foreL: [-0.6, -0.2, 0], handL: [0.2, 0, 0],
+      armR: [-0.45, 0.05, -0.2], foreR: [-0.6, 0.2, 0], handR: [0.2, 0, 0],
+    },
+  },
+  // Jodan: the sword held high above the head in both hands, the blade angled back, right foot forward, a cut waiting to fall.
+  jodan: {
+    lead: 'R', armed: true, both: true, hands: 'fist',
+    pose: stand([0.03, 0], { c: 0.25, out: 0.02, knee: 0.4 }, { c: -0.2, out: 0.03, knee: 0.45, toe: 0.05 }, {
+      footL: [-0.1, 0, 0], spine: [-0.04, 0, 0], chest: [-0.03, 0, 0], head: [-0.1, 0, 0],
+      armR: [-2.55, 0.05, -0.25], foreR: [-0.7, 0.1, 0], handR: [0.8, 0, 0],
+    }),
+  },
+  // Iai: crouched to draw, the left hand on the scabbard at the hip, the right on the hilt across the belly, the blade still home.
+  iai: {
+    lead: 'R', armed: true, hands: 'fist',
+    pose: stand([0.04, -0.45], { c: 0.55, out: 0.1, knee: 0.9 }, { c: -0.2, out: 0.2, knee: 0.6, toe: 0.6 }, {
+      '@hips': [0, 0, -0.06], spine: [0.04, 0.3, 0], chest: [0.03, 0.3, 0], neck: [0, 0.2, 0], head: [0, 0.15, 0],
+      armR: [-0.6, 0.55, -0.1], foreR: [-0.9, 0.5, 0], handR: [1.25, 0, 0],
+      armL: [-0.4, 0.1, 0.4], foreL: [-1.0, -0.3, 0], handL: [0.3, 0, 0],
     }),
   },
 };
@@ -225,9 +293,15 @@ function sole(k, S) {
  * that is not far off it (under 10 cm: it is meant to be down) has its leg straightened till it is
  * down too, less and less so the higher it is (none past 22 cm), so a lifted foot is left alone.
  */
-export function plant(k) {
+export function plant(k, kneeling = false) {
   if (typeof k.compute !== 'function') return;
   k.compute();
+  // Kneeling, it is the knees that are on the floor (half their thickness above it), and the feet are laid flat behind.
+  if (kneeling) {
+    const knee = (S) => k.point(`shin${S}`, k.pivots[k.index.get(`shin${S}`)])[1] - 0.05;
+    k.move('hips', 0, -Math.min(knee('L'), knee('R')), 0);
+    return;
+  }
   const low = Math.min(sole(k, 'L'), sole(k, 'R'));
   if (!Number.isFinite(low)) return;
   k.move('hips', 0, -low, 0);
@@ -261,7 +335,8 @@ export function holdStance(k, name, T, style = {}) {
   setPose(k, pose);
   const [amp, rate] = data.bounce ?? [0, 0];
   if (amp) k.move('hips', 0, amp * (Math.sin(T * rate) * 0.5 - 0.5), 0);
-  plant(k);
+  data.animate?.(k, T);
+  plant(k, data.kneeling);
   return pose;
 }
 
@@ -299,7 +374,7 @@ export const MOVE_DATA = {
   cross: {
     stance: 'boxing', from: ['boxing', 'muaythai', 'taekwondo', 'karate'], hands: 'fist',
     keys: [at(0, {}),
-      at(0.18, { ...hipTurn(-0.15), '+chest': [0.04, -0.1, 0], armR: [-0.5, 0.4, -0.1], foreR: [-2.5, 0.6, 0] }),
+      at(0.18, { ...hipTurn(-0.15), '+chest': [0.04, -0.1, 0], armR: [-0.5, 0.4, -0.3], foreR: [-2.5, 0.4, 0] }),
       at(0.32, { ...hipTurn(0.7), '+spine': [0.04, 0.1, 0], '+chest': [0.05, 0.25, 0], '+neck': [0, -0.4, 0], '+head': [0, -0.3, 0], armR: [-1.5, -0.5, -0.05], foreR: [-0.08, 0, 0], '+footR': [0.3, 0, 0], '@root': [0, 0, 0.1] }),
       at(0.44, { ...hipTurn(0.7), '+spine': [0.04, 0.1, 0], '+chest': [0.05, 0.25, 0], '+neck': [0, -0.4, 0], '+head': [0, -0.3, 0], armR: [-1.5, -0.5, -0.05], foreR: [-0.08, 0, 0], '+footR': [0.3, 0, 0], '@root': [0, 0, 0.1] }),
       at(0.75, {}), at(1, {})],
@@ -317,7 +392,7 @@ export const MOVE_DATA = {
   uppercut: {
     stance: 'boxing', from: ['boxing', 'muaythai', 'taekwondo', 'karate'], hands: 'fist',
     keys: [at(0, {}),
-      at(0.2, { ...hipTurn(-0.2), '+spine': [0.12, 0, 0.05], '+shinL': [0.25, 0, 0], '+shinR': [0.25, 0, 0], armR: [0.1, 0.3, -0.1], foreR: [-1.5, 0.5, 0] }),
+      at(0.2, { ...hipTurn(-0.2), '+spine': [0.12, 0, 0.05], '+shinL': [0.25, 0, 0], '+shinR': [0.25, 0, 0], armR: [0.1, 0.3, -0.3], foreR: [-1.5, 0.35, 0] }),
       at(0.34, { ...hipTurn(0.6), '+spine': [-0.1, 0.1, 0], '+chest': [-0.08, 0.2, 0], '+neck': [0, -0.4, 0], '+head': [0, -0.3, 0], armR: [-0.95, -0.1, -0.05], foreR: [-2.2, 0.1, 0] }),
       at(0.46, { ...hipTurn(0.6), '+spine': [-0.1, 0.1, 0], '+chest': [-0.08, 0.2, 0], '+neck': [0, -0.4, 0], '+head': [0, -0.3, 0], armR: [-0.95, -0.1, -0.05], foreR: [-2.2, 0.1, 0] }),
       at(0.78, {}), at(1, {})],
@@ -326,9 +401,9 @@ export const MOVE_DATA = {
   elbow: {
     stance: 'muaythai', from: ['muaythai', 'boxing', 'taekwondo', 'karate'], hands: 'fist',
     keys: [at(0, {}),
-      at(0.2, { ...hipTurn(-0.2), '+chest': [0, -0.1, 0], armR: [-1.0, 0.8, -0.1], foreR: [-0.5, 0.2, 1.6] }),
-      at(0.34, { ...hipTurn(0.8), '+chest': [0.05, 0.3, 0], '+neck': [0, -0.5, 0], '+head': [0, -0.3, 0], armR: [-1.45, -0.5, 0], foreR: [0, 0, 2.5], '@root': [0, 0, 0.1] }),
-      at(0.46, { ...hipTurn(0.8), '+chest': [0.05, 0.3, 0], '+neck': [0, -0.5, 0], '+head': [0, -0.3, 0], armR: [-1.45, -0.5, 0], foreR: [0, 0, 2.5], '@root': [0, 0, 0.1] }),
+      at(0.2, { ...hipTurn(-0.2), '+chest': [0, -0.1, 0], armR: [-0.8, 0.2, -0.45], foreR: [-0.6, 0.1, 1.3] }),
+      at(0.34, { ...hipTurn(0.8), '+chest': [0.05, 0.3, 0], '+neck': [0, -0.5, 0], '+head': [0, -0.3, 0], armR: [-1.4, -0.15, -0.2], foreR: [0, 0, 2.2], '@root': [0, 0, 0.1] }),
+      at(0.46, { ...hipTurn(0.8), '+chest': [0.05, 0.3, 0], '+neck': [0, -0.5, 0], '+head': [0, -0.3, 0], armR: [-1.4, -0.15, -0.2], foreR: [0, 0, 2.2], '@root': [0, 0, 0.1] }),
       at(0.78, {}), at(1, {})],
   },
   // A palm-heel strike: the cross thrown with the hand open, the fingers up.
@@ -354,29 +429,29 @@ export const MOVE_DATA = {
     stance: 'taekwondo', from: ['taekwondo', 'boxing', 'muaythai', 'karate'], hands: 'fist',
     keys: [at(0, {}),
       at(0.24, { '+thighR': [-1.4, 0, 0], '+shinR': [1.4, 0, 0], '+footR': [0.7, 0, 0], '+spine': [-0.08, 0, 0] }),
-      at(0.38, { '+thighR': [-1.6, 0, 0], '+shinR': [-0.45, 0, 0], '+footR': [-0.2, 0, 0], '+spine': [-0.18, 0, 0], '+hips': [-0.08, 0, 0] }),
-      at(0.5, { '+thighR': [-1.6, 0, 0], '+shinR': [-0.45, 0, 0], '+footR': [-0.2, 0, 0], '+spine': [-0.18, 0, 0], '+hips': [-0.08, 0, 0] }),
+      at(0.38, { '+thighR': [-1.6, 0, 0], '+shinR': [-0.45, 0, 0], '+footR': [-0.2, 0, 0], '+spine': [-0.2, 0, 0], '+chest': [-0.06, 0, 0] }),
+      at(0.5, { '+thighR': [-1.6, 0, 0], '+shinR': [-0.45, 0, 0], '+footR': [-0.2, 0, 0], '+spine': [-0.2, 0, 0], '+chest': [-0.06, 0, 0] }),
       at(0.66, { '+thighR': [-1.4, 0, 0], '+shinR': [1.4, 0, 0], '+footR': [0.7, 0, 0] }),
       at(0.9, {}), at(1, {})],
   },
   // The roundhouse: the rear knee swung up and out, the hip and standing foot turned over, the shin whipped across.
   roundhouse: {
-    stance: 'muaythai', from: ['muaythai', 'taekwondo', 'boxing'], hands: 'fist',
+    stance: 'muaythai', from: ['muaythai', 'taekwondo', 'boxing'], hands: 'fist', pivot: 'L',
     keys: [at(0, {}),
-      at(0.24, { ...hipTurn(0.3), '+thighR': [-1.2, 0, -0.5], '+shinR': [1.7, 0, 0], '+footR': [0.5, 0, 0], '+spine': [0, 0, -0.1] }),
-      at(0.4, { '+hips': [0, 0.95, 0], '+thighL': [0, -0.95, 0], '+thighR': [-1.45, -0.6, -0.3], '+shinR': [-0.35, 0, 0], '+footR': [-0.4, 0, 0], '+spine': [0, 0, -0.3], '+chest': [0, 0.2, 0], '+neck': [0, -0.6, 0], '+head': [0, -0.4, 0] }),
-      at(0.52, { '+hips': [0, 0.95, 0], '+thighL': [0, -0.95, 0], '+thighR': [-1.45, -0.6, -0.3], '+shinR': [-0.35, 0, 0], '+footR': [-0.4, 0, 0], '+spine': [0, 0, -0.3], '+chest': [0, 0.2, 0], '+neck': [0, -0.6, 0], '+head': [0, -0.4, 0] }),
-      at(0.72, { ...hipTurn(0.3), '+thighR': [-1.2, 0, -0.5], '+shinR': [1.7, 0, 0] }),
+      at(0.24, { '@spin': [0.3, 0, 0], '+thighR': [-1.2, 0, -0.5], '+shinR': [1.7, 0, 0], '+footR': [0.5, 0, 0], '+spine': [0, 0, -0.1] }),
+      at(0.4, { '@spin': [0.95, 0, 0], '+thighR': [-1.45, -0.65, -0.3], '+shinR': [-0.35, 0, 0], '+footR': [0.7, 0, 0], '+spine': [0, 0, -0.3], '+chest': [0, 0.2, 0], '+neck': [0, -0.6, 0], '+head': [0, -0.4, 0] }),
+      at(0.52, { '@spin': [0.95, 0, 0], '+thighR': [-1.45, -0.65, -0.3], '+shinR': [-0.35, 0, 0], '+footR': [0.7, 0, 0], '+spine': [0, 0, -0.3], '+chest': [0, 0.2, 0], '+neck': [0, -0.6, 0], '+head': [0, -0.4, 0] }),
+      at(0.72, { '@spin': [0.3, 0, 0], '+thighR': [-1.2, 0, -0.5], '+shinR': [1.7, 0, 0], '+footR': [0.5, 0, 0] }),
       at(0.92, {}), at(1, {})],
   },
   // The side kick: the lead knee chambered, the body turned side-on, the heel driven out in line with the hip.
   'side-kick': {
-    stance: 'taekwondo', from: ['taekwondo', 'boxing', 'muaythai', 'karate'], hands: 'fist',
+    stance: 'taekwondo', from: ['taekwondo', 'boxing', 'muaythai', 'karate'], hands: 'fist', pivot: 'R',
     keys: [at(0, {}),
-      at(0.24, { '+hips': [0, -0.5, 0], '+thighR': [0, 0.5, 0], '+thighL': [-1.2, 0, 0.1], '+shinL': [1.5, 0, 0], '+footL': [0.3, 0, 0], '+spine': [0, 0, 0.12] }),
-      at(0.4, { '+hips': [0, -0.9, 0], '+thighR': [0, 0.9, 0], '+thighL': [-0.35, 0, 1.2], '+shinL': [-0.3, 0, 0], '+footL': [0, 0, 0.3], '+spine': [0, 0, 0.4], '+neck': [0, 0.5, 0], '+head': [0, 0.3, 0] }),
-      at(0.52, { '+hips': [0, -0.9, 0], '+thighR': [0, 0.9, 0], '+thighL': [-0.35, 0, 1.2], '+shinL': [-0.3, 0, 0], '+footL': [0, 0, 0.3], '+spine': [0, 0, 0.4], '+neck': [0, 0.5, 0], '+head': [0, 0.3, 0] }),
-      at(0.7, { '+hips': [0, -0.5, 0], '+thighR': [0, 0.5, 0], '+thighL': [-1.2, 0, 0.1], '+shinL': [1.5, 0, 0] }),
+      at(0.24, { '@spin': [-0.5, 0, 0], '+thighL': [-1.2, 0, 0.1], '+shinL': [1.5, 0, 0], '+footL': [0.3, 0, 0], '+spine': [0, 0, 0.12] }),
+      at(0.4, { '@spin': [-0.9, 0, 0], '+thighL': [-0.35, 0, 1.2], '+shinL': [-0.3, 0, 0], '+footL': [0, 0, 0.3], '+spine': [0, 0, 0.4], '+neck': [0, 0.5, 0], '+head': [0, 0.3, 0] }),
+      at(0.52, { '@spin': [-0.9, 0, 0], '+thighL': [-0.35, 0, 1.2], '+shinL': [-0.3, 0, 0], '+footL': [0, 0, 0.3], '+spine': [0, 0, 0.4], '+neck': [0, 0.5, 0], '+head': [0, 0.3, 0] }),
+      at(0.7, { '@spin': [-0.5, 0, 0], '+thighL': [-1.2, 0, 0.1], '+shinL': [1.5, 0, 0] }),
       at(0.92, {}), at(1, {})],
   },
   // The rear knee strike: the hands pulling the head down, the hips thrust forward into it.
@@ -384,19 +459,110 @@ export const MOVE_DATA = {
     stance: 'muaythai', from: ['muaythai', 'boxing', 'taekwondo'], hands: 'fist',
     keys: [at(0, {}),
       at(0.22, { ...hipTurn(0.25), '+spine': [-0.1, 0, 0], armL: [-1.0, -0.1, 0.1], foreL: [-1.0, -0.4, 0], armR: [-1.0, 0.1, -0.1], foreR: [-1.0, 0.4, 0] }),
-      at(0.38, { ...hipTurn(0.25), '+thighR': [-1.9, 0, 0], '+shinR': [2.2, 0, 0], '+footR': [0.6, 0, 0], '+spine': [-0.15, 0, 0], '@hips': [0, 0, 0.12], armL: [-1.1, -0.1, 0.1], foreL: [-0.9, -0.4, 0], armR: [-1.1, 0.1, -0.1], foreR: [-0.9, 0.4, 0] }),
-      at(0.5, { ...hipTurn(0.25), '+thighR': [-1.9, 0, 0], '+shinR': [2.2, 0, 0], '+footR': [0.6, 0, 0], '+spine': [-0.15, 0, 0], '@hips': [0, 0, 0.12], armL: [-1.1, -0.1, 0.1], foreL: [-0.9, -0.4, 0], armR: [-1.1, 0.1, -0.1], foreR: [-0.9, 0.4, 0] }),
+      at(0.38, { ...hipTurn(0.25), '+thighR': [-1.9, 0, 0], '+shinR': [2.2, 0, 0], '+footR': [0.6, 0, 0], '+spine': [-0.15, 0, 0], armL: [-1.1, -0.1, 0.1], foreL: [-0.9, -0.4, 0], armR: [-1.1, 0.1, -0.1], foreR: [-0.9, 0.4, 0] }),
+      at(0.5, { ...hipTurn(0.25), '+thighR': [-1.9, 0, 0], '+shinR': [2.2, 0, 0], '+footR': [0.6, 0, 0], '+spine': [-0.15, 0, 0], armL: [-1.1, -0.1, 0.1], foreL: [-0.9, -0.4, 0], armR: [-1.1, 0.1, -0.1], foreR: [-0.9, 0.4, 0] }),
       at(0.8, {}), at(1, {})],
   },
   // The spinning back kick: turned right round with the back to him, bent forward at the hips to counterbalance, the heel sent out behind; then the spin carried on round to face him again.
   'back-kick': {
-    stance: 'taekwondo', from: ['taekwondo', 'boxing', 'muaythai'], hands: 'fist',
+    stance: 'taekwondo', from: ['taekwondo', 'boxing', 'muaythai'], hands: 'fist', pivot: 'L',
     keys: [at(0, {}),
-      at(0.3, { '+hips': [0, -2.6, 0], '+thighL': [0, 2.6, 0], '+thighR': [0, 2.6, 0], '+neck': [0, -0.3, 0], '+spine': [0.3, 0, 0] }),
-      at(0.46, { '+hips': [0.4, -3.1, 0], '+thighL': [0, 3.1, 0], '+thighR': [1.5, 3.1, 0], '+shinR': [-0.4, 0, 0], '+footR': [-0.3, 0, 0], '+spine': [0.55, 0, 0], '+chest': [0.25, 0, 0], '+neck': [-0.4, 0, 0], '+head': [-0.3, 0, 0] }),
-      at(0.56, { '+hips': [0.4, -3.1, 0], '+thighL': [0, 3.1, 0], '+thighR': [1.5, 3.1, 0], '+shinR': [-0.4, 0, 0], '+footR': [-0.3, 0, 0], '+spine': [0.55, 0, 0], '+chest': [0.25, 0, 0], '+neck': [-0.4, 0, 0], '+head': [-0.3, 0, 0] }),
-      at(0.78, { '+hips': [0, -4.7, 0], '+thighL': [0, 4.7, 0], '+thighR': [0, 4.7, 0], '+spine': [0.2, 0, 0] }),
-      at(1, { '+hips': [0, -2 * Math.PI, 0], '+thighL': [0, 2 * Math.PI, 0], '+thighR': [0, 2 * Math.PI, 0] })],
+      at(0.3, { '@spin': [-2.6, 0, 0], '+neck': [0, -0.3, 0], '+spine': [0.2, 0, 0] }),
+      at(0.46, { '@spin': [-3.1, 0, 0], '+thighR': [1.5, 0, 0], '+shinR': [-0.4, 0, 0], '+footR': [0.3, 0, 0], '+spine': [0.5, 0, 0], '+chest': [0.3, 0, 0], '+neck': [-0.4, 0, 0], '+head': [-0.3, 0, 0] }),
+      at(0.56, { '@spin': [-3.1, 0, 0], '+thighR': [1.5, 0, 0], '+shinR': [-0.4, 0, 0], '+footR': [0.3, 0, 0], '+spine': [0.5, 0, 0], '+chest': [0.3, 0, 0], '+neck': [-0.4, 0, 0], '+head': [-0.3, 0, 0] }),
+      at(0.78, { '@spin': [-4.7, 0, 0], '+spine': [0.15, 0, 0] }),
+      at(1, { '@spin': [-2 * Math.PI, 0, 0] })],
+  },
+  // Wing Chun's chain punch: three quick punches up the centre line, right, left, right, each from the elbow, the body still.
+  'chain-punch': {
+    stance: 'wingchun', from: ['wingchun', 'boxing', 'karate'], hands: 'fist',
+    keys: [at(0, {}),
+      at(0.1, { armR: [-1.5, -0.3, -0.05], foreR: [-0.08, 0, 0], handR: [0, 0, 0], '+chest': [0, 0.05, 0] }),
+      at(0.22, { armR: [-0.4, 0.25, -0.2], foreR: [-1.5, 0.7, 0], armL: [-1.5, 0.3, 0.05], foreL: [-0.08, 0, 0], handL: [0, 0, 0] }),
+      at(0.34, { armR: [-1.5, -0.3, -0.05], foreR: [-0.08, 0, 0], armL: [-0.55, -0.3, 0.12], foreL: [-1.3, -0.5, 0], handL: [0, 0, 0] }),
+      at(0.46, { armR: [-0.4, 0.25, -0.2], foreR: [-1.5, 0.7, 0], armL: [-1.5, 0.3, 0.05], foreL: [-0.08, 0, 0], handL: [0, 0, 0] }),
+      at(0.58, { armR: [-1.5, -0.3, -0.05], foreR: [-0.08, 0, 0], armL: [-0.55, -0.3, 0.12], foreL: [-1.3, -0.5, 0], handL: [0, 0, 0], '+chest': [0, 0.08, 0] }),
+      at(0.85, {}), at(1, {})],
+  },
+  // The tiger's claw: the raised hand swung down and forward, the fingers hooked, a step into it.
+  'tiger-claw': {
+    stance: 'tiger', from: ['tiger'], hands: 'claw',
+    keys: [at(0, {}),
+      at(0.22, { '+chest': [-0.1, -0.2, 0], armR: [-2.3, -0.15, -0.45], foreR: [-0.6, 0.1, 0], handR: [-0.3, 0, 0] }),
+      at(0.38, { '+chest': [0.2, 0.3, 0], '+spine': [0.1, 0.1, 0], armR: [-1.15, -0.45, -0.1], foreR: [-0.2, 0, 0], handR: [0.4, 0, 0], '@root': [0, 0, 0.08] }),
+      at(0.5, { '+chest': [0.2, 0.3, 0], '+spine': [0.1, 0.1, 0], armR: [-1.15, -0.45, -0.1], foreR: [-0.2, 0, 0], handR: [0.4, 0, 0], '@root': [0, 0, 0.08] }),
+      at(0.85, {}), at(1, {})],
+  },
+  // The crane's beak: the wing swept up and round while the hooked hand strikes out with the back of the wrist.
+  'crane-strike': {
+    stance: 'crane', from: ['crane'], hands: 'blade',
+    keys: [at(0, {}),
+      at(0.25, { armL: [-0.2, -0.2, 0.2], foreL: [-1.5, -0.4, 0], handL: [1.2, 0, 0], armR: [0.1, 0, -1.0], foreR: [-0.25, 0, 0] }),
+      at(0.4, { armL: [-1.45, 0.1, 0.05], foreL: [-0.1, 0, 0], handL: [1.1, 0, 0], armR: [0.1, 0, -1.7], foreR: [-0.2, 0, 0], '+spine': [0.05, 0.15, 0] }),
+      at(0.55, { armL: [-1.45, 0.1, 0.05], foreL: [-0.1, 0, 0], handL: [1.1, 0, 0], armR: [0.1, 0, -1.7], foreR: [-0.2, 0, 0], '+spine': [0.05, 0.15, 0] }),
+      at(0.85, {}), at(1, {})],
+  },
+  // The low sweep: down into a deep crouch with a hand to the floor, the other leg flung out along it and the body spun right round on the one foot.
+  'sweep-kick': {
+    stance: 'horse', from: ['horse', 'taekwondo', 'boxing'], hands: 'fist', pivot: 'R',
+    keys: [at(0, {}),
+      at(0.2, { '+thighR': [-0.5, 0, 0], '+shinR': [1.0, 0, 0], '+footR': [-0.5, 0, 0], armL: [-0.6, 0.2, 0.9], foreL: [-0.3, 0, 0], armR: [-0.1, 0, -0.9], '+spine': [0.3, 0, 0] }),
+      at(0.4, { '@spin': [-2.4, 0, 0], '+thighL': [0.1, 0, 1.35], '+shinL': [-1.3, 0, 0], '+thighR': [-1.1, 0, 0], '+shinR': [1.9, 0, 0], '+footR': [-0.5, 0, 0], armL: [-0.1, 0.2, 1.2], foreL: [-0.2, 0, 0], armR: [0.3, 0, -1.2], foreR: [-1.2, 0, 0], '+spine': [0.45, 0, 0] }),
+      at(0.62, { '@spin': [-4.6, 0, 0], '+thighL': [0.1, 0, 1.35], '+shinL': [-1.3, 0, 0], '+thighR': [-1.1, 0, 0], '+shinR': [1.9, 0, 0], '+footR': [-0.5, 0, 0], armL: [-0.1, 0.2, 1.2], foreL: [-0.2, 0, 0], armR: [0.3, 0, -1.2], foreR: [-1.2, 0, 0], '+spine': [0.45, 0, 0] }),
+      at(0.85, { '@spin': [-2 * Math.PI, 0, 0], '+thighR': [-0.5, 0, 0], '+shinR': [1.0, 0, 0] }),
+      at(1, { '@spin': [-2 * Math.PI, 0, 0] })],
+  },
+  // The rising block (jodan uke): the forearm swept up across the front to turn a blow over the head.
+  'high-block': {
+    stance: 'karate', from: ['karate', 'boxing', 'wingchun', 'tiger'], hands: 'fist',
+    keys: [at(0, {}),
+      at(0.22, { armL: [-0.7, -0.5, 0.15], foreL: [-1.6, -0.9, 0], armR: [0.45, 0.2, -0.1], foreR: [-1.95, 0.2, 0], '+chest': [0, -0.15, 0] }),
+      at(0.38, { armL: [-1.7, -0.1, 0.35], foreL: [-2.2, -0.3, 0], '+chest': [0, 0.1, 0] }),
+      at(0.55, { armL: [-1.7, -0.1, 0.35], foreL: [-2.2, -0.3, 0], '+chest': [0, 0.1, 0] }),
+      at(0.85, {}), at(1, {})],
+  },
+  // The low block (gedan barai): the arm crossed high over the opposite shoulder, then swept down and out to turn a kick aside.
+  'low-block': {
+    stance: 'karate', from: ['karate', 'boxing', 'wingchun', 'tiger'], hands: 'fist',
+    keys: [at(0, {}),
+      at(0.22, { armL: [-1.25, -0.4, 0.35], foreL: [-1.7, -0.3, 0], armR: [0.45, 0.2, -0.1], foreR: [-1.95, 0.2, 0], '+chest': [0, -0.2, 0] }),
+      at(0.38, { armL: [-0.55, 0.15, 0.3], foreL: [-0.25, 0, 0], '+chest': [0.06, 0.1, 0] }),
+      at(0.55, { armL: [-0.55, 0.15, 0.3], foreL: [-0.25, 0, 0], '+chest': [0.06, 0.1, 0] }),
+      at(0.85, {}), at(1, {})],
+  },
+  // The draw cut (nukitsuke): the blade ripped from the scabbard and across in one stroke, the scabbard hand hauling back, a step into it.
+  nukitsuke: {
+    stance: 'iai', armed: true, oneHanded: true, from: ['iai'], hands: 'fist',
+    keys: [at(0, {}),
+      at(0.2, { '+spine': [0.1, 0.1, 0], '+shinL': [0.2, 0, 0], '+shinR': [0.2, 0, 0] }),
+      at(0.34, { ...hipTurn(0.95), '+chest': [0.04, 0.45, 0], '+neck': [0, -0.5, 0], '+head': [0, -0.3, 0], armR: [-1.45, -0.55, -0.05], foreR: [-0.05, 0, 0], handR: [1.25, 0, 0], armL: [0.35, 0.3, 0.5], foreL: [-0.9, 0, 0], '@root': [0, 0, 0.12] }),
+      at(0.5, { ...hipTurn(0.95), '+chest': [0.04, 0.45, 0], '+neck': [0, -0.5, 0], '+head': [0, -0.3, 0], armR: [-1.45, -0.55, -0.05], foreR: [-0.05, 0, 0], handR: [1.25, 0, 0], armL: [0.35, 0.3, 0.5], foreL: [-0.9, 0, 0], '@root': [0, 0, 0.12] }),
+      at(0.85, {}), at(1, {})],
+  },
+  // Chiburi: the blade flicked out and down to the right, as the blood is shaken off, from a hold at the side.
+  chiburi: {
+    stance: 'kendo', armed: true, oneHanded: true, from: ['kendo', 'hasso', 'jodan', 'gedan'], hands: 'fist',
+    keys: [at(0, {}),
+      at(0.25, { armR: [-1.0, -0.5, -0.45], foreR: [-0.5, 0.1, 0], handR: [0.9, 0, 0], armL: [-0.1, 0, 0.2], foreL: [-0.4, 0, 0] }),
+      at(0.4, { armR: [-0.35, -0.7, -0.55], foreR: [-0.3, 0.1, 0], handR: [-0.1, 0, 0], armL: [-0.1, 0, 0.2], foreL: [-0.4, 0, 0] }),
+      at(0.6, { armR: [-0.35, -0.7, -0.55], foreR: [-0.3, 0.1, 0], handR: [-0.1, 0, 0], armL: [-0.1, 0, 0.2], foreL: [-0.4, 0, 0] }),
+      at(0.9, {}), at(1, {})],
+  },
+  // Noto: the blade laid back along the arm and returned to the scabbard at the hip, slowly, the body settling.
+  noto: {
+    stance: 'iai', armed: true, oneHanded: true, from: ['iai'], hands: 'fist',
+    keys: [at(0, { armR: [-1.45, -0.55, -0.05], foreR: [-0.05, 0, 0], handR: [1.25, 0, 0] }),
+      at(0.4, { armR: [-0.8, -0.1, -0.15], foreR: [-1.4, 0.4, 0], handR: [1.0, 0, 0] }),
+      at(0.8, {}), at(1, {})],
+  },
+  // Men: the kendo strike to the head: the sword raised high, then thrown straight down with a long step in and the arms driven out.
+  men: {
+    stance: 'kendo', armed: true, from: ['kendo', 'jodan'], hands: 'fist',
+    keys: [at(0, {}),
+      at(0.2, { armR: [-2.5, 0.05, -0.2], foreR: [-0.7, 0.1, 0], handR: [0.8, 0, 0], '+chest': [-0.06, 0, 0] }),
+      at(0.34, { armR: [-1.75, 0.05, -0.15], foreR: [-0.2, 0.1, 0], handR: [0.9, 0, 0], '+chest': [0.04, 0, 0], '+spine': [0.03, 0, 0], '@root': [0, 0, 0.35], '+thighR': [-0.45, 0, 0], '+shinR': [0.3, 0, 0], '+thighL': [-0.3, 0, 0], '+shinL': [-0.3, 0, 0] }),
+      at(0.5, { armR: [-1.75, 0.05, -0.15], foreR: [-0.2, 0.1, 0], handR: [0.9, 0, 0], '+chest': [0.04, 0, 0], '+spine': [0.03, 0, 0], '@root': [0, 0, 0.35], '+thighR': [-0.45, 0, 0], '+shinR': [0.3, 0, 0], '+thighL': [-0.3, 0, 0], '+shinL': [-0.3, 0, 0] }),
+      at(0.85, {}), at(1, {})],
   },
   // A rising cut (from low on the left, up through the right shoulder), the blade carried through and recovered.
   rising: {
@@ -445,12 +611,12 @@ export const MOVE_DATA = {
   },
   // The whirling cut: the blade held out level and the whole body turned a full circle behind it.
   whirl: {
-    stance: 'hasso', armed: true, from: ['hasso', 'kendo', 'gedan'], hands: 'fist',
+    stance: 'hasso', armed: true, oneHanded: true, from: ['hasso', 'kendo', 'gedan'], hands: 'fist', pivot: 'R',
     keys: [at(0, {}),
       at(0.2, { '+shinL': [0.3, 0, 0], '+shinR': [0.3, 0, 0], armR: [-1.45, -1.2, -0.05], foreR: [-0.05, 0, 0], handR: [1.25, 0, 0], armL: [-0.4, 0, 0.8] }),
-      at(0.6, { ...hipTurn(-Math.PI * 1.6), '+shinL': [0.3, 0, 0], '+shinR': [0.3, 0, 0], armR: [-1.45, -1.2, -0.05], foreR: [-0.05, 0, 0], handR: [1.25, 0, 0], armL: [-0.4, 0, 0.8] }),
-      at(0.85, { ...hipTurn(-Math.PI * 2), armR: [-1.0, -0.6, -0.05], foreR: [-0.8, 0, 0], handR: [0.8, 0, 0] }),
-      at(1, { ...hipTurn(-Math.PI * 2) })],
+      at(0.6, { '@spin': [-Math.PI * 1.6, 0, 0], '+shinL': [0.3, 0, 0], '+shinR': [0.3, 0, 0], armR: [-1.45, -1.2, -0.05], foreR: [-0.05, 0, 0], handR: [1.25, 0, 0], armL: [-0.4, 0, 0.8] }),
+      at(0.85, { '@spin': [-Math.PI * 2, 0, 0], armR: [-1.0, -0.6, -0.05], foreR: [-0.8, 0, 0], handR: [0.8, 0, 0] }),
+      at(1, { '@spin': [-Math.PI * 2, 0, 0] })],
   },
 };
 
@@ -465,6 +631,21 @@ export function homeOf(move, stance) {
 }
 
 /**
+ * Turns all of him by `angle` about the vertical through where foot `side` stands (the middle between the
+ * feet for 'mid'), as he is posed: so the foot he stands on stays where it is, and turns on it.
+ */
+function spinOn(k, side, angle) {
+  k.compute();
+  const ankle = (S) => k.point(`foot${S}`, k.pivots[k.index.get(`foot${S}`)]);
+  const [l, r] = [ankle('L'), ankle('R')];
+  const at = side === 'mid' ? [(l[0] + r[0]) / 2, 0, (l[2] + r[2]) / 2] : side === 'L' ? l : r;
+  const c = Math.cos(angle), s = Math.sin(angle), root = k.bone('root');
+  root.rot[1] += angle;
+  root.move[0] += at[0] - (at[0] * c + at[2] * s);
+  root.move[2] += at[2] - (-at[0] * s + at[2] * c);
+}
+
+/**
  * Performs move `name` at `t` (0..1): its stance, laid over with the move's keys. Returns the hand shape the move makes.
  */
 export function performMove(k, name, t, T, style = {}) {
@@ -472,6 +653,12 @@ export function performMove(k, name, t, T, style = {}) {
   const flip = data.armed ? style.armed === 'L' : (style.lead ?? data.lead) !== data.lead;
   // A bone the stance leaves alone is as it already is (hanging, say), not at nothing.
   const base = { ...poseOf(data, style) };
+  // The stance's legs as they stand on the floor (the knees settled so both feet are down), for the move to
+  // leave from, so the foot he stands on is not moved by the other leaving the ground.
+  setPose(k, base);
+  plant(k);
+  for (const bone of ['shinL', 'shinR', 'footL', 'footR']) base[bone] = [...k.bone(bone).rot];
+  k.bone('hips').move.fill(0);
   for (const [, pose] of move.keys) for (const bone of Object.keys(pose)) {
     const name = bone.replace(/^\+/, '');
     if (!name.startsWith('@') && !base[name]) base[name] = [...k.bone(name).rot];
@@ -479,6 +666,8 @@ export function performMove(k, name, t, T, style = {}) {
   const keys = flip ? move.keys.map(([u, p]) => [u, mirrorPose(p)]) : move.keys;
   const pose = keyedPose(t, keys, base);
   setPose(k, pose);
+  // A turn about the foot he stands on (or the middle between them): the whole of him turns, that foot with it, and it stays where it is.
+  if (pose['@spin']?.[0]) spinOn(k, move.pivot === 'mid' || !move.pivot ? 'mid' : flip ? (move.pivot === 'L' ? 'R' : 'L') : move.pivot, pose['@spin'][0]);
   const [amp, rate] = data.bounce ?? [0, 0];
   if (amp && t < 0.1) k.move('hips', 0, amp * (Math.sin(T * rate) * 0.5 - 0.5), 0);
   plant(k);
@@ -495,9 +684,29 @@ export const BOWS = Object.freeze({
   deep: { fold: 0.85, hands: 'slide', hold: 0.5 },
   // The fist-in-palm salute (baoquan): the left palm over the right fist at the chest, a short nod of a bow.
   salute: { fold: 0.3, hands: 'salute' },
+  // The kneeling bow (zarei), from seiza: the hands laid on the floor before the knees, the head lowered between them.
+  zarei: { fold: 1.0, hands: 'floor', kneeling: true, hold: 0.45 },
 });
 
 const winOf = (t, a, b) => ease((t - a) / (b - a));
+
+/** The bow from seiza: the body folded forward over the knees and the hands put down flat before them. */
+function kneelingBow(k, t, data) {
+  setPose(k, STANCE_DATA.seiza.pose);
+  const f = data.fold * winOf(t, 0, 0.35) * (1 - winOf(t, 0.35 + data.hold, 1));
+  k.turn('hips', 0.2 * f, 0, 0);
+  k.turn('spine', 0.4 * f, 0, 0);
+  k.turn('chest', 0.3 * f, 0, 0);
+  k.turn('neck', 0.2 * f, 0, 0);
+  k.turn('head', 0.1 * f, 0, 0);
+  // The hands slide forward off the thighs to the floor, the fingers turned in to make a triangle.
+  for (const [S, m] of [['L', 1], ['R', -1]]) {
+    k.turn(`arm${S}`, -0.55 * f, m * -0.35 * f, m * -0.1 * f);
+    k.turn(`fore${S}`, 0.35 * f, 0, 0);
+  }
+  k.move('hips', 0, 0, 0.06 * f);
+  plant(k, true);
+}
 
 /**
  * The bow, `t` 0..1: stood at attention, folded from the hips, held, and up again. The
@@ -509,6 +718,7 @@ export function bow(k, t, style = {}) {
   const data = BOWS[style.bow] ?? BOWS.rei;
   const hold = data.hold ?? 0.3;
   const down = winOf(t, 0, 0.35) * (1 - winOf(t, 0.35 + hold, 1)), f = data.fold * down;
+  if (data.kneeling) return kneelingBow(k, t, data);
   // Heels together, toes a little out.
   for (const [S, m] of [['L', 1], ['R', -1]]) {
     k.bone(`thigh${S}`).rot[2] = -m * -0.03; k.bone(`thigh${S}`).rot[1] = m * 0.1;
@@ -525,8 +735,8 @@ export function bow(k, t, style = {}) {
   k.move('hips', 0, 0, -0.1 * f);
   if (data.hands === 'salute') {
     const up = winOf(t, 0, 0.25) * (1 - winOf(t, 0.75, 1));
-    k.turn('armR', -0.6 * up, 0.3 * up, 0.05 * up); k.turn('foreR', -2.2 * up, 1.05 * up, 0);
-    k.turn('armL', -0.6 * up, -0.3 * up, -0.05 * up); k.turn('foreL', -2.3 * up, -1.1 * up, 0);
+    k.turn('armR', -0.4 * up, 0.1 * up, -0.7 * up); k.turn('foreR', -1.8 * up, 1.3 * up, 0);
+    k.turn('armL', -0.4 * up, -0.1 * up, 0.7 * up); k.turn('foreL', -1.8 * up, -1.3 * up, 0);
   } else {
     // Hands run down the thighs as he folds.
     for (const [S, m] of [['L', 1], ['R', -1]]) { k.turn(`arm${S}`, 0.05 * f, 0, m * 0.05 * f); k.turn(`fore${S}`, -0.05 * f, 0, 0); }
@@ -534,8 +744,11 @@ export function bow(k, t, style = {}) {
   plant(k);
 }
 
+import { DANCE_DATA } from './dance.js';
+
 /** The hand shape (a name in `HAND_POSES`) a fighting clip makes of both hands, or null if it says none. */
 export function fightHands(state = {}, style = {}) {
+  if (state.clip === 'dance') return DANCE_DATA[state.dance ?? style.dance ?? 'bounce']?.hands ?? null;
   if (state.clip === 'stance') return (STANCE_DATA[state.stance ?? style.stance] ?? STANCE_DATA.boxing).hands ?? null;
   if (state.clip === 'attack' && MOVE_DATA[style.attack]) return MOVE_DATA[style.attack].hands ?? null;
   return null;
@@ -543,6 +756,8 @@ export function fightHands(state = {}, style = {}) {
 
 /** Whether the stance he is in (or the one a move is made from) takes the sword in both hands. */
 export function stanceTakesBoth(state = {}, style = {}) {
+  // (A move that lets go with the left hand, the whirl, does.)
+  if (state.clip === 'attack' && MOVE_DATA[style.attack]?.oneHanded) return false;
   const name = state.clip === 'attack' && MOVE_DATA[style.attack] ? homeOf(style.attack, style.stance) : state.stance ?? style.stance;
   return !!STANCE_DATA[name]?.both;
 }

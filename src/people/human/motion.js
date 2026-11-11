@@ -1,5 +1,6 @@
 import { JOINTS } from './skeleton.js';
 import { bow, holdStance, MOVE_DATA, performMove } from './martial.js';
+import { dance } from './dance.js';
 
 /**
  * How the human moves: the engine's movement clips (idle, walk, run, jump,
@@ -15,7 +16,7 @@ import { bow, holdStance, MOVE_DATA, performMove } from './martial.js';
  * `heavy` (0..1, slower and deeper).
  */
 
-export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'flip', 'talk', 'yell', 'stance', 'bow']);
+export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'flip', 'talk', 'yell', 'stance', 'bow', 'dance']);
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
@@ -431,6 +432,7 @@ export function moveHuman(k, state = {}, style = {}) {
     case 'run': run(k, T, speed, heavy, armed); break;
     case 'jump': case 'leap': jump(k, t, clip === 'leap', armed); break;
     case 'attack': attack(k, t, style, T); break;
+    case 'dance': dance(k, state.dance ?? style.dance ?? 'bounce', T, speed); break;
     case 'bow': bow(k, t, { ...style, bow: state.bow ?? style.bow }); break;
     case 'stance': holdStance(k, state.stance ?? style.stance ?? 'boxing', T, style); break;
     case 'cast': {

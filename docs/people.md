@@ -418,6 +418,8 @@ they were the frame before, so they move smoothly (`people/human/carry.js`).
 
 ## Fighting
 
+![Thirty-six poses: boxing, kung fu, karate, kendo, iaido and dance](i-know-kung-fu.png)
+
 `people/human/martial.js` is the human's martial vocabulary: stances to stand in, moves to make from
 them, and a bow. They are written as absolute poses of the rig's own bones, laid over each other, so a
 move leaves from its stance and ends in it, and one flows into the next.
@@ -429,27 +431,49 @@ man.pose({ clip: 'attack', t, time });       // the cross, from that stance
 man.pose({ clip: 'bow', t, bow: 'rei' });    // 0..1: down, held, up
 ```
 
-**Stances** (`STANCES`, `style.stance`, the `stance` clip): `boxing` (orthodox, chin down behind the lead
-shoulder), `karate` (front stance, zenkutsu-dachi, lead forearm blocking, the other fist at the hip),
-`horse` (kung fu's ma bu: feet two shoulder widths apart, thighs near level, fists at the hips), `crane`
-(all the weight on one leg, the other knee drawn high, one hand a beak, one arm a wing), `muaythai`,
-`taekwondo` (bladed and bouncy), `taiji` (a bow stance with the arm rounded in ward-off),
-and, with a blade in the hand, `fencing` (en garde), `kendo` (chudan-no-kamae, both hands on the grip, the
-point at the throat), `hasso` (the blade upright by the shoulder), `waki` (the blade hidden behind the hip)
-and `gedan` (the point low). A blade stance is written for the right hand and mirrored for a blade in the
-left; the others are written for a left lead, and `style.lead: 'R'` stands him southpaw.
+**Stances** (`STANCES`, `style.stance`, the `stance` clip), by tradition:
+
+- Boxing and kickboxing: `boxing` (orthodox, chin down behind the lead shoulder), `muaythai`, `taekwondo` (bladed and bouncy).
+- Karate: `karate` (front stance, zenkutsu-dachi, lead forearm blocking, the other fist at the hip).
+- Kung fu: `horse` (ma bu: feet two shoulder widths apart, thighs near level, fists at the hips), `tiger`
+  (a long bow stance, claw hands), `cat` (xu bu: the weight sunk on the back leg, the front foot light),
+  `crane` (all the weight on one leg, the other knee drawn high, one hand a beak, one arm a wing),
+  `wingchun` (yi ji kim yeung ma: knees turned in, tan sao before the chest) and `beckon` (come on: the
+  lead hand drawing you in); and `taiji`, a bow stance with the arm rounded in ward-off.
+- Swordplay, with a blade in the hand: `fencing` (en garde), `kendo` (chudan-no-kamae, both hands on the grip,
+  the point at the throat), `hasso` (the blade upright by the shoulder), `jodan` (held high above the head),
+  `waki` (the blade hidden behind the hip), `gedan` (the point low) and `iai` (crouched to draw, the other
+  hand on the scabbard).
+- `seiza`: kneeling, sat back on the heels, the hands on the thighs.
+
+A blade stance is written for the right hand and mirrored for a blade in the left; the others are written
+for a left lead, and `style.lead: 'R'` stands him southpaw.
 
 **Moves** (`MOVES`, `style.attack`, the `attack` clip, `t` 0..1, beside `slash`, `chop`, `thrust`, `smite`,
-`punch` and `shove`): the strikes `jab`, `cross`, `hook`, `uppercut`, `elbow`, `palm`, `shuto` (a knife-hand);
-the kicks `front-kick`, `roundhouse`, `side-kick`, `knee` and the spinning `back-kick`; and, with a blade
-(`BLADE_MOVES`), the rising cut `rising`, the horizontal `sweep`, the fencing `lunge`, `parry`, `riposte` (a
-parry answered by a lunge) and the full-turn `whirl`. A move is made from its own stance, or from the one he is
-in if the move can be made from it (a punch from any guard); a move that is not given a stance is made from
-its own. With a two-handed weapon (or from kendo's and hasso's guards) the left hand closes on the grip.
+`punch` and `shove`):
+
+- Strikes: `jab`, `cross`, `hook`, `uppercut`, `elbow`, `palm`, `shuto` (a knife-hand).
+- Kicks: `front-kick`, `roundhouse`, `side-kick`, `knee`, the spinning `back-kick`, and the low `sweep-kick`.
+  The standing foot stays where it is and turns on it.
+- Kung fu: `chain-punch` (Wing Chun's three up the centre line), `tiger-claw`, `crane-strike`, and the blocks
+  `high-block` and `low-block`.
+- With a blade (`BLADE_MOVES`): the rising cut `rising`, the horizontal `sweep`, the fencing `lunge`, `parry` and
+  `riposte` (a parry answered by a lunge), the full-turn `whirl`, and the Japanese `nukitsuke` (the draw cut),
+  `chiburi` (the flick that shakes the blood off), `noto` (back into the scabbard) and `men` (the kendo strike to the head).
+
+A move is made from its own stance, or from the one he is in if the move can be made from it (a punch from any
+guard). With a two-handed weapon (or from kendo's, hasso's and jodan's guards) the left hand closes on the grip,
+kept out of his body as it goes. The moves are written for any sword: the banana broadsword stands in for the
+katana until there is one, and a two-handed blade is taken in both hands from the guards that call for it.
 
 **Bows** (`BOWS`, `style.bow` or `state.bow`): `rei` (a standing bow of about thirty degrees, hands sliding down
-the thighs), `deep` (the formal bow, lower and held longer) and `salute` (the fist in the palm at the chest,
-a nod).
+the thighs), `deep` (the formal bow, lower and held longer), `salute` (the fist in the palm at the chest, a nod)
+and `zarei` (the kneeling bow, from seiza, the hands laid on the floor).
+
+**Dances** (`DANCES`, `style.dance` or `state.dance`, the `dance` clip): `disco` (one arm thrown up to point and
+swung down across), `twist`, `robot` (square poses, snapped on), `moonwalk`, `sidestep` (a step-touch) and `bounce`
+(loose knees on the beat). Each loops in exactly its own `period` of the clip's `time` (`speed` plays it faster
+or slower), and keeps its feet on the floor.
 
 Feet stay on the floor whatever the legs do (`plant` in martial.js): the hips are lowered or raised to put
 the lowest sole on the ground, and a foot that is nearly down has its leg straightened to meet it, less and less

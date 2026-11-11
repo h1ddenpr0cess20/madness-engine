@@ -321,9 +321,9 @@ sneakers; or your own), which hide what they cover so nothing shows
 through. 66 bones: the engine's movement clips (plus `yell`), and
 collarbones, three bones a finger, toes, jaw and tongue, eyes, lids, brows,
 lips and the mouth's corners; he talks and shouts with his mouth. `man.hold(sword)` puts a weapon in his hand. He fights:
-a dozen stances (boxing, karate, kung fu's horse and crane, muay thai, taekwondo, fencing, kendo...),
-strikes, kicks and sword cuts made from them, and a bow (`style.stance`, `style.attack`, the `stance` and `bow`
-clips). See [docs/people.md](docs/people.md).
+stances from boxing, karate, kung fu (horse, tiger, crane, cat, Wing Chun), muay thai, taekwondo, fencing,
+kendo and iaido, strikes, kicks, blocks and sword cuts made from them, and a standing and a kneeling bow
+(`style.stance`, `style.attack`, the `stance` and `bow` clips). See [docs/people.md](docs/people.md).
 
 The asset viewer saves a screenshot (P) and records an animated GIF (V) of what is on screen: of the animation
 playing, or of a full turn round the model.
