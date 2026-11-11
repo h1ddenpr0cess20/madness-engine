@@ -90,6 +90,23 @@ game-ready adult man:
 He stands on y = 0, facing +z, his left toward +x, in a 12° A-pose (arms
 out from the sides) for rigging; every clip brings the arms down to hang.
 
+## The robot
+
+`createRobot(GFX, { finish, color, accent })` is a separate model made by editing
+the man: his mesh, rig, skin weights and clips, with proportions reworked for a
+heroic humanoid machine (about 2.0 m; broad chest and shoulders, narrow waist,
+long legs, big hands and feet, a short thick neck; see `ROBOT_PROPORTIONS`).
+His flesh is replaced by resin (cast like the dice: glossy, clearcoated) or a
+metal (`METALS`: brushed steel, chrome, gunmetal, titanium, brass, copper, black
+steel), and his eyes glow in `accent`.
+
+```js
+const bot = createRobot(GFX, { finish: 'brushed steel', accent: '#39d0ff' });
+bot.setFinish('resin', { color: '#c8202a' });
+bot.setFinish('chrome');
+bot.setAccent('#ffb030');
+```
+
 ## Use
 
 ```js
