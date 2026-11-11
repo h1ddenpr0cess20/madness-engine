@@ -27,6 +27,9 @@ export const ROBOT_BUILDS = Object.freeze({
   heavy: { limb: 1.38, torso: 1.2, depth: 0.76, shoulder: 1.3, neck: 1.35, head: 1.1, hip: 1.2, hand: 1.15, foot: 1.2, plated: true },
 });
 
+/** How the head is set on the neck: tilted forward, and cocked to one side, in radians. */
+export const HEAD_TILT = Object.freeze([0.1, 0.1]);
+
 export function robotParts(build = 'standard') {
   const G = ROBOT_BUILDS[build];
   if (!G) throw new Error(`robot: build is one of ${Object.keys(ROBOT_BUILDS).join(', ')}, not ${build}`);
@@ -72,10 +75,15 @@ export function robotParts(build = 'standard') {
   // ———————————————————————————————— neck and head
   M.cylinder('metal', 'neck', V(0, 1.47, 0.012), V(0, 1.6, 0.025), 0.03 * NK, { ch: 0.003, squash: 1 });
   for (let i = 0; i < 4; i++) M.cylinder('rubber', 'neck', V(0, 1.485 + i * 0.026, 0.014 + i * 0.002), V(0, 1.494 + i * 0.026, 0.015 + i * 0.002), 0.034 * NK, { ch: 0.002 });
-  // The head: a small smooth shell, plain, with no face.
-  M.lathe('plate', 'head', V(0, 1.6, 0.03), V(0, 1.795, 0.03), [
-    [0, 0], [0.005, 0.05], [0.03, 0.073], [0.075, 0.087], [0.12, 0.086], [0.16, 0.07], [0.185, 0.04], [0.195, 0],
-  ].map(([s, r]) => [s, r * HD]), { segs: 28, squash: 1.05 });
+  // The head: a smooth oval (an ellipsoid, taller than it is wide), plain with no face, set on the neck a little tilted
+  // (HEAD_TILT: forward and to the side, in radians).
+  const H = 0.21 * (1 + (HD - 1) * 0.5), A = 0.077 * HD;
+  const oval = [];
+  for (let i = 0; i <= 14; i++) { const t = i / 14, e = 2 * t - 1; oval.push([H * t, A * Math.sqrt(Math.max(0, 1 - e * e))]); }
+  const [fwd, side] = HEAD_TILT;
+  const base = V(0, 1.595, 0.03);
+  const up = [Math.sin(side), Math.cos(side) * Math.cos(fwd), Math.sin(fwd)];
+  M.lathe('plate', 'head', base, add(base, scale(up, H)), oval, { segs: 32, squash: 1.12 });
 
   // ———————————————————————————————— the arms
   for (const m of [1, -1]) {

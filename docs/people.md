@@ -93,7 +93,7 @@ out from the sides) for rigging; every clip brings the arms down to hang.
 ## The robot
 
 `createRobot(GFX, options)` is a separate model: a slim, sleek humanoid (smooth
-shells, a plain head, exposed actuators, black five-fingered hands) built from
+shells, a plain oval head set on the neck a little tilted, exposed actuators, black five-fingered hands) built from
 machine components, with the man's joints, limbs and trunk as the shape guide
 and his rig to move it, so it plays the same clips. His own skin is hidden. The
 components are laid out in `people/robot-build.js`, from the rigid-part builder
