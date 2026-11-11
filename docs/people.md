@@ -92,19 +92,28 @@ out from the sides) for rigging; every clip brings the arms down to hang.
 
 ## The robot
 
-`createRobot(GFX, { finish, color, accent })` is a separate model made by editing
-the man: his mesh, rig, skin weights and clips, with proportions reworked for a
-heroic humanoid machine (about 2.0 m; broad chest and shoulders, narrow waist,
-long legs, big hands and feet, a short thick neck; see `ROBOT_PROPORTIONS`).
-His flesh is replaced by resin (cast like the dice: glossy, clearcoated) or a
-metal (`METALS`: brushed steel, chrome, gunmetal, titanium, brass, copper, black
-steel), and his eyes glow in `accent`.
+`createRobot(GFX, options)` is a separate model: a slim, sleek humanoid (smooth
+shells, a plain head, exposed actuators, black five-fingered hands) built from
+machine components, with the man's joints, limbs and trunk as the shape guide
+and his rig to move it, so it plays the same clips. His own skin is hidden. The
+components are laid out in `people/robot-build.js`, from the rigid-part builder
+in `people/robot-parts.js` (chamfered boxes, lathed shells and joints, each
+bound whole to one bone).
+
+Outside resin, inside metal. The shell and trim panels are resin in any color
+(`RESIN_COLORS`, or any `#rrggbb`); the shell can instead be any of the engine's
+metals (`METALS`, the dice and globes' list) or wood (`WOOD_SPECIES`, lacquered).
+The frame inside (joints, actuators, rods) is a metal of its own.
 
 ```js
-const bot = createRobot(GFX, { finish: 'brushed steel', accent: '#39d0ff' });
-bot.setFinish('resin', { color: '#c8202a' });
-bot.setFinish('chrome');
-bot.setAccent('#ffb030');
+const bot = createRobot(GFX, { color: 'white', trim: 'grey', frame: 'titanium' });
+bot.setShell('resin', { color: '#c8202a' });   // glossy red resin
+bot.setShell('metal', { metal: 'chrome' });    // any METALS finish
+bot.setShell('wood', { wood: 'walnut' });      // any WOOD_SPECIES
+bot.setTrim('orange');
+bot.setFrame('gold');
+bot.setAccent('#39d0ff');
+bot.finish;                                    // what it is made of now
 ```
 
 ## Use

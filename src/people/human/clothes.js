@@ -696,7 +696,7 @@ function hangFromHips(parts, { round = false } = {}) {
  */
 const seated = (z) => z < JOINTS.hip[2] - 0.03;
 
-function tag(parts, name) {
+export function tag(parts, name) {
   for (const part of parts) part.zones = part.zones.map((z, v) => ({ d: 0, ...z, zone: name, on: z?.zone === part.name ? null : z?.zone ?? null, y: part.pos[v * 3 + 1], sx: part.pos[v * 3], z: part.pos[v * 3 + 2] }));
   return parts;
 }
