@@ -1219,7 +1219,9 @@ function jacketTrims(shell, open) {
     let L = 0;
     collar.grid(rows.length - 1, C, (i, j) => {
       if (j === 0 && i > 0) L += len(sub(ring[i].p, ring[i - 1].p));
-      return { p: rows[i][j], uv: [j / C, L * 40], w: ring[i].w, tint: j >= 5 ? 0.6 : 1 };
+      // (A knit rib's stripes run up it, close; a woven collar's weave is not stretched to them.)
+      const knit = (J.ribTrim ?? 'ribTrim') !== (J.material ?? 'leather');
+      return { p: rows[i][j], uv: knit ? [j / C, L * 40] : [j / C * 0.25, L * 6], w: ring[i].w, tint: j >= 5 ? 0.6 : 1 };
     }, { flip: true });
   }
 
@@ -1228,11 +1230,13 @@ function jacketTrims(shell, open) {
     const y0 = J.buttonBottom ?? J.hem + 0.03, y1 = J.buttonTop ?? jacketNeck(0) - 0.03, n = J.buttons;
     for (let i = 0; i < n; i++) {
       const h = front(0, n > 1 ? y0 + (y1 - y0) * (i / (n - 1)) : y0);
-      if (h) box(metal, add(h.p, scale(h.n, 0.0016)), [1, 0, 0], [0, 1, 0], h.n, [J.buttonSize ?? 0.0055, J.buttonSize ?? 0.0055, 0.0016], h.w);
+      // (Standing on the placket, when there is one, not sunk in it.)
+      if (h) box(metal, add(h.p, scale(h.n, J.placket ? 0.0042 : 0.0018)), [1, 0, 0], [0, 1, 0], h.n, [J.buttonSize ?? 0.0055, J.buttonSize ?? 0.0055, 0.0014], h.w);
     }
     if (J.placket) {
       const fz = along(40, (t) => front(0, J.hem + 0.01 + (jacketNeck(0) - J.hem - 0.02) * t));
-      strip(tape, fz.map((h) => ({ ...h, p: add(h.p, scale(h.n, 0.0004)) })), 0.03, (u, x) => 0.0012 * (1 - x ** 4));
+      // (Clear of the cloth under it all the way to its edges, so the two never fight.)
+      strip(tape, fz.map((h) => ({ ...h, p: add(h.p, scale(h.n, 0.002)) })), 0.026, (u, x) => 0.0006 + 0.0008 * (1 - x ** 4));
     }
   } else if (J.zip === false) {
     // (nothing down the front)
