@@ -9,6 +9,7 @@ import { BONES as BAKED_BONES } from './human/data/base.js';
 import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor } from './human/clothes.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
+import { BLADE_MOVES, fightHands, MOVES, stanceTakesBoth } from './human/martial.js';
 import { BUILDS, checkFeatures, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES } from './human/features.js';
 import { BEARDS, BROWS, buildBeard, buildBrows, buildHair, hairTexture, HAIRSTYLES } from './human/hair.js';
 import { armDepth, clearArms, measure } from './human/clearance.js';
@@ -367,6 +368,10 @@ export const HAND_POSES = Object.freeze({
   loose: { curl: [0.55, 0.75, 0.45], thumb: 0.45, spread: 0 },
   fist: { curl: [1.0, 1.0, 0.4], thumb: 1, spread: 0 },
   point: { curl: [1.0, 1.0, 0.4], thumb: 0.9, spread: 0, straight: ['index'] },
+  // The hand held flat, edge on, the thumb tucked in beside it (a knife-hand).
+  blade: { curl: [0, 0.03, 0.02], thumb: 0.55, spread: 0 },
+  // The fingers hooked and spread, as a tiger's claw.
+  claw: { curl: [0.45, 0.6, 0.35], thumb: 0.35, spread: 0.7 },
   // A ball on the palm: the fingers round under it.
   cup: { curl: [0.38, 0.45, 0.3], thumb: 0.35, spread: 0.3 },
   // A coin between the thumb and forefinger: the others tucked out of the way.
@@ -421,7 +426,7 @@ const handAxesMale = HAND_AXES.male;
 // The swings made with both hands on the grip, whatever the weapon; and the swings a two-handed weapon
 // (its `handling.hands`, see weapons/categories) is always swung with both.
 const TWO_HANDED = new Set(['chop']);
-const WEAPON_SWINGS = new Set(['slash', 'chop', 'thrust', 'smite']), UNARMED = new Set(['punch', 'shove']);
+const WEAPON_SWINGS = new Set(['slash', 'chop', 'thrust', 'smite', ...BLADE_MOVES]), UNARMED = new Set(['punch', 'shove', ...MOVES.filter((m) => !BLADE_MOVES.includes(m))]);
 
 // Where a held grip's middle sits in the (left) hand at rest, and how its axis tilts: his, and hers (the same place in her hand).
 const GRIP_AT = [0.283, 0.79, 0.04], GRIP_TILT = -0.05;
@@ -873,6 +878,8 @@ export function createHuman(GFX, options = {}) {
    * and in every weapon swing of a weapon made for two.
    */
   function twoHanded(state) {
+    // Held in a stance made with both hands (kendo's middle guard), or in the moves made from one.
+    if (held.R?.how === 'grip' && !held.L && ((state.clip === 'stance' || state.clip === 'attack') && stanceTakesBoth(state, style))) return 1;
     if (state.clip !== 'attack') return 0;
     // As the motion does: a swing it does not know is a slash.
     const swing = WEAPON_SWINGS.has(style.attack) || UNARMED.has(style.attack) ? style.attack : 'slash';
@@ -886,7 +893,7 @@ export function createHuman(GFX, options = {}) {
    * of the way) so the left hand closes on the right hand's weapon below
    * it, along the grip, its knuckles the same way as the right's.
    */
-  function bothHands(amount) {
+  function bothHands(amount, clear = 0) {
     const h = held.R;
     skeleton.compute();
     const o = skeleton.index.get('handR') * 12, B = skeleton.matrices;
@@ -908,7 +915,8 @@ export function createHuman(GFX, options = {}) {
       const p = skeleton.point('handL', grip);
       const dp = (p[0] - target.x) ** 2 + (p[1] - target.y) ** 2 + (p[2] - target.z) ** 2;
       const da = 1 - dirOf('handL', along).dot(axis), db = 1 - dirOf('handL', [1, 0, 0]).dot(back);
-      return dp + 0.004 * da + 0.0015 * db;
+      // And the arm kept out of the body (and what he wears) on the way there: the elbow goes out, not in.
+      return dp + 0.004 * da + 0.0015 * db + (clear ? clear * armDepth(skeleton, clearance).L ** 2 : 0);
     };
     let best = cost(), step = 0.25;
     for (let it = 0; it < 40 && step > 0.004; it++) {
@@ -1179,7 +1187,8 @@ export function createHuman(GFX, options = {}) {
       // The swinging arm kept out of his body first, then the left hand put on the grip where that leaves it.
       skeleton.compute();
       if (clearArms(skeleton, clearance, skeleton.pivots, ['R'])) skeleton.compute();
-      bothHands(grip);
+      // (The fighting stances and moves keep the arm out of the body on the way; the old swings are as they were.)
+      bothHands(grip, state.clip === 'stance' || (state.clip === 'attack' && MOVES.includes(style.attack)) ? 25 : 0);
     }
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
@@ -1187,6 +1196,8 @@ export function createHuman(GFX, options = {}) {
       const shape = how === 'tome' ? { ...HAND_POSES.tome, out: held[S].out }
         : how && how !== 'grip' ? HAND_POSES[{ palm: 'cup', pinch: 'pinch', book: 'book', tome: 'tome', bowl: 'bowl' }[how]]
         : held[S] || (S === 'L' && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
+        // Fighting, the hands make the shape the stance or move calls for.
+        : fightHands(state, style) && want === 'relaxed' ? HAND_POSES[fightHands(state, style)]
         // Running, a hand that was left easy closes loosely.
         : state.clip === 'run' && want === 'relaxed' ? HAND_POSES.loose
         : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;
@@ -1599,7 +1610,7 @@ export function createHuman(GFX, options = {}) {
       return api;
     },
     pose,
-    /** How he moves: { attack: 'slash' | 'chop' | 'thrust' | 'smite' | 'punch' | 'shove', heavy: 0..1, after(skeleton, state) }. */
+    /** How he moves: { attack: a swing or move (`MOVES`), stance (`STANCES`), lead, bow, heavy: 0..1, after(skeleton, state) }. */
     setStyle(next) { style = next; return api; },
     face(change) { face = { ...face, ...change }; if (last) pose(last); return api; },
     get faceState() { return { ...face }; },

@@ -1,4 +1,6 @@
 import { JOINTS } from './skeleton.js';
+import { bow, holdStance, MOVE_DATA, performMove } from './martial.js';
+import { dance } from './dance.js';
 
 /**
  * How the human moves: the engine's movement clips (idle, walk, run, jump,
@@ -14,7 +16,7 @@ import { JOINTS } from './skeleton.js';
  * `heavy` (0..1, slower and deeper).
  */
 
-export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'flip', 'talk', 'yell']);
+export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'flip', 'talk', 'yell', 'stance', 'bow', 'dance']);
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
@@ -341,10 +343,12 @@ const BOTH = Object.fromEntries(Object.entries({
   ],
 }).map(([name, keys]) => [name, keys.map(mirrored)]));
 
-function attack(k, t, style) {
+function attack(k, t, style, T = 0) {
   const heavy = style.heavy ?? 0;
   // Heavier is slower into the swing (the same shape, later).
   const tt = heavy ? Math.min(1, t / (1 + heavy * 0.25)) : t;
+  // A fighting move (martial.js): made from its stance, ending in it.
+  if (MOVE_DATA[style.attack]) { performMove(k, style.attack, tt, T, style); return; }
   const kind = SWINGS[style.attack] ? style.attack : 'slash';
   // A step into it with the left foot, the weight going onto it as the blow lands, then back.
   const s = win(tt, 0.2, 0.36) * (1 - win(tt, 0.6, 0.92));
@@ -427,7 +431,10 @@ export function moveHuman(k, state = {}, style = {}) {
     case 'walk': walk(k, T, speed, heavy, armed); break;
     case 'run': run(k, T, speed, heavy, armed); break;
     case 'jump': case 'leap': jump(k, t, clip === 'leap', armed); break;
-    case 'attack': attack(k, t, style); break;
+    case 'attack': attack(k, t, style, T); break;
+    case 'dance': dance(k, state.dance ?? style.dance ?? 'bounce', T, speed); break;
+    case 'bow': bow(k, t, { ...style, bow: state.bow ?? style.bow }); break;
+    case 'stance': holdStance(k, state.stance ?? style.stance ?? 'boxing', T, style); break;
     case 'cast': {
       const up = win(t, 0, 0.3), go = win(t, 0.3, 0.42), back = win(t, 0.65, 1), lift = up * (1 - back);
       k.turn('chest', -0.12 * lift + 0.08 * go * (1 - back), 0, 0);

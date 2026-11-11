@@ -110,12 +110,19 @@
           <div class="line"><label>Speed</label><input id="speed" type="range" min="0" max="2" step="0.05" value="1" /></div>
           <div class="line"><label>Detail</label><select id="detail"><option value="1">1 (near)</option><option value="0.5">0.5 (far)</option><option value="1.5">1.5 (fine)</option></select></div>
         </div>
+        <div class="group" id="capturegroup"><h3>Capture</h3>
+          <div class="line"><button id="shotbtn" title="Save the view as a PNG (P)">Screenshot (P)</button><button id="gifbtn" title="Record an animated GIF (V)">Record GIF (V)</button></div>
+          <div class="line"><label>GIF of</label><select id="capmode"><option value="animation">the animation</option><option value="turntable">a full turn</option></select></div>
+          <div class="line"><label>Width</label><select id="capsize"><option value="320">320</option><option value="480" selected>480</option><option value="640">640</option><option value="800">800</option></select><label>Frames/s</label><select id="capfps"><option value="10">10</option><option value="15" selected>15</option><option value="20">20</option><option value="25">25</option></select></div>
+          <div class="line"><label>Seconds</label><input id="capsecs" type="number" min="0.5" max="12" step="0.1" value="1.6" style="width:72px" /><span style="color:var(--dim)" id="capstatus"></span></div>
+          <div id="capresult" style="display:none;gap:6px"><img id="capimg" alt="" style="max-width:100%;border-radius:6px;border:1px solid var(--line)" /><div class="line"><a id="capsave" style="color:var(--accent)">Save</a><span style="color:var(--dim)" id="capinfo"></span></div></div>
+        </div>
         <div class="group"><h3>Info</h3><dl class="stats" id="stats"></dl><div id="err"></div></div>
         <div class="group"><h3>Flags</h3>
           <div class="line"><button id="copyflags">Copy for Claude</button><button id="dlflags">Download JSON</button></div>
           <div id="flagsummary" style="color:var(--dim)"></div>
         </div>
-        <div class="group"><h3>Keys</h3><div style="color:var(--dim)"><kbd>J</kbd>/<kbd>K</kbd> next / previous · <kbd>1</kbd>–<kbd>8</kbd> views · <kbd>F</kbd> flag · <kbd>T</kbd> turntable · <kbd>C</kbd> all angles · <kbd>M</kbd> mark areas · <kbd>R</kbd> reset the model · <kbd>/</kbd> search. Drag to orbit, wheel to zoom, right-drag to pan.</div></div>
+        <div class="group"><h3>Keys</h3><div style="color:var(--dim)"><kbd>J</kbd>/<kbd>K</kbd> next / previous · <kbd>1</kbd>–<kbd>8</kbd> views · <kbd>F</kbd> flag · <kbd>T</kbd> turntable · <kbd>C</kbd> all angles · <kbd>P</kbd> screenshot · <kbd>V</kbd> record a GIF · <kbd>M</kbd> mark areas · <kbd>R</kbd> reset the model · <kbd>/</kbd> search. Drag to orbit, wheel to zoom, right-drag to pan.</div></div>
       </aside>
     </div>
     <script type="module" src="/src/main.js"></script>
