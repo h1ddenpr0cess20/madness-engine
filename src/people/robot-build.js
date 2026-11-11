@@ -6,7 +6,7 @@ import { add, scale, sub } from './human/kit.js';
  * The robot's components, laid out along the man's skeleton as a guide: his
  * joints say where the machine bends, his limbs how long each part is, his
  * trunk and head how big to build round them. The look is an angular,
- * aggressive humanoid (a V-shaped torso lofted in hard planes, flat armored shoulders, a plain wedge head, exposed
+ * aggressive humanoid (a V-shaped torso lofted in hard planes, flat armored shoulders, a plain wedge head (no decor), exposed
  * linear actuators on the limbs, black five-fingered hands, feet like a
  * person's). The outer shell (`plate`, and `trim` for the second color) is
  * resin, wood or metal as chosen; what it covers (`metal`: the frame,
@@ -55,7 +55,7 @@ export function robotParts(build = 'standard') {
 
   // ———————————————————————————————— the trunk
   // The chest shell: a V-shaped torso, broad and flat across the shoulders and cut in to the waist, its front a hard plane.
-  const front = (y) => 0.1 * T * (D / 0.62) * 1.0 - 0.01;
+  const front = () => 0.1 * T * (D / 0.62) - 0.01;
   M.loft('plate', 'chest', [
     { y: 1.12, w: 0.085 * T, d: 0.07 * T * (D / 0.62), cz: -0.01, n: 2.6 },
     { y: 1.22, w: 0.12 * T, d: 0.082 * T * (D / 0.62), cz: -0.01, n: 3 },
@@ -65,8 +65,8 @@ export function robotParts(build = 'standard') {
     { y: 1.49, w: 0.15 * T, d: 0.065 * T * (D / 0.62), cz: -0.015, n: 5 },
   ], { segs: 32 });
   // A black panel across the upper chest, with a status light.
-  M.box('rubber', 'chest', V(0, 1.4, front(1.4) + 0.001), [0.1 * T, 0.02, 0.006], { bevel: 0.004 });
-  M.box('glow', 'chest', V(0, 1.4, front(1.4) + 0.0075), [0.012, 0.003, 0.002], { bevel: 0.001 });
+  M.box('rubber', 'chest', V(0, 1.4, front() + 0.001), [0.1 * T, 0.02, 0.006], { bevel: 0.004 });
+  M.box('glow', 'chest', V(0, 1.4, front() + 0.0075), [0.012, 0.003, 0.002], { bevel: 0.001 });
   // Trim: a hard band at the base of the chest, and a collar.
   M.loft('trim', 'chest', [
     { y: 1.125, w: 0.09 * T, d: 0.075 * T * (D / 0.62), cz: -0.01, n: 2.6 },
@@ -91,7 +91,7 @@ export function robotParts(build = 'standard') {
   M.cylinder('metal', 'neck', V(0, 1.47, 0.012), V(0, 1.6, 0.025), 0.03 * NK, { ch: 0.003, squash: 1 });
   for (let i = 0; i < 4; i++) M.cylinder('rubber', 'neck', V(0, 1.485 + i * 0.026, 0.014 + i * 0.002), V(0, 1.494 + i * 0.026, 0.015 + i * 0.002), 0.034 * NK, { ch: 0.002 });
   // The head: a wedge, a hard brow tapering to a narrow chin (a triangle from the front), plain with no face, set forward on the neck
-  // (HEAD_TILT: forward and to the side, in radians). A brow plate over it, and a blade back of each cheek.
+  // (HEAD_TILT: forward and to the side, in radians).
   const [fwd, side] = HEAD_TILT, yb = 1.595;
   const shear = (r) => ({ ...r, cx: Math.tan(side) * (r.y - yb), cz: 0.03 + Math.tan(fwd) * (r.y - yb) + (r.cz ?? 0) });
   M.loft('plate', 'head', [
@@ -102,10 +102,6 @@ export function robotParts(build = 'standard') {
     { y: yb + 0.18, w: 0.086 * HD, d: 0.075 * HD, n: 4 },
     { y: yb + 0.205, w: 0.06 * HD, d: 0.05 * HD, n: 3 },
   ].map(shear), { segs: 28 });
-  // The brow: a slab across the front above the eye line, angled down at the middle.
-  M.box('trim', 'head', V(Math.tan(side) * 0.1, yb + 0.15, 0.03 + Math.tan(fwd) * 0.15 + 0.062 * HD), [0.075 * HD, 0.011, 0.02], { bevel: 0.006, f: { x: [1, 0, 0], y: [0, Math.cos(0.5), -Math.sin(0.5)], z: [0, Math.sin(0.5), Math.cos(0.5)] } });
-  // Cheek blades: a thin wedge back of each side of the head, angled out and up.
-  for (const m of [1, -1]) M.box('trim', 'head', V(m * 0.092 * HD + Math.tan(side) * 0.1, yb + 0.1, 0.0 + Math.tan(fwd) * 0.1), [0.006, 0.032, 0.04], { bevel: 0.003, f: { x: [Math.cos(0.3), m * Math.sin(0.3), 0], y: [-m * Math.sin(0.3), Math.cos(0.3), 0], z: [0, 0, 1] } });
 
   // ———————————————————————————————— the arms
   for (const m of [1, -1]) {
