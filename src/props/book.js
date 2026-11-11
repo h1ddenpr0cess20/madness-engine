@@ -50,6 +50,9 @@ const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const smooth = (t) => { t = clamp(t); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 
+/** How big a 'low' cover is painted, square: its colours and shapes for a book seen from afar, the detail left out. */
+export const LOW_SIZE = 64;
+
 export const DEFAULTS = {
   title: DEFAULT_TITLE,
   subtitle: DEFAULT_SUBTITLE,
@@ -79,6 +82,7 @@ export const DEFAULTS = {
   textureSize: 2048,    // the cover's picture, square: 1024 is plenty for a book on a shelf
   bump: true,           // the cover's relief (the foil and grain standing proud)
   deferPages: false,    // write the pages only once the book is opened (a book on a shelf, shut)
+  coverDetail: 'full',  // 'low' paints the cover small (LOW_SIZE, no relief), for a book seen from afar; `setCoverDetail` changes it
 };
 
 /* ------------------------------------------------------------------ */
@@ -364,12 +368,15 @@ export function createBook(GFX, options = {}) {
   group.add(coverMesh);
 
   /** The cover's leather, foil, emblem and title: painted again whenever the style changes. */
+  let coverDetail = o.coverDetail;
+  if (coverDetail !== 'full' && coverDetail !== 'low') throw new Error(`book: unknown coverDetail ${coverDetail}`);
   const paintCoverTextures = () => {
     if (!canPaint) { clothMaterial.color.set(style.cloth); return; }
-    const spec = { L: coverLength, Hc: coverHeight, boardLength, frontStart, spineStart, spine, ...style, endpaper: o.endpaper, bookplate: o.bookplate, seed: 7, textureSize: o.textureSize };
+    const full = coverDetail === 'full';
+    const spec = { L: coverLength, Hc: coverHeight, boardLength, frontStart, spineStart, spine, ...style, endpaper: o.endpaper, bookplate: o.bookplate, seed: 7, textureSize: full ? o.textureSize : LOW_SIZE };
     clothMaterial.map?.dispose(); clothMaterial.bumpMap?.dispose();
     clothMaterial.map = texture(paintCover(spec, 'color'), true);
-    clothMaterial.bumpMap = o.bump ? texture(paintCover(spec, 'bump'), false) : null;
+    clothMaterial.bumpMap = full && o.bump ? texture(paintCover(spec, 'bump'), false) : null;
     clothMaterial.color.set('#ffffff');
     clothMaterial.needsUpdate = true;
   };
@@ -576,6 +583,16 @@ export function createBook(GFX, options = {}) {
     dimensions: { width: o.width, height: o.height, coverWidth: coverLength, coverHeight, thickness: rh * 2 + spine, leaves: N, pages: N * 2 },
     /** Where the camera should look. */
     frame: { center: [0, 0.03, 0], radius: 0.4 * o.size },
+    /** How much of the cover is painted: 'full', or 'low' (small, for a book seen from afar). */
+    get coverDetail() { return coverDetail; },
+    /** Paint the cover in full ('full') or small ('low'), for a book near or far. Does nothing if it already is. */
+    setCoverDetail(detail) {
+      if (detail !== 'full' && detail !== 'low') throw new Error(`book: unknown coverDetail ${detail}`);
+      if (detail === coverDetail) return api;
+      coverDetail = detail;
+      paintCoverTextures();
+      return api;
+    },
     /** The style now: what `setStyle` takes. */
     get style() { return { ...style }; },
 

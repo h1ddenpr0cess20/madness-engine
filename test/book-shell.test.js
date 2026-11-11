@@ -50,3 +50,15 @@ test('a full book is built straight away, as before', () => {
   assert.equal(full.built, true);
   assert.equal(full.leaves.length, 60);
 });
+
+test('a book can be painted low from afar, and in full up close', () => {
+  const book = createBook(GFX, { shell: true, coverDetail: 'low' });
+  assert.equal(book.coverDetail, 'low');
+  book.setCoverDetail('full');
+  assert.equal(book.coverDetail, 'full');
+  book.setCoverDetail('low');
+  assert.equal(book.coverDetail, 'low');
+  assert.equal(createBook(GFX, { shell: true }).coverDetail, 'full');
+  assert.throws(() => book.setCoverDetail('fuzzy'), /unknown coverDetail/);
+  assert.throws(() => createBook(GFX, { coverDetail: 'fuzzy' }), /unknown coverDetail/);
+});
