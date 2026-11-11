@@ -92,7 +92,7 @@ out from the sides) for rigging; every clip brings the arms down to hang.
 
 ## The robot
 
-`createRobot(GFX, options)` is a separate model: an angular, aggressive humanoid (a V-shaped torso, flat armored shoulders, a plain wedge-shaped head set forward on the neck, exposed actuators, black five-fingered hands) built from
+`createRobot(GFX, options)` is a separate model: a humanoid machine (smooth shells, exposed actuators, black five-fingered hands) built from
 machine components, with the man's joints, limbs and trunk as the shape guide
 and his rig to move it, so it plays the same clips. His own skin is hidden. The
 components are laid out in `people/robot-build.js`, from the rigid-part builder
@@ -105,8 +105,9 @@ metals (`METALS`, the dice and globes' list) or wood (`WOOD_SPECIES`, lacquered)
 The frame inside (joints, actuators, rods) is a metal of its own.
 
 Two builds (`ROBOT_BUILDS`, `createRobot(GFX, { build })` or `bot.setBuild(name)`, which keeps the finish):
-`standard` is the lean frame; `heavy` is the same machine built stouter, with thicker limbs, a broader and
-deeper torso, bigger shoulders, hands and feet, and armor plating (trim bands on every limb, hip plates, knee guards).
+`standard` is the slim, smooth frame (an egg-shaped torso, round shoulder caps, a plain oval head a little tilted on
+the neck); `heavy` is the same machine built stouter and angular (a V-shaped torso, flat armored shoulders, a plain
+wedge head set forward), with thicker limbs, bigger hands and feet, and armor plating (trim bands on every limb, hip plates, knee guards).
 
 ```js
 const bot = createRobot(GFX, { color: 'white', trim: 'grey', frame: 'titanium' });
