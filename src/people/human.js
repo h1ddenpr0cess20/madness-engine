@@ -1261,6 +1261,8 @@ export function createHuman(GFX, options = {}) {
         : held[S] || (S === 'L' && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
         // Fighting, the hands make the shape the stance or move calls for.
         : fightHands(state, style) && want === 'relaxed' ? HAND_POSES[fightHands(state, style)]
+        // Waving, the waving hand is open, its fingers a little apart.
+        : state.clip === 'wave' && S === (state.hand ?? (held.R ? 'L' : 'R')) && want === 'relaxed' ? HAND_POSES.open
         // Running, a hand that was left easy closes loosely.
         : state.clip === 'run' && want === 'relaxed' ? HAND_POSES.loose
         : typeof want === 'object' ? want : HAND_POSES[want] ?? HAND_POSES.relaxed;

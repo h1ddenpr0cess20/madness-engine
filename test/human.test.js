@@ -662,6 +662,26 @@ test('a shirt\'s tail and a jacket\'s bottom hang from the hips, and are kept ov
   assert.ok(under <= behind * 0.01, `${under} of ${behind} under the jeans`);
 });
 
+test('the wave is a hello: one arm lifted out, the forearm rocking; it works for either hand and with a t', () => {
+  assert.ok(CLIPS.includes('wave'));
+  const wide = (state) => {
+    const h = createHuman(GFX, { detail: 0.5 });
+    h.dress([]);
+    h.pose(state);
+    const { min, max } = boundsOf(h.body.geometry.attributes.position);
+    return { w: max[0] - min[0], top: max[1], lo: min[0], hi: max[0] };
+  };
+  const idle = wide({ clip: 'idle', t: 0, time: 0 });
+  const right = wide({ clip: 'wave', time: 0.4 });
+  const left = wide({ clip: 'wave', time: 0.4, hand: 'L' });
+  assert.ok(right.w > idle.w + 0.1, `right arm out: ${right.w} against ${idle.w}`);
+  assert.ok(right.lo < idle.lo - 0.1 && Math.abs(right.hi - idle.hi) < 0.1, 'the right arm is the one raised (his right is −x)');
+  assert.ok(left.hi > idle.hi + 0.1 && Math.abs(left.lo - idle.lo) < 0.1, 'hand: "L" raises the left');
+  // With a t, it is raised and lowered over it: down at the ends, up in the middle.
+  const ends = wide({ clip: 'wave', t: 0, time: 0.4 }), mid = wide({ clip: 'wave', t: 0.5, time: 0.4 });
+  assert.ok(mid.w > ends.w + 0.1);
+});
+
 test('the later wardrobe: his and hers can each be worn on its own, and the dresses and skirts are hers only', async () => {
   const { garmentsFor } = await import('../src/people/index.js');
   const her = createHuman(GFX, { detail: 0.5, sex: 'female', glasses: null });

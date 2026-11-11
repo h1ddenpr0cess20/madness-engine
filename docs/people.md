@@ -90,6 +90,37 @@ game-ready adult man:
 He stands on y = 0, facing +z, his left toward +x, in a 12° A-pose (arms
 out from the sides) for rigging; every clip brings the arms down to hang.
 
+## The robot
+
+`createRobot(GFX, options)` is a separate model: a humanoid machine (smooth shells, exposed actuators, black five-fingered hands) built from
+machine components, with the man's joints, limbs and trunk as the shape guide
+and his rig to move it, so it plays the same clips. His own skin is hidden. The
+components are laid out in `people/robot-build.js`, from the rigid-part builder
+in `people/robot-parts.js` (chamfered boxes, lathed shells and joints, each
+bound whole to one bone).
+
+Outside resin, inside metal. The shell and trim panels are resin in any color
+(`RESIN_COLORS`, or any `#rrggbb`); the shell can instead be any of the engine's
+metals (`METALS`, the dice and globes' list) or wood (`WOOD_SPECIES`, lacquered).
+The frame inside (joints, actuators, rods) is a metal of its own.
+
+Two builds (`ROBOT_BUILDS`, `createRobot(GFX, { build })` or `bot.setBuild(name)`, which keeps the finish):
+`standard` is the slim, smooth frame (an egg-shaped torso, round shoulder caps, a plain oval head a little tilted on
+the neck); `heavy` is the same machine built stouter and angular (a V-shaped torso, flat armored shoulders, a plain
+wedge head set forward), with thicker limbs, bigger hands and feet, and armor plating (trim bands on every limb, hip plates, knee guards).
+
+```js
+const bot = createRobot(GFX);                  // white resin, black trim, a titanium frame: the defaults
+bot.setShell('resin', { color: '#c8202a' });   // glossy red resin
+bot.setShell('metal', { metal: 'chrome' });    // any METALS finish
+bot.setShell('wood', { wood: 'walnut' });      // any WOOD_SPECIES
+bot.setTrim('orange');
+bot.setFrame('gold');
+bot.setAccent('#39d0ff');
+bot.setBuild('heavy');                         // a stouter, armored build
+bot.finish;                                    // what it is made of now
+```
+
 ## Use
 
 ```js
@@ -386,13 +417,16 @@ yourself in `style.after(skeleton, state)`, which runs after the clip.
 
 `man.pose({ clip, t, time, seed, speed })`, every frame. Clips (`CLIPS`):
 `idle`, `walk`, `run`, `jump`, `leap`, `attack`, `cast`, `hit`, `ko`,
-`win`, `sit`, `read`, `flip`, `talk`, `yell`, `stance`, `bow`. Their cadences match the cast's (a walk's stride at
+`win`, `sit`, `read`, `flip`, `talk`, `yell`, `stance`, `bow`, `dance`, `wave`. Their cadences match the cast's (a walk's stride at
 9 rad/s × speed, a run's at 15), worked out for his real size. With a
 weapon in his right hand the idle, walk, run and jump hold it ready; with
 one in each hand, both. `read` is `sit`, a little forward, the head bowed
 to a book held open in both hands. `flip` flips the coin he holds: off the
 thumb from a palm-up hand at the waist, up about 45 cm turning over and over,
 caught again and held up to look at, his head and eyes following it.
+`wave` is a hello: one arm lifted out, the elbow bent to put the open hand up by the shoulder, the forearm rocking
+side to side (the right unless it holds a weapon; `hand: 'L'` for the left). It goes on while you give no `t`; give one and the arm is raised and
+lowered over it. The robot, on the same rig, waves too.
 
 `man.setStyle({ attack, heavy })`: `attack` is `'slash'`, `'chop'`,
 `'thrust'`, `'smite'`, `'punch'` or `'shove'`. Each is a keyed swing from

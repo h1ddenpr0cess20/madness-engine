@@ -16,7 +16,7 @@ import { dance } from './dance.js';
  * `heavy` (0..1, slower and deeper).
  */
 
-export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'flip', 'talk', 'yell', 'stance', 'bow', 'dance']);
+export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'attack', 'cast', 'hit', 'ko', 'win', 'sit', 'read', 'flip', 'talk', 'yell', 'stance', 'bow', 'dance', 'wave']);
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
@@ -435,6 +435,22 @@ export function moveHuman(k, state = {}, style = {}) {
     case 'dance': dance(k, state.dance ?? style.dance ?? 'bounce', T, speed); break;
     case 'bow': bow(k, t, { ...style, bow: state.bow ?? style.bow }); break;
     case 'stance': holdStance(k, state.stance ?? style.stance ?? 'boxing', T, style); break;
+    case 'wave': {
+      // A hello: the upper arm lifted out and a little forward, the elbow well bent so the open hand is up by the shoulder, and the
+      // forearm rocking from side to side from the elbow. `state.hand` ('L' or 'R') is the one that waves (the right, unless it holds
+      // something). Given a `t`, the arm is raised and lowered over it; with none, the wave goes on.
+      idle(k, T, armed);
+      const S = state.hand ?? (isArmed(armed, 'R') ? 'L' : 'R'), m = S === 'L' ? 1 : -1;
+      const up = 't' in state ? win(t, 0, 0.2) * (1 - win(t, 0.82, 1)) : 1;
+      const wag = Math.sin(T * 8);
+      k.turn(`clavicle${S}`, 0, 0, m * 0.1 * up);
+      k.turn(`arm${S}`, -0.5 * up, 0, m * 0.8 * up);
+      k.turn(`fore${S}`, 0, 0, m * (1.75 + 0.3 * wag) * up);
+      k.turn(`hand${S}`, 0, 0, m * wag * 0.2 * up);
+      k.turn('chest', 0, 0.05 * up * m, 0);
+      k.turn('head', 0.02 * up, -0.12 * up * m, -m * 0.06 * up);
+      break;
+    }
     case 'cast': {
       const up = win(t, 0, 0.3), go = win(t, 0.3, 0.42), back = win(t, 0.65, 1), lift = up * (1 - back);
       k.turn('chest', -0.12 * lift + 0.08 * go * (1 - back), 0, 0);
