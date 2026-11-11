@@ -207,6 +207,19 @@ function tie(detail, under) {
 
 const HEAD = Object.freeze({ cz: 0.052 });
 
+let skullTable = null;
+/** The skull's reach from its axis by height and bearing (the head's own skin, read by rays out from the middle), and how high it goes. */
+function skull() {
+  if (skullTable) return skullTable;
+  const only = zoneIs('head');
+  const t = fill(table(1.56, 1.82, 52, 72, (y, th) => castBody([0, y, HEAD.cz], [Math.sin(th), 0, Math.cos(th)], { only, far: 0.3 }) ?? NaN));
+  for (let i = 0; i < t.R.length; i++) if (Number.isNaN(t.R[i])) t.R[i] = 0;
+  let top = 1.56;
+  for (let i = 0; i <= t.rows; i++) if (Math.max(...t.R.subarray(i * t.cols, (i + 1) * t.cols)) > 0.012) top = t.y0 + ((t.y1 - t.y0) * i) / t.rows;
+  skullTable = Object.assign(t, { top });
+  return skullTable;
+}
+
 /**
  * A hat, made at rest in the head's frame and carried by the head bone: a dome (the crown) from the apex down to the
  * band, and from the band out and back in again (the brim and its under side). `yb(a)` is the height of its band
@@ -215,13 +228,17 @@ const HEAD = Object.freeze({ cz: 0.052 });
  * turns down and up at its edge, and `tail` the rows from the band out: [out (of the brim, 0 to 1), up, in].
  */
 function hat(name, detail, spec) {
-  const { material, yb, low = yb, rx, rz, h, crown = [1, 1], dent = 0, button = false, brim = () => 0, drop = () => 0, lift = () => 0, tail, ribbon = null } = spec;
+  const { material, yb, low = yb, rx, rz, h, crown = [1, 1], dent = 0, button = false, fit = 0, ease = 0.012, brim = () => 0, drop = () => 0, lift = () => 0, tail, ribbon = null } = spec;
   const part = new Part(name, material);
-  const cols = Math.round(44 + 36 * detail), N = 10;
+  const cols = Math.round(44 + 36 * detail), N = fit ? 14 : 10;
+  // A fitted hat follows the skull itself (`h` is how far its top stands above it); the others are shaped by their own ellipse.
+  const skullTop = fit ? skull().top : 0;
+  const top = fit ? skullTop + ease + h : yb(0) + h;
   const rows = [];
   for (let i = 0; i <= N; i++) {
     const ang = (i / N) * (Math.PI / 2);
-    rows.push({ s: Math.pow(Math.sin(ang), crown[0]), c: Math.pow(Math.cos(ang), crown[1]), dy: 0, o: 0, f: 0 });
+    // (A fitted hat's rows are close together at the top, where the skull turns quickly.)
+    rows.push({ s: Math.pow(Math.sin(ang), crown[0]), c: fit ? 1 - (i / N) ** 1.6 : Math.pow(Math.cos(ang), crown[1]), dy: 0, o: 0, f: 0 });
   }
   for (const [f, dy, o = 0] of tail) rows.push({ s: 1, c: 0, dy, o, f });
   const fromFront = (th) => (th > Math.PI ? TAU - th : th);
@@ -230,12 +247,19 @@ function hat(name, detail, spec) {
     const a = fromFront(th);
     const add = r.o + r.f * brim(a);
     // (A crown's top creased along its length, lowest down the middle.)
-    const y = yb(a) + r.c * (yb(0) + h - yb(a)) - dent * r.c ** 3 * (1 - Math.abs(Math.sin(th))) + r.dy - r.f * r.f * drop(a) + r.f * r.f * lift(a);
-    return [Math.sin(th) * (rx * r.s + add), y, HEAD.cz + Math.cos(th) * (rz * r.s + add)];
+    const y = yb(a) + r.c * (top - yb(a)) - dent * r.c ** 3 * (1 - Math.abs(Math.sin(th))) + r.dy - r.f * r.f * drop(a) + r.f * r.f * lift(a);
+    if (!fit) return [Math.sin(th) * (rx * r.s + add), y, HEAD.cz + Math.cos(th) * (rz * r.s + add)];
+    // The skull's reach at this height and bearing, and the hat's ease beyond it, drawn in to a point at the top.
+    // The skull's reach (measured a little lower, so the hat stands off the top as it does off the sides), and over
+    // the last 4 cm a quarter of an ellipse closing it to the top, rounded.
+    const reach = (yy) => skull().at(Math.min(yy, skullTop) - ease * 0.9, th) + ease;
+    const ys = top - 0.04;
+    const R = (y < ys ? reach(y) : reach(ys) * Math.sqrt(Math.max(0, 1 - ((y - ys) / (top - ys)) ** 2))) + add;
+    return [Math.sin(th) * R, y, HEAD.cz + Math.cos(th) * R];
   };
   part.grid(rows.length - 1, cols, (i, k) => ({ p: point(rows[i], (k / cols) * TAU), uv: [k / cols, i / (rows.length - 1)], w, tint: i > N + Math.floor(tail.length / 2) ? 0.7 : 1 }), { flip: true });
   const parts = [part];
-  if (button) box(part, [0, yb(0) + h + 0.0015, HEAD.cz], [1, 0, 0], [0, 0, 1], [0, 1, 0], [0.008, 0.008, 0.005], w);
+  if (button) box(part, [0, top + 0.0015, HEAD.cz], [1, 0, 0], [0, 0, 1], [0, 1, 0], [0.008, 0.008, 0.005], w);
   if (ribbon) {
     const band = new Part('hat band', ribbon.material);
     // The dome's width at `dy` above the band.
@@ -246,7 +270,7 @@ function hat(name, detail, spec) {
     }, { flip: true });
     parts.push(band);
   }
-  const apex = yb(0) + h;
+  const apex = top;
   const lowest = Math.min(low(0), low(Math.PI / 2), low(Math.PI));
   return {
     parts: tag(parts, name),
@@ -262,14 +286,14 @@ function hat(name, detail, spec) {
 
 const HATS = {
   cap: (detail) => hat('cap', detail, {
-    material: 'cap', rx: 0.099, rz: 0.121, h: 0.118, crown: [0.8, 0.85], button: true,
+    material: 'cap', rx: 0.099, rz: 0.121, fit: 1, ease: 0.02, h: 0.004, crown: [0.8, 0.5], button: true,
     yb: (a) => 1.714 - 0.014 * smooth(0.6, 2.8, a),
     brim: (a) => 0.082 * smooth(1.5, 0.45, a),
     drop: (a) => 0.026 * smooth(1.5, 0.3, a),
     tail: [[0.3, 0.0035], [0.65, 0.0045], [1, 0.004], [1, -0.0012], [0.65, -0.002], [0.3, -0.003], [0, -0.003], [0, 0.011, -0.004]],
   }),
   beanie: (detail) => hat('beanie', detail, {
-    material: 'beanie', rx: 0.0985, rz: 0.123, h: 0.062, crown: [0.7, 0.7],
+    material: 'beanie', rx: 0.0985, rz: 0.123, fit: 1, ease: 0.014, h: 0.022, crown: [0.8, 0.5],
     yb: (a) => 1.766 - 0.075 * smooth(0.5, 1.6, a),
     low: (a) => 1.766 - 0.058 - 0.075 * smooth(0.5, 1.6, a),
     // A turned-up cuff: out, up and over, back down.
