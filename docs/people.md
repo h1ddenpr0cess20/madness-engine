@@ -272,11 +272,16 @@ More haircuts, all for either figure (`hair`), each grown by the same cards:
 - Short: `buzz` (a few millimetres, a little more on top), `crew` (2.5 cm on
   top, standing, tapered), `texturedCrop` (4 cm, tousled, brought forward in
   a fringe), `slickBack` (6 cm, combed straight back), `pompadour` (8 cm at
-  the front, swept up and back), `mohawk` (a 6 cm strip, the sides shaved),
-  `afro` (a round cloud about 7 cm deep) and `pixie` (a side fringe over a
-  short, soft nape).
+  the front, swept up and back), `mohawk` (a 7 cm strip of spikes, the sides shaved),
+  `afro` (a round cloud, its tips on a sphere about 17 cm across), `pixie`
+  (a side fringe over a short, soft nape), `undercut` (6 cm swept back over
+  shaved sides), `caesar` (3 cm, a short level fringe), `flatTop`, `curtains`
+  (middle-parted, to the ears), `bowl`, `curly` (5 cm of loose curls) and
+  `balding` (a horseshoe round the sides and back).
 - Falling like `long`, skinned to the neck and back: `bob` (side-parted, to
-  the jaw) and `shoulder` (to the tops of the shoulders).
+  the jaw), `shoulder` (to the tops of the shoulders), `longSide` (long, parted
+  at the side), `longBangs` (long, with a fringe) and `ponytail` (drawn back
+  and tied high at the back of the head).
 
 More facial hair (`beard`, the man's), all inside the full beard's outline,
 so the cheek line, the ear, the lips and the neckline hold: `stubble` (3 mm),

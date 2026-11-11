@@ -44,10 +44,10 @@ const bearing = (p) => Math.atan2(Math.abs(p[0]), p[2] - SKULL[2]);
 
 // The hairline: its height at each bearing. Across the forehead, back at the temples, down
 // in front of each ear for the sideburn (a band about 2.5 cm wide, from the temple to the ear),
-// over the ear, and down behind it to the nape.
+// over the ear in a low, gentle arch, and down behind it to the nape.
 const HAIRLINE = profile([
   [0, 1.737], [0.5, 1.733], [0.8, 1.722], [1.0, 1.706], [1.1, 1.672], [1.17, 1.648], [1.38, 1.645],
-  [1.47, 1.69], [1.62, 1.694], [1.78, 1.682], [1.95, 1.652], [2.2, 1.628], [2.6, 1.614], [Math.PI, 1.607],
+  [1.5, 1.655], [1.68, 1.666], [1.86, 1.662], [2.06, 1.647], [2.3, 1.627], [2.6, 1.614], [Math.PI, 1.607],
 ]);
 
 /** How much hair grows on the scalp at `p` (rest, metres), with normal `n`: 0 to 1, soft at the hairline. */
@@ -162,10 +162,10 @@ function surface() {
     cells.get(k).push(v);
   }
   /** The nearest surface vertex to `p`. */
-  const nearest = (p) => {
+  const nearest = (p, reach = 3) => {
     const cx = Math.floor(p[0] / CELL), cy = Math.floor(p[1] / CELL), cz = Math.floor(p[2] / CELL);
     let best = -1, bd = Infinity;
-    for (let r = 1; r <= 3 && best < 0; r++) {
+    for (let r = 1; r <= reach && best < 0; r++) {
       for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) for (let k = -r; k <= r; k++) {
         const list = cells.get(key(cx + i, cy + j, cz + k));
         if (!list) continue;
@@ -349,10 +349,17 @@ function fall(style, [root, n0], L, layer, fine, rnd) {
     if (onHead < 1 && p[2] < -0.01 && dir[2] > 0) dir = norm([dir[0], dir[1], dir[2] * onHead]);
     p = [p[0] + dir[0] * ds, p[1] + dir[1] * ds, p[2] + dir[2] * ds];
     run += ds;
+    // Gathered at a tie (a ponytail): behind it and below it, the strands draw in to the middle.
+    if (style.tie) {
+      const [tx, ty, tz] = style.tie;
+      const k = smooth(ty + 0.03, ty - 0.04, p[1]) * smooth(tz + 0.05, tz, p[2]);
+      p = [p[0] + (tx - p[0]) * k * 0.8, p[1], p[2] + (tz - p[2]) * k * 0.35];
+    }
     let n = normals[normals.length - 1];
     // On the head: on its layer of the hair, close.
     if (p[1] > 1.45) {
-      const v = S.nearest(p);
+      // (A coarse step over the crown can leave it more than 3 cm out: look wider, so it is brought back.)
+      const v = S.nearest(p, 8);
       if (v >= 0) {
         const q = S.P(v), hn = S.N(v), d = dot(sub(p, q), hn);
         // Flat at the root (a hairline lies on the skin), its layer's height built up along it.
@@ -483,7 +490,7 @@ const PART_X = 0.036;
 // A woman's hairline: rounder, full at the temples, no sideburn to speak of (bearing → height, as HAIRLINE).
 const HAIRLINE_FULL = profile([
   [0, 1.735], [0.5, 1.733], [0.8, 1.727], [1.0, 1.716], [1.1, 1.698], [1.2, 1.676], [1.38, 1.655],
-  [1.47, 1.69], [1.62, 1.694], [1.78, 1.682], [1.95, 1.652], [2.2, 1.628], [2.6, 1.612], [Math.PI, 1.604],
+  [1.5, 1.662], [1.68, 1.672], [1.86, 1.667], [2.06, 1.65], [2.3, 1.628], [2.6, 1.612], [Math.PI, 1.604],
 ]);
 /** How much hair grows at `p` for a full hairline (long hair): as scalpCover, round the temples. */
 export function fullScalpCover(p, n) {
@@ -599,13 +606,16 @@ const taper = (p, top, side) => {
 };
 
 /** Long hair cut shorter or parted elsewhere: the same fall, ending at `endAt`, its part at `partX` (his left: +x). */
-function hangs(name, seed, cards, endAt, partX = 0, back = 0.55) {
+function hangs(name, seed, cards, endAt, partX = 0, back = 0.55, fringe = false) {
+  const end = typeof endAt === 'function' ? endAt : () => endAt;
+  /** A fringe: the hair over the forehead stops there (a little above the brows), not at the cut. */
+  const bang = (p) => (fringe ? smooth(0.6, 0.35, bearing(p)) * smooth(1.70, 1.72, p[1]) : 0);
   return Object.freeze({
     ...LONG,
     name,
     seed,
     cards,
-    endAt: typeof endAt === 'function' ? endAt : () => endAt,
+    endAt: (p) => end(p) * (1 - bang(p)) + 1.688 * bang(p),
     /** Away from the part and back on top; down the sides, `back` behind the ears; straight down behind. */
     comb(p) {
       const dx = p[0] - partX, m = Math.sign(dx) || 1, b = bearing(p);
@@ -614,7 +624,9 @@ function hangs(name, seed, cards, endAt, partX = 0, back = 0.55) {
       const away = norm([0.3 * m, 0.05, -0.8 - 0.2 * (1 - front)]);
       const sides = norm([0.25 * m * smooth(2.5, 1.5, b), -1, -back * 0.5 - (back - 0.15) * smooth(1.6, 0.6, b)]);
       const off = 0.6 * smooth(0.008, 0, Math.abs(dx)) * smooth(-0.02, 0.04, p[2]);
-      return add3(times(away, top), times(sides, 1 - top), [m * off, 0, 0]);
+      const hair = add3(times(away, top), times(sides, 1 - top), [m * off, 0, 0]);
+      const f = bang(p);
+      return f ? add3(times(hair, 1 - f), times(norm([0.3 * m, -1, 0.35]), f)) : hair;
     },
   });
 }
@@ -731,51 +743,58 @@ export const HAIRSTYLES = Object.freeze({
       return add3(times(norm([0.2 * m, 0.35, -0.95]), high), times(norm([0.15 * m, -1, -0.5]), 1 - high));
     },
   }),
-  /** A mohawk: a strip about 6 cm tall from the forehead to the nape, standing, the sides shaved. */
+  /** A mohawk: a strip about 7 cm tall from the forehead to the nape, standing in spikes, the sides shaved. */
   mohawk: Object.freeze({
     ...SIDE_PART,
     name: 'mohawk',
     seed: 71,
-    cover: (p, n) => scalpCover(p, n) * smooth(0.028, 0.017, Math.abs(p[0])) * smooth(1.62, 1.66, p[1]),
-    cards: 2200,
-    width: 0.012,
+    cover: (p, n) => scalpCover(p, n) * smooth(0.026, 0.016, Math.abs(p[0])) * smooth(1.62, 1.66, p[1]),
+    cards: 4200,
+    width: 0.014,
     columns: [0, 1, 1, 2],
     shortest: 0.006,
-    rise: 1.3,
-    follow: 0.8,
-    weight: 0.12,
-    loose: 0.1,
-    lift: 0.35,
-    volume: 0.2,
+    rise: 0.25,
+    follow: 0.35,
+    weight: 0,
+    loose: 1.5,
+    lift: 0,
+    volume: 0.1,
     density: () => 1.4,
-    length: (p) => (0.02 + 0.045 * smooth(0.028, 0.004, Math.abs(p[0]))) * (1 - 0.45 * smooth(2.1, 3.0, bearing(p))),
-    comb: (p) => norm([0, 1, -0.25 - 0.4 * smooth(0.6, 2.2, bearing(p))]),
+    /** Tallest along the crown, lower at the brow and the nape, each spike its own height. */
+    length(p) {
+      const b = bearing(p);
+      const ridge = smooth(0.026, 0.002, Math.abs(p[0]));
+      const along = smooth(0.2, 0.8, b) * smooth(3.0, 2.0, b);
+      return (0.02 + 0.05 * ridge * (0.55 + 0.45 * along)) * (0.8 + 0.4 * (0.5 + 0.5 * noise3(p[0] * 300, p[1] * 300, p[2] * 300)));
+    },
+    /** Straight up, leaning back toward the nape and away from the middle, so the strip fans. */
+    comb: (p) => norm([(Math.sign(p[0]) || 1) * 0.35 * smooth(0.004, 0.02, Math.abs(p[0])), 1, -0.15 - 0.55 * smooth(1.2, 2.6, bearing(p))]),
   }),
-  /** An afro: a round cloud of tight curls about 7 cm deep, standing out from the whole scalp. */
+  /** An afro: a round cloud of tight curls, its tips on a sphere about 17 cm across from the middle of the head. */
   afro: Object.freeze({
     ...SIDE_PART,
     name: 'afro',
     seed: 73,
     cover: fullScalpCover,
-    cards: 5600,
-    width: 0.022,
+    cards: 6200,
+    width: 0.02,
     columns: [0, 1, 1, 2, 2, 3],
     shortest: 0.006,
-    rise: 1.0,
-    follow: 0.7,
+    rise: 0.3,
+    follow: 0.5,
     weight: 0,
-    loose: 0.2,
-    lift: 0.45,
-    volume: 0.5,
+    loose: 1.2,
+    lift: 0,
+    volume: 0.25,
     density: () => 1.2,
-    /** Deepest on top and behind; shorter at the hairline, so it does not fall over the face. */
-    length: (p) => (0.058 + 0.022 * smooth(1.2, 2.5, bearing(p))) * (1 - 0.45 * smooth(0.7, 0, bearing(p))),
-    /** Out from the middle of the head, lifted, in a little curl; held back off the face in front. */
+    /** Out to the sphere, shorter at the hairline in front so it does not fall over the face. */
+    length: (p) => Math.max(0.02, 0.172 - len(sub(p, SKULL))) * (1 - 0.4 * smooth(0.7, 0, bearing(p))) * (1 + 0.15 * noise3(p[0] * 70, p[1] * 70, p[2] * 70)),
+    /** Straight out from the middle of the head, in a little curl; held back off the face in front. */
     comb(p) {
       const r = norm(sub(p, SKULL));
-      const curl = 0.3 * noise3(p[0] * 60, p[1] * 60, p[2] * 60);
-      const face = 1 - 0.7 * smooth(0.04, 0.12, p[2]) * smooth(1.2, 0.2, bearing(p));
-      return [r[0] * 0.8 + curl, r[1] * 0.8 + 0.5 + curl * 0.6, (r[2] * 0.8 - curl) * face];
+      const curl = 0.35 * noise3(p[0] * 60, p[1] * 60, p[2] * 60);
+      const face = 1 - 0.6 * smooth(0.04, 0.12, p[2]) * smooth(1.2, 0.2, bearing(p));
+      return [r[0] + curl, r[1] + 0.15 + curl * 0.6, (r[2] - curl) * face];
     },
   }),
   /** A pixie cut: about 5 cm on top, swept across the forehead in a side fringe, short and soft over the ears and nape. */
@@ -800,6 +819,173 @@ export const HAIRSTYLES = Object.freeze({
   bob: hangs('bob', 77, 2800, (p) => 1.5 + 0.02 * smooth(2.4, 0.8, bearing(p)), PART_X, 0.2),
   /** Shoulder length: parted at the side, falling to the tops of the shoulders. */
   shoulder: hangs('shoulder', 79, 3200, (p) => 1.38 + 0.03 * smooth(2.4, 0.8, bearing(p)), PART_X, 0.35),
+  /** An undercut: 6 cm on top, swept back and over, the sides and back shaved to the skin below a sharp line. */
+  undercut: Object.freeze({
+    ...SIDE_PART,
+    name: 'undercut',
+    seed: 101,
+    cards: 4200,
+    columns: [0, 0, 1, 1, 2],
+    width: 0.014,
+    rise: 0.35,
+    follow: 3,
+    weight: 0.3,
+    loose: 0.04,
+    lift: 0.06,
+    volume: (p) => 0.1 + 0.1 * smooth(1.71, 1.75, p[1]),
+    length: (p) => 0.003 + (0.062 - 0.003) * smooth(1.696, 1.71, p[1]) * smooth(2.55, 2.1, bearing(p)),
+    comb(p) {
+      const m = Math.sign(p[0] - PART_X) || 1;
+      const high = smooth(1.70, 1.74, p[1]);
+      return add3(times(norm([0.55 * m, 0.0, -0.75]), high), times(norm([0.1 * m, -1, -0.4]), 1 - high));
+    },
+  }),
+  /** A Caesar cut: about 3 cm all over, combed straight forward into a short, level fringe. */
+  caesar: Object.freeze({
+    ...SIDE_PART,
+    name: 'caesar',
+    seed: 103,
+    cards: 3400,
+    columns: [1, 2, 2, 3],
+    rise: 0.4,
+    follow: 2.2,
+    weight: 0.3,
+    loose: 0.03,
+    lift: 0.05,
+    volume: 0.1,
+    length: (p) => taper(p, 0.032, 0.005),
+    comb(p) {
+      const high = smooth(1.70, 1.74, p[1]) * smooth(2.4, 1.6, bearing(p));
+      return add3(times(norm([0.15 * Math.sign(p[0]), -0.5, 1]), high), times(norm([0.1 * (Math.sign(p[0]) || 1), -1, -0.3]), 1 - high));
+    },
+  }),
+  /** A flat top: about 3.5 cm standing straight up, cut level, the sides tapered close. */
+  flatTop: Object.freeze({
+    ...SIDE_PART,
+    name: 'flatTop',
+    seed: 105,
+    cards: 4000,
+    columns: [1, 2, 2, 3],
+    width: 0.012,
+    rise: 0.8,
+    follow: 0.5,
+    weight: 0,
+    loose: 0.1,
+    lift: 0.1,
+    volume: 0.12,
+    length: (p) => taper(p, 0.036, 0.004),
+    comb: (p) => norm([0, 1, 0.05 - 0.1 * smooth(1.7, 1.78, p[1])]),
+  }),
+  /** Curtains: parted in the middle, about 7 cm, falling either side of the forehead to the ears. */
+  curtains: Object.freeze({
+    ...SIDE_PART,
+    name: 'curtains',
+    seed: 107,
+    cards: 4000,
+    columns: [0, 1, 1, 2, 2],
+    width: 0.016,
+    rise: 0.5,
+    follow: 2.4,
+    weight: 0.4,
+    loose: 0.06,
+    lift: 0.12,
+    volume: (p) => 0.1 + 0.14 * smooth(1.71, 1.75, p[1]) * smooth(2.5, 1.8, bearing(p)),
+    length: (p) => 0.012 + (0.075 - 0.012) * Math.max(smooth(1.67, 1.745, p[1]), smooth(1.2, 0.3, bearing(p))),
+    /** Away from the middle part and down: over the brow's edges, past the temples, behind the ears at the sides. */
+    comb(p) {
+      const m = Math.sign(p[0]) || 1, b = bearing(p);
+      const off = smooth(0.012, 0, Math.abs(p[0])) * smooth(-0.01, 0.03, p[2]);
+      const high = smooth(1.70, 1.74, p[1]);
+      const top = norm([0.9 * m, -0.35, 0.15 - 0.5 * smooth(0.4, 1.4, b)]);
+      return add3(times(top, high), times(norm([0.2 * m, -1, -0.35]), 1 - high), [m * off * 0.8, 0, 0]);
+    },
+  }),
+  /** A bowl cut: even all round, cut straight across the forehead and level at the ears. */
+  bowl: Object.freeze({
+    ...SIDE_PART,
+    name: 'bowl',
+    seed: 109,
+    cards: 3800,
+    columns: [0, 1, 1, 2, 2],
+    width: 0.016,
+    rise: 0.4,
+    follow: 2.8,
+    weight: 0.2,
+    loose: 0.03,
+    lift: 0.05,
+    volume: 0.14,
+    /** From its root down the head to a level line (a little higher across the brow). */
+    length(p) {
+      const end = 1.652 + 0.036 * smooth(0.9, 0.3, bearing(p));
+      return Math.max(0.012, (p[1] - end) * 1.4);
+    },
+    comb(p) {
+      const m = Math.sign(p[0]) || 1;
+      const high = smooth(1.74, 1.77, p[1]);
+      const front = smooth(0.02, 0.1, p[2]);
+      return add3(times(norm([0.15 * m, 0, 0.3]), high), times(norm([0.15 * m, -1, 0.5 * front - 0.2]), 1 - high));
+    },
+  }),
+  /** Short curls: about 5 cm of tight, loose curls over the top, tapered at the sides. */
+  curly: Object.freeze({
+    ...SIDE_PART,
+    name: 'curly',
+    seed: 111,
+    cards: 5000,
+    columns: [0, 1, 1, 2, 2, 3],
+    width: 0.018,
+    rise: 0.7,
+    follow: 0.8,
+    weight: 0.1,
+    loose: 0.5,
+    lift: 0.2,
+    volume: (p) => 0.2 + 0.3 * smooth(1.71, 1.75, p[1]),
+    length: (p) => taper(p, 0.058, 0.01),
+    comb(p) {
+      const r = norm(sub(p, SKULL));
+      const curl = 0.5 * noise3(p[0] * 80, p[1] * 80, p[2] * 80);
+      return [r[0] * 0.7 + curl, r[1] * 0.7 + curl * 0.5, (r[2] * 0.7 - curl) * (1 - 0.5 * smooth(0.04, 0.12, p[2]))];
+    },
+  }),
+  /** Balding: the crown and the front gone, a horseshoe of short hair left round the sides and back. */
+  balding: Object.freeze({
+    ...SIDE_PART,
+    name: 'balding',
+    seed: 113,
+    cover: (p, n) => scalpCover(p, n) * smooth(1.725, 1.705, p[1]) * smooth(0.5, 1.0, bearing(p)),
+    cards: 1500,
+    columns: [2, 3],
+    width: 0.008,
+    shortest: 0.002,
+    rise: 0.2,
+    loose: 0.02,
+    lift: 0.02,
+    follow: 1.5,
+    weight: 0.2,
+    volume: 0.06,
+    density: () => 1.3,
+    length: (p) => 0.004 + 0.014 * smooth(1.69, 1.715, p[1]),
+    comb: (p) => norm([0.1 * (Math.sign(p[0]) || 1), -1, -0.4]),
+  }),
+  /** Long hair parted at the side, to below the shoulder blades. */
+  longSide: hangs('longSide', 115, 3600, (p) => LONG.endAt(p), PART_X, 0.55),
+  /** Long hair with a fringe, straight across the brows, the rest falling behind the ears and shoulders. */
+  longBangs: hangs('longBangs', 117, 3800, (p) => LONG.endAt(p), 0, 0.55, true),
+  /** A ponytail: the hair drawn back off the face and tied high at the back of the head, hanging to the shoulder blades. */
+  ponytail: Object.freeze({
+    ...LONG,
+    name: 'ponytail',
+    seed: 119,
+    cards: 2400,
+    tie: [0, 1.7, -0.07],
+    weight: 0.14,
+    endAt: () => 1.4,
+    /** Toward the tie, from wherever it grows: up the back of the head, and back across the top and the temples. */
+    comb(p) {
+      const to = norm(sub([0, 1.7, -0.085], p));
+      return times(to, 1.2);
+    },
+  }),
 });
 
 /**
