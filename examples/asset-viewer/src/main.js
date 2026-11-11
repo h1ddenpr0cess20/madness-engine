@@ -18,6 +18,7 @@ import { diverse } from '../../../src/characters/person.js';
 import { GLASS_PLANET_NAMES } from '../../../src/props/glass-planets.js';
 import { boundsOf, loadCatalog, METAL_CHOICES } from './catalog.js';
 import { randomBowlingBallPalette } from './bowling-ball-palettes.js';
+import { GifEncoder } from './gif.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => {
@@ -373,6 +374,7 @@ function animGroup(built) {
   if (built.clips) {
     clip.replaceChildren(...built.clips.map((c) => el('option', { value: c }, c)));
     clip.value = view.clip = built.clips.includes(view.clip) ? view.clip : built.clips[0];
+    $('capsecs').value = loopSeconds(view.clip).toFixed(1);
   }
   // Extra per-item options (a building's level, variant, how far built).
   document.querySelectorAll('.opt').forEach((n) => n.remove());
@@ -758,17 +760,21 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 
 // ———————————————————————————————————————————————— the loop
 
-let last = null;
-renderer.setAnimationLoop((now) => {
-  const dt = last === null ? 0 : Math.min(0.1, (now - last) / 1000);
-  last = now;
+/** How long the clips that repeat on their own take to come round, in seconds: what a GIF of one of them is, to loop cleanly. */
+const LOOPS = { walk: 0.698 * 2, run: 0.419 * 4 };
+const loopSeconds = (clip) => LOOPS[clip] ?? 1.6;
+
+/** Poses the thing for the clock as it stands. */
+function poseNow() {
+  if (!view.built?.pose) return;
+  const t = view.clock - view.clipStart;
+  // The one-shot clips loop, so there is always something to see.
+  view.built.pose({ clip: view.clip, t: view.clip === 'idle' || view.clip === 'walk' || view.clip === 'run' ? t : t % 1.6, time: view.clock, seed: 1, speed: 1 });
+}
+
+/** Moves the camera and lights as they follow what is looked at, and draws. */
+function drawScene() {
   sizeCamera();
-  if (view.built?.pose && !view.paused) {
-    view.clock += dt * view.speed;
-    const t = view.clock - view.clipStart;
-    // The one-shot clips loop, so there is always something to see.
-    view.built.pose({ clip: view.clip, t: view.clip === 'idle' || view.clip === 'walk' || view.clip === 'run' ? t : t % 1.6, time: view.clock, seed: 1, speed: 1 });
-  }
   controls.update();
   key.position.copy(controls.target).addScaledVector(stage.keyFrom, 40);
   key.target.position.copy(controls.target);
@@ -779,6 +785,19 @@ renderer.setAnimationLoop((now) => {
     fill.target.updateMatrixWorld();
   }
   stage.render();
+}
+
+let last = null, capturing = false;
+renderer.setAnimationLoop((now) => {
+  const dt = last === null ? 0 : Math.min(0.1, (now - last) / 1000);
+  last = now;
+  // (A capture sets the clock and the camera itself, a frame at a time.)
+  if (capturing) return;
+  if (view.built?.pose && !view.paused) {
+    view.clock += dt * view.speed;
+    poseNow();
+  }
+  drawScene();
 });
 
 // ———————————————————————————————————————————————— the list
@@ -940,6 +959,103 @@ function contactSheet() {
 }
 const closeSheet = () => { $('sheet').style.display = 'none'; };
 
+// ———————————————————————————————————————————————— capture
+
+const fileStem = () => `${(view.item?.id ?? 'asset').replace(/[^\w.-]+/g, '-')}${view.built?.pose ? `-${view.clip}` : ''}`;
+const save = (blob, name) => {
+  const a = el('a', { href: URL.createObjectURL(blob), download: name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+
+/** The picture on screen, as a canvas `width` wide (the canvas's own size if not said), read in the task it was drawn in. */
+function grab(width = 0) {
+  stage.render();
+  const src = renderer.domElement;
+  const w = width || src.width, h = Math.max(2, Math.round((w * src.height) / src.width));
+  const c = el('canvas');
+  c.width = w;
+  c.height = h;
+  c.getContext('2d', { willReadFrequently: true }).drawImage(src, 0, 0, w, h);
+  return c;
+}
+
+/** Saves the view as it is as a PNG, at the size it is shown. */
+async function screenshot() {
+  if (!view.built || capturing) return null;
+  const blob = await new Promise((r) => grab().toBlob(r, 'image/png'));
+  save(blob, `${fileStem()}.png`);
+  $('capstatus').textContent = 'Saved';
+  setTimeout(() => { if ($('capstatus').textContent === 'Saved') $('capstatus').textContent = ''; }, 1500);
+  return blob;
+}
+
+/**
+ * Records an animated GIF, a frame at a time so that however slowly it is drawn it plays in step: of the animation
+ * (the camera still, the clock run on over `seconds`) or of a full turn round it (the clock running on too, unless
+ * paused). The camera, clock and controls are put back as they were.
+ */
+async function recordGif({ mode = $('capmode').value, width = Number($('capsize').value), fps = Number($('capfps').value), seconds = Number($('capsecs').value) } = {}) {
+  if (!view.built || capturing) return null;
+  const frames = Math.max(2, Math.min(300, Math.round(fps * seconds)));
+  const was = { clock: view.clock, pos: camera.position.clone(), target: controls.target.clone(), spin: controls.autoRotate, damping: controls.enableDamping, enabled: controls.enabled };
+  capturing = true;
+  controls.autoRotate = false;
+  controls.enableDamping = false;
+  controls.enabled = false;
+  $('gifbtn').disabled = $('shotbtn').disabled = true;
+  try {
+    const offset = was.pos.clone().sub(was.target);
+    let gif = null;
+    for (let i = 0; i < frames; i++) {
+      const u = i / frames;
+      if (!view.paused || mode === 'animation') view.clock = was.clock + u * seconds * (mode === 'animation' ? view.speed : 1);
+      if (mode === 'turntable') {
+        const a = u * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+        camera.position.set(was.target.x + offset.x * c + offset.z * s, was.pos.y, was.target.z - offset.x * s + offset.z * c);
+      }
+      poseNow();
+      drawScene();
+      const c = grab(width), px = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
+      gif ??= new GifEncoder(c.width, c.height);
+      gif.addFrame(px.data, 1000 / fps);
+      $('capstatus').textContent = `Recording ${i + 1}/${frames}`;
+      // Let the page breathe, so the status shows and the tab stays awake.
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    $('capstatus').textContent = 'Encoding…';
+    await new Promise((r) => setTimeout(r, 20));
+    const bytes = gif.finish();
+    const blob = new Blob([bytes], { type: 'image/gif' });
+    const name = `${fileStem()}${mode === 'turntable' ? '-turn' : ''}.gif`;
+    const old = $('capsave').href;
+    if (old?.startsWith('blob:')) URL.revokeObjectURL(old);
+    const url = URL.createObjectURL(blob);
+    $('capimg').src = url;
+    $('capsave').href = url;
+    $('capsave').download = name;
+    $('capinfo').textContent = `${gif.width}×${gif.height}, ${frames} frames, ${(bytes.length / 1024).toFixed(0)} KB`;
+    $('capresult').style.display = 'grid';
+    save(blob, name);
+    $('capstatus').textContent = 'Saved';
+    return blob;
+  } catch (err) {
+    $('capstatus').textContent = `Failed: ${err.message}`;
+    console.error(err);
+    return null;
+  } finally {
+    view.clock = was.clock;
+    camera.position.copy(was.pos);
+    controls.target.copy(was.target);
+    controls.autoRotate = was.spin;
+    controls.enableDamping = was.damping;
+    controls.enabled = was.enabled;
+    capturing = false;
+    $('gifbtn').disabled = $('shotbtn').disabled = false;
+    poseNow();
+  }
+}
+
 // ———————————————————————————————————————————————— wiring
 
 $('views').replaceChildren(...VIEWS.map(([name, az, elev], i) => el('button', { title: `${i + 1}`, onclick: () => frame(az, elev) }, name)));
@@ -953,6 +1069,10 @@ $('note').oninput = () => { const f = flags[view.item?.id]; if (f) { f.note = $(
 $('mistbox').onchange = () => view.built?.mist?.set($('mistbox').checked);
 $('turn').onclick = () => { controls.autoRotate = !controls.autoRotate; $('turn').classList.toggle('on', controls.autoRotate); };
 $('sheetbtn').onclick = contactSheet;
+$('shotbtn').onclick = screenshot;
+$('gifbtn').onclick = () => recordGif();
+// A clip that repeats on its own is recorded for as long as it takes to come round; the others, for the viewer's loop.
+$('clip').addEventListener('change', () => { $('capsecs').value = loopSeconds($('clip').value).toFixed(1); });
 $('gridbtn').onclick = () => { floor.visible = !floor.visible; $('gridbtn').classList.toggle('on', floor.visible); };
 $('pause').onclick = () => { view.paused = !view.paused; $('pause').classList.toggle('on', view.paused); };
 $('speed').oninput = () => { view.speed = Number($('speed').value); };
@@ -992,13 +1112,15 @@ addEventListener('keydown', (e) => {
   else if (k === 'm') setMarking(!marking);
   else if (k === 'r') resetItem();
   else if (k === 'c') contactSheet();
+  else if (k === 'p') screenshot();
+  else if (k === 'v') recordGif();
   else if (k === 'g') $('gridbtn').click();
   else if (k === ' ') { e.preventDefault(); $('pause').click(); }
   else if (k === '/') { e.preventDefault(); $('search').focus(); }
   else if (/^[1-8]$/.test(k)) frame(VIEWS[k - 1][1], VIEWS[k - 1][2]);
 });
 
-window.assetViewer = { catalog, show, options, renderer, scene, camera, controls, view };
+window.assetViewer = { catalog, show, options, renderer, scene, camera, controls, view, screenshot, recordGif, pose: poseNow, draw: drawScene };
 applyFilter();
 const start = catalog.find((i) => i.id === decodeURIComponent(location.hash.slice(1))) ?? filtered[0];
 if (start) show(start);

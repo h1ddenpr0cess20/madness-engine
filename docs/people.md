@@ -325,7 +325,7 @@ yourself in `style.after(skeleton, state)`, which runs after the clip.
 
 `man.pose({ clip, t, time, seed, speed })`, every frame. Clips (`CLIPS`):
 `idle`, `walk`, `run`, `jump`, `leap`, `attack`, `cast`, `hit`, `ko`,
-`win`, `sit`, `read`, `flip`, `talk`, `yell`. Their cadences match the cast's (a walk's stride at
+`win`, `sit`, `read`, `flip`, `talk`, `yell`, `stance`, `bow`. Their cadences match the cast's (a walk's stride at
 9 rad/s × speed, a run's at 15), worked out for his real size. With a
 weapon in his right hand the idle, walk, run and jump hold it ready; with
 one in each hand, both. `read` is `sit`, a little forward, the head bowed
@@ -415,6 +415,47 @@ first), and is held still: a globe or coin that turns on its own
 arm, forearm and hand as little as gets them there, starting from where
 they were the frame before, so they move smoothly (`people/human/carry.js`).
 `man.release(hand)` gives it back; `man.held(hand)` says what is there.
+
+## Fighting
+
+`people/human/martial.js` is the human's martial vocabulary: stances to stand in, moves to make from
+them, and a bow. They are written as absolute poses of the rig's own bones, laid over each other, so a
+move leaves from its stance and ends in it, and one flows into the next.
+
+```js
+man.setStyle({ stance: 'boxing', attack: 'cross' });
+man.pose({ clip: 'stance', time });          // held, bobbing on his feet
+man.pose({ clip: 'attack', t, time });       // the cross, from that stance
+man.pose({ clip: 'bow', t, bow: 'rei' });    // 0..1: down, held, up
+```
+
+**Stances** (`STANCES`, `style.stance`, the `stance` clip): `boxing` (orthodox, chin down behind the lead
+shoulder), `karate` (front stance, zenkutsu-dachi, lead forearm blocking, the other fist at the hip),
+`horse` (kung fu's ma bu: feet two shoulder widths apart, thighs near level, fists at the hips), `crane`
+(all the weight on one leg, the other knee drawn high, one hand a beak, one arm a wing), `muaythai`,
+`taekwondo` (bladed and bouncy), `taiji` (a bow stance with the arm rounded in ward-off),
+and, with a blade in the hand, `fencing` (en garde), `kendo` (chudan-no-kamae, both hands on the grip, the
+point at the throat), `hasso` (the blade upright by the shoulder), `waki` (the blade hidden behind the hip)
+and `gedan` (the point low). A blade stance is written for the right hand and mirrored for a blade in the
+left; the others are written for a left lead, and `style.lead: 'R'` stands him southpaw.
+
+**Moves** (`MOVES`, `style.attack`, the `attack` clip, `t` 0..1, beside `slash`, `chop`, `thrust`, `smite`,
+`punch` and `shove`): the strikes `jab`, `cross`, `hook`, `uppercut`, `elbow`, `palm`, `shuto` (a knife-hand);
+the kicks `front-kick`, `roundhouse`, `side-kick`, `knee` and the spinning `back-kick`; and, with a blade
+(`BLADE_MOVES`), the rising cut `rising`, the horizontal `sweep`, the fencing `lunge`, `parry`, `riposte` (a
+parry answered by a lunge) and the full-turn `whirl`. A move is made from its own stance, or from the one he is
+in if the move can be made from it (a punch from any guard); a move that is not given a stance is made from
+its own. With a two-handed weapon (or from kendo's and hasso's guards) the left hand closes on the grip.
+
+**Bows** (`BOWS`, `style.bow` or `state.bow`): `rei` (a standing bow of about thirty degrees, hands sliding down
+the thighs), `deep` (the formal bow, lower and held longer) and `salute` (the fist in the palm at the chest,
+a nod).
+
+Feet stay on the floor whatever the legs do (`plant` in martial.js): the hips are lowered or raised to put
+the lowest sole on the ground, and a foot that is nearly down has its leg straightened to meet it, less and less
+so the higher it is, so a kick's lifted foot is left alone. A woman's shorter legs are measured off
+her skeleton, so every stance and kick fits her too. Hands take the shape the stance or move calls for
+(`HAND_POSES`: fists, an open palm, `blade` for a knife-hand) unless something is held.
 
 ## Files
 

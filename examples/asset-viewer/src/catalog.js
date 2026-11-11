@@ -749,8 +749,9 @@ function humanItem(sex) {
     source: 'people/human',
     kind: 'object',
     async build() {
-      const [{ createHuman, CLIPS: clips, garmentsFor, HAND_POSES, customizationFor }, weapons, metals] = await Promise.all([
+      const [{ createHuman, CLIPS: clips, garmentsFor, HAND_POSES, customizationFor }, { STANCES, MOVES, BOWS }, weapons, metals] = await Promise.all([
         import('../../../src/people/human.js'),
+        import('../../../src/people/human/martial.js'),
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
@@ -781,7 +782,11 @@ function humanItem(sex) {
         { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm('R'); } },
         // The left hand's own: a second weapon to wield both, a hero or a coin (not while reading a book).
         { type: 'select', label: 'Left holds', options: HUMAN_LEFT, get: () => weaponL, set: (v) => { weaponL = v; if (weapon === 'book') { weapon = 'none'; man.release('R'); } rearm('L'); } },
-        { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove'], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
+        { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove', ...MOVES], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
+        // The fighting clips: `stance` holds this form, `attack` makes the move from it, `bow` the bow.
+        { type: 'select', label: 'Stance', options: ['(the move\'s own)', ...STANCES], get: () => style.stance ?? '(the move\'s own)', set: (v) => { style.stance = STANCES.includes(v) ? v : undefined; } },
+        { type: 'select', label: 'Lead foot', options: ['as written', 'L', 'R'], get: () => style.lead ?? 'as written', set: (v) => { style.lead = v === 'as written' ? undefined : v; } },
+        { type: 'select', label: 'Bow', options: Object.keys(BOWS), get: () => style.bow ?? 'rei', set: (v) => { style.bow = v; } },
         { type: 'select', label: 'Left hand', options: Object.keys(HAND_POSES), get: () => handL, set: (v) => { handL = v; man.hands(v, { hand: 'L' }); } },
         { type: 'color', label: 'T-shirt', get: () => man.look.shirt, set: (c) => man.setShirtColor(c) },
         { type: 'color', label: 'Jeans tint', get: () => man.look.denim, set: (c) => man.setJeansColor(c) },
