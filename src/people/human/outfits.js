@@ -23,6 +23,9 @@ import {
 const TAU = Math.PI * 2;
 const WRIST = WRIST_D;
 
+/** What an untucked top (or the gi's jacket) hides the top of: the briefs, the legwear, a belt over it. */
+export const LEGWEAR = new Set(['jeans', 'briefs', 'trousers', 'shorts', 'giPants', 'dressBelt']);
+
 // ———————————————————————————————————————————————— jackets, shirts and pullovers
 
 /** Measures (see JACKET) for each, as cut for him; hers are a little shorter and closer. */
@@ -33,7 +36,8 @@ const COATS = {
   blazerButtoned: { open: false, layer: 5, slot: 'outer', materials: ['wool', 'metal'], j: { material: 'wool', rib: 'wool', ribTrim: 'wool', trim: 'wool', hem: 0.845, band: 0, cuffBand: 0, cuff: WRIST - 0.006, collar: 0.024, gap: 0.034, over: 0.014, stiffness: 0.6, shade: 0.5, blouse: 0, pockets: false, lapel: 0.3, puff: 0.002, buttons: 2, buttonTop: 1.17, buttonBottom: 1.04, buttonSize: 0.0075 }, crop: 0.06 },
   sweater: { open: false, layer: 4.5, slot: 'mid', materials: ['knit', 'knitRib', 'knitRibTrim'], j: { material: 'knit', rib: 'knitRib', ribTrim: 'knitRibTrim', trim: 'knitRibTrim', hem: 0.915, band: 0.06, cuffBand: 0.05, cuff: WRIST - 0.004, collar: 0.028, zip: false, pockets: false, gap: 0.05, over: 0.012, stiffness: 0.5, shade: 0.6, blouse: 0.5, puff: 0.004 } },
   hoodie: { open: false, layer: 4.5, slot: 'mid', materials: ['hoodie', 'hoodieRib', 'hoodieRibTrim'], j: { material: 'hoodie', rib: 'hoodieRib', ribTrim: 'hoodieRibTrim', trim: 'hoodieRibTrim', hem: 0.91, band: 0.065, cuffBand: 0.05, cuff: WRIST - 0.004, collar: 0.042, hood: 1, zip: false, pockets: false, gap: 0.05, over: 0.016, stiffness: 0.5, shade: 0.6, blouse: 0.7, puff: 0.006 } },
-  dressShirt: { open: false, layer: 4, slot: 'top', materials: ['poplin', 'metal'], j: { material: 'poplin', rib: 'poplin', ribTrim: 'poplin', trim: 'poplin', hem: 0.915, band: 0, cuffBand: 0.035, cuff: WRIST - 0.004, collar: 0.032, gap: 0.05, over: 0.006, stiffness: 0.15, shade: 0.9, blouse: 0.3, pockets: false, buttons: 7, placket: true, puff: 0.002 }, tail: true },
+  // (Tucked in: under the trousers, its hem inside their waistband.)
+  dressShirt: { open: false, layer: 2.5, slot: 'top', materials: ['poplin', 'metal'], j: { material: 'poplin', rib: 'poplin', ribTrim: 'poplin', trim: 'poplin', hem: 0.995, band: 0, cuffBand: 0.035, cuff: WRIST - 0.004, collar: 0.032, gap: 0.05, over: 0.006, stiffness: 0.15, shade: 0.9, blouse: 0.3, pockets: false, buttons: 7, placket: true, puff: 0.002 } },
   giTop: { open: true, layer: 5, slot: 'top', materials: ['gi', 'metal'], j: { material: 'gi', rib: 'gi', ribTrim: 'gi', trim: 'gi', hem: 0.87, band: 0, cuffBand: 0, cuff: 0.44, collar: 0.02, gap: 0.014, vgap: 0.05, vlow: 1.08, over: 0.016, loose: 0.03, stiffness: 0.3, shade: 0.7, blouse: 0.4, pockets: false, lapel: 0.42, lapelWide: 0.075, puff: 0.002 }, tail: true },
 };
 
@@ -44,7 +48,7 @@ function coat(name, women = false) {
   const c = { ...(women ? WOMENS_CUT : MENS_CUT), jacket: Object.freeze({ ...JACKET, ...made }) };
   const base = bomber(open, c, { name, layer, slot, materials });
   // A shirt (or the gi) is not tucked in: its tail's under-layers are hidden the way a t-shirt's are, not the jacket's.
-  const covers = !tail ? base.covers : (z) => base.covers(z) && !((z.zone === 'jeans' || z.zone === 'trousers' || z.zone === 'briefs' || z.zone === 'shorts' || z.zone === 'giPants') && seated(z.z ?? 0));
+  const covers = !tail ? base.covers : (z) => base.covers(z) && !(LEGWEAR.has(z.zone) && seated(z.z ?? 0));
   return { ...base, covers };
 }
 
@@ -348,12 +352,12 @@ export const OUTFIT_HANGS = Object.freeze({
 });
 
 /** Garments that hang from the hips behind, and are kept over what is under them as he sits (see clearTails in human.js). */
-export const TAIL_GARMENTS = Object.freeze(['skirt', 'miniSkirt', 'dress', 'miniDress', 'dressShirt', 'giTop', 'sweater', 'hoodie', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned']);
+export const TAIL_GARMENTS = Object.freeze(['skirt', 'miniSkirt', 'dress', 'miniDress', 'giTop', 'sweater', 'hoodie', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned']);
 
 const SHARED = {
-  tank: { layer: 4, slot: 'top', materials: ['tank'], fits: true, build: (detail, { under } = {}) => tag([tank(detail, under)], 'tank'), covers: ({ zone, y, sx = 0, z = 0 }) => (zone === 'trunk' && y > 0.93 + OPEN && y < tankTop(sx, z) - 0.02) || ((zone === 'jeans' || zone === 'briefs' || zone === 'trousers' || zone === 'shorts') && y > 0.93 + OPEN && !seated(z)) || zone === 'bra' },
+  tank: { layer: 4, slot: 'top', materials: ['tank'], fits: true, build: (detail, { under } = {}) => tag([tank(detail, under)], 'tank'), covers: ({ zone, y, sx = 0, z = 0 }) => (zone === 'trunk' && y > 0.93 + OPEN && y < tankTop(sx, z) - 0.02) || (LEGWEAR.has(zone) && y > 0.93 + OPEN && !seated(z)) || zone === 'bra' },
   belt: { layer: 6, slot: 'belt', materials: ['belt'], fits: true, build: (detail, { under } = {}) => tag(belt(detail, under, 'belt', 'belt', false), 'belt'), covers: () => false },
-  dressBelt: { layer: 6, slot: 'belt', materials: ['beltLeather', 'metal'], fits: true, build: (detail, { under } = {}) => tag(belt(detail, under, 'dressBelt', 'beltLeather', true), 'dressBelt'), covers: () => false },
+  dressBelt: { layer: 3.5, slot: 'belt', materials: ['beltLeather', 'metal'], fits: true, build: (detail, { under } = {}) => tag(belt(detail, under, 'dressBelt', 'beltLeather', true), 'dressBelt'), covers: () => false },
   tie: { layer: 4.2, slot: 'tie', materials: ['tie'], fits: true, build: (detail, { under } = {}) => tag([tie(detail, under)], 'tie'), covers: () => false },
   dressShoes: footwear('dressShoes', 2, { collar: 0.062, sole: 0.8, laces: 4, materials: ['dressShoe', 'dressShoe', 'dressShoe'] }),
   boots: footwear('boots', 2, { collar: 0.15, sole: 1.2, laces: 7, materials: ['boot', 'sole', 'boot'] }),

@@ -738,3 +738,14 @@ test('the skirt moves with the legs and stays out of the briefs under it', () =>
   assert.ok(hem.length > 50 && kick > rest + 0.03, `the hem lifts with the leg (${rest.toFixed(2)} to ${kick.toFixed(2)})`);
   her.setStyle({});
 });
+
+test('a dress shirt is tucked in (under the trousers, which the belt goes over); a t-shirt hangs over the belt', async () => {
+  const { garmentsFor } = await import('../src/people/index.js');
+  const w = garmentsFor('male');
+  assert.ok(w.dressShirt.layer < w.trousers.layer && w.trousers.layer < w.dressBelt.layer, 'shirt, trousers, belt, from the inside out');
+  assert.ok(w.dressBelt.layer < w.tshirt.layer, 'an untucked t-shirt is over the belt');
+  const him = createHuman(GFX, { detail: 0.5, outfit: ['briefs', 'trousers', 'dressBelt'], glasses: null });
+  const belt = him.garment('dressBelt').geometry.index.count;
+  him.wear('tshirt');
+  assert.ok(him.garment('dressBelt').geometry.index.count < belt, 'the t-shirt hides the belt under it');
+});

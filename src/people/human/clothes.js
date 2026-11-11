@@ -1347,11 +1347,13 @@ const NOT_UNDER = new Set(['foot', 'hand', 'head', 'neck', 'sneakers', 'socks', 
  */
 export function bomber(open, c = MENS_CUT, o = {}) {
   const j = c.jacket ?? JACKET;
+  // (Half the space between the open fronts at height `y`: a V-neck's widens up the chest.)
+  const gapAt = (y) => j.gap + (j.vgap ?? 0) * smooth(j.vlow ?? 1.0, jacketNeck(0) - 0.02, y);
   const inside = ({ y, sx = 0, z = 0 }, margin) => {
     const th = Math.atan2(sx, z - SHIRT_Z);
     // At the open fronts only the facing turned in behind the edge needs clearing, not the whole margin:
     // the cloth under further in is hidden, or it shows through as the arms lift the leather off it.
-    const shut = !open || Math.cos(th) < 0.2 || Math.abs(sx) - j.gap > Math.min(margin, FRONT_CLEAR);
+    const shut = !open || Math.cos(th) < 0.2 || Math.abs(sx) - gapAt(y) > Math.min(margin, FRONT_CLEAR);
     return y > j.hem + margin && y < jacketNeck(th) - margin * 0.5 && shut;
   };
   const { name = open ? 'jacket' : 'jacketZipped', layer = 5, slot = 'outer', materials = ['leather', 'rib', 'ribTrim', 'leatherTrim', 'metal'] } = o;
@@ -1374,6 +1376,9 @@ export function bomber(open, c = MENS_CUT, o = {}) {
     },
   };
 }
+
+/** What a t-shirt hangs over the top of. */
+const UNDER_TOP = new Set(['jeans', 'briefs', 'trousers', 'shorts', 'giPants', 'dressBelt']);
 
 export const GARMENTS = Object.freeze({
   briefs: {
@@ -1413,7 +1418,7 @@ export const GARMENTS = Object.freeze({
     materials: ['shirt'],
     fits: true,
     build: (detail, { under } = {}) => tag(hangFromHips(shirt(detail, under)), 'tshirt'),
-    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > HEM + OPEN && !seated(z)) || zone === 'bra',
+    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || (UNDER_TOP.has(zone) && y > HEM + OPEN && !seated(z)) || zone === 'bra',
   },
   jacket: bomber(true),
   jacketZipped: bomber(false),
@@ -1443,7 +1448,7 @@ export const GARMENTS_FEMALE = Object.freeze({
   tshirt: {
     ...GARMENTS.tshirt,
     build: (detail, { under } = {}) => inCut(WOMENS_CUT, () => tag(hangFromHips(shirt(detail, under)), 'tshirt')),
-    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > WOMENS_CUT.hem + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < WOMENS_CUT.sleeve - OPEN) || ((zone === 'jeans' || zone === 'briefs') && y > WOMENS_CUT.hem + OPEN && !seated(z)) || zone === 'bra',
+    covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > WOMENS_CUT.hem + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < WOMENS_CUT.sleeve - OPEN) || (UNDER_TOP.has(zone) && y > WOMENS_CUT.hem + OPEN && !seated(z)) || zone === 'bra',
   },
   jeans: {
     ...GARMENTS.jeans,
