@@ -46,3 +46,15 @@ test('the shell can be resin in any color, any of the engine\'s metals, or wood'
   assert.throws(() => bot.setShell('metal', { metal: 'unobtainium' }), /metal/);
   assert.throws(() => bot.setShell('wood', { wood: 'plastic' }), /wood/);
 });
+
+test('the robot dual wields, as the man does: a blade in each hand, held ready in both', async () => {
+  const { createBroadsword, createDagger } = await import('../src/weapons/index.js');
+  const bot = createRobot(GFX, { detail: 0.5 });
+  bot.hold(createBroadsword(GFX), { hand: 'R' });
+  bot.hold(createDagger(GFX), { hand: 'L' });
+  assert.ok(bot.held('R') && bot.held('L'), 'both hands are full');
+  for (const clip of ['idle', 'walk', 'attack']) bot.pose({ clip, t: 0.4, time: 0.4 });
+  bot.release('L');
+  assert.equal(bot.held('L'), null);
+  assert.ok(bot.held('R'));
+});

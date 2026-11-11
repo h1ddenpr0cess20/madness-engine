@@ -841,14 +841,21 @@ function robotItem() {
       ]);
       const bot = createRobot(GFX, {});
       const style = {};
-      let weapon = 'none', attack = 'slash';
-      let arming = 0;
-      const rearm = async () => {
-        const mine = ++arming;
-        bot.release('R');
-        if (weapon === 'none') return;
-        const { thing, how, open = true } = await humanHeld(weapon, weapons);
-        if (mine === arming) bot.hold(thing, { hand: 'R', how, open });
+      let weapon = 'none', weaponL = 'none', attack = 'slash';
+      // (A weapon may load after a later choice: only the latest for each hand is put in it.)
+      const arming = { R: 0, L: 0 };
+      const rearm = async (S = 'R') => {
+        const mine = ++arming[S];
+        const choice = S === 'R' ? weapon : weaponL;
+        bot.release(S);
+        if (choice === 'none') return;
+        const { thing, how, open = true } = await humanHeld(choice, weapons);
+        if (mine !== arming[S]) return;
+        // A book open takes both hands: whatever the left held is put down.
+        if (how === 'book' && open) weaponL = 'none';
+        bot.hold(thing, { hand: S, how, open });
+        // (A weapon made for two hands takes both: one in the other hand was put down.)
+        if (!bot.held(S === 'R' ? 'L' : 'R')) { if (S === 'R') weaponL = 'none'; else weapon = 'none'; }
       };
       const ui = [
         { type: 'select', label: 'Shell', options: SHELLS, get: () => bot.finish.shell, set: (v) => bot.setShell(v) },
@@ -859,7 +866,9 @@ function robotItem() {
         { type: 'select', label: 'Trim (resin)', options: Object.keys(RESIN_COLORS), get: () => (RESIN_COLORS[bot.finish.trim] ? bot.finish.trim : 'blue'), set: (v) => bot.setTrim(v) },
         { type: 'select', label: 'Frame metal', options: Object.keys(metals.METALS), get: () => bot.finish.frame, set: (v) => bot.setFrame(v) },
         { type: 'color', label: 'Light', get: () => bot.finish.accent, set: (c) => bot.setAccent(c) },
-        { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm(); } },
+        { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm('R'); } },
+        // The left hand's own: a second weapon to wield both.
+        { type: 'select', label: 'Left holds', options: HUMAN_LEFT, get: () => weaponL, set: (v) => { weaponL = v; if (weapon === 'book') { weapon = 'none'; bot.release('R'); } rearm('L'); } },
         { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove', ...MOVES], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
         { type: 'select', label: 'Stance', options: ['(the move\'s own)', ...STANCES], get: () => style.stance ?? '(the move\'s own)', set: (v) => { style.stance = STANCES.includes(v) ? v : undefined; } },
       ];
