@@ -108,20 +108,33 @@ export function robotParts(build = 'standard') {
   }
 
   // ———————————————————————————————— neck and head
-  M.cylinder('metal', 'neck', V(0, 1.47, 0.012), V(0, 1.6, 0.025), 0.03 * NK, { ch: 0.003, squash: 1 });
-  for (let i = 0; i < 4; i++) M.cylinder('rubber', 'neck', V(0, 1.485 + i * 0.026, 0.014 + i * 0.002), V(0, 1.494 + i * 0.026, 0.015 + i * 0.002), 0.034 * NK, { ch: 0.002 });
+  // The neck: a column from the shoulders up into the head. The wedge head's neck leans forward into the head's angle (half of it),
+  // so the two read as one line.
+  const neckBase = V(0, 1.47, 0.012);
+  const [hf, hs] = angular ? HEAD_TILT.angular : [0, 0];
+  const nf = hf * 0.55, ns = hs * 0.55;
+  const neckAxis = angular ? [Math.cos(nf) * Math.sin(ns), Math.cos(nf) * Math.cos(ns), Math.sin(nf)] : [0, 0.9994, 0.1];
+  const neckTop = angular ? add(neckBase, scale(neckAxis, 0.135)) : V(0, 1.6, 0.025);
+  M.cylinder('metal', 'neck', neckBase, neckTop, 0.03 * NK, { ch: 0.003, squash: 1 });
+  for (let i = 0; i < 4; i++) {
+    const c = add(neckBase, scale(sub(neckTop, neckBase), (0.12 + i * 0.2) / 1));
+    M.cylinder('rubber', 'neck', c, add(c, scale(neckAxis, 0.01)), 0.034 * NK, { ch: 0.002 });
+  }
   if (angular) {
-    // The head: a wedge, a hard brow tapering to a narrow chin (a triangle from the front), plain with no face, turned on the neck
+    // The head: a wedge, a hard brow tapering to a narrow chin (a triangle from the front), plain with no face. The point is the chin,
+    // thrust forward; the neck goes up into the underside of the skull behind it. The whole head is turned on the neck
     // (HEAD_TILT.angular: forward, like a glare, and canted to one side, in radians).
-    const [fwd, side] = HEAD_TILT.angular, yb = 1.595;
+    const [fwd, side] = HEAD_TILT.angular;
+    const P = add(neckTop, scale(neckAxis, -0.02));
+    const ring = (h, w, d, cz) => ({ y: P[1] + h, w: w * HD, d: d * HD, cx: P[0], cz: P[2] + cz * HD, n: h < 0.02 ? 2 : h < 0.1 ? 3 : 3.8 });
     M.loft('plate', 'head', [
-      { y: yb + 0.0, w: 0.018 * HD, d: 0.03 * HD, cz: 0.03, n: 2 },
-      { y: yb + 0.04, w: 0.04 * HD, d: 0.055 * HD, cz: 0.03, n: 2.6 },
-      { y: yb + 0.09, w: 0.07 * HD, d: 0.075 * HD, cz: 0.03, n: 3.2 },
-      { y: yb + 0.14, w: 0.088 * HD, d: 0.082 * HD, cz: 0.03, n: 3.8 },
-      { y: yb + 0.18, w: 0.086 * HD, d: 0.075 * HD, cz: 0.03, n: 4 },
-      { y: yb + 0.205, w: 0.06 * HD, d: 0.05 * HD, cz: 0.03, n: 3 },
-    ], { segs: 28, tilt: { pivot: V(0, yb, 0.03), fwd, side } });
+      ring(0.0, 0.022, 0.03, 0.05),
+      ring(0.03, 0.042, 0.062, 0.022),
+      ring(0.08, 0.068, 0.076, 0.012),
+      ring(0.13, 0.088, 0.082, 0.004),
+      ring(0.17, 0.086, 0.075, 0.0),
+      ring(0.2, 0.06, 0.05, -0.006),
+    ], { segs: 28, tilt: { pivot: P, fwd, side } });
   } else {
     // The head: a smooth oval (an ellipsoid, taller than it is wide), plain with no face, set on the neck a little tilted
     // (HEAD_TILT.smooth: forward and to the side, in radians).
