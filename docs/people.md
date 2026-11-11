@@ -381,8 +381,8 @@ one in each hand, both. `read` is `sit`, a little forward, the head bowed
 to a book held open in both hands. `flip` flips the coin he holds: off the
 thumb from a palm-up hand at the waist, up about 45 cm turning over and over,
 caught again and held up to look at, his head and eyes following it.
-`wave` raises one arm out to the side, the elbow bent and the forearm swinging side to side (the right
-unless it holds a weapon; `hand: 'L'` for the left). It goes on while you give no `t`; give one and the arm is raised and
+`wave` is a hello: one arm lifted out, the elbow bent to put the open hand up by the shoulder, the forearm rocking
+side to side (the right unless it holds a weapon; `hand: 'L'` for the left). It goes on while you give no `t`; give one and the arm is raised and
 lowered over it. The robot, on the same rig, waves too.
 
 `man.setStyle({ attack, heavy })`: `attack` is `'slash'`, `'chop'`,

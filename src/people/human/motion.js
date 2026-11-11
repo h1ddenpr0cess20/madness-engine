@@ -436,19 +436,19 @@ export function moveHuman(k, state = {}, style = {}) {
     case 'bow': bow(k, t, { ...style, bow: state.bow ?? style.bow }); break;
     case 'stance': holdStance(k, state.stance ?? style.stance ?? 'boxing', T, style); break;
     case 'wave': {
-      // A friendly wave: the arm raised out to the side, the elbow bent, the forearm and hand swinging from side to side.
-      // `state.hand` ('L' or 'R') is the one that waves (the right, unless it holds something). Given a `t`, the arm is raised and lowered
-      // over it; with none, the wave goes on.
+      // A hello: the upper arm lifted out and a little forward, the elbow well bent so the open hand is up by the shoulder, and the
+      // forearm rocking from side to side from the elbow. `state.hand` ('L' or 'R') is the one that waves (the right, unless it holds
+      // something). Given a `t`, the arm is raised and lowered over it; with none, the wave goes on.
       idle(k, T, armed);
       const S = state.hand ?? (isArmed(armed, 'R') ? 'L' : 'R'), m = S === 'L' ? 1 : -1;
-      const up = 't' in state ? win(t, 0, 0.18) * (1 - win(t, 0.84, 1)) : 1;
-      const wag = Math.sin(T * 9);
-      k.turn(`clavicle${S}`, 0, 0, m * 0.18 * up);
-      k.turn(`arm${S}`, -0.1 * up, 0, m * 1.35 * up);
-      k.turn(`fore${S}`, 0, 0, m * (1.3 + 0.4 * wag) * up);
-      k.turn(`hand${S}`, 0, 0, m * wag * 0.25 * up);
-      k.turn('chest', 0, 0.06 * up * m, 0);
-      k.turn('head', 0.02 * up, -0.1 * up * m, -m * 0.07 * up);
+      const up = 't' in state ? win(t, 0, 0.2) * (1 - win(t, 0.82, 1)) : 1;
+      const wag = Math.sin(T * 8);
+      k.turn(`clavicle${S}`, 0, 0, m * 0.1 * up);
+      k.turn(`arm${S}`, -0.5 * up, 0, m * 0.8 * up);
+      k.turn(`fore${S}`, 0, 0, m * (1.75 + 0.3 * wag) * up);
+      k.turn(`hand${S}`, 0, 0, m * wag * 0.2 * up);
+      k.turn('chest', 0, 0.05 * up * m, 0);
+      k.turn('head', 0.02 * up, -0.12 * up * m, -m * 0.06 * up);
       break;
     }
     case 'cast': {
