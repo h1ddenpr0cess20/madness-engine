@@ -100,6 +100,30 @@ export class Mech {
     }, { flip: true });
   }
 
+  /**
+   * A shell lofted through cross-sections up the y axis: `rings` is [{ y, w, d, cx, cz, n }, ...] (bottom to top), each a
+   * superellipse of half-width `w` and half-depth `d` about (cx, cz); `n` is its squareness (2 an ellipse, 4 a rounded
+   * square, higher boxier). Closed at either end by default.
+   */
+  loft(material, bone, rings, { segs = 28, capTop = true, capBottom = true } = {}) {
+    const part = this.part(material);
+    const sg = (x) => (x < 0 ? -1 : 1);
+    const at = (r, j) => {
+      const th = (j / segs) * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th), e = 2 / (r.n ?? 2);
+      return [(r.cx ?? 0) + r.w * sg(c) * Math.abs(c) ** e, r.y, (r.cz ?? 0) + r.d * sg(sn) * Math.abs(sn) ** e];
+    };
+    part.grid(rings.length - 1, segs, (i, j) => {
+      const p = at(rings[i], j);
+      return { p, w: { [bone]: 1 }, uv: [p[0] * 3 + p[2] * 3, p[1] * 3] };
+    });
+    const cap = (r, up) => {
+      const c = [r.cx ?? 0, r.y, r.cz ?? 0];
+      for (let j = 0; j < segs; j++) this.tri(material, bone, c, at(r, j), at(r, j + 1), [0, up, 0]);
+    };
+    if (capTop) cap(rings[rings.length - 1], 1);
+    if (capBottom) cap(rings[0], -1);
+  }
+
   /** A cylinder from `p0` to `p1`, radius `r` (to `r1` if given), the ends chamfered `ch`. */
   cylinder(material, bone, p0, p1, r, { r1 = r, ch = 0.003, segs = 18, ref, squash = 1, rm = null } = {}) {
     const L = Math.hypot(...sub(p1, p0));

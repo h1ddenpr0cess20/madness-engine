@@ -5,8 +5,8 @@ import { add, scale, sub } from './human/kit.js';
 /**
  * The robot's components, laid out along the man's skeleton as a guide: his
  * joints say where the machine bends, his limbs how long each part is, his
- * trunk and head how big to build round them. The look is a slim, sleek
- * humanoid (smooth rounded shells, a plain smooth head, exposed
+ * trunk and head how big to build round them. The look is an angular,
+ * aggressive humanoid (a V-shaped torso lofted in hard planes, flat armored shoulders, a plain wedge head, exposed
  * linear actuators on the limbs, black five-fingered hands, feet like a
  * person's). The outer shell (`plate`, and `trim` for the second color) is
  * resin, wood or metal as chosen; what it covers (`metal`: the frame,
@@ -18,7 +18,7 @@ export const ROBOT_MATERIALS = Object.freeze(['plate', 'trim', 'metal', 'rubber'
 const V = (x, y, z) => [x, y, z];
 
 /**
- * The builds: how much to scale the machine's parts round the same skeleton. `standard` is the slim, sleek frame; `heavy` is the
+ * The builds: how much to scale the machine's parts round the same skeleton. `standard` is the lean frame; `heavy` is the
  * same machine built stouter: thicker limbs, a broader, deeper torso, bigger shoulders, hands and feet, and armor plating
  * (trim bands on the limbs, hip plates, a heavier knee guard) over it.
  */
@@ -27,8 +27,8 @@ export const ROBOT_BUILDS = Object.freeze({
   heavy: { limb: 1.38, torso: 1.2, depth: 0.76, shoulder: 1.3, neck: 1.35, head: 1.1, hip: 1.2, hand: 1.15, foot: 1.2, plated: true },
 });
 
-/** How the head is set on the neck: tilted forward, and cocked to one side, in radians. */
-export const HEAD_TILT = Object.freeze([0.1, 0.1]);
+/** How the head is set on the neck: forward (like a stalking hunch), and cocked to one side (none), in radians. */
+export const HEAD_TILT = Object.freeze([0.12, 0]);
 
 export function robotParts(build = 'standard') {
   const G = ROBOT_BUILDS[build];
@@ -54,36 +54,58 @@ export function robotParts(build = 'standard') {
   };
 
   // ———————————————————————————————— the trunk
-  // The chest shell: a smooth egg-shaped torso, wide at the shoulders, narrowing to the waist.
-  M.lathe('plate', 'chest', V(0, 1.12, -0.02), V(0, 1.5, -0.02), [
-    [0, 0], [0, 0.08], [0.03, 0.098], [0.1, 0.13], [0.17, 0.158], [0.24, 0.165], [0.3, 0.15], [0.34, 0.115], [0.37, 0.075], [0.38, 0.045], [0.38, 0],
-  ].map(([s, r]) => [s, r * T]), { segs: 32, squash: dep(0.62) });
-  // A sternum plate and a black panel across the upper chest, with a status light.
-  M.box('rubber', 'chest', V(0, 1.4, 0.083 * T * (D / 0.62)), [0.1 * T, 0.02, 0.006], { bevel: 0.004 });
-  M.box('glow', 'chest', V(0, 1.4, 0.0895 * T * (D / 0.62)), [0.012, 0.003, 0.002], { bevel: 0.001 });
-  // Trim: a collar ring, and a band at the base of the chest shell.
-  M.lathe('trim', 'chest', V(0, 1.425, -0.02), V(0, 1.445, -0.02), [[0, 0.09 * T], [0, 0.118 * T], [0.02, 0.118 * T], [0.02, 0.09 * T]], { segs: 28, squash: dep(0.62) });
+  // The chest shell: a V-shaped torso, broad and flat across the shoulders and cut in to the waist, its front a hard plane.
+  const front = (y) => 0.1 * T * (D / 0.62) * 1.0 - 0.01;
+  M.loft('plate', 'chest', [
+    { y: 1.12, w: 0.085 * T, d: 0.07 * T * (D / 0.62), cz: -0.01, n: 2.6 },
+    { y: 1.22, w: 0.12 * T, d: 0.082 * T * (D / 0.62), cz: -0.01, n: 3 },
+    { y: 1.32, w: 0.175 * T, d: 0.095 * T * (D / 0.62), cz: -0.01, n: 3.6 },
+    { y: 1.41, w: 0.222 * T, d: 0.1 * T * (D / 0.62), cz: -0.01, n: 4.6 },
+    { y: 1.465, w: 0.232 * T, d: 0.088 * T * (D / 0.62), cz: -0.012, n: 6 },
+    { y: 1.49, w: 0.15 * T, d: 0.065 * T * (D / 0.62), cz: -0.015, n: 5 },
+  ], { segs: 32 });
+  // A black panel across the upper chest, with a status light.
+  M.box('rubber', 'chest', V(0, 1.4, front(1.4) + 0.001), [0.1 * T, 0.02, 0.006], { bevel: 0.004 });
+  M.box('glow', 'chest', V(0, 1.4, front(1.4) + 0.0075), [0.012, 0.003, 0.002], { bevel: 0.001 });
+  // Trim: a hard band at the base of the chest, and a collar.
+  M.loft('trim', 'chest', [
+    { y: 1.125, w: 0.09 * T, d: 0.075 * T * (D / 0.62), cz: -0.01, n: 2.6 },
+    { y: 1.145, w: 0.094 * T, d: 0.078 * T * (D / 0.62), cz: -0.01, n: 2.6 },
+  ], { segs: 32, capTop: false, capBottom: false });
   // The waist: a black bellows over a metal spine of actuators.
   M.cylinder('rubber', 'spine', V(0, 1.06, 0.0), V(0, 1.2, 0.0), 0.083 * (1 + (T - 1) * 0.7), { ch: 0.004, squash: dep(0.72), segs: 22 });
   for (let i = 0; i < 6; i++) M.cylinder('metal', 'spine', V(0, 1.075 + i * 0.022, 0.0), V(0, 1.083 + i * 0.022, 0.0), 0.088 * (1 + (T - 1) * 0.7), { ch: 0.002, squash: dep(0.72), segs: 22 });
   for (const m of [1, -1]) actuator('spine', V(m * 0.07 * T, 1.07, -0.045 * T), V(m * 0.085 * T, 1.22, -0.03 * T), 0.012 * L);
-  // The pelvis shell.
-  M.lathe('plate', 'hips', V(0, 0.93, 0.005), V(0, 1.07, 0.005), [[0, 0], [0, 0.1], [0.02, 0.135], [0.07, 0.155], [0.12, 0.15], [0.14, 0.11], [0.14, 0]].map(([s, r]) => [s, r * HP]), { segs: 28, squash: dep(0.68) });
-
-  M.lathe('trim', 'hips', V(0, 1.045, 0.005), V(0, 1.065, 0.005), [[0, 0.1 * HP], [0, 0.152 * HP], [0.02, 0.152 * HP], [0.02, 0.1 * HP]], { segs: 28, squash: dep(0.68) });
+  // The pelvis shell: a tapered block, wide at the belt and narrowing to the thighs.
+  M.loft('plate', 'hips', [
+    { y: 0.93, w: 0.1 * HP, d: 0.075 * HP * (D / 0.62), cz: 0.005, n: 3 },
+    { y: 0.99, w: 0.13 * HP, d: 0.09 * HP * (D / 0.62), cz: 0.005, n: 3.4 },
+    { y: 1.07, w: 0.145 * HP, d: 0.095 * HP * (D / 0.62), cz: 0.005, n: 3.4 },
+  ], { segs: 28 });
+  M.loft('trim', 'hips', [
+    { y: 1.045, w: 0.146 * HP, d: 0.096 * HP * (D / 0.62), cz: 0.005, n: 3.4 },
+    { y: 1.065, w: 0.15 * HP, d: 0.1 * HP * (D / 0.62), cz: 0.005, n: 3.4 },
+  ], { segs: 28, capTop: false, capBottom: false });
 
   // ———————————————————————————————— neck and head
   M.cylinder('metal', 'neck', V(0, 1.47, 0.012), V(0, 1.6, 0.025), 0.03 * NK, { ch: 0.003, squash: 1 });
   for (let i = 0; i < 4; i++) M.cylinder('rubber', 'neck', V(0, 1.485 + i * 0.026, 0.014 + i * 0.002), V(0, 1.494 + i * 0.026, 0.015 + i * 0.002), 0.034 * NK, { ch: 0.002 });
-  // The head: a smooth oval (an ellipsoid, taller than it is wide), plain with no face, set on the neck a little tilted
-  // (HEAD_TILT: forward and to the side, in radians).
-  const H = 0.21 * (1 + (HD - 1) * 0.5), A = 0.077 * HD;
-  const oval = [];
-  for (let i = 0; i <= 14; i++) { const t = i / 14, e = 2 * t - 1; oval.push([H * t, A * Math.sqrt(Math.max(0, 1 - e * e))]); }
-  const [fwd, side] = HEAD_TILT;
-  const base = V(0, 1.595, 0.03);
-  const up = [Math.sin(side), Math.cos(side) * Math.cos(fwd), Math.sin(fwd)];
-  M.lathe('plate', 'head', base, add(base, scale(up, H)), oval, { segs: 32, squash: 1.12 });
+  // The head: a wedge, a hard brow tapering to a narrow chin (a triangle from the front), plain with no face, set forward on the neck
+  // (HEAD_TILT: forward and to the side, in radians). A brow plate over it, and a blade back of each cheek.
+  const [fwd, side] = HEAD_TILT, yb = 1.595;
+  const shear = (r) => ({ ...r, cx: Math.tan(side) * (r.y - yb), cz: 0.03 + Math.tan(fwd) * (r.y - yb) + (r.cz ?? 0) });
+  M.loft('plate', 'head', [
+    { y: yb + 0.0, w: 0.018 * HD, d: 0.03 * HD, n: 2 },
+    { y: yb + 0.04, w: 0.04 * HD, d: 0.055 * HD, n: 2.6 },
+    { y: yb + 0.09, w: 0.07 * HD, d: 0.075 * HD, n: 3.2 },
+    { y: yb + 0.14, w: 0.088 * HD, d: 0.082 * HD, n: 3.8 },
+    { y: yb + 0.18, w: 0.086 * HD, d: 0.075 * HD, n: 4 },
+    { y: yb + 0.205, w: 0.06 * HD, d: 0.05 * HD, n: 3 },
+  ].map(shear), { segs: 28 });
+  // The brow: a slab across the front above the eye line, angled down at the middle.
+  M.box('trim', 'head', V(Math.tan(side) * 0.1, yb + 0.15, 0.03 + Math.tan(fwd) * 0.15 + 0.062 * HD), [0.075 * HD, 0.011, 0.02], { bevel: 0.006, f: { x: [1, 0, 0], y: [0, Math.cos(0.5), -Math.sin(0.5)], z: [0, Math.sin(0.5), Math.cos(0.5)] } });
+  // Cheek blades: a thin wedge back of each side of the head, angled out and up.
+  for (const m of [1, -1]) M.box('trim', 'head', V(m * 0.092 * HD + Math.tan(side) * 0.1, yb + 0.1, 0.0 + Math.tan(fwd) * 0.1), [0.006, 0.032, 0.04], { bevel: 0.003, f: { x: [Math.cos(0.3), m * Math.sin(0.3), 0], y: [-m * Math.sin(0.3), Math.cos(0.3), 0], z: [0, 0, 1] } });
 
   // ———————————————————————————————— the arms
   for (const m of [1, -1]) {
@@ -92,8 +114,12 @@ export function robotParts(build = 'standard') {
     const arm = `arm${S}`, fore = `fore${S}`, clav = `clavicle${S}`;
     // The shoulder: a black joint under a smooth resin cap, an actuator across the top of it.
     M.sphere('rubber', arm, sh, 0.057 * SH, { segs: 20, rings: 10 });
-    M.sphere('plate', clav, add(sh, V(m * 0.008 * SH, 0.012 * SH, 0)), 0.062 * SH, { segs: 24, rings: 12 });
-    actuator(clav, add(sh, V(m * 0.045 * SH, 0.045 * SH, -0.04 * SH)), add(sh, V(-m * 0.04, 0.085 * SH, -0.045 * SH)), 0.013 * L);
+    // A flat pauldron: a hard slab across the top of the shoulder, sloping a little down and out, with a trim edge, over a block at its side.
+    const slope = { x: [Math.cos(0.16), -m * Math.sin(0.16), 0], y: [m * Math.sin(0.16), Math.cos(0.16), 0], z: [0, 0, 1] };
+    M.box('plate', clav, add(sh, V(m * 0.022, 0.05 * SH, 0)), [0.068 * SH, 0.026, 0.078 * SH], { bevel: 0.014, f: slope });
+    M.box('trim', clav, add(sh, V(m * 0.082 * SH, 0.034 * SH, 0)), [0.012, 0.02, 0.066 * SH], { bevel: 0.005, f: slope });
+    M.box('plate', clav, add(sh, V(m * 0.058 * SH, 0.0, 0)), [0.014 * SH, 0.04 * SH, 0.06 * SH], { bevel: 0.006 });
+    
     // The upper arm: a tapered resin sleeve, a metal actuator along its front.
     sleeve('plate', arm, add(sh, scale(sub(el, sh), 0.12)), add(sh, scale(sub(el, sh), 0.93)), 0.047 * L, 0.04 * L, { rm: 0.045 * L });
     actuator(arm, add(sh, off(m * 0.012, -0.05, 0.05)), add(el, off(m * 0.002, 0.04, 0.043)), 0.012 * L);
