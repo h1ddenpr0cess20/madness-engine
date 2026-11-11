@@ -1065,7 +1065,7 @@ export const BEARDS = Object.freeze({
       const top = beardTop(p);
       return 0.025 * (1 - 0.7 * smooth(top - 0.03, top - 0.002, p[1]));
     },
-    comb: (p) => norm([0, -1, 0.15]),
+    comb: () => norm([0, -1, 0.15]),
   }),
   /** A long beard: 6 cm on the cheeks and 9 at the chin, hanging down the throat and over the chest, uncut. */
   long: Object.freeze({
