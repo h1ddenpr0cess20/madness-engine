@@ -861,11 +861,11 @@ function robotItem() {
       const ui = [
         { type: 'select', label: 'Build', options: Object.keys(ROBOT_BUILDS), get: () => bot.finish.build, set: (v) => bot.setBuild(v) },
         { type: 'select', label: 'Shell', options: SHELLS, get: () => bot.finish.shell, set: (v) => bot.setShell(v) },
-        { type: 'select', label: 'Resin color', options: Object.keys(RESIN_COLORS), get: () => (RESIN_COLORS[bot.finish.color] ? bot.finish.color : Object.keys(RESIN_COLORS)[0]), set: (v) => bot.setShell('resin', { color: v }) },
+        { type: 'select', label: 'Resin color', options: Object.keys(RESIN_COLORS), get: () => (RESIN_COLORS[bot.finish.color] ? bot.finish.color : 'white'), set: (v) => bot.setShell('resin', { color: v }) },
         { type: 'color', label: 'Resin (custom)', get: () => RESIN_COLORS[bot.finish.color] ?? bot.finish.color, set: (c) => bot.setShell('resin', { color: c }) },
         { type: 'select', label: 'Shell metal', options: Object.keys(metals.METALS), get: () => bot.finish.metal, set: (v) => bot.setShell('metal', { metal: v }) },
         { type: 'select', label: 'Shell wood', options: Object.keys(WOOD_SPECIES), get: () => bot.finish.wood, set: (v) => bot.setShell('wood', { wood: v }) },
-        { type: 'select', label: 'Trim (resin)', options: Object.keys(RESIN_COLORS), get: () => (RESIN_COLORS[bot.finish.trim] ? bot.finish.trim : 'blue'), set: (v) => bot.setTrim(v) },
+        { type: 'select', label: 'Trim (resin)', options: Object.keys(RESIN_COLORS), get: () => (RESIN_COLORS[bot.finish.trim] ? bot.finish.trim : 'black'), set: (v) => bot.setTrim(v) },
         { type: 'select', label: 'Frame metal', options: Object.keys(metals.METALS), get: () => bot.finish.frame, set: (v) => bot.setFrame(v) },
         { type: 'color', label: 'Light', get: () => bot.finish.accent, set: (c) => bot.setAccent(c) },
         { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm('R'); } },

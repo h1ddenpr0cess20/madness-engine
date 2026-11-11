@@ -110,7 +110,7 @@ the neck); `heavy` is the same machine built stouter and angular (a V-shaped tor
 wedge head set forward), with thicker limbs, bigger hands and feet, and armor plating (trim bands on every limb, hip plates, knee guards).
 
 ```js
-const bot = createRobot(GFX, { color: 'white', trim: 'grey', frame: 'titanium' });
+const bot = createRobot(GFX);                  // white resin, black trim, a titanium frame: the defaults
 bot.setShell('resin', { color: '#c8202a' });   // glossy red resin
 bot.setShell('metal', { metal: 'chrome' });    // any METALS finish
 bot.setShell('wood', { wood: 'walnut' });      // any WOOD_SPECIES

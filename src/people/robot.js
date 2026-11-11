@@ -67,15 +67,15 @@ const colorOf = (c) => RESIN_COLORS[c] ?? c;
  * @param {object} [options]
  * @param {string} [options.build]  'standard' (the slim frame, default) or 'heavy' (stouter, with armor plating): `ROBOT_BUILDS`
  * @param {string} [options.shell]  what the outer shell is made of: 'resin' (default), 'metal' or 'wood'
- * @param {string} [options.color]  the resin's color: a name in `RESIN_COLORS`, or #rrggbb (default 'red')
+ * @param {string} [options.color]  the resin's color: a name in `RESIN_COLORS`, or #rrggbb (default 'white')
  * @param {string} [options.metal]  for a metal shell, a finish from `METALS` (steel, chrome, gold, ...; default 'steel')
  * @param {string} [options.wood]   for a wood shell, a species from `WOOD_SPECIES` (default 'walnut')
- * @param {string} [options.trim]   the trim panels' resin color (default 'blue')
+ * @param {string} [options.trim]   the trim panels' resin color (default 'black')
  * @param {string} [options.frame]  the metal of the frame inside, from `METALS` (default 'titanium')
  * @param {string} [options.accent] the eyes' and lamps' glow
  * @param {number} [options.detail] the human guide's level of detail, as createHuman's
  */
-export function createRobot(GFX, { build = 'standard', shell = 'resin', color = 'red', metal = 'steel', wood = 'walnut', trim = 'blue', frame = 'titanium', accent = '#39d0ff', detail = 1 } = {}) {
+export function createRobot(GFX, { build = 'standard', shell = 'resin', color = 'white', metal = 'steel', wood = 'walnut', trim = 'black', frame = 'titanium', accent = '#39d0ff', detail = 1 } = {}) {
   const human = createHuman(GFX, { detail, outfit: [], glasses: null, hair: null, beard: null, brows: null });
   const mats = human.materials;
   const M = (name, o) => new GFX.MeshPhysicalMaterial({ name: `robot ${name}`, vertexColors: true, ...o });

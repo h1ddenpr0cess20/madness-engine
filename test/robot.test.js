@@ -83,3 +83,12 @@ test('the heavy build is stouter than the standard one, on the same skeleton, an
   slim.pose({ clip: 'walk', t: 0.3, time: 0.3 });
   assert.throws(() => slim.setBuild('tiny'), /build/);
 });
+
+test('by default the robot is white resin with black trim', () => {
+  const bot = createRobot(GFX, { detail: 0.5 });
+  assert.equal(bot.finish.shell, 'resin');
+  assert.equal(bot.finish.color, 'white');
+  assert.equal(bot.finish.trim, 'black');
+  assert.equal(bot.materials.plate.color.getHexString(), RESIN_COLORS.white.slice(1));
+  assert.equal(bot.materials.trim.color.getHexString(), RESIN_COLORS.black.slice(1));
+});
