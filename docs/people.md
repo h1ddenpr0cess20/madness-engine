@@ -267,6 +267,29 @@ own colour (the material's `strands` flag).
   the front of the ear across the cheek to the corner of the mouth, trimmed
   level under the chin; the moustache down and out over the lip.
 
+More haircuts, all for either figure (`hair`), each grown by the same cards:
+
+- Short: `buzz` (a few millimetres, a little more on top), `crew` (2.5 cm on
+  top, standing, tapered), `texturedCrop` (4 cm, tousled, brought forward in
+  a fringe), `slickBack` (6 cm, combed straight back), `pompadour` (8 cm at
+  the front, swept up and back), `mohawk` (a 7 cm strip of spikes, the sides shaved),
+  `afro` (a round cloud, its tips on a sphere about 17 cm across), `pixie`
+  (a side fringe over a short, soft nape), `undercut` (6 cm swept back over
+  shaved sides), `caesar` (3 cm, a short level fringe), `flatTop`, `curtains`
+  (middle-parted, to the ears), `bowl`, `curly` (5 cm of loose curls) and
+  `balding` (a horseshoe round the sides and back).
+- Falling like `long`, skinned to the neck and back: `bob` (side-parted, to
+  the jaw), `shoulder` (to the tops of the shoulders), `longSide` (long, parted
+  at the side), `longBangs` (long, with a fringe) and `ponytail` (drawn back
+  and tied high at the back of the head).
+
+More facial hair (`beard`, the man's), all inside the full beard's outline,
+so the cheek line, the ear, the lips and the neckline hold: `stubble` (3 mm),
+`goatee` (chin and moustache joined), `vanDyke` (a pointed chin beard and a
+moustache apart), `soulPatch`, `chevron`, `pencil`, `handlebar` (ends waxed
+out and up), `walrus`, `muttonChops` and `long` (6 cm on the cheeks, 9 at the
+chin, over the throat).
+
 - `natural` (`brows`, on unless `brows: null`): about 9 mm at the head of
   each brow, swept up there, then lying out along the arch and turning down
   toward the tail.

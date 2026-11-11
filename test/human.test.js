@@ -194,6 +194,30 @@ test('talking moves the mouth through its shapes, and a yell opens it wide', asy
   man.pose({ clip: 'idle', t: 0, time: 0 });
 });
 
+test('every haircut and beard builds on the head and the face, and stays finite', async () => {
+  const { HAIRSTYLES, BEARDS } = await import('../src/people/index.js');
+  for (const name of ['buzz', 'crew', 'texturedCrop', 'slickBack', 'pompadour', 'mohawk', 'afro', 'pixie', 'bob', 'shoulder', 'undercut', 'caesar', 'flatTop', 'curtains', 'bowl', 'curly', 'balding', 'longSide', 'longBangs', 'ponytail']) assert.ok(HAIRSTYLES[name], name);
+  for (const name of ['stubble', 'goatee', 'vanDyke', 'soulPatch', 'chevron', 'pencil', 'handlebar', 'walrus', 'muttonChops', 'long']) assert.ok(BEARDS[name], name);
+  for (const name of Object.keys(HAIRSTYLES)) {
+    const him = createHuman(GFX, { detail: 0.5, hair: name, beard: null });
+    const mesh = him.group.children.find((c) => c.name === 'human hair');
+    const a = mesh.geometry.attributes.position;
+    assert.ok(a.count > (name === 'balding' ? 200 : 500), `${name} has cards`);
+    assert.ok(a.array.every(Number.isFinite), `${name} has no NaN`);
+    const { min, max } = boundsOf(a);
+    assert.ok(min[1] > 1.0 && max[1] > (name === 'balding' ? 1.7 : 1.72) && max[1] < 1.9 && Math.abs(min[2]) < 0.3, `${name} is on the head: ${min[1]}..${max[1]}`);
+  }
+  for (const name of Object.keys(BEARDS)) {
+    const him = createHuman(GFX, { detail: 0.5, hair: null, beard: name });
+    const mesh = him.group.children.find((c) => c.name === 'human beard');
+    const a = mesh.geometry.attributes.position;
+    assert.ok(a.count > 200, `${name} has cards`);
+    assert.ok(a.array.every(Number.isFinite), `${name} has no NaN`);
+    const { min, max } = boundsOf(a);
+    assert.ok(min[1] > 1.44 && max[1] < 1.71 && min[2] > 0.03, `${name} is on the face: ${min[1]}..${max[1]}`);
+  }
+});
+
 test('hair and a beard: cards where they grow, the beard moving with the jaw', () => {
   const bearded = createHuman(GFX, { detail: 0.5, beard: 'full' });
   assert.deepEqual(bearded.hair, { hair: 'sidePart', beard: 'full', brows: 'natural' });
