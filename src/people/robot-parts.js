@@ -105,20 +105,29 @@ export class Mech {
    * superellipse of half-width `w` and half-depth `d` about (cx, cz); `n` is its squareness (2 an ellipse, 4 a rounded
    * square, higher boxier). Closed at either end by default.
    */
-  loft(material, bone, rings, { segs = 28, capTop = true, capBottom = true } = {}) {
+  loft(material, bone, rings, { segs = 28, capTop = true, capBottom = true, tilt = null } = {}) {
     const part = this.part(material);
     const sg = (x) => (x < 0 ? -1 : 1);
+    // `tilt` ({ pivot, fwd, side }, radians) turns the whole shell about `pivot`: its top forward, then toward +x.
+    const turn = (p) => {
+      if (!tilt) return p;
+      const [x, y, z] = [p[0] - tilt.pivot[0], p[1] - tilt.pivot[1], p[2] - tilt.pivot[2]];
+      const cf = Math.cos(tilt.fwd), sf = Math.sin(tilt.fwd), cs = Math.cos(tilt.side), ss = Math.sin(tilt.side);
+      const y1 = y * cf - z * sf, z1 = y * sf + z * cf;
+      return [tilt.pivot[0] + x * cs + y1 * ss, tilt.pivot[1] - x * ss + y1 * cs, tilt.pivot[2] + z1];
+    };
+    const upOf = (up) => (tilt ? norm(sub(turn([tilt.pivot[0], tilt.pivot[1] + up, tilt.pivot[2]]), tilt.pivot)) : [0, up, 0]);
     const at = (r, j) => {
       const th = (j / segs) * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th), e = 2 / (r.n ?? 2);
-      return [(r.cx ?? 0) + r.w * sg(c) * Math.abs(c) ** e, r.y, (r.cz ?? 0) + r.d * sg(sn) * Math.abs(sn) ** e];
+      return turn([(r.cx ?? 0) + r.w * sg(c) * Math.abs(c) ** e, r.y, (r.cz ?? 0) + r.d * sg(sn) * Math.abs(sn) ** e]);
     };
     part.grid(rings.length - 1, segs, (i, j) => {
       const p = at(rings[i], j);
       return { p, w: { [bone]: 1 }, uv: [p[0] * 3 + p[2] * 3, p[1] * 3] };
     });
     const cap = (r, up) => {
-      const c = [r.cx ?? 0, r.y, r.cz ?? 0];
-      for (let j = 0; j < segs; j++) this.tri(material, bone, c, at(r, j), at(r, j + 1), [0, up, 0]);
+      const c = turn([r.cx ?? 0, r.y, r.cz ?? 0]);
+      for (let j = 0; j < segs; j++) this.tri(material, bone, c, at(r, j), at(r, j + 1), upOf(up));
     };
     if (capTop) cap(rings[rings.length - 1], 1);
     if (capBottom) cap(rings[0], -1);

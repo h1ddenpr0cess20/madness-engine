@@ -28,8 +28,8 @@ export const ROBOT_BUILDS = Object.freeze({
   heavy: { look: 'angular', limb: 1.38, torso: 1.2, depth: 0.76, shoulder: 1.3, neck: 1.35, head: 1.1, hip: 1.2, hand: 1.15, foot: 1.2, plated: true },
 });
 
-/** How the head is set on the neck, forward and to the side, in radians: the smooth oval's a little cocked, the wedge's set forward like a stalk. */
-export const HEAD_TILT = Object.freeze({ smooth: [0.1, 0.1], angular: [0.12, 0] });
+/** How the head is set on the neck, forward and to the side, in radians: the smooth oval's a little cocked, the wedge's turned well forward and canted, like a glare. */
+export const HEAD_TILT = Object.freeze({ smooth: [0.1, 0.1], angular: [0.32, 0.14] });
 
 export function robotParts(build = 'standard') {
   const G = ROBOT_BUILDS[build];
@@ -111,18 +111,17 @@ export function robotParts(build = 'standard') {
   M.cylinder('metal', 'neck', V(0, 1.47, 0.012), V(0, 1.6, 0.025), 0.03 * NK, { ch: 0.003, squash: 1 });
   for (let i = 0; i < 4; i++) M.cylinder('rubber', 'neck', V(0, 1.485 + i * 0.026, 0.014 + i * 0.002), V(0, 1.494 + i * 0.026, 0.015 + i * 0.002), 0.034 * NK, { ch: 0.002 });
   if (angular) {
-    // The head: a wedge, a hard brow tapering to a narrow chin (a triangle from the front), plain with no face, set forward on the neck
-    // (HEAD_TILT: forward and to the side, in radians).
+    // The head: a wedge, a hard brow tapering to a narrow chin (a triangle from the front), plain with no face, turned on the neck
+    // (HEAD_TILT.angular: forward, like a glare, and canted to one side, in radians).
     const [fwd, side] = HEAD_TILT.angular, yb = 1.595;
-    const shear = (r) => ({ ...r, cx: Math.tan(side) * (r.y - yb), cz: 0.03 + Math.tan(fwd) * (r.y - yb) + (r.cz ?? 0) });
     M.loft('plate', 'head', [
-      { y: yb + 0.0, w: 0.018 * HD, d: 0.03 * HD, n: 2 },
-      { y: yb + 0.04, w: 0.04 * HD, d: 0.055 * HD, n: 2.6 },
-      { y: yb + 0.09, w: 0.07 * HD, d: 0.075 * HD, n: 3.2 },
-      { y: yb + 0.14, w: 0.088 * HD, d: 0.082 * HD, n: 3.8 },
-      { y: yb + 0.18, w: 0.086 * HD, d: 0.075 * HD, n: 4 },
-      { y: yb + 0.205, w: 0.06 * HD, d: 0.05 * HD, n: 3 },
-    ].map(shear), { segs: 28 });
+      { y: yb + 0.0, w: 0.018 * HD, d: 0.03 * HD, cz: 0.03, n: 2 },
+      { y: yb + 0.04, w: 0.04 * HD, d: 0.055 * HD, cz: 0.03, n: 2.6 },
+      { y: yb + 0.09, w: 0.07 * HD, d: 0.075 * HD, cz: 0.03, n: 3.2 },
+      { y: yb + 0.14, w: 0.088 * HD, d: 0.082 * HD, cz: 0.03, n: 3.8 },
+      { y: yb + 0.18, w: 0.086 * HD, d: 0.075 * HD, cz: 0.03, n: 4 },
+      { y: yb + 0.205, w: 0.06 * HD, d: 0.05 * HD, cz: 0.03, n: 3 },
+    ], { segs: 28, tilt: { pivot: V(0, yb, 0.03), fwd, side } });
   } else {
     // The head: a smooth oval (an ellipsoid, taller than it is wide), plain with no face, set on the neck a little tilted
     // (HEAD_TILT.smooth: forward and to the side, in radians).
