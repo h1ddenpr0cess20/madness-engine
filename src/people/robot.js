@@ -1,7 +1,7 @@
 import { createHuman } from './human.js';
 import { METALS } from '../props/metalglobe.js';
 import { WOOD_SPECIES, woodTexture } from '../textures/wood.js';
-import { robotParts, ROBOT_MATERIALS } from './robot-build.js';
+import { robotParts, ROBOT_BUILDS, ROBOT_MATERIALS } from './robot-build.js';
 import { tag } from './human/clothes.js';
 
 /**
@@ -20,6 +20,7 @@ import { tag } from './human/clothes.js';
  *     bot.setShell('metal', { metal: 'chrome' });    // or any of the engine's METALS
  *     bot.setShell('wood', { wood: 'walnut' });      // or any WOOD_SPECIES
  *     bot.setTrim('black'); bot.setFrame('gold'); bot.setAccent('#39d0ff');
+ *     bot.setBuild('heavy');                         // a stouter, armored build
  */
 
 /** The resin colors on offer, by name (any #rrggbb works too). */
@@ -64,6 +65,7 @@ const colorOf = (c) => RESIN_COLORS[c] ?? c;
 /**
  * @param {object} GFX  the engine's gfx module
  * @param {object} [options]
+ * @param {string} [options.build]  'standard' (the slim frame, default) or 'heavy' (stouter, with armor plating): `ROBOT_BUILDS`
  * @param {string} [options.shell]  what the outer shell is made of: 'resin' (default), 'metal' or 'wood'
  * @param {string} [options.color]  the resin's color: a name in `RESIN_COLORS`, or #rrggbb (default 'red')
  * @param {string} [options.metal]  for a metal shell, a finish from `METALS` (steel, chrome, gold, ...; default 'steel')
@@ -73,7 +75,7 @@ const colorOf = (c) => RESIN_COLORS[c] ?? c;
  * @param {string} [options.accent] the eyes' and lamps' glow
  * @param {number} [options.detail] the human guide's level of detail, as createHuman's
  */
-export function createRobot(GFX, { shell = 'resin', color = 'red', metal = 'steel', wood = 'walnut', trim = 'blue', frame = 'titanium', accent = '#39d0ff', detail = 1 } = {}) {
+export function createRobot(GFX, { build = 'standard', shell = 'resin', color = 'red', metal = 'steel', wood = 'walnut', trim = 'blue', frame = 'titanium', accent = '#39d0ff', detail = 1 } = {}) {
   const human = createHuman(GFX, { detail, outfit: [], glasses: null, hair: null, beard: null, brows: null });
   const mats = human.materials;
   const M = (name, o) => new GFX.MeshPhysicalMaterial({ name: `robot ${name}`, vertexColors: true, ...o });
@@ -89,7 +91,7 @@ export function createRobot(GFX, { shell = 'resin', color = 'red', metal = 'stee
     if (!grains.has(name)) grains.set(name, grainMap(GFX, 0.7));
     return grains.get(name);
   };
-  const state = { shell, color, metal, wood, trim, frame, accent };
+  const state = { build, shell, color, metal, wood, trim, frame, accent };
 
   /** A metal finish on material `m`. */
   function metalOn(m, name) {
@@ -152,20 +154,33 @@ export function createRobot(GFX, { shell = 'resin', color = 'red', metal = 'stee
 
   // The man is only the guide: his skin, eyes and mouth are not shown.
   human.body.visible = false;
-  human.wear('robot', {
+  const garment = (name) => ({
     layer: 3,
     materials: [...ROBOT_MATERIALS],
     covers: () => false,
-    build: () => tag(robotParts(), 'robot'),
+    build: () => tag(robotParts(name), 'robot'),
   });
+  human.wear('robot', garment(build));
+
+  /** Rebuilds the machine in build `name` (one of `ROBOT_BUILDS`), keeping its finish. */
+  function setBuild(name) {
+    if (!ROBOT_BUILDS[name]) throw new Error(`robot: build is one of ${Object.keys(ROBOT_BUILDS).join(', ')}, not ${name}`);
+    if (name === state.build) return api;
+    human.remove('robot');
+    human.wear('robot', garment(name));
+    state.build = name;
+    return api;
+  }
 
   const api = Object.assign(Object.create(human), {
     human,
+    setBuild,
     setShell,
     setTrim,
     setFrame,
     setAccent,
     shells: SHELLS,
+    builds: Object.keys(ROBOT_BUILDS),
     colors: Object.keys(RESIN_COLORS),
     metals: Object.keys(METALS),
     woods: Object.keys(WOOD_SPECIES),

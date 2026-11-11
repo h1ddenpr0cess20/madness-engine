@@ -831,8 +831,9 @@ function robotItem() {
     source: 'people/robot',
     kind: 'object',
     async build() {
-      const [{ createRobot, RESIN_COLORS, SHELLS }, { CLIPS: clips }, { STANCES, MOVES }, weapons, metals, { WOOD_SPECIES }] = await Promise.all([
+      const [{ createRobot, RESIN_COLORS, SHELLS }, { ROBOT_BUILDS }, { CLIPS: clips }, { STANCES, MOVES }, weapons, metals, { WOOD_SPECIES }] = await Promise.all([
         import('../../../src/people/robot.js'),
+        import('../../../src/people/robot-build.js'),
         import('../../../src/people/human.js'),
         import('../../../src/people/human/martial.js'),
         import('../../../src/weapons/variants.js'),
@@ -858,6 +859,7 @@ function robotItem() {
         if (!bot.held(S === 'R' ? 'L' : 'R')) { if (S === 'R') weaponL = 'none'; else weapon = 'none'; }
       };
       const ui = [
+        { type: 'select', label: 'Build', options: Object.keys(ROBOT_BUILDS), get: () => bot.finish.build, set: (v) => bot.setBuild(v) },
         { type: 'select', label: 'Shell', options: SHELLS, get: () => bot.finish.shell, set: (v) => bot.setShell(v) },
         { type: 'select', label: 'Resin color', options: Object.keys(RESIN_COLORS), get: () => (RESIN_COLORS[bot.finish.color] ? bot.finish.color : Object.keys(RESIN_COLORS)[0]), set: (v) => bot.setShell('resin', { color: v }) },
         { type: 'color', label: 'Resin (custom)', get: () => RESIN_COLORS[bot.finish.color] ?? bot.finish.color, set: (c) => bot.setShell('resin', { color: c }) },

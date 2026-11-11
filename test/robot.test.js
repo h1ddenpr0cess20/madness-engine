@@ -58,3 +58,28 @@ test('the robot dual wields, as the man does: a blade in each hand, held ready i
   assert.equal(bot.held('L'), null);
   assert.ok(bot.held('R'));
 });
+
+test('the heavy build is stouter than the standard one, on the same skeleton, and keeps its finish', () => {
+  const widest = (bot) => {
+    const p = bot.garment('robot').geometry.attributes.position;
+    let lo = Infinity, hi = -Infinity, zlo = Infinity, zhi = -Infinity;
+    for (let i = 0; i < p.count; i++) { lo = Math.min(lo, p.getX(i)); hi = Math.max(hi, p.getX(i)); zlo = Math.min(zlo, p.getZ(i)); zhi = Math.max(zhi, p.getZ(i)); }
+    return { w: hi - lo, d: zhi - zlo, n: p.count };
+  };
+  const slim = createRobot(GFX, { detail: 0.5, color: 'blue' });
+  const heavy = createRobot(GFX, { detail: 0.5, build: 'heavy', color: 'blue' });
+  const a = widest(slim), b = widest(heavy);
+  assert.ok(b.w > a.w + 0.02, `broader: ${b.w} against ${a.w}`);
+  assert.ok(b.d > a.d, 'deeper');
+  assert.ok(b.n > a.n, 'more parts (the plating)');
+  assert.equal(heavy.finish.build, 'heavy');
+  // Changing build live keeps the finish and the clips work.
+  slim.setShell('metal', { metal: 'gold' }).setBuild('heavy');
+  assert.equal(slim.finish.build, 'heavy');
+  assert.equal(slim.materials.plate.metalness, 1);
+  assert.ok(widest(slim).w > a.w + 0.02);
+  slim.setBuild('standard');
+  assert.ok(Math.abs(widest(slim).w - a.w) < 1e-6);
+  slim.pose({ clip: 'walk', t: 0.3, time: 0.3 });
+  assert.throws(() => slim.setBuild('tiny'), /build/);
+});

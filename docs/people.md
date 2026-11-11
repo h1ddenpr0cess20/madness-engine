@@ -105,6 +105,10 @@ Outside resin, inside metal. The shell and trim panels are resin in any color
 metals (`METALS`, the dice and globes' list) or wood (`WOOD_SPECIES`, lacquered).
 The frame inside (joints, actuators, rods) is a metal of its own.
 
+Two builds (`ROBOT_BUILDS`, `createRobot(GFX, { build })` or `bot.setBuild(name)`, which keeps the finish):
+`standard` is the slim, sleek frame; `heavy` is the same machine built stouter, with thicker limbs, a broader and
+deeper torso, bigger shoulders, hands and feet, and armor plating (trim bands on every limb, hip plates, knee guards).
+
 ```js
 const bot = createRobot(GFX, { color: 'white', trim: 'grey', frame: 'titanium' });
 bot.setShell('resin', { color: '#c8202a' });   // glossy red resin
@@ -113,6 +117,7 @@ bot.setShell('wood', { wood: 'walnut' });      // any WOOD_SPECIES
 bot.setTrim('orange');
 bot.setFrame('gold');
 bot.setAccent('#39d0ff');
+bot.setBuild('heavy');                         // a stouter, armored build
 bot.finish;                                    // what it is made of now
 ```
 
