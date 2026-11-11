@@ -278,12 +278,12 @@ const DEFAULT_LOOK = Object.freeze({
  * edges, and whether it is rough-woven (it takes the t-shirt's weave for its bump).
  */
 const FABRICS = Object.freeze({
-  wool: { rough: 0.85, sheen: 0.3, weave: true }, poplin: { rough: 0.8, sheen: 0.5 }, tie: { rough: 0.45, sheen: 0.9 }, tank: { rough: 0.9, sheen: 0.7, weave: true },
-  knit: { rough: 0.95, sheen: 0.8, weave: true }, knitRib: { of: 'knit', rough: 0.95, sheen: 0.8 }, knitRibTrim: { of: 'knit', rough: 0.95, sheen: 0.8, tile: true },
-  hoodie: { rough: 0.95, sheen: 0.7, weave: true }, hoodieRib: { of: 'hoodie', rough: 0.95, sheen: 0.7 }, hoodieRibTrim: { of: 'hoodie', rough: 0.95, sheen: 0.7, tile: true },
-  gi: { rough: 0.9, sheen: 0.5, weave: true }, canvas: { rough: 0.9, sheen: 0.3, weave: true }, dress: { rough: 0.5, sheen: 0.8 }, belt: { rough: 0.8, sheen: 0.4, weave: true },
-  cap: { rough: 0.9, sheen: 0.4, weave: true }, beanie: { rough: 0.95, sheen: 0.8, weave: true }, felt: { rough: 0.95, sheen: 0.5 }, cowboyFelt: { rough: 0.95, sheen: 0.5 },
-  topHatFelt: { rough: 0.6, sheen: 0.4 }, hatBand: { rough: 0.6, sheen: 0.5 },
+  wool: { rough: 0.85, sheen: 0.3, weave: 'twill', stripe: true }, poplin: { rough: 0.8, sheen: 0.5, weave: 'plain' }, tie: { rough: 0.45, sheen: 0.9, weave: 'twill' }, tank: { rough: 0.9, sheen: 0.7, weave: 'knit', scale: 0.00015 },
+  knit: { rough: 0.95, sheen: 0.8, weave: 'knit', scale: 0.0007 }, knitRib: { of: 'knit', rough: 0.95, sheen: 0.8 }, knitRibTrim: { of: 'knit', rough: 0.95, sheen: 0.8, tile: true },
+  hoodie: { rough: 0.95, sheen: 0.7, weave: 'felt', scale: 0.0006 }, hoodieRib: { of: 'hoodie', rough: 0.95, sheen: 0.7 }, hoodieRibTrim: { of: 'hoodie', rough: 0.95, sheen: 0.7, tile: true },
+  gi: { rough: 0.9, sheen: 0.5, weave: 'coarse', scale: 0.0005 }, canvas: { rough: 0.9, sheen: 0.3, weave: 'coarse', scale: 0.0005 }, dress: { rough: 0.5, sheen: 0.8, weave: 'plain', scale: 0.0002 }, belt: { rough: 0.8, sheen: 0.4, weave: 'coarse' },
+  cap: { rough: 0.9, sheen: 0.4, weave: 'twill' }, beanie: { rough: 0.95, sheen: 0.8, weave: 'knit', scale: 0.0007 }, felt: { rough: 0.95, sheen: 0.5, weave: 'felt', scale: 0.0008 }, cowboyFelt: { rough: 0.95, sheen: 0.5, weave: 'felt', scale: 0.0008 },
+  topHatFelt: { rough: 0.6, sheen: 0.4, weave: 'felt' }, hatBand: { rough: 0.6, sheen: 0.5 },
 });
 
 /** The hair's sheen: its own colour, a third of the way to white. */
@@ -352,10 +352,11 @@ function makeMaterials(GFX, look, tex) {
     frameAcetate: M('frame', { color: '#121214', roughness: 0.18, clearcoat: 0.9, clearcoatRoughness: 0.1 }),
     ...Object.fromEntries(Object.entries(FABRICS).map(([n, f]) => [n, M(n, {
       color: look[f.of ?? n], roughness: f.rough, sheen: f.sheen, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.6, side: GFX.DoubleSide,
-      map: f.tile ? tex?.rib.tile ?? null : null, bumpMap: f.weave ? tex?.shirt.bump ?? null : null, bumpScale: 0.0003,
+      map: f.tile ? tex?.rib.tile ?? null : f.stripe ? tex?.wool.map ?? null : null, bumpMap: f.weave ? tex?.fabric[f.weave] ?? null : null, bumpScale: f.scale ?? 0.0004,
     })])),
     beltLeather: M('belt leather', leather(GFX, look, tex, { color: look.beltLeather })),
     dressShoe: M('dress shoes', { color: look.dressShoe, roughness: 0.28, clearcoat: 0.7, clearcoatRoughness: 0.15 }),
+    bootSole: M('boot soles', { color: '#2a211b', roughness: 0.85 }),
     boot: M('boots', { color: look.boot, bumpMap: tex?.leather.bump ?? null, bumpScale: 0.0008, roughness: 0.6, clearcoat: 0.12 }),
     metal: M('hardware', { color: '#c4c6ca', metalness: 1, roughness: 0.26, clearcoat: 0.2 }),
   };

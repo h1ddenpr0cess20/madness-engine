@@ -1193,8 +1193,10 @@ function jacketTrims(shell, open) {
     if (!b) continue;
     const { y, out, r, p } = b;
     // Its top closes on the neck itself, a finger's width off it.
-    const rt = castBody([0, y + J.collar, SHIRT_Z], out, { only: zoneIs('neck', 'head'), far: 0.2 }) ?? r;
-    const top = [out[0] * (rt + 0.009), y + J.collar, SHIRT_Z + out[2] * (rt + 0.009)];
+    // (A hood, down, stands higher behind the neck, where it bunches.)
+    const high = J.collar * (1 + (J.hood ?? 0) * 0.7 * smooth(0.2, -0.7, out[2]));
+    const rt = castBody([0, y + high, SHIRT_Z], out, { only: zoneIs('neck', 'head'), far: 0.2 }) ?? r;
+    const top = [out[0] * (rt + 0.009), y + high, SHIRT_Z + out[2] * (rt + 0.009)];
     ring.push({ p, top, n: out, w: clothWeights(zoneIs('neck', 'trunk'))(p), th, out });
   }
   if (!open && ring.length) ring.push(ring[0]);
@@ -1266,7 +1268,16 @@ function jacketTrims(shell, open) {
     }
   }
   // The hip pockets: a slanting welt each side, a lip of leather with the opening's shadow above it.
-  if (J.pockets !== false) for (const s of [-1, 1]) {
+  if (J.pockets === 'blazer') {
+    // Flapped pockets at the hips, level, and a welted breast pocket on his left.
+    for (const s of [-1, 1]) {
+      const a = [s * 0.07, leatherHem() + 0.075], b = [s * 0.135, leatherHem() + 0.082];
+      const pts = along(24, (t) => front(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t));
+      strip(welts, pts.map((h) => ({ ...h, p: add(h.p, scale(h.n, 0.0004)) })), 0.026, (u, x) => 0.0022 * (x < 0 ? 0.5 + 0.5 * (x + 1) : 1) * Math.sqrt(Math.max(0, 1 - x ** 4)));
+    }
+    const pts = along(20, (t) => front(0.085 + 0.05 * t, 1.255 + 0.006 * t));
+    strip(welts, pts.map((h) => ({ ...h, p: add(h.p, scale(h.n, 0.0004)) })), 0.012, (u, x) => 0.0014 * Math.sqrt(Math.max(0, 1 - x ** 4)));
+  } else if (J.pockets !== false) for (const s of [-1, 1]) {
     const a = [s * 0.075, leatherHem() + 0.025], b = [s * 0.125, leatherHem() + 0.15];
     const pts = along(30, (t) => front(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t));
     strip(welts, pts.map((h) => ({ ...h, p: add(h.p, scale(h.n, 0.0004)) })), 0.012, (u, x) => 0.0016 * Math.sqrt(Math.max(0, 1 - x ** 4)));

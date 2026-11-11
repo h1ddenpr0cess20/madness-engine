@@ -32,8 +32,8 @@ export const LEGWEAR = new Set(['jeans', 'briefs', 'trousers', 'shorts', 'giPant
 const COATS = {
   denimJacket: { open: true, layer: 5, slot: 'outer', materials: ['denim', 'metal'], j: { material: 'denim', rib: 'denim', ribTrim: 'denim', trim: 'denim', hem: 0.962, band: 0, cuffBand: 0, cuff: WRIST - 0.014, collar: 0.034, gap: 0.045, over: 0.012, stiffness: 0.3, shade: 0.7, blouse: 0, puff: 0.002 } },
   denimJacketButtoned: { open: false, layer: 5, slot: 'outer', materials: ['denim', 'metal'], j: { material: 'denim', rib: 'denim', ribTrim: 'denim', trim: 'denim', hem: 0.962, band: 0, cuffBand: 0, cuff: WRIST - 0.014, collar: 0.034, gap: 0.045, over: 0.012, stiffness: 0.3, shade: 0.7, blouse: 0, puff: 0.002, buttons: 6, buttonSize: 0.0065, placket: true } },
-  blazer: { open: true, layer: 5, slot: 'outer', materials: ['wool', 'metal'], j: { material: 'wool', rib: 'wool', ribTrim: 'wool', trim: 'wool', hem: 0.845, band: 0, cuffBand: 0, cuff: WRIST - 0.006, collar: 0.024, gap: 0.034, over: 0.014, stiffness: 0.6, shade: 0.5, blouse: 0, pockets: false, lapel: 0.3, puff: 0.002 }, crop: 0.06 },
-  blazerButtoned: { open: false, layer: 5, slot: 'outer', materials: ['wool', 'metal'], j: { material: 'wool', rib: 'wool', ribTrim: 'wool', trim: 'wool', hem: 0.845, band: 0, cuffBand: 0, cuff: WRIST - 0.006, collar: 0.024, gap: 0.034, over: 0.014, stiffness: 0.6, shade: 0.5, blouse: 0, pockets: false, lapel: 0.3, puff: 0.002, buttons: 2, buttonTop: 1.17, buttonBottom: 1.04, buttonSize: 0.0075 }, crop: 0.06 },
+  blazer: { open: true, layer: 5, slot: 'outer', materials: ['wool', 'metal'], j: { material: 'wool', rib: 'wool', ribTrim: 'wool', trim: 'wool', hem: 0.845, band: 0, cuffBand: 0, cuff: WRIST - 0.006, collar: 0.024, gap: 0.034, over: 0.014, stiffness: 0.6, shade: 0.5, blouse: 0, pockets: 'blazer', lapel: 0.3, puff: 0.002 }, crop: 0.06 },
+  blazerButtoned: { open: false, layer: 5, slot: 'outer', materials: ['wool', 'metal'], j: { material: 'wool', rib: 'wool', ribTrim: 'wool', trim: 'wool', hem: 0.845, band: 0, cuffBand: 0, cuff: WRIST - 0.006, collar: 0.024, gap: 0.034, over: 0.014, stiffness: 0.6, shade: 0.5, blouse: 0, pockets: 'blazer', lapel: 0.3, puff: 0.002, buttons: 2, buttonTop: 1.17, buttonBottom: 1.04, buttonSize: 0.0075 }, crop: 0.06 },
   sweater: { open: false, layer: 4.5, slot: 'mid', materials: ['knit', 'knitRib', 'knitRibTrim'], j: { material: 'knit', rib: 'knitRib', ribTrim: 'knitRibTrim', trim: 'knitRibTrim', hem: 0.915, band: 0.06, cuffBand: 0.05, cuff: WRIST - 0.004, collar: 0.028, zip: false, pockets: false, gap: 0.05, over: 0.012, stiffness: 0.5, shade: 0.6, blouse: 0.5, puff: 0.004 } },
   hoodie: { open: false, layer: 4.5, slot: 'mid', materials: ['hoodie', 'hoodieRib', 'hoodieRibTrim'], j: { material: 'hoodie', rib: 'hoodieRib', ribTrim: 'hoodieRibTrim', trim: 'hoodieRibTrim', hem: 0.91, band: 0.065, cuffBand: 0.05, cuff: WRIST - 0.004, collar: 0.042, hood: 1, zip: false, pockets: false, gap: 0.05, over: 0.016, stiffness: 0.5, shade: 0.6, blouse: 0.7, puff: 0.006 } },
   // (Tucked in: under the trousers, its hem inside their waistband.)
@@ -70,7 +70,7 @@ function tankCut(p, z, hem) {
 }
 
 /** A sleeveless top: `hem` its bottom edge; `loose` hung off the chest and shoulder blades, else close (the dress's bodice). */
-function tank(detail, under, { hem = 0.93, loose = true, material = 'tank', name = 'tank' } = {}) {
+function tank(detail, under, { hem = 0.9, loose = true, material = 'tank', name = 'tank' } = {}) {
   return skinShell(name, material, {
     under,
     level: detail >= 0.8 ? 1 : 0,
@@ -113,13 +113,17 @@ function skirtParts(detail, name, { top = 1.0, hem = 0.5, flare = 0.35, pleats =
     const hull = body.at(y, th) + 0.011;
     const spread = R0(th) + flare * Math.max(0, 0.95 - y) * (0.8 + 0.2 * Math.cos(th * 2));
     const folds = 0.012 * t * t * (0.5 + 0.5 * Math.sin(th * pleats + 2 * Math.sin(th * 3)));
-    return Math.max(hull, spread) + folds;
+    // A waistband a little proud of the cloth below it.
+    return Math.max(hull, spread) + folds + 0.004 * smooth(0.06, 0.02, t);
   };
+  // The hem turned up inside: two more rows after the last, in and up.
+  const FOLD = [[0.0015, 0.004], [0.016, 0.0035]];
   const at = (i, k) => {
-    const th = (k / cols) * TAU, t = i / rows;
+    const th = (k / cols) * TAU, t = Math.min(1, i / rows);
     const y = top + (hem - top) * t + 0.006 * t * Math.sin(th * 9);
-    const r = radius(y, th, t);
-    return [Math.sin(th) * r, y, SHIRT_Z + Math.cos(th) * r];
+    const [up, inset] = i > rows ? FOLD[i - rows - 1] : [0, 0];
+    const r = radius(y, th, t) - inset;
+    return [Math.sin(th) * r, y + up, SHIRT_Z + Math.cos(th) * r];
   };
   // Where it lies close to the body it takes the weights of the skin there (as all cloth does), so it moves as the
   // skin does at the hip's crease; farther out it rides on the thighs more and more, each on its own side, the
@@ -136,9 +140,9 @@ function skirtParts(detail, name, { top = 1.0, hem = 0.5, flare = 0.35, pleats =
     for (const [bone, w] of Object.entries(far)) out[bone] = (out[bone] ?? 0) + w * m;
     return out;
   };
-  part.grid(rows, cols, (i, k) => {
-    const p = at(i, k), t = i / rows;
-    return { p, uv: [k / cols, t], w: weights(p, t, (k / cols) * TAU), tint: 1 - 0.25 * smooth(0.9, 1, t) };
+  part.grid(rows + 2, cols, (i, k) => {
+    const p = at(i, k), t = Math.min(1, i / rows);
+    return { p, uv: [k / cols, t], w: weights(p, t, (k / cols) * TAU), tint: (i > rows ? 0.6 : 1) * (1 - 0.25 * smooth(0.9, 1, t)) };
   }, { flip: true });
   return [part];
 }
@@ -159,12 +163,14 @@ function belt(detail, under, name, material, buckle) {
     thick: 0.004,
   });
   const cast = caster(shell), hit = (x, y) => cast([x, y, 0.6], [0, 0, -1], 0.6);
-  const trim = new Part('belt trim', buckle ? 'metal' : material);
+  const trim = new Part('belt trim', buckle ? 'metal' : material), leatherEnd = new Part('belt end', material);
   const h = hit(buckle ? 0 : -0.03, 0.995);
   if (h) {
     const out = h.n, up = [0, 1, 0], right = norm(sub([1, 0, 0], scale(out, out[0])));
     if (buckle) {
+      // A metal frame with the leather's end showing through it.
       box(trim, add(h.p, scale(out, 0.003)), right, up, out, [0.024, 0.02, 0.0035], h.w);
+      box(leatherEnd, add(h.p, scale(out, 0.0062)), right, up, out, [0.016, 0.012, 0.0012], h.w);
     } else {
       // The knot, and two ends hanging from it, one a little longer, each turned a little from the other.
       box(trim, add(h.p, scale(out, 0.008)), right, up, out, [0.026, 0.022, 0.011], h.w);
@@ -174,7 +180,7 @@ function belt(detail, under, name, material, buckle) {
       }
     }
   }
-  return trim.idx.length ? [shell, trim] : [shell];
+  return trim.idx.length ? [shell, trim, ...(leatherEnd.idx.length ? [leatherEnd] : [])] : [shell];
 }
 
 /** A tie, cut from the skin down the front of the chest and fitted over the shirt: a knot at the collar, widening to a pointed end above the waist. */
@@ -209,7 +215,7 @@ const HEAD = Object.freeze({ cz: 0.052 });
  * turns down and up at its edge, and `tail` the rows from the band out: [out (of the brim, 0 to 1), up, in].
  */
 function hat(name, detail, spec) {
-  const { material, yb, low = yb, rx, rz, h, crown = [1, 1], brim = () => 0, drop = () => 0, lift = () => 0, tail, ribbon = null } = spec;
+  const { material, yb, low = yb, rx, rz, h, crown = [1, 1], dent = 0, button = false, brim = () => 0, drop = () => 0, lift = () => 0, tail, ribbon = null } = spec;
   const part = new Part(name, material);
   const cols = Math.round(44 + 36 * detail), N = 10;
   const rows = [];
@@ -223,11 +229,13 @@ function hat(name, detail, spec) {
   const point = (r, th) => {
     const a = fromFront(th);
     const add = r.o + r.f * brim(a);
-    const y = yb(a) + r.c * (yb(0) + h - yb(a)) + r.dy - r.f * r.f * drop(a) + r.f * r.f * lift(a);
+    // (A crown's top creased along its length, lowest down the middle.)
+    const y = yb(a) + r.c * (yb(0) + h - yb(a)) - dent * r.c ** 3 * (1 - Math.abs(Math.sin(th))) + r.dy - r.f * r.f * drop(a) + r.f * r.f * lift(a);
     return [Math.sin(th) * (rx * r.s + add), y, HEAD.cz + Math.cos(th) * (rz * r.s + add)];
   };
   part.grid(rows.length - 1, cols, (i, k) => ({ p: point(rows[i], (k / cols) * TAU), uv: [k / cols, i / (rows.length - 1)], w, tint: i > N + Math.floor(tail.length / 2) ? 0.7 : 1 }), { flip: true });
   const parts = [part];
+  if (button) box(part, [0, yb(0) + h + 0.0015, HEAD.cz], [1, 0, 0], [0, 0, 1], [0, 1, 0], [0.008, 0.008, 0.005], w);
   if (ribbon) {
     const band = new Part('hat band', ribbon.material);
     // The dome's width at `dy` above the band.
@@ -254,7 +262,7 @@ function hat(name, detail, spec) {
 
 const HATS = {
   cap: (detail) => hat('cap', detail, {
-    material: 'cap', rx: 0.099, rz: 0.121, h: 0.118, crown: [0.8, 0.85],
+    material: 'cap', rx: 0.099, rz: 0.121, h: 0.118, crown: [0.8, 0.85], button: true,
     yb: (a) => 1.714 - 0.014 * smooth(0.6, 2.8, a),
     brim: (a) => 0.082 * smooth(1.5, 0.45, a),
     drop: (a) => 0.026 * smooth(1.5, 0.3, a),
@@ -268,14 +276,14 @@ const HATS = {
     tail: [[0, 0.0, 0.003], [0, -0.006, 0.0085], [0, -0.03, 0.0095], [0, -0.052, 0.0085], [0, -0.056, 0.004], [0, -0.052, -0.001], [0, -0.04, -0.004]],
   }),
   fedora: (detail) => hat('fedora', detail, {
-    material: 'felt', rx: 0.1, rz: 0.123, h: 0.125, crown: [0.45, 0.6],
+    material: 'felt', rx: 0.1, rz: 0.123, h: 0.125, crown: [0.45, 0.6], dent: 0.02,
     yb: () => 1.706,
     brim: () => 0.052, drop: (a) => 0.016 * Math.cos(a) ** 2, lift: (a) => 0.024 * Math.sin(a) ** 2,
     tail: [[0.3, 0.004], [0.65, 0.0045], [1, 0.004], [1, -0.0015], [0.65, -0.002], [0.3, -0.0025], [0, -0.003], [0, 0.011, -0.004]],
     ribbon: { material: 'hatBand', from: 0.003, to: 0.03 },
   }),
   cowboy: (detail) => hat('cowboy', detail, {
-    material: 'cowboyFelt', rx: 0.1, rz: 0.123, h: 0.135, crown: [0.5, 0.7],
+    material: 'cowboyFelt', rx: 0.1, rz: 0.123, h: 0.14, crown: [0.5, 0.7], dent: 0.026,
     yb: () => 1.706,
     brim: (a) => 0.078 - 0.012 * Math.cos(a) ** 2, drop: (a) => 0.012 * Math.max(0, Math.cos(a)) ** 2, lift: (a) => 0.055 * Math.sin(a) ** 2,
     tail: [[0.3, 0.004], [0.65, 0.0045], [1, 0.004], [1, -0.0015], [0.65, -0.002], [0.3, -0.0025], [0, -0.003], [0, 0.011, -0.004]],
@@ -355,12 +363,12 @@ export const OUTFIT_HANGS = Object.freeze({
 export const TAIL_GARMENTS = Object.freeze(['skirt', 'miniSkirt', 'dress', 'miniDress', 'giTop', 'sweater', 'hoodie', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned']);
 
 const SHARED = {
-  tank: { layer: 4, slot: 'top', materials: ['tank'], fits: true, build: (detail, { under } = {}) => tag([tank(detail, under)], 'tank'), covers: ({ zone, y, sx = 0, z = 0 }) => (zone === 'trunk' && y > 0.93 + OPEN && y < tankTop(sx, z) - 0.02) || (LEGWEAR.has(zone) && y > 0.93 + OPEN && !seated(z)) || zone === 'bra' },
+  tank: { layer: 4, slot: 'top', materials: ['tank'], fits: true, build: (detail, { under } = {}) => tag([tank(detail, under)], 'tank'), covers: ({ zone, y, sx = 0, z = 0 }) => (zone === 'trunk' && y > 0.9 + OPEN && y < tankTop(sx, z) - 0.02) || (LEGWEAR.has(zone) && y > 0.9 + OPEN && !seated(z)) || zone === 'bra' },
   belt: { layer: 6, slot: 'belt', materials: ['belt'], fits: true, build: (detail, { under } = {}) => tag(belt(detail, under, 'belt', 'belt', false), 'belt'), covers: () => false },
   dressBelt: { layer: 3.5, slot: 'belt', materials: ['beltLeather', 'metal'], fits: true, build: (detail, { under } = {}) => tag(belt(detail, under, 'dressBelt', 'beltLeather', true), 'dressBelt'), covers: () => false },
   tie: { layer: 4.2, slot: 'tie', materials: ['tie'], fits: true, build: (detail, { under } = {}) => tag([tie(detail, under)], 'tie'), covers: () => false },
   dressShoes: footwear('dressShoes', 2, { collar: 0.062, sole: 0.8, laces: 4, materials: ['dressShoe', 'dressShoe', 'dressShoe'] }),
-  boots: footwear('boots', 2, { collar: 0.15, sole: 1.2, laces: 7, materials: ['boot', 'sole', 'boot'] }),
+  boots: footwear('boots', 2, { collar: 0.15, sole: 1.2, laces: 7, materials: ['boot', 'bootSole', 'boot'] }),
   cap: hatGarment('cap', ['cap']),
   beanie: hatGarment('beanie', ['beanie']),
   fedora: hatGarment('fedora', ['felt', 'hatBand']),
