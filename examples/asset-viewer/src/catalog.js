@@ -821,6 +821,61 @@ function humanItem(sex) {
   };
 }
 
+/** The robot: a slim humanoid machine on the human's rig, its shell resin, metal or wood and its frame metal; each chosen live. */
+function robotItem() {
+  return {
+    id: 'people/robot',
+    category: 'People',
+    group: 'people',
+    name: 'Robot (resin, metal or wood)',
+    source: 'people/robot',
+    kind: 'object',
+    async build() {
+      const [{ createRobot, RESIN_COLORS, SHELLS }, { CLIPS: clips }, { STANCES, MOVES }, weapons, metals, { WOOD_SPECIES }] = await Promise.all([
+        import('../../../src/people/robot.js'),
+        import('../../../src/people/human.js'),
+        import('../../../src/people/human/martial.js'),
+        import('../../../src/weapons/variants.js'),
+        import('../../../src/props/metalglobe.js'),
+        import('../../../src/textures/wood.js'),
+      ]);
+      const bot = createRobot(GFX, {});
+      const style = {};
+      let weapon = 'none', attack = 'slash';
+      let arming = 0;
+      const rearm = async () => {
+        const mine = ++arming;
+        bot.release('R');
+        if (weapon === 'none') return;
+        const { thing, how, open = true } = await humanHeld(weapon, weapons);
+        if (mine === arming) bot.hold(thing, { hand: 'R', how, open });
+      };
+      const ui = [
+        { type: 'select', label: 'Shell', options: SHELLS, get: () => bot.finish.shell, set: (v) => bot.setShell(v) },
+        { type: 'select', label: 'Resin color', options: Object.keys(RESIN_COLORS), get: () => (RESIN_COLORS[bot.finish.color] ? bot.finish.color : Object.keys(RESIN_COLORS)[0]), set: (v) => bot.setShell('resin', { color: v }) },
+        { type: 'color', label: 'Resin (custom)', get: () => RESIN_COLORS[bot.finish.color] ?? bot.finish.color, set: (c) => bot.setShell('resin', { color: c }) },
+        { type: 'select', label: 'Shell metal', options: Object.keys(metals.METALS), get: () => bot.finish.metal, set: (v) => bot.setShell('metal', { metal: v }) },
+        { type: 'select', label: 'Shell wood', options: Object.keys(WOOD_SPECIES), get: () => bot.finish.wood, set: (v) => bot.setShell('wood', { wood: v }) },
+        { type: 'select', label: 'Trim (resin)', options: Object.keys(RESIN_COLORS), get: () => (RESIN_COLORS[bot.finish.trim] ? bot.finish.trim : 'blue'), set: (v) => bot.setTrim(v) },
+        { type: 'select', label: 'Frame metal', options: Object.keys(metals.METALS), get: () => bot.finish.frame, set: (v) => bot.setFrame(v) },
+        { type: 'color', label: 'Light', get: () => bot.finish.accent, set: (c) => bot.setAccent(c) },
+        { type: 'select', label: 'Holds', options: HUMAN_WEAPONS, get: () => weapon, set: (v) => { weapon = v; rearm(); } },
+        { type: 'select', label: 'Attack', options: ['slash', 'chop', 'thrust', 'smite', 'punch', 'shove', ...MOVES], get: () => attack, set: (v) => { attack = v; style.attack = v; } },
+        { type: 'select', label: 'Stance', options: ['(the move\'s own)', ...STANCES], get: () => style.stance ?? '(the move\'s own)', set: (v) => { style.stance = STANCES.includes(v) ? v : undefined; } },
+      ];
+      bot.setStyle(style);
+      return {
+        object: bot.group,
+        pose: (s) => bot.pose(s),
+        clips,
+        ui,
+        environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
+        info: { Source: 'people/robot', Height: `${bot.dimensions.height} m`, Bones: bot.skeleton.names.length, ...countOf(bot.group) },
+      };
+    },
+  };
+}
+
 /**
  * Stands a staff up from the viewer's choices. `wood` is `{ species, finish }` for the wooden staff or `{ metal }` for
  * the metal one, passed on its own: the viewer hands every item all the options, and the other kind's must not leak in.
@@ -935,7 +990,7 @@ export async function loadCatalog(onProgress = () => {}) {
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
   items.push(...weaponItems(), staffItem(), metalStaffItem());
-  items.push(...humanItems());
+  items.push(...humanItems(), robotItem());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
