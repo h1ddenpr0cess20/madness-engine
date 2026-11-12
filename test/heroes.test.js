@@ -395,3 +395,10 @@ test('lava Slimey reuses the deforming orb while replacing every slime layer wit
   assert.equal(typeof lava.setState, 'function');
   assert.throws(() => createSlimeOrb({ stage: lavaStage, GFX, metal: 'steel', lava: true }), /both lava and metal/);
 });
+
+test('environmentFrom gives nothing without a renderer or a painted room, which is how it is under node', async () => {
+  const { environmentFrom, studioEnvironment } = await import('../src/props/metalglobe.js');
+  assert.equal(environmentFrom(GFX, null, {}), null);
+  assert.equal(environmentFrom(GFX, {}, null), null);
+  assert.equal(studioEnvironment(GFX, {}), null);
+});
