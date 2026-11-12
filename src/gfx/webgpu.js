@@ -661,11 +661,26 @@ export class WebGPUBackend {
           [image.width, image.height],
         );
       } else {
-        this.device.queue.copyExternalImageToTexture(
-          { source: image, flipY: texture.flipY },
-          { texture: entry.texture, premultipliedAlpha: texture.premultiplyAlpha },
-          [image.width, image.height],
-        );
+        try {
+          this.device.queue.copyExternalImageToTexture(
+            { source: image, flipY: texture.flipY },
+            { texture: entry.texture, premultipliedAlpha: texture.premultiplyAlpha },
+            [image.width, image.height],
+          );
+        } catch (err) {
+          // The browser could not copy the picture (out of memory on the card, a canvas it lost): the frame goes on
+          // with a plain grey texel in its place, rather than the whole loop stopping on one texture.
+          if (!this._copyWarned) { console.warn(`gfx: a texture could not be uploaded (${err.message}); drawn plain instead.`); this._copyWarned = true; }
+          entry.texture.destroy();
+          entry.texture = this.device.createTexture({ size: [1, 1], format, usage: T.TEXTURE_BINDING | T.COPY_DST });
+          this.device.queue.writeTexture({ texture: entry.texture }, new Uint8Array([200, 200, 200, 255]), { bytesPerRow: 4 }, [1, 1]);
+          entry.sampler = this._sampler(false, 1, texture.wrapS, texture.wrapT);
+          entry.version = texture.version;
+          entry.id = `${texture.id}.${texture.version}`;
+          this.drawGroups.clear();
+          this.customGroups?.clear();
+          return entry;
+        }
       }
       if (mipmaps) this._generateMipmaps(entry.texture, format);
       entry.sampler = this._sampler(mipmaps, texture.anisotropy, texture.wrapS, texture.wrapT);
