@@ -74,7 +74,7 @@ export class Pixels {
  * way: a soft dome lit from one side, no outline to compute.
  */
 const LIGHT = -2.2, LX = Math.cos(LIGHT), LY = Math.sin(LIGHT);
-export function grain(s, cx, cy, R, rnd, { rgb, top, base, elong = 1, speck = 0.12, shadow = 0.55 }) {
+export function grain(s, cx, cy, R, rnd, { rgb, top, base, elong = 1, speck = 0.12, shadow = 0.55, angular = null }) {
   const x0 = Math.floor(cx), y0 = Math.floor(cy);
   if (R < 1.9) {
     const reach = Math.ceil(R * Math.max(elong, 1)) + 1;
@@ -104,7 +104,7 @@ export function grain(s, cx, cy, R, rnd, { rgb, top, base, elong = 1, speck = 0.
   const p1 = rnd() * 6.28, p2 = rnd() * 6.28, p3 = rnd() * 6.28;
   const facets = 3 + Math.floor(rnd() * 4), fp = rnd() * 6.28;
   // Crushed stone is angular: the outline is a polygon of five to eight sides, rounded a little at its corners and broken by the lobes.
-  const sides = 5 + Math.floor(rnd() * 4), sp = rnd() * 6.28, angular = 0.55 + rnd() * 0.3, wedge = 6.2832 / sides;
+  const sides = 5 + Math.floor(rnd() * 4), sp = rnd() * 6.28, angularity = angular ?? 0.55 + rnd() * 0.3, wedge = 6.2832 / sides;
   const reach = Math.ceil(R * Math.max(elong, 1) * 1.5) + 2;
   for (let j = -reach; j <= reach; j++) {
     for (let i = -reach; i <= reach; i++) {
@@ -115,7 +115,7 @@ export function grain(s, cx, cy, R, rnd, { rgb, top, base, elong = 1, speck = 0.
       const lobes = 1 + l1 * Math.sin(2 * a + p1) + l2 * Math.sin(3 * a + p2) + l3 * Math.sin(5 * a + p3);
       const into = ((a + sp) % wedge + wedge) % wedge - wedge / 2;
       const poly = Math.cos(wedge / 2) / Math.cos(into) * 1.08;
-      const edge = R * lobes * lerp(1, poly, angular);
+      const edge = R * lobes * lerp(1, poly, angularity);
       const t = d / edge;
       if (t > 1.35) continue;
       if (t > 1) {

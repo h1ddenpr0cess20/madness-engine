@@ -3,16 +3,17 @@
  * Paints the road textures (src/textures/road.js) under node and writes PNGs
  * to look at: the whole tile shrunk, a crop at 1:1, and the bump map's crop.
  *
- *     node scripts/preview-road.mjs <out dir> [asphalt|concrete|turf] [json options]
+ *     node scripts/preview-road.mjs <out dir> [asphalt|concrete|turf|gravel|pavers|shingles|membrane] [json options]
  *     node scripts/preview-road.mjs /tmp/out asphalt '{"age":0.7,"cracks":0.6}'
  */
 import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { paintAsphalt, paintConcrete } from '../src/textures/road.js';
-import { paintTurf } from '../src/textures/ground.js';
+import { paintGravel, paintPavers, paintTurf } from '../src/textures/ground.js';
+import { paintMembrane, paintShingles } from '../src/textures/roofing.js';
 
-const PAINTERS = { asphalt: paintAsphalt, concrete: paintConcrete, turf: paintTurf };
+const PAINTERS = { asphalt: paintAsphalt, concrete: paintConcrete, turf: paintTurf, gravel: paintGravel, pavers: paintPavers, shingles: paintShingles, membrane: paintMembrane };
 
 const crc = (() => {
   const t = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
@@ -38,7 +39,7 @@ const t0 = Date.now();
 const px = PAINTERS[kind](options);
 console.log(`${kind} ${px.size}px in ${Date.now() - t0} ms`);
 const { size, color, height } = px;
-const tag = `${kind}${options.seed ? `-${options.seed}` : ''}${options.finish ? `-${options.finish}` : ''}`;
+const tag = `${kind}${options.seed ? `-${options.seed}` : ''}${options.finish ? `-${options.finish}` : ''}${options.kind ? `-${options.kind}` : ''}`;
 // The whole tile, 4 times it across so the repeat shows, shrunk to 1024.
 const W = 1024, whole = Buffer.alloc(W * W * 3);
 for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {

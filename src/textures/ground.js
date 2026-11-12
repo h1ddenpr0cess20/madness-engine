@@ -14,15 +14,22 @@
  * across, and comes with a bump map in the same pixels (blades stand out of
  * the soil, tip highest).
  *
+ * Gravel is stones laid on stones (angular crushed rock for a railway's
+ * ballast, rounded river gravel for a roof or a path) in three sizes, dark in the
+ * gaps between, each with the shadow it throws; pavers are fired bricks in a
+ * running bond, every one its own colour and speckle with the kiln's dark flash
+ * at its edges, a bevel, a chip, and the sand between them with grass seed in
+ * it.
+ *
  * `paintTurf` gives the raw pixels (`{ size, color, height }`) with no canvas,
  * so it runs under node; `turfTexture` puts them on one and gives `{ map: null,
  * bump: null }` without a document, as the other painters do.
  */
 import { fractal } from './painters.js';
-import { Pixels, clamp, grain, hash, lerp, made, prng, ramp } from './pixel-kit.js';
+import { Pixels, clamp, grain, hash, lerp, made, pickStone, prng, ramp } from './pixel-kit.js';
 
 /** How many metres one tile of each spans. */
-export const TILE = Object.freeze({ turf: 1.5 });
+export const TILE = Object.freeze({ turf: 1.5, gravel: 2, pavers: 1.6 });
 
 const LIGHT = -2.2;
 
@@ -174,3 +181,116 @@ export function paintTurf({ size = 2048, health = 0.75, length = 0.4, clover: cl
 
 /** A turf tile's maps, painted once for each set of options (see `paintTurf`). */
 export const turfTexture = (GFX, options = {}) => made(GFX, 'turf', paintTurf, options);
+
+const GRAVELS = {
+  ballast: { cells: [30, 19, 11.5], radii: [[9, 17], [6, 11], [3.4, 6.6]], dense: 1, round: 0.1, tones: [[0.4, [118, 116, 112]], [0.26, [78, 78, 82]], [0.14, [146, 140, 130]], [0.1, [56, 56, 60]], [0.1, [170, 166, 158]]] },
+  roof: { cells: [20, 12, 7], radii: [[4.4, 8.4], [3, 5.6], [1.8, 3.4]], round: 0.92, tones: [[0.34, [168, 164, 156]], [0.26, [136, 132, 126]], [0.2, [196, 190, 178]], [0.12, [104, 100, 98]], [0.08, [176, 150, 128]]] },
+  path: { cells: [15, 9, 5.5], radii: [[3.4, 6.2], [2.2, 4.2], [1.3, 2.5]], round: 0.85, tones: [[0.3, [186, 170, 140]], [0.26, [214, 204, 184]], [0.2, [150, 140, 126]], [0.14, [172, 124, 98]], [0.1, [120, 118, 114]]] },
+};
+
+/**
+ * Gravel, as pixels.
+ * @param options `size` (2048); `kind`: 'ballast' (angular railway stone, fist-sized), 'roof' (rounded river gravel over tar) or 'path' (pea gravel); `seed`
+ */
+export function paintGravel({ size = 2048, kind = 'roof', seed = 1 } = {}) {
+  const G = GRAVELS[kind] ?? GRAVELS.roof;
+  const s = new Pixels(size);
+  const rnd = prng(seed * 3989 + 5);
+  const S = size / 2048;
+  const tone = fractal(seed * 19 + 401, 5, 3);
+  // What lies under: the dark of the gaps, a little lighter where the stones are thin.
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = y * size + x, f = 0.7 + (tone(x / size, y / size) - 0.5) * 0.3 + (hash(x, y, 6) - 0.5) * 0.2;
+      s.r[i] = 46 * f; s.g[i] = 45 * f; s.b[i] = 44 * f; s.h[i] = 0.12;
+    }
+  }
+  const table = G.tones.map(([w, rgb]) => ({ w, rgb }));
+  for (let L = 2; L >= 0; L--) {
+    const cell = Math.max(2.6, G.cells[L] * S), n = Math.floor(size / cell), step = size / n;
+    const [lo, hi] = G.radii[L];
+    for (let j = 0; j < n; j++) {
+      for (let i = 0; i < n; i++) {
+        if (rnd() > (G.dense ?? 0.93)) continue;
+        const cx = (i + 0.5 + (rnd() - 0.5) * 0.9) * step, cy = (j + 0.5 + (rnd() - 0.5) * 0.9) * step;
+        const rgb = pickStone(rnd(), table);
+        const b = 0.78 + rnd() * 0.4 + (tone(cx / size, cy / size) - 0.5) * 0.3;
+        // Dust on the stones that lie low, and the oldest weathered dark.
+        grain(s, cx, cy, (lo + rnd() * (hi - lo)) * Math.max(S, 0.6), rnd, { rgb: [rgb[0] * b, rgb[1] * b, rgb[2] * b * 0.98], top: 0.3 + L * 0.12, base: 0.16 + (2 - L) * 0.1, elong: 1 + rnd() * 0.45, angular: lerp(0.8, 0.08, G.round) });
+      }
+    }
+  }
+  return s.bake();
+}
+
+const BRICKS = {
+  brick: [[0.3, [150, 66, 48]], [0.24, [168, 80, 56]], [0.18, [128, 54, 42]], [0.14, [184, 100, 70]], [0.1, [104, 48, 40]], [0.04, [196, 150, 112]]],
+  grey: [[0.4, [150, 150, 148]], [0.3, [128, 128, 128]], [0.2, [170, 168, 162]], [0.1, [104, 104, 106]]],
+  tan: [[0.4, [190, 164, 124]], [0.3, [172, 142, 104]], [0.2, [208, 186, 150]], [0.1, [150, 118, 90]]],
+};
+
+/**
+ * Pavers, as pixels: fired bricks (or concrete blocks) in a running bond, every one its own.
+ * @param options `size` (2048); `kind`: 'brick', 'grey' or 'tan'; `wear` (0 to 1, how much grime and moss is in the joints, 0.4); `seed`
+ *   One tile is 8 bricks across (200 mm by 100 mm, with a joint of 5 mm) and 16 rows: `TILE.pavers` metres.
+ */
+export function paintPavers({ size = 2048, kind = 'brick', wear = 0.4, seed = 1 } = {}) {
+  const s = new Pixels(size);
+  const rnd = prng(seed * 2711 + 3);
+  const across = 8, rows = 16;
+  const bw = size / across, bh = size / rows;
+  const joint = Math.max(2, Math.round(size * 0.0035));
+  const table = (BRICKS[kind] ?? BRICKS.brick).map(([w, rgb]) => ({ w, rgb }));
+  const flash = fractal(seed * 23 + 501, 8, 3), grime = fractal(seed * 23 + 503, 6, 4);
+  // The joints: sand, with the dirt of years in it and a little green.
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = y * size + x, f = 0.82 + (hash(x, y, 9) - 0.5) * 0.4 + (grime(x / size, y / size) - 0.5) * 0.3;
+      const dirty = ramp(0.4, 0.8, grime(x / size, y / size)) * wear;
+      s.r[i] = (156 - dirty * 62) * f; s.g[i] = (142 - dirty * 48 + (dirty > 0.5 ? 10 : 0)) * f; s.b[i] = (118 - dirty * 50) * f; s.h[i] = 0.12;
+    }
+  }
+  for (let r = 0; r < rows; r++) {
+    for (let c = -1; c <= across; c++) {
+      const x0 = c * bw + (r % 2 ? bw / 2 : 0), y0 = r * bh;
+      const rgb = pickStone(rnd(), table);
+      const b = 0.86 + rnd() * 0.28;
+      const tiltX = (rnd() - 0.5) * 0.14, tiltY = (rnd() - 0.5) * 0.14;
+      const dark = rnd() < 0.18;
+      const chipX = rnd() < 0.12 ? rnd() * bw : -1, chipY = rnd() * bh;
+      for (let y = Math.floor(y0 + joint / 2); y < Math.ceil(y0 + bh - joint / 2); y++) {
+        for (let x = Math.floor(x0 + joint / 2); x < Math.ceil(x0 + bw - joint / 2); x++) {
+          const u = (x - x0) / bw, v = (y - y0) / bh;
+          // How far inside the brick's edge: the arris is rounded a little, the face a touch domed.
+          const e = Math.min(x - x0 - joint / 2, x0 + bw - joint / 2 - x, y - y0 - joint / 2, y0 + bh - joint / 2 - y);
+          const edge = ramp(0, 5, e);
+          const fl = ramp(0.5, 0.75, flash((x / size + 0.37 * r) % 1, (y / size + 0.21 * c) % 1));
+          let k = b * (1 + (u - 0.5) * tiltX * 2 + (v - 0.5) * tiltY * 2) * (0.7 + 0.3 * edge) * (1 - fl * (dark ? 0.35 : 0.18));
+          // The bevel catches the light on the top and left, and loses it on the bottom and right.
+          if (e < 5) k *= 1 + (((x - x0) / bw < 0.5 ? 0.22 : -0.2) + ((y - y0) / bh < 0.5 ? 0.16 : -0.16)) * (1 - e / 5) * 0.8;
+          const sp = hash(x, y, 13);
+          k *= sp > 0.97 ? 1.28 : sp < 0.04 ? 0.7 : 0.95 + sp * 0.1;
+          let h = 0.62 + 0.1 * edge + tiltX * (u - 0.5) + tiltY * (v - 0.5);
+          if (chipX >= 0 && Math.hypot((x - x0) - chipX, (y - y0) - chipY) < bh * 0.12) { k *= 0.78; h -= 0.2; }
+          const idx = s.at(x, y);
+          s.r[idx] = rgb[0] * k; s.g[idx] = rgb[1] * k; s.b[idx] = rgb[2] * k; s.h[idx] = h;
+        }
+      }
+    }
+  }
+  // Sand grains in the joints, and dirt along the foot of each brick.
+  for (let n = 0, count = Math.floor(size * size * 0.012); n < count; n++) {
+    const x = rnd() * size, y = rnd() * size;
+    const i = s.at(Math.floor(x), Math.floor(y));
+    if (s.h[i] > 0.2) continue;
+    const g = 120 + rnd() * 90;
+    grain(s, x, y, 1 + rnd() * 1.2, rnd, { rgb: [g, g * 0.92, g * 0.76], top: 0.1, base: 0.14, shadow: 0.3 });
+  }
+  return s.bake();
+}
+
+/** A gravel tile's maps, painted once for each set of options (see `paintGravel`). */
+export const gravelTexture = (GFX, options = {}) => made(GFX, 'gravel', paintGravel, options);
+
+/** A pavers tile's maps, painted once for each set of options (see `paintPavers`). */
+export const paversTexture = (GFX, options = {}) => made(GFX, 'pavers', paintPavers, options);
