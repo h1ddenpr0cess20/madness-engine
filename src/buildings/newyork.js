@@ -172,6 +172,48 @@ export function brickchurch(m, v) {
   return { height: 2.9 };
 }
 
+// ---- More homes: an Italianate row and a two-family brick house ----
+
+/** An Italianate row house: five narrow storeys with arched-top windows, a bracketed cornice and a stoop. */
+export function italianaterow(m, v) {
+  const { rnd } = v;
+  const wall = pickFrom(rnd, ['#c8b89a', '#d8c8a8', '#b8a488']);
+  const x0 = -0.7, x1 = 0.7, z0 = -1.3, z1 = 1.3, H = 1.5;
+  const F = block(m, x0, z0, x1, z1, 0, H, wall);
+  // Brackets under the cornice, all along the front.
+  for (let x = x0 + 0.1; x <= x1 - 0.1; x += 0.14) m.box('stone', x, H - 0.14, z1, x + 0.05, H, z1 + 0.05, NY.limestone[0]);
+  // Windows with a cap of stone over each, five floors, the door on the ground.
+  const door = 0.7;
+  doorOn(m, F.front, door, 0.2, 0.36, '#2a1a10', { step: false });
+  grid(m, F, 5, 0.27, {
+    gap: 0.4, w: 0.2, h: 0.2, frame: '#f0ece0', v0: 0.06,
+    skip: (name, u, r) => name === 'front' && r === 0 && Math.abs(u - door) < 0.3,
+  });
+  m.box('stone', -0.5, 0, 1.3, 0.5, 0.1, 1.45, NY.limestone[1], { skip: ['bottom'] });
+  return { height: H + 0.1 };
+}
+
+/** A two-family brick house: three storeys, two front doors each with its own stoop, and a wooden porch on the upper floor. */
+export function brickduplex(m, v) {
+  const { rnd } = v;
+  const wall = pickFrom(rnd, NY.brick);
+  const x0 = -0.9, x1 = 0.9, z0 = -0.85, z1 = 0.85, y0 = 0.2, H = 1.45;
+  const F = block(m, x0, z0, x1, z1, y0, H, wall);
+  const doors = [-0.45, 0.45];
+  for (const u of doors) {
+    doorOn(m, F.front, u + 0.9, 0.2, 0.36, '#3a2a1a', { step: false });
+    m.box('stone', u - 0.25, 0, 0.85, u + 0.25, 0.2, 1.0, NY.limestone[1], { skip: ['bottom'] });
+  }
+  grid(m, F, 2, 0.4, {
+    gap: 0.36, w: 0.2, h: 0.22, frame: '#f0ece0', v0: 0.14,
+    skip: (name, u, r) => name === 'front' && r === 0 && doors.some((d) => Math.abs(u - (d + 0.9)) < 0.3),
+  });
+  // The upper porch on the front, with posts and a rail.
+  m.box('wood', x0 + 0.1, H - 0.4, 0.85, x1 - 0.1, H - 0.36, 1.15, '#8a6840', { skip: ['bottom'] });
+  for (const x of [x0 + 0.14, x1 - 0.14]) m.box('wood', x - 0.03, y0, 1.1, x + 0.03, H - 0.36, 1.15, '#5a4026', { skip: ['top'] });
+  return { height: H + 0.1 };
+}
+
 // ---- Towers ----
 
 /** An Art Deco tower: a limestone base, three glass tiers stepping in, a stainless crown and a spire with a light. */
@@ -256,4 +298,5 @@ export function watertower(m) {
 export const NEWYORK_FOOTPRINTS = Object.freeze({
   brownstone: [2, 2], tenement: [2, 3], bodega: [2, 2], castironloft: [2, 3], brickchurch: [2, 3],
   decotower: [2, 2], setbacktower: [3, 3], glassslab: [3, 3], subwaykiosk: [1, 1], hotdogcart: [1, 1], watertower: [1, 1],
+  italianaterow: [2, 3], brickduplex: [2, 2],
 });

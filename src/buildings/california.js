@@ -979,6 +979,85 @@ export function lighthouse(m, v) {
   return { height: 2.1 };
 }
 
+// ---- More homes: a prairie house, a mid-century house, an adobe and a house on stilts ----
+
+/** A prairie house: a low stone base, a long ribbon of glass under cantilevered roof slabs, and a stone chimney. */
+export function prairiehouse(m, v) {
+  const { rnd } = v;
+  const wall = pickFrom(rnd, ['#e8dcc0', '#d8c8a8', '#f0e8d8']);
+  const x0 = -0.85, x1 = 0.85, z0 = -0.7, z1 = 0.5;
+  m.box('stone', x0 - 0.03, 0, z0 - 0.03, x1 + 0.03, 0.2, z1 + 0.03, '#8a7a64', { skip: ['bottom'] });
+  m.box('plaster', x0, 0.2, z0, x1, 0.62, z1, wall, { skip: ['bottom', 'top'] });
+  m.box('plain', x0 - 0.3, 0.62, z0 - 0.3, x1 + 0.3, 0.7, z1 + 0.3, '#4a4438', { skip: ['bottom'] });
+  const F = faces(x0, z0, x1, z1, 0.2, 0.62);
+  // The ribbon of glass runs under the eave; the door sits at its west end.
+  panel(m, 'glass', F.front, 0.5, 0.18, 1.6, 0.4, 0.006, CAL.glass[1]);
+  panel(m, 'glow', F.front, 0.54, 0.22, 1.56, 0.36, 0.011, PALETTE.warm);
+  panel(m, 'glass', F.left, 0.1, 0.18, 1.1, 0.4, 0.006, CAL.glass[1]);
+  panel(m, 'glass', F.right, 0.1, 0.18, 1.1, 0.4, 0.006, CAL.glass[1]);
+  doorOn(m, F.front, 0.25, 0.2, 0.36, '#3a2a1a', { step: false });
+  m.box('stone', 0.5, 0.7, -0.4, 0.7, 1.15, -0.2, '#8a7a64', { skip: ['bottom'] });
+  m.box('hedge', -1.0, 0, 0.6, 1.0, 0.012, 0.9, '#7ab050', { skip: ['bottom'] });
+  return { height: 1.2 };
+}
+
+/** A mid-century house: a low gabled roof on wide eaves, a glass wall to the front, a breeze-block screen and a carport. */
+export function midcenturyhome(m, v) {
+  const { rnd } = v;
+  const wall = pickFrom(rnd, ['#f4f2ec', '#ecebe4', '#e0dcd2']);
+  const x0 = -0.8, x1 = 0.8, z0 = -0.6, z1 = 0.5;
+  m.box('stone', x0 - 0.02, 0, z0 - 0.02, x1 + 0.02, 0.05, z1 + 0.02, '#8a8a84', { skip: ['bottom'] });
+  m.box('plaster', x0, 0.05, z0, x1, 0.5, z1, wall, { skip: ['bottom', 'top'] });
+  m.gable('plain', x0, z0, x1, z1, 0.5, 0.75, '#4a4a50', { over: 0.25 });
+  const F = faces(x0, z0, x1, z1, 0.05, 0.5);
+  panel(m, 'glass', F.front, 0.1, 0.08, 1.1, 0.42, 0.006, CAL.glass[0]);
+  panel(m, 'glow', F.front, 0.14, 0.12, 1.06, 0.38, 0.011, PALETTE.warm);
+  // A breeze-block screen of small cubes on the front's east end.
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) m.box('stone', 1.2 + i * 0.1, 0.1 + j * 0.1, z1, 1.27 + i * 0.1, 0.17 + j * 0.1, z1 + 0.04, '#d8d4cc');
+  // A carport on two posts at the side, its flat roof of concrete.
+  m.box('plain', 0.2, 0.42, 0.5, 0.85, 0.46, 0.95, '#d8d4cc', { skip: ['bottom'] });
+  for (const x of [0.25, 0.8]) m.box('metal', x - 0.03, 0, 0.9, x + 0.03, 0.42, 0.95, '#2a2a2e', { skip: ['top'] });
+  return { height: 0.75 };
+}
+
+/** An adobe: a thick earth-coloured house with a flat roof, a parapet to the front, wooden vigas through the wall and a beehive oven. */
+export function adobe(m, v) {
+  const { rnd } = v;
+  const wall = pickFrom(rnd, ['#c8a878', '#d4b488', '#bf9c6c']);
+  const x0 = -0.8, x1 = 0.8, z0 = -0.7, z1 = 0.6;
+  m.box('plaster', x0, 0, z0, x1, 0.7, z1, wall, { skip: ['bottom', 'top'] });
+  m.box('plain', x0 - 0.02, 0.7, z0 - 0.02, x1 + 0.02, 0.74, z1 + 0.02, '#b8a888', { skip: ['bottom'] });
+  m.box('plaster', x0, 0.74, z1 - 0.04, x1, 0.82, z1, wall);
+  // The vigas: round beams that stick out through the front wall under the roof.
+  for (const x of [-0.6, -0.2, 0.2, 0.6]) m.box('wood', x - 0.02, 0.66, z1, x + 0.02, 0.7, z1 + 0.06, '#6a4a2a');
+  const F = faces(x0, z0, x1, z1, 0, 0.7);
+  windowOn(m, F.front, 0.3, 0.3, 0.22, 0.22, { frame: '#5a3a20', sill: false });
+  windowOn(m, F.front, 1.1, 0.3, 0.22, 0.22, { frame: '#5a3a20', sill: false });
+  doorOn(m, F.front, 0.7, 0.24, 0.44, '#5a3a20');
+  windowRows(m, { left: F.left, right: F.right }, 1, 0.5, { gap: 0.5, frame: '#5a3a20' });
+  // A beehive oven in the yard.
+  m.sphere('plaster', -0.45, 0.1, 0.92, 0.2, 0.2, 0.2, '#c8a878', { detail: 1 });
+  return { height: 0.82 };
+}
+
+/** A house on stilts on a hillside: a rock base, wooden posts, a glass front on a deck with a rail, and a flat roof with deep eaves. */
+export function hillsidehome(m, v) {
+  const { rnd } = v;
+  const wall = pickFrom(rnd, ['#e8e4da', '#dcd6c8', '#eeeae0']);
+  m.rock('stone', 0, -0.1, 0.1, 1.0, 0.4, 0.9, PALETTE.stone[2], { detail: 1, seed: 9 });
+  for (const [x, z] of [[-0.55, -0.45], [0.55, -0.45], [-0.55, 0.45], [0.55, 0.45]]) m.box('wood', x - 0.04, 0, z - 0.04, x + 0.04, 0.6, z + 0.04, '#5a4026', { skip: ['bottom'] });
+  m.box('plaster', -0.6, 0.6, -0.5, 0.6, 1.0, 0.5, wall, { skip: ['bottom', 'top'] });
+  m.box('plain', -0.7, 1.0, -0.6, 0.7, 1.05, 0.6, '#3a3a40', { skip: ['bottom'] });
+  const F = faces(-0.6, -0.5, 0.6, 0.5, 0.6, 1.0);
+  panel(m, 'glass', F.front, 0.1, 0.1, 1.1, 0.34, 0.006, CAL.glass[0]);
+  panel(m, 'glow', F.front, 0.14, 0.14, 1.06, 0.3, 0.011, PALETTE.warm);
+  // The deck out front, its rail and posts.
+  m.box('wood', -0.75, 0.56, 0.5, 0.65, 0.6, 0.95, PALETTE.wood[0], { skip: ['bottom'] });
+  m.box('metal', -0.75, 0.66, 0.92, 0.65, 0.69, 0.95, '#2a2a2e');
+  for (const x of [-0.75, 0.62]) m.box('metal', x, 0.6, 0.92, x + 0.03, 0.69, 0.95, '#2a2a2e', { skip: ['top'] });
+  return { height: 1.1 };
+}
+
 // ---- Skyscrapers: towers that stand over the rest of the city ----
 
 /** A slab tower: a tall glass box with white fins at its floors, a plant room on the roof and a helipad with a mast. */
@@ -1095,4 +1174,5 @@ export const CALIFORNIA_FOOTPRINTS = Object.freeze({
   clinic: [2, 2], library: [2, 2], university: [4, 4], seaport: [4, 4], airport: [6, 10], marina: [3, 3], stadium: [5, 5], datacenter: [3, 4],
   victorian: [2, 3], spanishcourt: [3, 3], motel: [3, 2], diner: [2, 2], gasstation: [3, 3], mission: [2, 3], lighthouse: [2, 2],
   slabtower: [2, 2], twintower: [3, 3], terracedtower: [2, 3], needle: [2, 2], sailtower: [2, 3], megatower: [4, 4],
+  prairiehouse: [2, 2], midcenturyhome: [2, 2], adobe: [2, 2], hillsidehome: [2, 2],
 });
