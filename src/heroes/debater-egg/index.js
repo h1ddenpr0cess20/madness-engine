@@ -1,13 +1,14 @@
 import { ENERGY_GAIN, MOODS } from './moods.js';
 import { approach, spring } from '../motion.js';
-import { createShell, dressInChocolate, dressInWood } from './shell.js';
+import { createEggBlot } from './blot.js';
+import { createShell, dressInChocolate, dressInVariety, dressInWood, EGG_VARIETIES } from './shell.js';
 import { createShellSkin } from './skin.js';
 import { createEggMist } from './mist.js';
 import { METALS } from '../../props/metalglobe.js';
 import { CHOCOLATES } from '../../textures/chocolate.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../textures/wood.js';
 
-export { CHOCOLATES, METALS, WOOD_FINISHES, WOOD_SPECIES };
+export { CHOCOLATES, EGG_VARIETIES, METALS, WOOD_FINISHES, WOOD_SPECIES, createEggBlot };
 
 /** The looks an egg comes in. */
 export const EGG_APPEARANCES = Object.freeze(['original', 'metal', 'glass', 'wood', 'chocolate']);
@@ -26,9 +27,10 @@ export const ROLL_REACH = 0.22;
  * where he stands — this returns the group to hang off a podium, and the three
  * handles the debate drives him by.
  */
-function buildEgg({ GFX, shadow = null, reach = ROLL_REACH }, { appearance = 'original', metal = 'steel', mist: withMist = false, species = 'walnut', finish = 'lacquered', chocolate = 'milk' } = {}) {
-  const skin = appearance === 'original' ? createShellSkin(GFX) : { map: null, bumpMap: null };
-  const shell = createShell(GFX, skin, { appearance, metal, species, finish, chocolate });
+function buildEgg({ GFX, shadow = null, reach = ROLL_REACH }, { appearance = 'original', metal = 'steel', mist: withMist = false, species = 'walnut', finish = 'lacquered', chocolate = 'milk', variety = 'speckled' } = {}) {
+  /** The speckles are painted only for the speckled egg, and only once: the plain ones are a color. */
+  let skin = appearance === 'original' && variety === 'speckled' ? createShellSkin(GFX) : { map: null, bumpMap: null };
+  const shell = createShell(GFX, skin, { appearance, metal, species, finish, chocolate, variety });
   const mistLayer = appearance === 'glass' ? createEggMist(GFX, { visible: withMist }) : null;
 
   const marc = new GFX.Group();
@@ -205,6 +207,18 @@ function buildEgg({ GFX, shadow = null, reach = ROLL_REACH }, { appearance = 'or
     };
   }
 
+  if (appearance === 'original') {
+    let selected = variety;
+    Object.defineProperty(api, 'variety', { enumerable: true, get: () => selected });
+    /** Lays another egg's shell on it: `speckled` (Marc's cream), `white` or `brown`, the last two plain. */
+    api.setVariety = (name) => {
+      if (name === 'speckled' && !skin.map) skin = createShellSkin(GFX);
+      dressInVariety(shell.material, name, skin);
+      selected = name;
+      return api;
+    };
+  }
+
   if (appearance === 'wood') {
     let selected = { species, finish };
     Object.defineProperty(api, 'species', { enumerable: true, get: () => selected.species });
@@ -241,11 +255,11 @@ function buildEgg({ GFX, shadow = null, reach = ROLL_REACH }, { appearance = 'or
 
 /**
  * The Egg. `appearance` is any of `EGG_APPEARANCES` (the original speckled shell by default) and the rest of
- * the options are those of the functions below: `metal`, `mist`, `species` and `finish`, `chocolate`. `reach`
+ * the options are those of the functions below: `metal`, `mist`, `species` and `finish`, `chocolate`, and for the original egg `variety` (`EGG_VARIETIES`: `speckled`, `white`, `brown`). `reach`
  * is how far it rolls from where it stands, in tiles (`ROLL_REACH`).
  */
-export function createEgg({ appearance, metal, mist, species, finish, chocolate, ...rig } = {}) {
-  return buildEgg(rig, { appearance, metal, mist, species, finish, chocolate });
+export function createEgg({ appearance, metal, mist, species, finish, chocolate, variety, ...rig } = {}) {
+  return buildEgg(rig, { appearance, metal, mist, species, finish, chocolate, variety });
 }
 
 export function createMetalEgg({ GFX, shadow = null, reach, metal = 'steel' } = {}) {
