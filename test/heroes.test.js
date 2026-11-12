@@ -8,7 +8,7 @@ const HEROES = {
   marble: ['createMarble', 'RADIUS'],
   'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
   'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'createMoltenSlimeOrb', 'createLavaSlimeOrb', 'METALS'],
-  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'METALS', 'ROLL_REACH'],
+  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'createWoodEgg', 'createChocolateEgg', 'EGG_APPEARANCES', 'METALS', 'WOOD_SPECIES', 'WOOD_FINISHES', 'CHOCOLATES', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
@@ -252,6 +252,76 @@ test('metal and clear-glass Egg keep Marc geometry and behaviour with optional w
     return max;
   };
   assert.ok(maxY(inner) / maxY(outer) > 0.98, 'mist fills the egg almost to the inner shell');
+});
+
+
+test('wooden Egg is the same egg in any wood and finish, with the grain turned to run tip to tip', async () => {
+  const { createEgg, createWoodEgg, WOOD_SPECIES, WOOD_FINISHES, ROLL_REACH } = await import('../src/heroes/debater-egg/index.js');
+  const original = createEgg({ GFX });
+  const wood = createWoodEgg({ GFX, species: 'oak', finish: 'raw' });
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+  const shell = shellOf(wood);
+  assert.deepEqual(shell.geometry.attributes.position.array, shellOf(original).geometry.attributes.position.array);
+  assert.equal(shell.material.metalness, 0);
+  assert.equal(wood.species, 'oak');
+  assert.equal(wood.finish, 'raw');
+  assert.equal(shell.material.clearcoat, 0);
+  assert.equal(wood.reach, ROLL_REACH);
+
+  // u now runs from one tip to the other (the sphere's v), so the grain, which runs along u, follows the egg's length.
+  const uv = shell.geometry.attributes.uv, y = shell.geometry.attributes.position;
+  let top = 0, bottom = 0;
+  for (let i = 0; i < uv.count; i++) {
+    if (y.getY(i) > y.getY(top)) top = i;
+    if (y.getY(i) < y.getY(bottom)) bottom = i;
+  }
+  assert.ok(Math.abs(uv.getX(top) - uv.getX(bottom)) > 0.98, 'the tips are the ends of u');
+
+  wood.setWood('maple');
+  assert.equal(wood.species, 'maple');
+  assert.equal(wood.finish, 'raw');
+  wood.setWood(undefined, 'lacquered');
+  assert.equal(wood.species, 'maple');
+  assert.equal(shell.material.clearcoat, 1);
+  for (const species of Object.keys(WOOD_SPECIES)) for (const finish of WOOD_FINISHES) wood.setWood(species, finish);
+  assert.throws(() => wood.setWood('unobtainium'), /no wood/);
+  assert.throws(() => wood.setWood('oak', 'varnished'), /no wood finish/);
+  assert.throws(() => createWoodEgg({ GFX, species: 'plastic' }), /no wood/);
+
+  const far = createWoodEgg({ GFX, reach: 0.42 });
+  assert.equal(far.reach, 0.42);
+});
+
+test('chocolate Egg is the same egg in milk, dark or white, glossy under a clearcoat', async () => {
+  const { createEgg, createChocolateEgg, CHOCOLATES } = await import('../src/heroes/debater-egg/index.js');
+  const original = createEgg({ GFX });
+  const choc = createChocolateEgg({ GFX });
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+  const shell = shellOf(choc);
+  assert.deepEqual(shell.geometry.attributes.position.array, shellOf(original).geometry.attributes.position.array);
+  assert.equal(choc.chocolate, 'milk');
+  assert.equal(shell.material.metalness, 0);
+  assert.ok(shell.material.clearcoat > 0.5);
+  for (const kind of Object.keys(CHOCOLATES)) {
+    choc.setChocolate(kind);
+    assert.equal(choc.chocolate, kind);
+  }
+  choc.setChocolate('dark');
+  assert.ok(shell.material.clearcoat > CHOCOLATES.white.gloss, 'dark is glossier than white');
+  assert.throws(() => choc.setChocolate('carob'), /no chocolate/);
+  assert.equal(choc.chocolate, 'dark', 'a refusal leaves it as it was');
+  assert.throws(() => createChocolateEgg({ GFX, chocolate: 'carob' }), /no chocolate/);
+});
+
+test('createEgg makes any appearance of the Egg from its options', async () => {
+  const { createEgg, EGG_APPEARANCES } = await import('../src/heroes/debater-egg/index.js');
+  assert.deepEqual([...EGG_APPEARANCES], ['original', 'metal', 'glass', 'wood', 'chocolate']);
+  const metal = createEgg({ GFX, appearance: 'metal', metal: 'gold' });
+  assert.equal(metal.metal, 'gold');
+  assert.equal(createEgg({ GFX, appearance: 'wood', species: 'teak' }).species, 'teak');
+  assert.equal(createEgg({ GFX, appearance: 'chocolate', chocolate: 'white' }).chocolate, 'white');
+  assert.equal(createEgg({ GFX, appearance: 'glass', mist: true }).mist.visible, true);
+  assert.throws(() => createEgg({ GFX, appearance: 'jelly' }), /unknown egg appearance/);
 });
 
 

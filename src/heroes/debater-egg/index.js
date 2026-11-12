@@ -1,11 +1,16 @@
 import { ENERGY_GAIN, MOODS } from './moods.js';
 import { approach, spring } from '../motion.js';
-import { createShell } from './shell.js';
+import { createShell, dressInChocolate, dressInWood } from './shell.js';
 import { createShellSkin } from './skin.js';
 import { createEggMist } from './mist.js';
 import { METALS } from '../../props/metalglobe.js';
+import { CHOCOLATES } from '../../textures/chocolate.js';
+import { WOOD_FINISHES, WOOD_SPECIES } from '../../textures/wood.js';
 
-export { METALS };
+export { CHOCOLATES, METALS, WOOD_FINISHES, WOOD_SPECIES };
+
+/** The looks an egg comes in. */
+export const EGG_APPEARANCES = Object.freeze(['original', 'metal', 'glass', 'wood', 'chocolate']);
 
 const RADIUS = 0.78;
 
@@ -21,9 +26,9 @@ export const ROLL_REACH = 0.22;
  * where he stands — this returns the group to hang off a podium, and the three
  * handles the debate drives him by.
  */
-function buildEgg({ GFX, shadow = null }, { appearance = 'original', metal = 'steel', mist: withMist = false } = {}) {
+function buildEgg({ GFX, shadow = null, reach = ROLL_REACH }, { appearance = 'original', metal = 'steel', mist: withMist = false, species = 'walnut', finish = 'lacquered', chocolate = 'milk' } = {}) {
   const skin = appearance === 'original' ? createShellSkin(GFX) : { map: null, bumpMap: null };
-  const shell = createShell(GFX, skin, { appearance, metal });
+  const shell = createShell(GFX, skin, { appearance, metal, species, finish, chocolate });
   const mistLayer = appearance === 'glass' ? createEggMist(GFX, { visible: withMist }) : null;
 
   const marc = new GFX.Group();
@@ -101,7 +106,7 @@ function buildEgg({ GFX, shadow = null }, { appearance = 'original', metal = 'st
         ang += dir * dt * speed;
         x += dir * dt * speed * RADIUS;
         lift = Math.abs(Math.sin(rollPhase * 1.5)) * 0.035;
-        if (Math.abs(x) > ROLL_REACH) {
+        if (Math.abs(x) > reach) {
           dir *= -1;
           rest = 0.5 + Math.random() * 0.6;
           sq.v += 1.2;
@@ -165,7 +170,7 @@ function buildEgg({ GFX, shadow = null }, { appearance = 'original', metal = 'st
     group: marc,
     shell: shell.mesh,
     /** How far he gets from where he was put. The stage keeps that much clear. */
-    reach: ROLL_REACH,
+    reach,
     get state() { return state; },
 
     setState(next) {
@@ -200,6 +205,28 @@ function buildEgg({ GFX, shadow = null }, { appearance = 'original', metal = 'st
     };
   }
 
+  if (appearance === 'wood') {
+    let selected = { species, finish };
+    Object.defineProperty(api, 'species', { enumerable: true, get: () => selected.species });
+    Object.defineProperty(api, 'finish', { enumerable: true, get: () => selected.finish });
+    /** Turns the egg from another wood or in another finish: either may be left as it is. */
+    api.setWood = (name = selected.species, how = selected.finish) => {
+      dressInWood(GFX, shell.material, name, how);
+      selected = { species: name, finish: how };
+      return api;
+    };
+  }
+
+  if (appearance === 'chocolate') {
+    let selected = chocolate;
+    Object.defineProperty(api, 'chocolate', { enumerable: true, get: () => selected });
+    api.setChocolate = (kind) => {
+      dressInChocolate(GFX, shell.material, kind);
+      selected = kind;
+      return api;
+    };
+  }
+
   if (appearance === 'glass') {
     api.glass = shell.mesh;
     api.mist = mistLayer.mesh;
@@ -212,14 +239,29 @@ function buildEgg({ GFX, shadow = null }, { appearance = 'original', metal = 'st
   return api;
 }
 
-export function createEgg(options) {
-  return buildEgg(options);
+/**
+ * The Egg. `appearance` is any of `EGG_APPEARANCES` (the original speckled shell by default) and the rest of
+ * the options are those of the functions below: `metal`, `mist`, `species` and `finish`, `chocolate`. `reach`
+ * is how far it rolls from where it stands, in tiles (`ROLL_REACH`).
+ */
+export function createEgg({ appearance, metal, mist, species, finish, chocolate, ...rig } = {}) {
+  return buildEgg(rig, { appearance, metal, mist, species, finish, chocolate });
 }
 
-export function createMetalEgg({ GFX, shadow = null, metal = 'steel' } = {}) {
-  return buildEgg({ GFX, shadow }, { appearance: 'metal', metal });
+export function createMetalEgg({ GFX, shadow = null, reach, metal = 'steel' } = {}) {
+  return buildEgg({ GFX, shadow, reach }, { appearance: 'metal', metal });
 }
 
-export function createGlassEgg({ GFX, shadow = null, mist = false } = {}) {
-  return buildEgg({ GFX, shadow }, { appearance: 'glass', mist });
+export function createGlassEgg({ GFX, shadow = null, reach, mist = false } = {}) {
+  return buildEgg({ GFX, shadow, reach }, { appearance: 'glass', mist });
+}
+
+/** A turned wooden egg: any `species` of `textures/wood` in any `finish`, the grain running tip to tip. `setWood(species, finish)` changes either. */
+export function createWoodEgg({ GFX, shadow = null, reach, species = 'walnut', finish = 'lacquered' } = {}) {
+  return buildEgg({ GFX, shadow, reach }, { appearance: 'wood', species, finish });
+}
+
+/** A molded chocolate egg, `milk`, `dark` or `white` (`CHOCOLATES`), with the seam where the mold met. `setChocolate(kind)` changes it. */
+export function createChocolateEgg({ GFX, shadow = null, reach, chocolate = 'milk' } = {}) {
+  return buildEgg({ GFX, shadow, reach }, { appearance: 'chocolate', chocolate });
 }

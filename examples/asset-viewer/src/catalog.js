@@ -17,6 +17,7 @@ import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
 import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
+import { CHOCOLATES } from '../../../src/textures/chocolate.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
 import { STAFF_TOPPERS } from '../../../src/weapons/staff.js';
 import { GRANITE_CHOICES } from '../../../src/heroes/rock-granite.js';
@@ -37,6 +38,9 @@ const stem = (path) => where(path).split('/').pop().replace(/\.js$/, '');
 const CLIPS = ['idle', 'walk', 'run', 'attack', 'cast', 'hit', 'ko', 'win', 'jump', 'leap', 'sit', 'talk'];
 const CATEGORY = { characters: 'Characters', props: 'Props', scenery: 'Scenery & vehicles' };
 export const METAL_CHOICES = Object.keys(METAL_FINISHES);
+const WOOD_SPECIES_CHOICES = Object.keys(WOOD_SPECIES);
+const WOOD_FINISH_CHOICES = [...WOOD_FINISHES];
+const CHOCOLATE_CHOICES = Object.keys(CHOCOLATES);
 
 /** The bounding box of everything drawn in `object`, in its own units, as { min, max, size }. */
 export function boundsOf(object) {
@@ -233,6 +237,14 @@ const HEROES = [
     h.createGlassEgg({ GFX }),
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   ))],
+  ['wooden egg (debater)', ({ species = 'walnut', finish = 'lacquered' } = {}) => Promise.all([import('../../../src/heroes/debater-egg/index.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
+    h.createWoodEgg({ GFX, species, finish }),
+    { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
+  )), null, { species: WOOD_SPECIES_CHOICES, finish: WOOD_FINISH_CHOICES }],
+  ['chocolate egg (debater)', ({ chocolate = 'milk' } = {}) => Promise.all([import('../../../src/heroes/debater-egg/index.js'), import('../../../src/props/metalglobe.js')]).then(([h, m]) => Object.assign(
+    h.createChocolateEgg({ GFX, chocolate }),
+    { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
+  )), null, { chocolate: CHOCOLATE_CHOICES }],
   ['alan', () => avatar('../../../src/heroes/alan/index.js', 'createAlan')],
   ['vibey', () => avatar('../../../src/heroes/vibey/index.js', 'createStar')],
   ['metal vibey', ({ metal = 'steel' } = {}) => avatar('../../../src/heroes/vibey/index.js', 'createMetalStar', { metal }), null, { metal: METAL_CHOICES }],

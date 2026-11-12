@@ -1,4 +1,7 @@
 import { METALS } from '../../props/metalglobe.js';
+import { WOOD_LOOKS } from '../../props/wood-board.js';
+import { CHOCOLATES, chocolateTexture } from '../../textures/chocolate.js';
+import { WOOD_FINISHES, WOOD_SPECIES, woodTexture } from '../../textures/wood.js';
 
 export function shapeEgg(positions) {
   for (let i = 0; i < positions.length; i += 3) {
@@ -76,10 +79,64 @@ export function smoothEggSeams(geometry) {
   return geometry;
 }
 
-export function createShell(GFX, skin, { appearance = 'original', metal = 'steel' } = {}) {
+/**
+ * Turns the egg's texture coordinates a quarter: u runs pole to pole and v round. The wood maps have their grain
+ * along u, so on the egg it runs from tip to tip, as it does on a turned egg, and closes up toward both ends.
+ */
+function grainAlongEgg(GFX, geometry) {
+  const uv = geometry.attributes.uv;
+  const turned = new Float32Array(uv.count * 2);
+  for (let i = 0; i < uv.count; i++) {
+    turned[i * 2] = 1 - uv.getY(i);
+    turned[i * 2 + 1] = uv.getX(i);
+  }
+  geometry.setAttribute('uv', new GFX.BufferAttribute(turned, 2));
+  return geometry;
+}
+
+const hex = ([r, g, b]) => `#${[r, g, b].map((x) => Math.round(x).toString(16).padStart(2, '0')).join('')}`;
+
+/** Dresses `material` in `species` in `finish` (see `textures/wood`). The grain is slow to read on a curve, so the bump is a little stronger than a board's. */
+export function dressInWood(GFX, material, species, finish) {
+  if (!Object.hasOwn(WOOD_SPECIES, species)) throw new Error(`no wood called ${species}`);
+  if (!WOOD_FINISHES.includes(finish)) throw new Error(`no wood finish called ${finish}`);
+  const { map, bump } = woodTexture(GFX, species, finish);
+  const look = WOOD_LOOKS[finish];
+  material.map = map;
+  material.bumpMap = bump;
+  // Without a canvas (the tests) there is no grain to paint: the species' own color stands in.
+  material.color.set(map ? '#ffffff' : hex(WOOD_SPECIES[species].base));
+  material.metalness = 0;
+  material.roughness = look.roughness;
+  material.clearcoat = look.clearcoat;
+  material.clearcoatRoughness = look.clearcoatRoughness;
+  material.bumpScale = look.bumpScale * 2;
+  material.needsUpdate = true;
+  return material;
+}
+
+/** Dresses `material` in molded chocolate of `kind` (see `textures/chocolate`). */
+export function dressInChocolate(GFX, material, kind) {
+  const look = CHOCOLATES[kind];
+  if (!look) throw new Error(`no chocolate called ${kind}`);
+  const { map, bump } = chocolateTexture(GFX, kind);
+  material.map = map;
+  material.bumpMap = bump;
+  material.color.set(map ? '#ffffff' : look.color);
+  material.metalness = 0;
+  material.roughness = 0.5 - look.gloss * 0.3;
+  material.clearcoat = look.gloss;
+  material.clearcoatRoughness = 0.5 - look.gloss * 0.42;
+  material.bumpScale = 0.5;
+  material.needsUpdate = true;
+  return material;
+}
+
+export function createShell(GFX, skin, { appearance = 'original', metal = 'steel', species = 'walnut', finish = 'lacquered', chocolate = 'milk' } = {}) {
   const geometry = new GFX.SphereGeometry(1, 128, 96);
   shapeEgg(geometry.attributes.position.array);
   smoothEggSeams(geometry);
+  if (appearance === 'wood') grainAlongEgg(GFX, geometry);
 
   let material;
   if (appearance === 'metal') {
@@ -108,6 +165,16 @@ export function createShell(GFX, skin, { appearance = 'original', metal = 'steel
       specularIntensity: 1,
       depthWrite: false,
     });
+  } else if (appearance === 'wood') {
+    material = new GFX.MeshPhysicalMaterial({ name: 'wooden-eggshell', color: new GFX.Color('#ffffff') });
+    dressInWood(GFX, material, species, finish);
+  } else if (appearance === 'chocolate') {
+    material = new GFX.MeshPhysicalMaterial({
+      name: 'chocolate-eggshell',
+      color: new GFX.Color('#ffffff'),
+      envMapIntensity: 1.1,
+    });
+    dressInChocolate(GFX, material, chocolate);
   } else if (appearance === 'original') {
     material = new GFX.MeshPhysicalMaterial({
       name: 'eggshell',
