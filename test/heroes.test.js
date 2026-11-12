@@ -468,3 +468,46 @@ test('the tile kitchen is a marble counter with its top on y = 0 and a green til
   assert.equal(kitchen.counter.material.map, null);
   assert.equal(kitchen.wall.material.map, null);
 });
+
+test('a planted Egg keeps its foot where it stands as it squashes, and none squashes into a ball', async () => {
+  const { createEgg } = await import('../src/heroes/debater-egg/index.js');
+  /** Where the shell's lowest point is in the body's frame, then in the Egg's: the body's own place and squash, and not a box round a tilted egg, whose corners dip lower than it does. */
+  const low = (made) => {
+    const y = made.shell.geometry.attributes.position;
+    let min = Infinity;
+    for (let i = 0; i < y.count; i++) min = Math.min(min, y.getY(i));
+    return min;
+  };
+  const foot = (made) => {
+    const body = made.group.getObjectByName('body');
+    return body.position.y + low(made) * body.scale.y;
+  };
+  /** The Egg moves with the time, so frames are given real time to move in. */
+  const drive = async (eggs, frames, hit) => {
+    for (const made of eggs) { made.setState('speaking'); made.setLevel(1); }
+    for (let i = 0; i < frames; i++) {
+      for (const made of eggs) { if (hit) made.pulse(1); made.shell.onBeforeRender(); }
+      await new Promise((resolve) => setTimeout(resolve, 12));
+    }
+  };
+  const bodyOf = (made) => made.group.getObjectByName('body');
+
+  const loose = createEgg({ GFX });
+  const planted = createEgg({ GFX, planted: true });
+  const rest = foot(planted);
+  await drive([loose, planted], 45, true);
+  assert.ok(foot(loose) > rest + 0.05, `unplanted, the foot lifts off (${foot(loose) - rest})`);
+  assert.ok(Math.abs(foot(planted) - rest) < 1e-6, `planted, the foot is where it was (${foot(planted) - rest})`);
+
+  // Whatever is thrown at it, the body is never flattened past the limit.
+  assert.ok(bodyOf(loose).scale.y >= 0.84 - 1e-9, `squashed to ${bodyOf(loose).scale.y}`);
+  assert.ok(bodyOf(loose).scale.x <= 1.08 + 1e-9);
+
+  // A gain of half squashes half as far.
+  const gentle = createEgg({ GFX, squashGain: 0.5 });
+  const full = createEgg({ GFX });
+  await drive([gentle, full], 20, false);
+  const flat = (made) => 1 - bodyOf(made).scale.y;
+  assert.ok(flat(full) > 0.02, 'it squashes at all');
+  assert.ok(flat(gentle) < flat(full) * 0.75, `a gentler squash (${flat(gentle)} against ${flat(full)})`);
+});
