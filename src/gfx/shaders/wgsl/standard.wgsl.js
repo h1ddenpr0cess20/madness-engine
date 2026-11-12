@@ -109,6 +109,9 @@ fn vs(in: VertexInput) -> Varyings {
 #ifdef USE_TRANSMISSION
 #include <transmission>
 #endif
+#ifdef USE_ANTITILE
+#include <antitile>
+#endif
 #ifdef USE_BUMPMAP
 #include <bump>
 #endif
@@ -169,7 +172,13 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   var diffuseColor = vec4f(u_draw.diffuse, u_draw.opacity);
   let totalEmissiveRadiance = u_draw.emissive;
   #ifdef USE_MAP
+  #ifdef USE_ANTITILE
+  diffuseColor *= untiled(t_map, s_map, in.mapUv, dpdx(in.mapUv), dpdy(in.mapUv));
+  // And the whole drifts a little lighter and darker over tens of tiles, as a real surface weathers.
+  diffuseColor = vec4f(diffuseColor.rgb * (0.86 + 0.28 * antiTileNoise(in.mapUv * 0.045 + 17.0)), diffuseColor.a);
+  #else
   diffuseColor *= textureSample(t_map, s_map, in.mapUv);
+  #endif
   #endif
   #if defined(USE_COLOR) || defined(USE_INSTANCING)
   diffuseColor *= in.color;

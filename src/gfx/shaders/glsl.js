@@ -82,6 +82,7 @@ function standardDefines(key) {
     HAS_NORMAL: key.hasNormal,
     USE_INSTANCING: key.instanced,
     USE_STRANDS: key.strands,
+    USE_ANTITILE: key.antiTile,
     USE_DETAILMAP: key.detailMap,
     USE_SUBSURFACE: key.subsurface,
   }) + `#define NUM_DIR_LIGHTS ${key.numDir}\n#define NUM_POINT_LIGHTS ${key.numPoint}\n`

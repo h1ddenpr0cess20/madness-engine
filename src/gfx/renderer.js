@@ -484,6 +484,9 @@ function describe(object, geometry, material, side, context, frame) {
       alphaTest: material.alphaTest > 0 ? material.alphaTest : 0,
       // Hair: highlights across the strands, which run along the map's v.
       strands: material.strands === true && !!material.map,
+      // Ground and walls tiled over a big area: each lookup blends two copies of the tile shifted by a slow noise, so
+      // the repeat does not show as a grid, and the colour drifts a little across the whole.
+      antiTile: material.antiTile === true && !!material.map,
       // Skin and the like: a detail map over the colour map's layout (it needs both the map and the bump), and light scattered under the surface.
       detailMap: !!material.detailMap && !!material.map && !!material.bumpMap,
       subsurface: physical && material.subsurface > 0,

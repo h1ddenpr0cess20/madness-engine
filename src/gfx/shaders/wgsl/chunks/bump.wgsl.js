@@ -3,9 +3,16 @@ export default `// Bump mapping: the normal tilted by the slope of the height ma
 fn dHdxy_fwd(bumpMapUv: vec2f, mapUv: vec2f) -> vec2f {
   let dSTdx = dpdx(bumpMapUv);
   let dSTdy = dFdy2(bumpMapUv);
+  #ifdef USE_ANTITILE
+  let gy = dpdy(bumpMapUv);
+  let Hll = u_draw.bumpScale * untiled(t_bump, s_bump, bumpMapUv, dSTdx, gy).x;
+  let dBx = u_draw.bumpScale * untiled(t_bump, s_bump, bumpMapUv + dSTdx, dSTdx, gy).x - Hll;
+  let dBy = u_draw.bumpScale * untiled(t_bump, s_bump, bumpMapUv + dSTdy, dSTdx, gy).x - Hll;
+  #else
   let Hll = u_draw.bumpScale * textureSample(t_bump, s_bump, bumpMapUv).x;
   let dBx = u_draw.bumpScale * textureSample(t_bump, s_bump, bumpMapUv + dSTdx).x - Hll;
   let dBy = u_draw.bumpScale * textureSample(t_bump, s_bump, bumpMapUv + dSTdy).x - Hll;
+  #endif
   var dH = vec2f(dBx, dBy);
   #ifdef USE_DETAILMAP
   // The detail map, on the colour map's layout: how much of the fine bump shows here (b), and a

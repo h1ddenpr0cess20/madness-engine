@@ -1127,6 +1127,8 @@ export class MeshStandardMaterial extends Material {
     // Over the map's layout (it needs the map and the bump map): r a relief of its own (scaled by detailScale),
     // g the roughness (0.5 as the material's, to twice it), b how much of the bump map shows.
     this.detailMap = null;
+    /** Whether a big tiled surface hides its repeat (see renderer.js). */
+    this.antiTile = false;
     this.detailScale = 1;
     this.envMapIntensity = 1.0;
     this.flatShading = false;

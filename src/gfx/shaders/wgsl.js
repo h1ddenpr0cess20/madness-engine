@@ -20,6 +20,7 @@
 
 import { preprocess } from './preprocess.js';
 
+import antitile from './wgsl/chunks/antitile.wgsl.js';
 import bindings from './wgsl/chunks/bindings.wgsl.js';
 import bump from './wgsl/chunks/bump.wgsl.js';
 import common from './wgsl/chunks/common.wgsl.js';
@@ -51,7 +52,7 @@ export const MAX_POINT_LIGHTS = 8;
 export const MAX_HEMI_LIGHTS = 4;
 
 const CHUNKS = {
-  bindings, bump, common, cube_uv, draw, frame, instancing, iridescence, output,
+  antitile, bindings, bump, common, cube_uv, draw, frame, instancing, iridescence, output,
   physical_lighting, pmrem_vertex, shadow_vertex, shadowmap, transmission,
 };
 
@@ -89,6 +90,7 @@ function standardDefines(key) {
     NUM_DIR_LIGHT_SHADOWS: key.numDirShadows,
     USE_ALPHATEST: key.alphaTest > 0,
     USE_STRANDS: key.strands,
+    USE_ANTITILE: key.antiTile,
     USE_DETAILMAP: key.detailMap,
     USE_SUBSURFACE: key.subsurface,
     ALPHA_TEST: key.alphaTest > 0 ? key.alphaTest.toFixed(4) : null,

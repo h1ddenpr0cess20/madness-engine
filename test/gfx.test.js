@@ -93,3 +93,18 @@ test('instanced programs read the copies, and plain ones do not', async () => {
   assert.match(depthWGSL(true), /instanceLook/);
   assert.doesNotMatch(depthWGSL(), /instanceLook/);
 });
+
+test('a material that hides its repeat samples its tiles through the anti-tiling lookup, in both languages', async () => {
+  const { programSources } = await import('../src/gfx/shaders/glsl.js');
+  const { moduleSource } = await import('../src/gfx/shaders/wgsl.js');
+  const key = { kind: 'standard', output: 'srgb', opaque: true, hasNormal: true, vertexColors: true, map: true, bumpMap: true, numDir: 1, numPoint: 0, numHemi: 1, numDirShadows: 1 };
+  const [, fs] = programSources({ ...key, antiTile: true });
+  assert.match(fs, /#define USE_ANTITILE/);
+  assert.match(fs, /vec4 untiled\(/);
+  const wgsl = moduleSource({ ...key, antiTile: true });
+  assert.match(wgsl, /fn untiled\(/);
+  assert.match(wgsl, /untiled\(t_map, s_map, in\.mapUv/);
+  assert.match(wgsl, /untiled\(t_bump, s_bump/);
+  assert.doesNotMatch(moduleSource(key), /untiled/);
+  assert.equal(new (await import('../src/gfx/index.js')).MeshStandardMaterial().antiTile, false);
+});
