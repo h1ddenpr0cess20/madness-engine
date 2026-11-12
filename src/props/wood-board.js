@@ -8,11 +8,13 @@
  */
 import { WOOD_FINISHES, WOOD_SPECIES, woodTexture } from '../textures/wood.js';
 
-const FINISH = Object.freeze({
-  raw: { roughness: 0.82, clearcoat: 0, bumpScale: 0.035 },
-  sanded: { roughness: 0.5, clearcoat: 0, bumpScale: 0.02 },
+/** What each finish does to a material: how rough, how much lacquer over it, how deep the bump reads. */
+export const WOOD_LOOKS = Object.freeze({
+  raw: { roughness: 0.82, clearcoat: 0, clearcoatRoughness: 0.5, bumpScale: 0.035 },
+  sanded: { roughness: 0.5, clearcoat: 0, clearcoatRoughness: 0.5, bumpScale: 0.02 },
   lacquered: { roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.06, bumpScale: 0.012 },
 });
+const FINISH = WOOD_LOOKS;
 
 /** Texture coordinates from the board's place: one repeat a metre, the grain along x on every face. */
 function worldUV(GFX, geometry, scale) {

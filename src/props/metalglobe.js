@@ -125,6 +125,22 @@ export function createMetalGlobe(GFX, { radius = RADIUS, relief, metal = 'steel'
 }
 
 /**
+ * An environment map for the lit materials to reflect, made from a painted equirectangular `canvas` (the
+ * `textures/rooms/*`) with `renderer`'s PMREM. Null where there is no renderer or no canvas.
+ */
+export function environmentFrom(GFX, renderer, canvas) {
+  if (!renderer || !canvas) return null;
+  const texture = new GFX.CanvasTexture(canvas);
+  texture.mapping = GFX.EquirectangularReflectionMapping;
+  texture.colorSpace = GFX.SRGBColorSpace;
+  const pmrem = new GFX.PMREMGenerator(renderer);
+  const environment = pmrem.fromEquirectangular(texture).texture;
+  pmrem.dispose();
+  texture.dispose();
+  return environment;
+}
+
+/**
  * A bright studio to reflect, for metal to show itself in: soft boxes and a white floor on a dim room, as an
  * environment map made with `renderer`'s PMREM. Null where there is no renderer or no document.
  */
@@ -138,11 +154,5 @@ export function studioEnvironment(GFX, renderer) {
   g.fillStyle = sky; g.fillRect(0, 0, 1024, 512);
   g.fillStyle = '#ffffff';
   for (const [x, y, w, h] of [[120, 90, 180, 110], [470, 60, 220, 90], [780, 110, 160, 130], [300, 300, 120, 60]]) g.fillRect(x, y, w, h);
-  const texture = new GFX.CanvasTexture(c);
-  texture.mapping = GFX.EquirectangularReflectionMapping;
-  const pmrem = new GFX.PMREMGenerator(renderer);
-  const environment = pmrem.fromEquirectangular(texture).texture;
-  pmrem.dispose();
-  texture.dispose();
-  return environment;
+  return environmentFrom(GFX, renderer, c);
 }
