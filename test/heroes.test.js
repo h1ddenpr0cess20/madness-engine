@@ -452,3 +452,19 @@ test('the original Egg comes speckled, plain white or plain brown, in the same s
   assert.throws(() => createEgg({ GFX, variety: 'green' }), /no egg variety/);
   assert.equal(createEgg({ GFX, appearance: 'metal' }).variety, undefined, 'only the original has one');
 });
+
+test('the tile kitchen is a marble counter with its top on y = 0 and a green tile wall behind it, with a brass rail', async () => {
+  const { createTileKitchen } = await import('../src/props/tile-kitchen.js');
+  const kitchen = createTileKitchen(GFX, { width: 40, depth: 20, height: 30, railHeight: 3 });
+  const box = new GFX.Box3().setFromObject(kitchen.counter);
+  assert.ok(Math.abs(box.max.y) < 1e-6, 'the counter top is the origin');
+  assert.ok(box.min.z >= -1e-6 && box.max.z > 19.9, 'it comes out from the wall');
+  const wall = new GFX.Box3().setFromObject(kitchen.wall);
+  assert.ok(Math.abs(wall.max.z) < 1e-6, 'the wall stands at z = 0');
+  assert.ok(wall.min.y > -1e-6 && wall.max.y > 29.9, 'rising from the counter');
+  assert.equal(kitchen.rail.position.y, 3);
+  assert.ok(kitchen.group.getObjectByName('wall-brass').children.filter((c) => c.name === 'wall-standoff').length >= 3);
+  // Without a canvas the materials are plain colors, not broken.
+  assert.equal(kitchen.counter.material.map, null);
+  assert.equal(kitchen.wall.material.map, null);
+});
