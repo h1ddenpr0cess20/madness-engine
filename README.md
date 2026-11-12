@@ -64,6 +64,27 @@ scene.add(bowlingBall.group);
 bowlingBall.setColors({ base: '#153a31', swirl: '#78d6ad', accent: '#f4e28b' });
 ```
 
+## Putter
+
+A customizable putter, built like the swords: real size in metres, a wrapped leather grip and a metal cap on each end, and the shared twelve metals chosen separately for the head, the shaft and the fittings. It has three head shapes (blade, mallet and half-moon) with a face insert and a sight line, and the sight line can glow. Everything can be changed after it is built:
+
+```js
+import * as GFX from 'madness-engine/gfx';
+import { createPutter } from 'madness-engine/props/putter';
+
+const putter = createPutter(GFX, {
+  head: 'mallet', headMetal: 'chrome', shaftMetal: 'steel',
+  gripColor: '#ff3fa4', accentColor: '#39ff88', glow: 1,
+});
+scene.add(putter.group);
+
+putter.setHeadStyle('blade');
+putter.setHeadMetal('rose gold');
+putter.setLength(0.89); // metres, 0.76 to 0.95
+```
+
+It is built standing on its butt with the head at the far end, as the swords are. `putter.playRotation` is the turn about z that lays the head on the floor, sole level, and `putter.sole` is the point of the sole under the shaft.
+
 ## The engine
 
 | Import | What it is |

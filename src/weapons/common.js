@@ -232,7 +232,7 @@ function createWeaponPommel(GFX, spec, { style = 'marble', metal, material, gran
 }
 
 /** A continuous helical leather cord laid over the cylindrical grip. */
-function diagonalWrapGeometry(GFX, {
+export function diagonalWrapGeometry(GFX, {
   radius, startY, height, pitch = 0.0117, tubeRadius = 0.00105, radialSegments = 8,
   direction = 1, phase = 0,
 } = {}) {
@@ -630,7 +630,7 @@ function createLightningGuard(GFX, parent, material, {
   return guard;
 }
 
-function leatherMaps(GFX) {
+export function leatherMaps(GFX) {
   if (typeof document === 'undefined') return { map: null, bump: null };
   const width = 512, height = 256;
   const mapCanvas = document.createElement('canvas');
