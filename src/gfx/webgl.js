@@ -327,6 +327,7 @@ export class WebGLBackend {
       else gl.bufferData(target, data, entry.version === -1 ? gl.STATIC_DRAW : gl.DYNAMIC_DRAW);
       entry.byteLength = data.byteLength;
       entry.version = attribute.version;
+      if (attribute.freeAfterUpload) attribute.array = new attribute.array.constructor(0);
     }
     return entry.buffer;
   }

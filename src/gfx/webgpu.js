@@ -594,6 +594,8 @@ export class WebGPUBackend {
 
   _buffer(attribute, usage, sync) {
     let entry = this.buffers.get(attribute);
+    // Its array let go once it was uploaded (freeAfterUpload): the buffer is all there is.
+    if (entry && attribute.freeAfterUpload && entry.version !== -1) return entry;
     const array = attribute.array instanceof Float64Array ? new Float32Array(attribute.array) : attribute.array;
     const size = alignTo(array.byteLength, 4);
     if (!entry || entry.size !== size) {
@@ -610,6 +612,7 @@ export class WebGPUBackend {
         this.device.queue.writeBuffer(entry.buffer, 0, padded);
       }
       entry.version = attribute.version;
+      if (attribute.freeAfterUpload) attribute.array = new attribute.array.constructor(0);
     }
     return entry;
   }

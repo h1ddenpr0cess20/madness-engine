@@ -327,6 +327,12 @@ export class BufferAttribute {
     this.count = array.length / itemSize;
     this.normalized = normalized;
     this.version = 0;
+    /**
+     * Whether the array is let go once the GPU has it: for big geometry that never changes (a city's streets and
+     * walls), so it is not held twice, once in the page and once on the card. Its `count` stays; its `array` is
+     * then empty (of the same type), and it cannot be changed or read back.
+     */
+    this.freeAfterUpload = false;
   }
 
   set needsUpdate(value) { if (value === true) this.version++; }
