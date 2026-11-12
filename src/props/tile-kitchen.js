@@ -59,7 +59,7 @@ export function createTileKitchen(GFX, { width = 110, depth = 60, height = 60, r
 
   // Brass: a quarter-round where the tile meets the stone, and the rail ladles hang from.
   const brass = new GFX.MeshStandardMaterial({
-    name: 'wall-brass', color: 0xc9a25a, map: brushedTexture(GFX, 256, '#b0b0b0'), roughness: 0.3, metalness: 1,
+    name: 'wall-brass', color: 0xc9a25a, map: brushedTexture(GFX, 256, '#b0b0b0'), roughness: 0.44, metalness: 1,
   });
   const trim = new GFX.Group();
   trim.name = 'wall-brass';
