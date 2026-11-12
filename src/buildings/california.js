@@ -979,6 +979,114 @@ export function lighthouse(m, v) {
   return { height: 2.1 };
 }
 
+// ---- Skyscrapers: towers that stand over the rest of the city ----
+
+/** A slab tower: a tall glass box with white fins at its floors, a plant room on the roof and a helipad with a mast. */
+export function slabtower(m, v) {
+  const { rnd } = v;
+  const H = 6.6 + rnd() * 1.8;
+  m.box('plain', -0.92, 0, -0.92, 0.92, 0.012, 0.92, '#bdb8ac', { skip: ['bottom'] });
+  curtain(m, -0.55, -0.5, 0.55, 0.5, 0.012, H, 0.3, pickFrom(rnd, CAL.glass), '#e8ecef');
+  m.box('plaster', -0.4, H, -0.35, 0.4, H + 0.25, 0.35, '#e8e8e4', { skip: ['top'] });
+  m.disc('plain', 0, H + 0.25, 0, 0.3, 20, '#c8ccd0');
+  m.cylinder('metal', 0, H + 0.25, -0.2, 0.01, 0.015, 1.0, 5, '#d8d8d8', { caps: false });
+  m.sphere('glow', 0, H + 1.25, -0.2, 0.035, 0.035, 0.035, '#ff4a3a', { detail: 0 });
+  return { height: H + 1.3 };
+}
+
+/** A twin tower: two glass towers of different heights on one stone podium, joined by a glass sky bridge. */
+export function twintower(m, v) {
+  const { rnd } = v;
+  slabBlock(m, -1.4, -1.4, 1.4, 1.4, 0, 0.4, pickFrom(rnd, ['#e8e2d4', '#d8d4cc']), { parapet: 0.06 });
+  const H1 = 6.2 + rnd() * 1.2, H2 = 4.6 + rnd() * 1.2;
+  const glass = pickFrom(rnd, CAL.glass);
+  curtain(m, -1.0, -0.9, -0.2, 0.9, 0.4, H1, 0.3, glass, '#e8ecef');
+  curtain(m, 0.2, -0.6, 1.0, 1.1, 0.4, H2, 0.3, glass, '#e8ecef');
+  // The sky bridge across the gap, at a floor both towers have.
+  m.box('glass', -0.2, 2.6, -0.3, 0.2, 2.95, 0.3, '#8ab8d0', { skip: ['left', 'right'] });
+  m.box('metal', -0.2, 2.95, -0.32, 0.2, 2.98, 0.32, '#d8dce0');
+  return { height: H1 + 0.1 };
+}
+
+/** A terraced tower: glass tiers stepping back as they rise, a planted terrace on each setback and a spire on the top. */
+export function terracedtower(m, v) {
+  const { rnd } = v;
+  const glass = pickFrom(rnd, CAL.glass);
+  const tiers = 4 + Math.floor(rnd() * 2);
+  let y = 0;
+  for (let i = 0; i < tiers; i++) {
+    const hx = 0.86 - i * 0.14, hz = 1.3 - i * 0.22, h = i === 0 ? 1.0 : 0.7;
+    curtain(m, -hx, -hz, hx, hz, y, y + h, 0.3, glass, '#d8dce0');
+    y += h + 0.05;
+    if (i < tiers - 1) m.box('hedge', -hx, y, hz - 0.22, hx, y + 0.04, hz, '#7ab050', { skip: ['bottom'] });
+  }
+  m.box('plaster', -0.3, y, -0.3, 0.3, y + 0.35, 0.3, '#f0eee8', { skip: ['bottom', 'top'] });
+  m.cylinder('metal', 0, y + 0.35, 0, 0.01, 0.03, 0.9, 5, '#d8d8d8', { caps: false });
+  m.sphere('glow', 0, y + 1.25, 0, 0.035, 0.035, 0.035, '#ff4a3a', { detail: 0 });
+  return { height: y + 1.3 };
+}
+
+/** A needle: a very tall, slim glass tower with floor rings, an observation pod two-thirds up and a long antenna. */
+export function needle(m, v) {
+  const { rnd } = v;
+  const H = 8 + rnd() * 1.5, r = 0.36;
+  m.box('plain', -0.8, 0, -0.8, 0.8, 0.012, 0.8, '#bdb8ac', { skip: ['bottom'] });
+  m.cylinder('glass', 0, 0.012, 0, r, r, H - 0.012, 20, pickFrom(rnd, CAL.glass), { caps: false });
+  for (let y = 0.3; y < H; y += 0.3) m.cylinder('metal', 0, y, 0, r + 0.015, r + 0.015, 0.03, 20, '#e8ecef', { caps: false });
+  // The observation pod: a white ring of floor with a glass drum above it.
+  const P = H * 0.66;
+  m.cylinder('plaster', 0, P, 0, 0.5, 0.5, 0.2, 20, '#f4f4f0', { caps: false });
+  m.cylinder('glass', 0, P + 0.2, 0, 0.48, 0.48, 0.16, 20, CAL.glass[4], { caps: false });
+  m.cone('metal', 0, P + 0.36, 0, 0.5, P + 0.52, 20, '#e8ecef');
+  // The crown and the antenna.
+  m.cone('metal', 0, H, 0, r, H + 0.35, 20, '#c8c8cc');
+  m.cylinder('metal', 0, H + 0.35, 0, 0.012, 0.02, 1.4, 5, '#e8e8e8', { caps: false });
+  m.sphere('glow', 0, H + 1.78, 0, 0.04, 0.04, 0.04, '#ff4a3a', { detail: 0 });
+  return { height: H + 1.8 };
+}
+
+/** A sail tower: a curved glass wall of floors, white bands at each floor, and a fanned cap of metal. */
+export function sailtower(m, v) {
+  const { rnd } = v;
+  const H = 6.4 + rnd() * 1.6, R = 0.95, cz = -0.2, n = 14;
+  const glass = pickFrom(rnd, CAL.glass);
+  const at = (k, r, y) => {
+    const a = -Math.PI / 2 + (k / n) * Math.PI;
+    return [r * Math.sin(a), y, cz + r * Math.cos(a)];
+  };
+  m.box('plain', -1.0, 0, -1.2, 1.0, 0.012, 0.9, '#bdb8ac', { skip: ['bottom'] });
+  for (let k = 0; k < n; k++) sheet(m, 'glass', at(k, R, 0.012), at(k + 1, R, 0.012), at(k + 1, R, H), at(k, R, H), glass);
+  for (let y = 0.3; y < H; y += 0.3) for (let k = 0; k < n; k++) sheet(m, 'plain', at(k, R + 0.012, y), at(k + 1, R + 0.012, y), at(k + 1, R + 0.012, y + 0.03), at(k, R + 0.012, y + 0.03), '#f4f4f0');
+  for (let k = 0; k < n; k++) m.tri('metal', [0, H + 0.2, cz], at(k, R, H), at(k + 1, R, H), '#c8ccd0');
+  return { height: H + 0.2 };
+}
+
+/** A megatower: a stone podium, then a glass shaft that tapers as it rises, ending in a four-sided pyramid crown and a spire. */
+export function megatower(m, v) {
+  const { rnd } = v;
+  const glass = pickFrom(rnd, CAL.glass);
+  slabBlock(m, -1.8, -1.8, 1.8, 1.8, 0, 0.4, '#e8e2d4', { parapet: 0.06 });
+  let y = 0.4, hx = 1.0;
+  const steps = 7;
+  for (let i = 0; i < steps; i++) {
+    const h = 0.55, nh = hx - 0.07;
+    curtain(m, -hx, -hx, hx, hx, y, y + h, 0.3, glass, '#e8ecef');
+    y += h;
+    hx = nh;
+  }
+  // The pyramid crown, four faces drawn both ways so each shows from outside.
+  const apex = [0, y + 0.7, 0];
+  const c = [[-hx, y, -hx], [hx, y, -hx], [hx, y, hx], [-hx, y, hx]];
+  for (let k = 0; k < 4; k++) {
+    const a = c[k], b = c[(k + 1) % 4];
+    m.tri('metal', apex, a, b, '#c8ccd0');
+    m.tri('metal', apex, b, a, '#c8ccd0');
+  }
+  m.cylinder('metal', 0, y + 0.7, 0, 0.012, 0.03, 0.8, 6, '#d8d8d8', { caps: false });
+  m.sphere('glow', 0, y + 1.5, 0, 0.04, 0.04, 0.04, '#ff4a3a', { detail: 0 });
+  return { height: y + 1.55 };
+}
+
 /** The footprints these models are drawn for. */
 export const CALIFORNIA_FOOTPRINTS = Object.freeze({
   bungalow: [2, 2], ranchhouse: [2, 2], beachhouse: [2, 2], dingbat: [2, 2], aptblock: [2, 3], condotower: [2, 3],
@@ -986,4 +1094,5 @@ export const CALIFORNIA_FOOTPRINTS = Object.freeze({
   police: [2, 2], firehouse: [2, 3], school: [3, 3], park: [3, 3], plaza: [3, 3], hospital: [3, 4], cityhall: [6, 6],
   clinic: [2, 2], library: [2, 2], university: [4, 4], seaport: [4, 4], airport: [6, 10], marina: [3, 3], stadium: [5, 5], datacenter: [3, 4],
   victorian: [2, 3], spanishcourt: [3, 3], motel: [3, 2], diner: [2, 2], gasstation: [3, 3], mission: [2, 3], lighthouse: [2, 2],
+  slabtower: [2, 2], twintower: [3, 3], terracedtower: [2, 3], needle: [2, 2], sailtower: [2, 3], megatower: [4, 4],
 });

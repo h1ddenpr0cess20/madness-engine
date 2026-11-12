@@ -11,6 +11,7 @@ import * as GFX from '../../../src/gfx/index.js';
 import { adopt, bake, createModel, createStatic, hasBake } from '../../../src/models/model.js';
 import { createBuildings, FOOTPRINTS } from '../../../src/buildings/index.js';
 import { CALIFORNIA_FOOTPRINTS } from '../../../src/buildings/california.js';
+import { NEWYORK_FOOTPRINTS } from '../../../src/buildings/newyork.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { tiled } from '../../../src/textures/painters.js';
 import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
@@ -402,9 +403,9 @@ function heroItem([name, make, palette = null, options = null]) {
 
 function buildingItems() {
   const buildings = createBuildings();
-  const sizes = { ...FOOTPRINTS, ...CALIFORNIA_FOOTPRINTS };
+  const sizes = { ...FOOTPRINTS, ...CALIFORNIA_FOOTPRINTS, ...NEWYORK_FOOTPRINTS };
   return buildings.types().map((type) => ({
-    id: `buildings/${type}`, category: 'Buildings', group: type in CALIFORNIA_FOOTPRINTS ? 'california' : 'medieval town', name: type, source: 'buildings', kind: 'object',
+    id: `buildings/${type}`, category: 'Buildings', group: type in CALIFORNIA_FOOTPRINTS ? 'california' : type in NEWYORK_FOOTPRINTS ? 'new york' : 'medieval town', name: type, source: 'buildings', kind: 'object',
     options: { level: [1, 2, 3], variant: [0, 1, 2, 3, 4, 5, 6, 7], construction: [0, 0.25, 0.5, 0.75] },
     build({ level = 1, variant = 0, construction = 0, lights = [] }) {
       const model = buildings.modelFor(type, construction ? { level, variant, building: true, progress: construction } : { level, variant });
