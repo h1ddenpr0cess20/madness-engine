@@ -309,7 +309,7 @@ Blender reaches the screen until it exists.
 - [ ] An engine screenshot, not a Blender one, shows the asset in place.
 
 **Each engine feature:**
-- [ ] A `test/` case; `npm test` passes in `/home/user/madness-engine` and in `the 3d-city repo (h1ddenpr0cess20/3d-city)`.
+- [ ] A `test/` case; `npm test` passes in the engine and in the 3d-city repo.
 - [ ] `npm run lint` is clean in the engine.
 - [ ] Frame time on a fixed camera path is recorded before and after. Target
       16.6 ms (60 fps) on the user's machine; in software rendering compare
