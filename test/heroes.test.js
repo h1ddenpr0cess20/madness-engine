@@ -8,7 +8,7 @@ const HEROES = {
   marble: ['createMarble', 'RADIUS'],
   'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
   'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'createMoltenSlimeOrb', 'createLavaSlimeOrb', 'METALS'],
-  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'createWoodEgg', 'createChocolateEgg', 'createEggBlot', 'EGG_APPEARANCES', 'METALS', 'WOOD_SPECIES', 'WOOD_FINISHES', 'CHOCOLATES', 'ROLL_REACH'],
+  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'createWoodEgg', 'createChocolateEgg', 'createEggBlot', 'EGG_APPEARANCES', 'EGG_VARIETIES', 'METALS', 'WOOD_SPECIES', 'WOOD_FINISHES', 'CHOCOLATES', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
@@ -422,4 +422,33 @@ test('the Egg keeps its blot under it, and thins it as it lifts', async () => {
   assert.ok(Math.abs(blot.position.z - egg.group.position.z) < 1e-9);
   assert.ok(blot.material.opacity > 0.2 && blot.material.opacity <= 0.34);
   assert.ok(blot.scale.x > 0.5 && blot.scale.x <= 1);
+});
+
+test('the original Egg comes speckled, plain white or plain brown, in the same shape', async () => {
+  const { createEgg, EGG_VARIETIES } = await import('../src/heroes/debater-egg/index.js');
+  assert.deepEqual(Object.keys(EGG_VARIETIES), ['speckled', 'white', 'brown']);
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+  const speckled = createEgg({ GFX });
+  assert.equal(speckled.variety, 'speckled');
+  for (const variety of ['white', 'brown']) {
+    const plain = createEgg({ GFX, variety });
+    assert.equal(plain.variety, variety);
+    assert.equal(shellOf(plain).material.map, null, 'plain, with no speckles');
+    assert.equal(shellOf(plain).material.bumpMap, null);
+    assert.deepEqual(shellOf(plain).geometry.attributes.position.array, shellOf(speckled).geometry.attributes.position.array);
+  }
+  const brown = shellOf(createEgg({ GFX, variety: 'brown' })).material.color;
+  const white = shellOf(createEgg({ GFX, variety: 'white' })).material.color;
+  assert.ok(white.r > brown.r && white.g > brown.g && white.b > brown.b, 'white is the lighter');
+  assert.ok(brown.r > brown.b, 'brown is warm');
+
+  const egg = createEgg({ GFX, variety: 'white' });
+  egg.setVariety('brown');
+  assert.equal(egg.variety, 'brown');
+  egg.setVariety('speckled');
+  assert.equal(egg.variety, 'speckled');
+  assert.throws(() => egg.setVariety('green'), /no egg variety/);
+  assert.equal(egg.variety, 'speckled', 'a refusal leaves it as it was');
+  assert.throws(() => createEgg({ GFX, variety: 'green' }), /no egg variety/);
+  assert.equal(createEgg({ GFX, appearance: 'metal' }).variety, undefined, 'only the original has one');
 });

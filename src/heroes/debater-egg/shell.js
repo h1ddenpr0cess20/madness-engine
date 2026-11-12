@@ -132,7 +132,26 @@ export function dressInChocolate(GFX, material, kind) {
   return material;
 }
 
-export function createShell(GFX, skin, { appearance = 'original', metal = 'steel', species = 'walnut', finish = 'lacquered', chocolate = 'milk' } = {}) {
+/** The varieties of the original egg: Marc's speckled cream, and the plain white and brown ones. */
+export const EGG_VARIETIES = Object.freeze({
+  speckled: { color: '#f0e3cd' },
+  white: { color: '#f7f4ee' },
+  brown: { color: '#a56f45' },
+});
+
+/** Dresses `material` as `variety`. `skin` is the speckled skin (see `skin.js`), needed only for that one: the plain ones are a color. */
+export function dressInVariety(material, variety, skin) {
+  const look = EGG_VARIETIES[variety];
+  if (!look) throw new Error(`no egg variety called ${variety}`);
+  const speckled = variety === 'speckled' && skin?.map;
+  material.map = speckled ? skin.map : null;
+  material.bumpMap = speckled ? skin.bumpMap : null;
+  material.color.set(speckled ? '#ffffff' : look.color);
+  material.needsUpdate = true;
+  return material;
+}
+
+export function createShell(GFX, skin, { appearance = 'original', metal = 'steel', species = 'walnut', finish = 'lacquered', chocolate = 'milk', variety = 'speckled' } = {}) {
   const geometry = new GFX.SphereGeometry(1, 128, 96);
   shapeEgg(geometry.attributes.position.array);
   smoothEggSeams(geometry);
@@ -176,11 +195,10 @@ export function createShell(GFX, skin, { appearance = 'original', metal = 'steel
     });
     dressInChocolate(GFX, material, chocolate);
   } else if (appearance === 'original') {
+    if (!EGG_VARIETIES[variety]) throw new Error(`no egg variety called ${variety}`);
     material = new GFX.MeshPhysicalMaterial({
       name: 'eggshell',
-      color: new GFX.Color(skin.map ? '#ffffff' : '#f0e3cd'),
-      map: skin.map,
-      bumpMap: skin.bumpMap,
+      color: new GFX.Color('#ffffff'),
       bumpScale: 0.7,
       roughness: 0.52,
       metalness: 0,
@@ -189,6 +207,7 @@ export function createShell(GFX, skin, { appearance = 'original', metal = 'steel
       sheen: 0.4,
       sheenColor: new GFX.Color('#fff2dd'),
     });
+    dressInVariety(material, variety, skin);
   } else {
     throw new Error(`unknown egg appearance: ${appearance}`);
   }
