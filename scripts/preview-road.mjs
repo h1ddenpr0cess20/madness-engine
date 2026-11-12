@@ -3,7 +3,7 @@
  * Paints the road textures (src/textures/road.js) under node and writes PNGs
  * to look at: the whole tile shrunk, a crop at 1:1, and the bump map's crop.
  *
- *     node scripts/preview-road.mjs <out dir> [asphalt|concrete|turf|gravel|pavers|shingles|membrane] [json options]
+ *     node scripts/preview-road.mjs <out dir> [asphalt|concrete|turf|gravel|pavers|shingles|membrane|facade] [json options]
  *     node scripts/preview-road.mjs /tmp/out asphalt '{"age":0.7,"cracks":0.6}'
  */
 import { deflateSync } from 'node:zlib';
@@ -12,8 +12,9 @@ import { join } from 'node:path';
 import { paintAsphalt, paintConcrete } from '../src/textures/road.js';
 import { paintGravel, paintPavers, paintTurf } from '../src/textures/ground.js';
 import { paintMembrane, paintShingles } from '../src/textures/roofing.js';
+import { paintFacade } from '../src/textures/facades.js';
 
-const PAINTERS = { asphalt: paintAsphalt, concrete: paintConcrete, turf: paintTurf, gravel: paintGravel, pavers: paintPavers, shingles: paintShingles, membrane: paintMembrane };
+const PAINTERS = { asphalt: paintAsphalt, concrete: paintConcrete, turf: paintTurf, gravel: paintGravel, pavers: paintPavers, shingles: paintShingles, membrane: paintMembrane, facade: paintFacade };
 
 const crc = (() => {
   const t = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
