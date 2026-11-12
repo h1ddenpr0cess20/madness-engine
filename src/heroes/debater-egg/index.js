@@ -1,5 +1,6 @@
 import { ENERGY_GAIN, MOODS } from './moods.js';
 import { approach, spring } from '../motion.js';
+import { createEggBlot } from './blot.js';
 import { createShell, dressInChocolate, dressInWood } from './shell.js';
 import { createShellSkin } from './skin.js';
 import { createEggMist } from './mist.js';
@@ -7,7 +8,7 @@ import { METALS } from '../../props/metalglobe.js';
 import { CHOCOLATES } from '../../textures/chocolate.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../textures/wood.js';
 
-export { CHOCOLATES, METALS, WOOD_FINISHES, WOOD_SPECIES };
+export { CHOCOLATES, METALS, WOOD_FINISHES, WOOD_SPECIES, createEggBlot };
 
 /** The looks an egg comes in. */
 export const EGG_APPEARANCES = Object.freeze(['original', 'metal', 'glass', 'wood', 'chocolate']);

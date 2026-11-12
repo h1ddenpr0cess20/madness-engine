@@ -8,7 +8,7 @@ const HEROES = {
   marble: ['createMarble', 'RADIUS'],
   'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
   'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'createMoltenSlimeOrb', 'createLavaSlimeOrb', 'METALS'],
-  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'createWoodEgg', 'createChocolateEgg', 'EGG_APPEARANCES', 'METALS', 'WOOD_SPECIES', 'WOOD_FINISHES', 'CHOCOLATES', 'ROLL_REACH'],
+  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'createWoodEgg', 'createChocolateEgg', 'createEggBlot', 'EGG_APPEARANCES', 'METALS', 'WOOD_SPECIES', 'WOOD_FINISHES', 'CHOCOLATES', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
   'yarn/ball': ['createBall', 'TILE_METRES'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
@@ -401,4 +401,25 @@ test('environmentFrom gives nothing without a renderer or a painted room, which 
   assert.equal(environmentFrom(GFX, null, {}), null);
   assert.equal(environmentFrom(GFX, {}, null), null);
   assert.equal(studioEnvironment(GFX, {}), null);
+});
+
+test('the Egg keeps its blot under it, and thins it as it lifts', async () => {
+  const { createEggBlot, createGlassEgg } = await import('../src/heroes/debater-egg/index.js');
+  const blot = createEggBlot(GFX);
+  assert.equal(blot.castShadow, false);
+  assert.equal(blot.receiveShadow, false);
+  assert.equal(blot.material.transparent, true);
+  assert.equal(blot.material.depthWrite, false);
+  // It lies flat, facing up.
+  const normal = blot.geometry.attributes.normal;
+  assert.ok(normal.getY(0) > 0.99);
+
+  const egg = createGlassEgg({ GFX, shadow: blot });
+  egg.group.position.set(0.3, 0, -0.2);
+  egg.shell.onBeforeRender();
+  // The Egg moves its group about itself: the blot follows it and keeps its opacity near the resting 0.34.
+  assert.ok(Math.abs(blot.position.x - egg.group.position.x) < 1e-9);
+  assert.ok(Math.abs(blot.position.z - egg.group.position.z) < 1e-9);
+  assert.ok(blot.material.opacity > 0.2 && blot.material.opacity <= 0.34);
+  assert.ok(blot.scale.x > 0.5 && blot.scale.x <= 1);
 });
