@@ -3,13 +3,16 @@
  * Paints the road textures (src/textures/road.js) under node and writes PNGs
  * to look at: the whole tile shrunk, a crop at 1:1, and the bump map's crop.
  *
- *     node scripts/preview-road.mjs <out dir> [asphalt|concrete] [json options]
+ *     node scripts/preview-road.mjs <out dir> [asphalt|concrete|turf] [json options]
  *     node scripts/preview-road.mjs /tmp/out asphalt '{"age":0.7,"cracks":0.6}'
  */
 import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { paintAsphalt, paintConcrete } from '../src/textures/road.js';
+import { paintTurf } from '../src/textures/ground.js';
+
+const PAINTERS = { asphalt: paintAsphalt, concrete: paintConcrete, turf: paintTurf };
 
 const crc = (() => {
   const t = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
@@ -32,7 +35,7 @@ const [out, kind = 'asphalt', json = '{}'] = process.argv.slice(2);
 mkdirSync(out, { recursive: true });
 const options = JSON.parse(json);
 const t0 = Date.now();
-const px = (kind === 'concrete' ? paintConcrete : paintAsphalt)(options);
+const px = PAINTERS[kind](options);
 console.log(`${kind} ${px.size}px in ${Date.now() - t0} ms`);
 const { size, color, height } = px;
 const tag = `${kind}${options.seed ? `-${options.seed}` : ''}${options.finish ? `-${options.finish}` : ''}`;
