@@ -113,6 +113,8 @@ const canvasTexture = (canvas) => {
  *   - `pixelRatio`: the most device pixels a CSS pixel gets (2)
  *   - `ui`: elements shot on the same film as the picture where a film says so (film.js)
  *   - `label`: the game's name, for the console
+ *   - `depth`: the camera's depth range: { ratio, min, most } for the near plane (0.02 of the distance, between
+ *     0.005 and 0.3), { far, reach } for the far plane (400, and `reach` times the distance past it: 0)
  * @returns the stage: { GFX, renderer, scene, camera, view, target, key, keyFrom, hemi, fill,
  *   film, lantern, fixtureLights, shake, look(), render(), setSky(canvas), setRoom(canvas), setMood(mood) }
  */
@@ -130,7 +132,11 @@ export async function createStage(host, {
   ui = [],
   preference = preferredRenderer(),
   label = 'madness-engine',
+  depth = {},
 } = {}) {
+  // The depth range: the near plane a `ratio` of the way to what the camera looks at, kept between `min` and `most`; the
+  // far plane at `far`, or, for a camera that goes far out (a whole city from above), `reach` times its distance past that.
+  const range = { ratio: 0.02, min: 0.005, most: 0.3, far: 400, reach: 0, ...depth };
   const renderer = await createRenderer(preference, { label });
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, pixelRatio));
   renderer.shadowMap.enabled = shadows;
@@ -139,7 +145,7 @@ export async function createStage(host, {
   const film = createFilm(host, { canvas: () => renderer.domElement, ui });
 
   const scene = new GFX.Scene();
-  const camera = new GFX.PerspectiveCamera(lens.fov, 1, 0.3, 400);
+  const camera = new GFX.PerspectiveCamera(lens.fov, 1, Math.min(range.most, 0.3), range.far);
 
   if (renderer.isWebGPU && preference !== 'webgpu') {
     renderer.backend.onLost = () => {
@@ -316,14 +322,24 @@ export async function createStage(host, {
   /**
    * The near plane follows the camera in: a fiftieth of the way to what it
    * looks at (`stage.focus`, or `stage.target`), between 5 mm and 30 cm, so
-   * a close look never cuts into a model and a far one keeps its depth.
+   * a close look never cuts into a model and a far one keeps its depth
+   * (`depth` sets the ratio and the limits). A 24-bit depth buffer tells
+   * apart surfaces about d² / (near × 2²⁴) apart at a distance d: a near
+   * plane held at 30 cm while the camera backs off hundreds of tiles leaves
+   * surfaces laid a few centimetres apart (a road on the ground, a decal)
+   * flickering through each other, so a game that zooms far out lets it go
+   * out with the camera (`most: Infinity`). With `reach`, the far plane goes
+   * out too, so what the camera backs away from stays in the picture.
    */
   const fitNear = () => {
     const focus = stage.focus ?? stage.target;
     if (!focus) return;
-    const near = Math.min(0.3, Math.max(0.005, camera.position.distanceTo(focus) * 0.02));
-    if (Math.abs(near - camera.near) > camera.near * 0.05) {
+    const d = camera.position.distanceTo(focus);
+    const near = Math.min(range.most, Math.max(range.min, d * range.ratio));
+    const far = Math.max(range.far, d * range.reach + range.far);
+    if (Math.abs(near - camera.near) > camera.near * 0.05 || Math.abs(far - camera.far) > camera.far * 0.05) {
       camera.near = near;
+      camera.far = far;
       camera.updateProjectionMatrix();
     }
   };
