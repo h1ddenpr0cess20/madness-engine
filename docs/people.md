@@ -328,7 +328,7 @@ muscular). Her long hair goes with her head and back, not with the arms it
 hangs beside.
 
 Brow thickness widens the brows' cards about the line they run along. The
-skin details (age, freckles, scars, a tattoo), the lip color, the moustache
+skin details (age, freckles, scars, a tattoo), the lip color, the mustache
 and stubble are not built yet: they are kept and handed back, so a game can
 offer them now, and the asset viewer grays them out.
 
@@ -350,16 +350,16 @@ a tight white one off the strands' surface and a broader one in the hair's
 own color (the material's `strands` flag).
 
 - `sidePart` (the default): about 5 cm on top, combed across from a parting
-  over the left eye, tapering to a few millimetres over the ears and at the
+  over the left eye, tapering to a few millimeters over the ears and at the
   nape; the sideburns a band from the temple down the front of the ear.
 - `full` (`beard`): about 2 cm, 2.5 at the chin, in a barber's outline:
   from behind the top of the ear down and forward to the throat, from above
   the front of the ear across the cheek to the corner of the mouth, trimmed
-  level under the chin; the moustache down and out over the lip.
+  level under the chin; the mustache down and out over the lip.
 
 More haircuts, all for either figure (`hair`), each grown by the same cards:
 
-- Short: `buzz` (a few millimetres, a little more on top), `crew` (2.5 cm on
+- Short: `buzz` (a few millimeters, a little more on top), `crew` (2.5 cm on
   top, standing, tapered), `texturedCrop` (4 cm, tousled, brought forward in
   a fringe), `slickBack` (6 cm, combed straight back), `pompadour` (8 cm at
   the front, swept up and back), `mohawk` (a 7 cm strip of spikes, the sides shaved),
@@ -375,8 +375,8 @@ More haircuts, all for either figure (`hair`), each grown by the same cards:
 
 More facial hair (`beard`, the man's), all inside the full beard's outline,
 so the cheek line, the ear, the lips and the neckline hold: `stubble` (3 mm),
-`goatee` (chin and moustache joined), `vanDyke` (a pointed chin beard and a
-moustache apart), `soulPatch`, `chevron`, `pencil`, `handlebar` (ends waxed
+`goatee` (chin and mustache joined), `vanDyke` (a pointed chin beard and a
+mustache apart), `soulPatch`, `chevron`, `pencil`, `handlebar` (ends waxed
 out and up), `walrus`, `muttonChops` and `long` (6 cm on the cheeks, 9 at the
 chin, over the throat).
 

@@ -81,7 +81,6 @@ The venue's palette and texture choices feed into the mesh builder. Keep the pal
 - `createGig(GFX, index, options)` creates a playable gig using the game's `loadVenue` and `createActors` callbacks.
 - `stepGig(gig, push, dt, options)` advances the simulation.
 - `putBack(gig)` resets the gig.
-- `resultOf(gig)` returns the run's summary statistics.
 
 The simulation module exports tuning constants for grip, rev, sticky ground, ice, belts, bumpers, and the fixed simulation step. Scoring, actor construction, pickup meaning, and presentation remain game-specific.
 

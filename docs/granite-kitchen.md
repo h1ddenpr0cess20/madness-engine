@@ -8,6 +8,8 @@ The granite kitchen asset is built from three reusable pieces: a counter, a sepa
 
 Creates a cabinet run beneath a polished granite top.
 
+The granite option uses the exact API key `'grey'` (not `'gray'`).
+
 | Option | Default | Notes |
 |---|---|---|
 | `length` | `2.8` | Run length in meters; supported range is 1.2–4.8 m. |
@@ -15,7 +17,6 @@ Creates a cabinet run beneath a polished granite top.
 | `height` | `0.92` | Counter height in meters; supported range is 0.7–1.2 m. |
 | `granite` | `'grey'` | Key in the granite library. |
 
-The API key is spelled `'grey'` in the current source and must be passed exactly as shown; it is not a prose spelling choice.
 | `wood` | `'walnut'` | Key in `WOOD_SPECIES`. |
 | `hardwareMetal` | `'brass'` | Finish for cabinet pulls and hinges. |
 | `environment` | `null` | Optional reflection environment for metal hardware. |
@@ -39,9 +40,9 @@ The basin and faucet use separate metal finishes. The faucet sits behind the bas
 
 ### `createGraniteKitchen(GFX, options)`
 
-Creates the assembled kitchen counter and sink. It accepts the granite, wood, basin, fixture, and hardware finishes, plus `length`, `height`, `depth`, and `environment`. The sink opening is calculated from the counter size, with the sink positioned slightly left of center and toward the back.
+Creates the assembled kitchen counter and sink. It accepts the granite, wood, basin, fixture, and hardware finishes, plus `length`, `height`, `depth`, and `environment`. The sink opening is calculated from the counter size; its center is offset along negative x and slightly toward the rear (negative z).
 
-This is the asset registered in the asset viewer. The result includes the combined `group`, the separate `counter` and `sink` groups, materials, and dimension metadata.
+This is the asset registered in the asset viewer. The return value includes `group`, `counter`, and `sink`, plus material handles. The combined group's `userData.dimensions` and `userData.materials` hold its size and materials.
 
 ## Materials
 

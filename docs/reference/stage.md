@@ -50,7 +50,7 @@ The stage prefers WebGPU when the browser exposes it. If initialization fails, i
 Use a query parameter to select a backend while testing:
 
 - `?renderer=webgl` forces WebGL 2.
-- `?renderer=webgpu` requires WebGPU.
+- `?renderer=webgpu` requests WebGPU when the browser exposes it; otherwise the stage falls back to WebGL 2.
 - Without the parameter, the stage chooses automatically.
 
 ## Stage members

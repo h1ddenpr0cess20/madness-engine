@@ -56,8 +56,8 @@ Interchange rules:
 ### The city today (`the 3d-city repo (h1ddenpr0cess20/3d-city)`)
 
 - `src/city/buildings.js` turns footprints into walls. Each wall edge becomes one
-  textured quad per storey band (the `builder.quad` call in the wall loop). The
-  facade texture repeats once per storey and once per bay, with whole numbers of
+  textured quad per story band (the `builder.quad` call in the wall loop). The
+  facade texture repeats once per story and once per bay, with whole numbers of
   each so windows land on corners. Roofs are separate quads.
 - Walls collide as two triangles per edge (`builder.collide`, same file).
 - Tiles stream from Web Workers: `src/city/stream.js` creates
@@ -157,11 +157,11 @@ until then.
 
 ## 4. Modular city kit
 
-The city wall is one quad per storey band. A kit replaces it with **bays** placed
+The city wall is one quad per story band. A kit replaces it with **bays** placed
 along the footprint edges: plain bays, windows, a shop front, corners, a cornice
 and roof props.
 
-**Grid.** Bay width **3 m** (one window and one pier). Storey height **3.5 m**
+**Grid.** Bay width **3 m** (one window and one pier). Story height **3.5 m**
 for offices, **4 m** for retail and ground floors. Corner pieces are one bay
 square (3 m by 3 m). For a wall of length `L`, use `n = round(L / 3)` bays,
 each stretched by `L / n` so the ends meet the corners. If that stretch exceeds
@@ -171,8 +171,8 @@ about 10%, change the piece count or add a plain filler.
 
 | Piece | Used for |
 |---|---|
-| `bay_plain` | Upper storeys, blank walls, service faces |
-| `bay_window` | Upper storeys; two or three window variants |
+| `bay_plain` | Upper stories, blank walls, service faces |
+| `bay_window` | Upper stories; two or three window variants |
 | `bay_pier` | Strip between window groups |
 | `ground_shop` | Ground floor of retail or commercial buildings |
 | `ground_lobby` | Glass entrance on a tower |
@@ -183,9 +183,9 @@ about 10%, change the piece count or add a plain filler.
 **Placement generator (to build in `src/city/buildings.js`).**
 1. For each wall edge in the loop, take its length `L` and outward normal `n`
    (already computed there as `[-dz/L, 0, dx/L]`).
-2. Storey count: `rows = max(1, round(height / storey))`, with the same
+2. Story count: `rows = max(1, round(height / storey))`, with the same
    `FACADE[kind].storey` values the file already uses.
-3. Per storey row, pick a piece: `ground_shop` for row 0 with a shop base,
+3. Per story row, pick a piece: `ground_shop` for row 0 with a shop base,
    `cornice` for the top row when `h >= 7`, otherwise `bay_window` or `bay_plain`.
 4. Place `n` bays along the edge as `instancePlace` entries, scaled by `L / (n * 3)`.
 5. Place a `corner` at each vertex.

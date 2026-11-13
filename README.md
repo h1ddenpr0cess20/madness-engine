@@ -33,7 +33,7 @@ The engine also collects reusable content created across the games. Assets are o
 
 The library is intentionally shared: a project can use an existing character, prop, texture, or environment instead of creating and maintaining another copy. Where games have distinct versions of an asset, those versions can be kept separately.
 
-The generated [library catalog](docs/library.md) lists game-derived assets in the extracted library categories and records their source projects. It is not a complete inventory of every engine-authored module or asset.
+The generated [library catalog](docs/library.md) lists the shared-library assets by category and identifies their source game where applicable. It does not inventory every engine module or every standalone asset.
 
 ## Installation
 

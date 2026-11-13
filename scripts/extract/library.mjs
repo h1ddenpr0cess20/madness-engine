@@ -253,8 +253,13 @@ const ABOUT = {
  * Americanizes generated Markdown prose without changing inline code or code fences.
  * Source comments are kept as written; this is a presentation-only pass for the catalog.
  */
+/**
+ * Americanizes generated Markdown prose without changing inline code or fenced examples.
+ * Source comments remain untouched; only the human-readable catalog presentation is converted.
+ */
 export function americanizeMarkdown(text) {
   const replacements = [
+    [/\bcolourable\b/gi, 'colorable'],
     [/\bcolours\b/gi, 'colors'],
     [/\bcolouring\b/gi, 'coloring'],
     [/\bcoloured\b/gi, 'colored'],
@@ -262,14 +267,26 @@ export function americanizeMarkdown(text) {
     [/\bcolour\b/gi, 'color'],
     [/\bmodelling\b/gi, 'modeling'],
     [/\bmodelled\b/gi, 'modeled'],
+    [/\bmillimetres\b/gi, 'millimeters'],
+    [/\bmillimetre\b/gi, 'millimeter'],
+    [/\bcentimetres\b/gi, 'centimeters'],
+    [/\bcentimetre\b/gi, 'centimeter'],
+    [/\bkilometres\b/gi, 'kilometers'],
+    [/\bkilometre\b/gi, 'kilometer'],
     [/\bmetres\b/gi, 'meters'],
     [/\bmetre\b/gi, 'meter'],
+    [/\blitres\b/gi, 'liters'],
+    [/\blitre\b/gi, 'liter'],
     [/\bstylised\b/gi, 'stylized'],
     [/\bbehaviour\b/gi, 'behavior'],
     [/\bcatalogue\b/gi, 'catalog'],
     [/\bcentres\b/gi, 'centers'],
     [/\bcentre\b/gi, 'center'],
     [/\bgreys\b/gi, 'grays'],
+    [/\bgreyed\b/gi, 'grayed'],
+    [/\bgreyer\b/gi, 'grayer'],
+    [/\bgreyest\b/gi, 'grayest'],
+    [/\bgreyish\b/gi, 'grayish'],
     [/\bgrey\b/gi, 'gray'],
     [/\bfibres\b/gi, 'fibers'],
     [/\bfibre\b/gi, 'fiber'],
@@ -279,13 +296,100 @@ export function americanizeMarkdown(text) {
     [/\borganise\b/gi, 'organize'],
     [/\boptimised\b/gi, 'optimized'],
     [/\boptimise\b/gi, 'optimize'],
+    [/\brealised\b/gi, 'realized'],
+    [/\brealise\b/gi, 'realize'],
+    [/\brecognised\b/gi, 'recognized'],
+    [/\brecognise\b/gi, 'recognize'],
+    [/\bcustomised\b/gi, 'customized'],
+    [/\bcustomise\b/gi, 'customize'],
+    [/\bvisualised\b/gi, 'visualized'],
+    [/\bvisualise\b/gi, 'visualize'],
+    [/\bspecialised\b/gi, 'specialized'],
+    [/\bspecialise\b/gi, 'specialize'],
+    [/\bauthorised\b/gi, 'authorized'],
+    [/\bauthorise\b/gi, 'authorize'],
+    [/\binitialised\b/gi, 'initialized'],
+    [/\binitialise\b/gi, 'initialize'],
+    [/\bnormalised\b/gi, 'normalized'],
+    [/\bnormalise\b/gi, 'normalize'],
+    [/\bserialised\b/gi, 'serialized'],
+    [/\bserialise\b/gi, 'serialize'],
+    [/\bsummarised\b/gi, 'summarized'],
+    [/\bsummarise\b/gi, 'summarize'],
+    [/\butilised\b/gi, 'utilized'],
+    [/\butilise\b/gi, 'utilize'],
+    [/\btravellers\b/gi, 'travelers'],
+    [/\btraveller\b/gi, 'traveler'],
     [/\btravelling\b/gi, 'traveling'],
     [/\bcancelled\b/gi, 'canceled'],
     [/\blabelled\b/gi, 'labeled'],
     [/\bfavourites\b/gi, 'favorites'],
     [/\bfavourite\b/gi, 'favorite'],
+    [/\bfavourable\b/gi, 'favorable'],
+    [/\bfavour\b/gi, 'favor'],
     [/\btheatre\b/gi, 'theater'],
+    [/\bmoustaches\b/gi, 'mustaches'],
+    [/\bmoustache\b/gi, 'mustache'],
+    [/\btowards\b/gi, 'toward'],
+    [/\bstoreys\b/gi, 'stories'],
+    [/\bstorey\b/gi, 'story'],
+    [/\baluminium\b/gi, 'aluminum'],
+    [/\bmoulds\b/gi, 'molds'],
+    [/\bmoulded\b/gi, 'molded'],
+    [/\bmoulding\b/gi, 'molding'],
+    [/\bmould\b/gi, 'mold'],
+    [/\bchequered\b/gi, 'checkered'],
+    [/\bwhilst\b/gi, 'while'],
+    [/\bamongst\b/gi, 'among'],
+    [/\blearnt\b/gi, 'learned'],
+    [/\bleant\b/gi, 'leaned'],
+    [/\bspelt\b/gi, 'spelled'],
+    [/\bspilt\b/gi, 'spilled'],
+    [/\bspoilt\b/gi, 'spoiled'],
+    [/\bstencilled\b/gi, 'stenciled'],
+    [/\bstencilling\b/gi, 'stenciling'],
+    [/\bneighbours\b/gi, 'neighbors'],
+    [/\bneighbour\b/gi, 'neighbor'],
+    [/\bjewellery\b/gi, 'jewelry'],
+    [/\btyres\b/gi, 'tires'],
+    [/\btyre\b/gi, 'tire'],
+    [/\bkerb\b/gi, 'curb'],
+    [/\bcheques\b/gi, 'checks'],
+    [/\bcheque\b/gi, 'check'],
+    [/\bprogramme\b/gi, 'program'],
+    [/\bpyjamas\b/gi, 'pajamas'],
+    [/\boffence\b/gi, 'offense'],
+    [/\bdefence\b/gi, 'defense'],
+    [/\bploughed\b/gi, 'plowed'],
+    [/\bplough\b/gi, 'plow'],
+    [/\bmanoeuvres\b/gi, 'maneuvers'],
+    [/\bmanoeuvre\b/gi, 'maneuver'],
+    [/\bsulphur\b/gi, 'sulfur'],
+    [/\bpractising\b/gi, 'practicing'],
+    [/\bpractised\b/gi, 'practiced'],
+    [/\bpractise\b/gi, 'practice'],
+    [/\bageing\b/gi, 'aging'],
+    [/\bhonoured\b/gi, 'honored'],
+    [/\bhonouring\b/gi, 'honoring'],
+    [/\bhonours\b/gi, 'honors'],
+    [/\bhonour\b/gi, 'honor'],
+    [/\bhumour\b/gi, 'humor'],
+    [/\brumour\b/gi, 'rumor'],
+    [/\blabour\b/gi, 'labor'],
+    [/\barmour\b/gi, 'armor'],
+    [/\bflavour\b/gi, 'flavor'],
+    [/\bodour\b/gi, 'odor'],
+    [/\bvigour\b/gi, 'vigor'],
+    [/\bsaviour\b/gi, 'savior'],
+    [/\bharbour\b/gi, 'harbor'],
+    [/\bendeavour\b/gi, 'endeavor'],
+    [/\bsplendour\b/gi, 'splendor'],
   ];
+  const apply = (prose) => replacements.reduce((value, [pattern, replacement]) => value.replace(pattern, (match) => (
+    match === match.toUpperCase() ? replacement.toUpperCase()
+      : match[0] === match[0].toUpperCase() ? replacement[0].toUpperCase() + replacement.slice(1)
+        : replacement
+  )), prose);
   let fence = null;
   let fenceLength = 0;
   return text.split('\n').map((line) => {
@@ -302,10 +406,7 @@ export function americanizeMarkdown(text) {
       return line;
     }
     if (fence !== null) return line;
-    return line.split(/(\x60+[^\x60]*?\x60+)/g).map((part, index) => {
-      if (index % 2) return part;
-      return replacements.reduce((value, [pattern, replacement]) => value.replace(pattern, replacement), part);
-    }).join('');
+    return line.split(/(\x60+[^\x60]*?\x60+)/g).map((part, index) => index % 2 ? part : apply(part)).join('');
   }).join('\n');
 }
 
