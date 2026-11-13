@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import * as GFX from '../src/gfx/index.js';
-import { createFreighter, FREIGHTER, FREIGHTER_DRIVE } from '../src/scenery/freighter.js';
+import { createFreighter, FREIGHTER, FREIGHTER_DRIVE } from '../src/vehicles/freighter.js';
 import { VEHICLES } from '../src/scenery/vehicles.js';
 
 const near = (a, b, eps, what) => assert.ok(Math.abs(a - b) <= eps, `${what}: ${a} vs ${b}`);
@@ -169,7 +169,7 @@ test('a hitch in the frame rate does not throw it, and nothing happens with no t
   near(f.speed, FREIGHTER_DRIVE.accel * FREIGHTER_DRIVE.maxStep, 1e-12, 'no time, no change');
 });
 
-test('it is a vehicle of its own beside the traffic, not one of its sculpts', () => {
+test('it is a vehicle to drive, beside the sculpted traffic and not one of it', () => {
   assert.ok(!('freighter' in VEHICLES));
   assert.equal(FREIGHTER.unit, 'm');
 });

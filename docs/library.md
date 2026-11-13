@@ -308,7 +308,6 @@ The world round the ball: the town's street furniture and vehicles (`bakeData` i
 | `scenery/oil` | `oil` (petroll) | The gas station's and the oil field's machinery, sculpted: the pumps and the air pump, the pumpjack (its frame standing still, its walking beam and horsehead nodding), oil drums, a wellhead, a flar… |
 | `scenery/street` | `street` (petroll)<br>`street.metrlol` (metrlol) | The furniture of the streets and yards, sculpted. |
 | `scenery/vehicles` | `vehicles` (petroll)<br>`vehicles.metrlol` (metrlol) | The traffic, sculpted: a sedan, a hatchback, a pickup, a box truck, a tanker, and a rusted-out junker for the yard. |
-| `scenery/freighter` | `createFreighter` (engine) | The electric freighter: a cab-over delivery truck with a raked dark canopy, a light bar, a white cargo box with green leaf badges and four axles (two steering at the front, duals behind), built from plain shapes at real size in metres, and it drives. `createFreighter(GFX, { scale, paint, accent, light })` gives `group`, `update(dt, { throttle, brake, steer, handbrake })` (accelerating, braking and reversing, a steering lock that shrinks with speed, and a bicycle-model turn about the back wheels: the model it was made with), `reset()`, `speed`, `kmh`, `heading`, `steerAngle`, `wheels` and `steeredWheels`. It faces +z with its wheels on y = 0 and its origin at the back wheels, as `scenery/vehicles` do; `scale` is game units to the metre (0.41 puts it among the traffic). `FREIGHTER` and `FREIGHTER_DRIVE` hold its measures and driving numbers. |
 
 ## textures
 

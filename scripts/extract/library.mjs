@@ -35,7 +35,7 @@ import { split } from './split.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Engine-authored library assets are kept when the game-built library is regenerated.
-const ENGINE_OWNED = ['props/bowling-ball.js', 'props/book.js', 'props/book-art.js', 'props/bookcase.js', 'props/wood-table.js', 'props/wood-chair.js', 'props/track-light.js', 'props/glass-entry.js', 'scenery/freighter.js'];
+const ENGINE_OWNED = ['props/bowling-ball.js', 'props/book.js', 'props/book-art.js', 'props/bookcase.js', 'props/wood-table.js', 'props/wood-chair.js', 'props/track-light.js', 'props/glass-entry.js'];
 const SRC = join(HERE, '..', '..', 'src');
 export const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music'];
 export const ORIGINS = join(HERE, 'origins.json');
@@ -290,7 +290,6 @@ function contents(places, moods) {
     }
     if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be coloured independently. |');
     if (kind === 'props') lines.push('| `props/bowling-ball` | `createBowlingBall` (engine) | A high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs (marble, spiral, flame, split and blotch). Colors and designs are changeable at runtime. |');
-    if (kind === 'scenery') lines.push('| `scenery/freighter` | `createFreighter` (engine) | The electric freighter: a cab-over delivery truck with a raked dark canopy, a light bar, a white cargo box with green leaf badges and four axles (two steering at the front, duals behind), built from plain shapes at real size in metres, and it drives. `createFreighter(GFX, { scale, paint, accent, light })` gives `group`, `update(dt, { throttle, brake, steer, handbrake })` (accelerating, braking and reversing, a steering lock that shrinks with speed, and a bicycle-model turn about the back wheels: the model it was made with), `reset()`, `speed`, `kmh`, `heading`, `steerAngle`, `wheels` and `steeredWheels`. It faces +z with its wheels on y = 0 and its origin at the back wheels, as `scenery/vehicles` do; `scale` is game units to the metre (0.41 puts it among the traffic). `FREIGHTER` and `FREIGHTER_DRIVE` hold its measures and driving numbers. |');
     lines.push('');
   }
   lines.push('## moods', '', ABOUT.moods, '', '| Path | Versions (games) | What it is |', '|---|---|---|');
