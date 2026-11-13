@@ -178,7 +178,11 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #ifdef USE_MAP
   {
     // Each repeat of the map (a window) by its own chance; the vertex colour (a building's tint) shuffles them.
+    #ifdef EMISSIVE_CELLS
+    var seed = dot(floor(in.mapUv * EMISSIVE_CELLS), vec2f(12.9898, 78.233));
+    #else
     var seed = dot(floor(in.mapUv), vec2f(12.9898, 78.233));
+    #endif
     #if defined(USE_COLOR) || defined(USE_INSTANCING)
     seed += dot(in.color.rgb, vec3f(39.3, 11.1, 23.7)) * 17.0;
     #endif

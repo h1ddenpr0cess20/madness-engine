@@ -96,6 +96,7 @@ function standardDefines(key) {
     USE_SUBSURFACE: key.subsurface,
     ALPHA_TEST: key.alphaTest > 0 ? key.alphaTest.toFixed(4) : null,
     EMISSIVE_SCATTER: key.emissiveScatter > 0 ? key.emissiveScatter.toFixed(3) : null,
+    EMISSIVE_CELLS: key.emissiveCells ? `vec2f(${key.emissiveCells[0].toFixed(1)}, ${key.emissiveCells[1].toFixed(1)})` : null,
     ...(key.envMap ? cubeUVDefines(key.env) : {}),
   };
 }

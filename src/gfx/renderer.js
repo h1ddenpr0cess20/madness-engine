@@ -51,6 +51,13 @@ const colorArray = (c, scale = 1) => [c.r * scale, c.g * scale, c.b * scale];
  * The renderer the stage drives: `render(scene, camera)` once a frame, the
  * canvas at `domElement`. Build one with `createRenderer()`.
  */
+
+/** A material's emissive cells as [across, up], whole and at least 1; null for one cell a repeat. */
+const cellsOf = (c) => {
+  const a = Math.max(1, Math.round(c?.[0] ?? 1)), b = Math.max(1, Math.round(c?.[1] ?? 1));
+  return a === 1 && b === 1 ? null : [a, b];
+};
+
 export class Renderer {
   constructor(backend, canvas) {
     this.backend = backend;
@@ -493,6 +500,8 @@ function describe(object, geometry, material, side, context, frame) {
       emissiveMap: !!material.emissiveMap && !!material.map,
       // Which of the map's repeats glow: a share, each repeat (a window) by its own chance.
       emissiveScatter: material.emissiveScatter > 0 && !!material.map ? Math.min(1, material.emissiveScatter) : 0,
+      // How many cells each repeat is split into for it: [across, up], as whole numbers.
+      emissiveCells: material.emissiveScatter > 0 && !!material.map ? cellsOf(material.emissiveCells) : null,
       subsurface: physical && material.subsurface > 0,
       vertexColors: material.vertexColors === true,
       flat: material.flatShading === true || !hasNormal,

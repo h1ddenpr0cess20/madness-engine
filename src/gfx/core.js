@@ -1133,6 +1133,9 @@ export class MeshStandardMaterial extends Material {
     // The share (0 to 1) of the map's repeats that glow, each by its own chance (and a little brighter or dimmer):
     // a facade whose texture is one window lights some windows and not others. 0 for every repeat alike.
     this.emissiveScatter = 0;
+    // How many cells each repeat of the map is split into for the scatter, [across, up]: a texture of three panes
+    // lights each pane by its own chance with [3, 1].
+    this.emissiveCells = [1, 1];
     this.bumpMap = null;
     this.bumpScale = 1;
     // Over the map's layout (it needs the map and the bump map): r a relief of its own (scaled by detailScale),

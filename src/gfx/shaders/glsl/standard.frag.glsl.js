@@ -210,7 +210,11 @@ void main() {
   #if defined( EMISSIVE_SCATTER ) && defined( USE_MAP )
     {
       // Each repeat of the map (a window) by its own chance; the vertex colour (a building's tint) shuffles them.
-      float seed = dot( floor( vMapUv ), vec2( 12.9898, 78.233 ) );
+      #ifdef EMISSIVE_CELLS
+        float seed = dot( floor( vMapUv * EMISSIVE_CELLS ), vec2( 12.9898, 78.233 ) );
+      #else
+        float seed = dot( floor( vMapUv ), vec2( 12.9898, 78.233 ) );
+      #endif
       #if defined( USE_COLOR ) || defined( USE_INSTANCING )
         seed += dot( vColor.rgb, vec3( 39.3, 11.1, 23.7 ) ) * 17.0;
       #endif

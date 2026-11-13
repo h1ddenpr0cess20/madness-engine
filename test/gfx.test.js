@@ -133,3 +133,13 @@ test('emissive scatter lights each repeat of the map by its own chance: a share 
   assert.doesNotMatch(programSources(key)[1], /#define EMISSIVE_SCATTER/);
   assert.equal(new gfx.MeshStandardMaterial().emissiveScatter, 0);
 });
+
+test('emissive cells split each repeat of the map for the scatter: a pane at a time, in both languages', async () => {
+  const { programSources } = await import('../src/gfx/shaders/glsl.js');
+  const { moduleSource } = await import('../src/gfx/shaders/wgsl.js');
+  const key = { kind: 'standard', output: 'srgb', opaque: true, hasNormal: true, vertexColors: true, map: true, numDir: 1, numPoint: 0, numHemi: 1, numDirShadows: 0, emissiveScatter: 0.4 };
+  assert.match(programSources({ ...key, emissiveCells: [3, 1] })[1], /#define EMISSIVE_CELLS vec2\( 3\.0, 1\.0 \)/);
+  assert.match(moduleSource({ ...key, emissiveCells: [3, 1] }), /floor\(in\.mapUv \* vec2f\(3\.0, 1\.0\)\)/);
+  assert.doesNotMatch(programSources(key)[1], /#define EMISSIVE_CELLS/);
+  assert.doesNotMatch(moduleSource(key), /in\.mapUv \* vec2f/);
+});
