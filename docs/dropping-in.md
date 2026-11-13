@@ -1,222 +1,120 @@
-# Dropping the engine into a game
+# Integrating Madness Engine into an existing game
 
-Each game has its own copies of the files below. Swap them for the engine's,
-pass the options in the table, and nothing about how it plays changes. How it
-looks changes only where the engine is more than the game (below): its cast
-is finer.
-`npm run verify` does exactly this swap on a copy of every game and runs the
-game's tests (`scripts/drop-in/overlay.mjs` is the recipe in code).
+This guide describes the current state of the game's integration and what the verification script actually tests. It is not a promise that swapping files is behavior-neutral in every browser or scene. Use the verifier and review the game after each migration.
 
-| Game | physics | input | view | models |
-|---|---|---|---|---|
-| madness | on the engine (below) | | | |
-| dungeon-roller | on the engine (below) | | | |
-| catroller | on the engine (below) | | | |
-| metroll | – | `boost: { pad: [0, 2, 7, 6] }` (`rev()`) | `views/arcade` | kit |
-| rocknroller, -ii, -iii | on the engine (below) | | | |
-| metrlol | on the engine (below) | | | |
-| petroll | on the engine (below) | | | |
+## Current integration status
 
-## A game rewritten on the engine: Catroller
+The migration configuration lives in `scripts/drop-in/games.mjs`; the set of projects that already depend on the engine lives in `scripts/extract/sources.mjs` as `ON_ENGINE`.
 
-Catroller is the first game to go all the way. It depends on
-`github:h1ddenpr0cess20/madness-engine#<commit>` and has no copies at all:
-it imports `madness-engine/gfx`, `physics`, `input`, `views/close`,
-`models/model` and `models/bake`; its cats, mouse, yarn ball and music from
-the library (`characters/cat`, `characters/mouse`, `heroes/yarn/…`,
-`music/score`); and its stage, sound, effects and storage are the engine's
-with the game's own on top:
+| Game | Current path |
+|---|---|
+| Madness | Uses the engine as a package; no local copies of the extracted engine files. |
+| Dungeon Roller | Uses the engine as a package; no local copies of the extracted engine files. |
+| Catroller | Uses the engine as a package; no local copies of the extracted engine files. |
+| Rock 'n' Roller I, II, and III | Use the engine as a package; no local copies of the extracted engine files. |
+| Metrlol | Uses the engine as a package; retains its game-specific cast and game code. |
+| Petroll | Uses the engine as a package; retains its game-specific cast, controls, and game code. |
+| Metroll | Uses the compatibility-overlay configuration. It is not in the `ON_ENGINE` set. |
 
-- `stage.js` is `createStage(host, { lens, view, sky, room, lights })` with
-  `textures/rooms/house` and `textures/skies/night`, the house's light,
-  and real lights at the lamps nearest the ball added to `stage.look`.
-  `main.js` runs the game with `stage.run`.
-- `audio.js` is `createAudio({ storageKey, volume, onWake })` with the roll
-  as a `loop`, and the cats' voices, purrs and the rest made on its
-  `tone` (now with a `vibrato`) and `burst`.
-- `effects.js` is the engine's `burst` with the game's sparkles, wool,
-  drops, dust and buttons; `storage.js` is a `saveSlot`.
-- `models/library.js` is `createBakeLibrary`, `bake.worker.js`
-  `serveBakes`, and `models/cast.js` the roster.
+The verifier also maintains per-game settings for renderer paths, physics behavior, input options, view defaults, and model kits. Do not infer a game's migration status from this table alone; check the configuration before changing it.
 
-It is `onEngine` in `scripts/drop-in/games.mjs` and in `ON_ENGINE` in
-`scripts/extract/sources.mjs`: the library's files of it are the source,
-and the verify runs its tests on the engine rather than comparing copies.
+## What remains game-specific
 
-## Madness
+The engine provides reusable systems and assets. A game still owns its level design, rules, UI, progression, rosters, and the way those systems are composed.
 
-Madness went the same way. It depends on the engine at a commit and keeps no
-copies: its renderer, physics, input and arcade view are the engine's, its
-marble is `heroes/marble`, and its sky and studio are `textures/skies/haze`
-and `textures/rooms/studio`. What is left of its own is the game: the
-courses, the races, the hazards, the HUD, and these, on the engine's:
+In particular, the engine's stage does not automatically take over a game's audio, weather, or music lifecycle. The game decides when to wake audio, start a band, apply weather through the effects system, and respond to game events. The stage can apply a mood's lighting, sky, reflection environment, and film settings, but it does not start the mood's music or weather for the game.
 
-- `stage.js` is `createStage(host, { lens, view, sky, room })`, with the
-  camera a little further back than the engine's (`distance: 12`).
-  `main.js` runs the game with `stage.run`.
-- `audio.js` is `createAudio({ storageKey, volume })` with the roll as a
-  `loop`, and the knocks, the shattering, the fizz, the jingles and the
-  tune made on its `tone` and `burst`.
-- `effects.js` is the engine's `spawn` and `outward` with the game's glass
-  shards, spark, bubbles and confetti; `storage.js` is a `saveSlot`.
+The shared library stores reusable characters, props, heroes, scenery, textures, and music extracted from the games. `scripts/extract/origins.json` records where a game's files were placed. The game's roster files remain game-specific: they decide which of the shared assets appear in that game.
 
-It is `onEngine` in `scripts/drop-in/games.mjs` and in `ON_ENGINE` in
-`scripts/extract/sources.mjs`, as Catroller is.
+## Run compatibility verification
 
-## Rock 'n' Roller I–III
+The verifier expects a directory containing game folders named after the configured projects. From the engine repository:
 
-The three Rock 'n' Roller games went the same way, each depending on the
-engine and keeping no copies. Their renderer, physics, input (with
-`boost: { pad: [0, 2, 7, 6] }`, the rev) and arcade view are the engine's;
-Rock is `heroes/rock-granite`, in black, grey or white granite as the game wants, the rig `scenery/lightshow.<game>`, the band
-`music/band.<game>`, the textures `textures/venue.<game>`, and the cast and
-props the library's, which the rosters (`models/cast/index.js`,
-`models/props/index.js`) list. What is left of each is the game: the venues,
-the rules, the machinery, the props and the HUD, and these, on the engine's:
-
-- `stage.js` is `createStage(host, { lens, view, lights, fixtures: 5, ui })`,
-  and dresses itself for a set with `stage.setMood(mood)`: `moods.js`
-  lists the library's mood of each set in the order the game plays them
-  (`moods/garage` … `moods/stadium`, `moods/casting` … `moods/premiere`,
-  `moods/london` … `moods/newyork`). The lantern hangs over Rock rather
-  than the camera's target, as it did. The film each set is shot on (the
-  noir's black and white, the grades, the grain, the vignette and the
-  sandstorm's haze) is the engine's `film`, not the stylesheet's, and in
-  the noir the interface (`#ui`, `.corner`, `#rev-button`) is shot on it
-  too. `main.js` runs the game with `stage.run`.
-- `audio.js` is `createAudio({ storageKey, level: 0.75, glue: true, onWake })`
-  with the roll, the rev and the crowd as `loop`s and the band started in
-  `onWake`, and every sound made on its `tone` and `burst`.
-- `effects.js` is the engine's `createEffects`, with the game's smoke,
-  stars, picks, popcorn, confetti, sparks, embers, dust and chips thrown by
-  its `spawn` and `outward`, its `ring`, and its weather (`mood.weather`);
-  `storage.js` is a `saveSlot` with `SETTINGS` and `pickSettings`.
-- `models/library.js` is `createBakeLibrary`, `bake.worker.js`
-  `serveBakes`, and `models.html` turns any of the library's characters
-  and props round, not only the game's.
-
-They are `onEngine` and in `ON_ENGINE` as Madness and Catroller are. Since
-their moods are now the library's, `npm run extract` takes them (and their
-grades) from the library as they are, and does the same with the cores
-their versions of `textures/venue` and `music/band` share
-(`textures/painters`, `music/theory`), keeping the off-engine games'
-versions of those whole.
-
-## Dungeon Roller, Metrlol and Petroll
-
-These three went the same way, each depending on the engine at a commit and
-keeping no copies. They took the drop-in's swap (`drop-in/package-mode.mjs`)
-and then dropped the re-exports it leaves behind, importing
-`madness-engine/...` directly:
-
-- The renderer is `madness-engine/gfx`, the physics `madness-engine/physics`
-  (the town maps' `new World({ ..., slideUnder: true })`), the input
-  `madness-engine/input` (Metrlol passes `boost: { pad: [0, 2, 7], element:
-  'accel-touch' }`; Petroll keeps its jobs' buttons in `src/controls.js`
-  and passes `presses` and `padPresses`), and the view `views/arcade`
-  (Dungeon Roller) or `views/town`.
-- Dungeon Roller's `models/library.js` is `createBakeLibrary` and its
-  `bake.worker.js` `serveBakes`; the town games' `sculpt/` is gone for
-  `models/sdf`, `models/skins` and `models/legacy-bake`, and their
-  `cast/library.js` is `createCastLibrary`. The rosters (`cast/index.js`,
-  `props/index.js`, `models/index.js`) list the library's characters,
-  props and scenery.
-- `stage.js` keeps its own lights and loop, but its sky and reflections
-  are the library's: `textures/skies/embers` and `textures/rooms/vault`
-  for the dungeon, `textures/skies/town` (Metrlol's `town.metrlol`) and
-  `textures/rooms/town` for the towns. The town maps' `linearRGB` is
-  `madness-engine/color`, and their prop kit `madness-engine/kit`.
-- Where the game's copy and the library's differ, the library's is the
-  one: the people are the rebuilt ones, with the budgets that go with them.
-  `models/model` exports `materialsOf` now, which Metrlol uses to warm its
-  people's shaders before they are baked.
-
-## Swapping the files
-
-- `src/vendor/gfx/` → `madness-engine/gfx`. Delete the folder; import
-  `madness-engine/gfx` where `./vendor/gfx/index.js` was, and
-  `madness-engine/gfx/stage` (and so on: `renderer`, `webgl`, `webgpu`) for the rest.
-- `src/physics.js` → `export * from 'madness-engine/physics'`, and in the map
-  or course builder `new World({ cols, rows, slideUnder: true })` for the town
-  games.
-- `src/input.js` → `madness-engine/input`, with the options above passed where
-  the game calls `createInput(view, { anchor, ... })`.
-- `src/view.js` → `export * from 'madness-engine/views/<arcade, close or town>'`.
-- `src/models/{sdf,rig,skins,model}.js` → `madness-engine/models/…`. The
-  game's `library.js` becomes `createBakeLibrary({ sculpted, spawn, jobs, label })`
-  and its `bake.worker.js` becomes `serveBakes(sculpted)`. The game keeps
-  `new Worker(new URL('./bake.worker.js', import.meta.url), { type: 'module' })`
-  in its own `spawn`, so that Vite can find the worker.
-- Metrlol and Petroll keep their people in `src/cast`: `rig.js` and `model.js`
-  there are the engine's, and `cast/library.js` is `createCastLibrary`.
-
-Petroll's jobs controls:
-
-```js
-export const presses = {
-  Enter: 'start', NumpadEnter: 'start', Space: 'hop',
-  ShiftLeft: 'dash', ShiftRight: 'dash',
-  KeyP: 'pause', Escape: ['pause', 'back'],
-  KeyX: 'quit', KeyM: 'mute', KeyC: 'home',
-  ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
-};
-export const padPresses = (b, sx, sy) => ({
-  start: b(0), back: b(1), dash: b(2) || b(7), quit: b(8), pause: b(9), home: b(11),
-  up: b(12) || sy < -0.6, down: b(13) || sy > 0.6,
-});
+```sh
+npm run verify -- --games ../games
 ```
 
-## Where the engine is more than the game
+Use the actual directory that contains the game folders in place of `../games`.
 
-The engine's files are the newest of each game's, so a game picks up what the
-others added and doesn't use: Metrlol's still boxes and cylinders, a physics
-`drag` option, Catroller's texture wrap, lens shift and `onFrame`, Rock 'n'
-Roller's sculpt warp, Catroller's clip blending. None of them does anything
-until it is asked for.
+The script has two paths:
 
-It also has a fix the games' copies don't: under WebGL, a double-sided lit
-material drawn after a back-sided one (the sky dome, which is drawn first)
-took the dome's winding, so it was lit as if seen from behind.
+### Games already on the engine
 
-And its cast is finer. The mesher spends up to 30% more vertices where the
-grid was too coarse for the detail (sharp bends, lines of paint, small
-parts), the people's and animals' eyes are set by where the face is, not
-just under its skin, and the animals' faces, paws, wings, legs and hooves
-have more to them. The people are rebuilt: a lofted trunk with clean
-limbs, clothes that are shapes in the outline, heads, hands and shoes as
-meshes of their own on finer grids (lidded eyes, noses, lips, ears, fingers,
-welted soles), hair in strands, and what they wear fitted onto them. Every
-part of a model is shaded by the whole model. The library's characters and props carry budgets
-half as large again for the finer meshes, and the people 2.2 times that. A game that takes the engine's
-`models/` should take the library's characters and props with them, or
-raise its own budgets the same way (`scripts/extract/edits.mjs` has the
-changes). `npm run verify` tests each game with them made.
+For a game marked `onEngine`, the script checks that:
 
-## The game's characters, props, heroes, textures and music
+- `package.json` declares a `madness-engine` dependency;
+- files already represented in the shared library are not still present as local copies; and
+- the old `src/vendor/gfx` renderer folder is absent.
 
-Each file of the game that the library has becomes a line or two that takes
-the library's:
+It then copies the game to a temporary work directory, links the current engine repository into that copy as `node_modules/madness-engine`, and runs the game's test suite. With package verification enabled, it also packs the engine, installs that package into another copy, runs the tests, and builds with Vite.
 
-```js
-// src/models/cast/bouncer.js in Rock 'n' Roller III
-export * from 'madness-engine/characters/bouncer.rocknroller-iii';
-export { default } from 'madness-engine/characters/bouncer.rocknroller-iii';
+### Games still using the compatibility overlay
+
+For a game not marked `onEngine`, the default checks compare the engine with the game's local copies where applicable:
+
+- physics behavior over the configured test worlds;
+- scripted input behavior, including configured boost and game-specific controls;
+- renderer shader files;
+- extracted library content and import relationships;
+- moods and film settings, where that game has them;
+- music behavior for extracted bands; and
+- the view implementation and configured starting view.
+
+The script then makes an untouched copy and an overlay copy of the game. The overlay replaces the configured renderer, physics, input, view, and model-kit files with engine versions, applying the game's configured options. It runs the same game tests against both copies and compares the results.
+
+This is a temporary verification process. It does not rewrite the checked-out game directory.
+
+## Verification options
+
+| Option | Effect |
+|---|---|
+| `--games <path>` | Directory containing the configured game folders. Defaults to the parent directory of the current working directory. |
+| `--only <names>` | Comma-separated game names to check, such as `metroll,petroll`. |
+| `--work <path>` | Use a specific directory for temporary copies and package artifacts. |
+| `--skip-tests` | Skip game test suites. Compatibility comparisons still run for overlay-based games. |
+| `--package` | Also pack and install the engine as a package, then run the package-mode tests and Vite build. |
+| `--package-only` | Run package-mode verification without the normal compatibility comparisons or overlay test pass. |
+
+Examples:
+
+```sh
+# Check one game with the compatibility comparisons and overlay tests.
+npm run verify -- --games ../games --only metroll
+
+# Check every configured game and also test the packed npm package.
+npm run verify -- --games ../games --package
+
+# Test the package-install path without the normal overlay comparisons.
+npm run verify -- --games ../games --package-only
+
+# Run comparisons without running the game test suites.
+npm run verify -- --games ../games --skip-tests
 ```
 
-`scripts/extract/origins.json` says, for every game, which library file each of
-its files is. `npm run verify -- --package` does exactly this to a copy of each
-game, runs its tests and builds it. The rosters (`cast/index.js`,
-`props/index.js`, `models/index.js`) stay the game's: they say who is in the
-game, and they import the files above as before.
+The verifier exits with a nonzero status when a check fails. It skips game folders that are not present under the supplied games directory, so confirm the output lists every project you intended to check.
 
-The skies and rooms in `textures/skies` and `textures/rooms` were lifted out of
-the games' `stage.js`. A game keeps its own `stage.js`, audio, effects and
-storage. Those are the game itself, and the engine's `stage`, `audio`,
-`effects` and `storage` are for new games, or for a game that wants to be
-rewritten on them.
+## Moving a game onto the engine
 
-The moods in `moods/` are the same: each is what a game's own `setVenue`
-and stylesheet make of one of its sets (the light, the sky, the reflections,
-the grade, the grain and the vignette), so the game keeps its `look`s, its
-`stage.js` and its `styles.css`. `npm run verify` checks each mood against
-what the game makes of its set now.
+The overlay and package-mode implementations are the executable migration examples:
+
+- `scripts/drop-in/overlay.mjs` replaces local engine files in a temporary game copy.
+- `scripts/drop-in/package-mode.mjs` removes local copies or turns compatibility files into package re-exports.
+- `scripts/drop-in/games.mjs` defines each game's options and migration path.
+- `scripts/extract/sources.mjs` defines extracted assets and the games already using the engine.
+- `scripts/extract/origins.json` maps source game files to their library locations.
+
+For a package-based migration, replace local implementation files with imports from `madness-engine` rather than leaving duplicate copies beside the package. Keep game-specific control maps and other glue in the game. Preserve the game's own roster and content selection.
+
+A typical package re-export is:
+
+```js
+export * from 'madness-engine/physics';
+```
+
+For systems with game-specific configuration, import the engine's API and pass those options at the call site. Avoid forking an engine module merely to change one default when the option already exists.
+
+## Changes the engine may introduce
+
+The engine is not necessarily a byte-for-byte copy of every historical game implementation. The shared systems have accumulated fixes and enhancements, including collision options, renderer corrections, model baking improvements, and rebuilt character assets. The compatibility checks cover the behaviors they explicitly exercise; they do not prove that every visual result, browser/GPU combination, or untested gameplay path is unchanged.
+
+When a migration changes character or prop assets, use the corresponding generated library assets and their current model budgets. Do not keep an old local model while replacing only the model system unless that combination is intentional and tested.

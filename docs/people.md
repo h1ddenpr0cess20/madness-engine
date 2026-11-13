@@ -15,6 +15,25 @@ by Catmull–Clark subdivision (detail ≥ 0.8), the skin is painted onto its
 UV layout from where each texel is on the body, and every garment is cut
 by casting rays onto that body.
 
+## Contents
+
+- [The woman](#the-woman)
+- [Scale and proportions](#scale-and-proportions)
+- [The robot](#the-robot)
+- [Use](#use)
+- [Dressing](#dressing)
+- [The later wardrobe](#the-later-wardrobe)
+- [Character creator](#character-creator)
+- [Hair](#hair)
+- [Arms clear of the body](#arms-clear-of-the-body)
+- [The rig](#the-rig)
+- [Moving](#moving)
+- [Face](#face)
+- [Hands](#hands)
+- [Holding](#holding)
+- [Fighting](#fighting)
+- [Files](#files)
+
 ## The woman
 
 `createHuman(GFX, { sex: 'female' })` (or `features: { sex: 'female' }`)
@@ -74,7 +93,7 @@ she is made; `customize({ sex })` refuses to change it.
 
 ## Scale and proportions
 
-One world unit is one metre, the same as the weapons. He is a stylised,
+One world unit is one meter, the same as the weapons. He is a stylized,
 game-ready adult man:
 
 | Measure | Value |
@@ -132,8 +151,10 @@ const man = createHuman(GFX);                  // briefs, t-shirt, jeans, sneake
 scene.add(man.group);
 man.hold(createKrystalSword(GFX));             // right hand, by the grip, under the guard
 
-stage.run((dt, time) => {
-  man.pose({ clip: 'walk', t: time - started, time, speed: 1 });
+let elapsed = 0;
+stage.run((dt) => {
+  elapsed += dt;
+  man.pose({ clip: 'walk', t: elapsed, time: elapsed, speed: 1 });
 });
 ```
 
@@ -145,7 +166,7 @@ stage.run((dt, time) => {
   1024² map, for crowds.
 - `outfit`: garment names to start in (default `['briefs', 'tshirt',
   'jeans', 'sneakers']`).
-- `look`: `{ skin, iris, shirt, denim, shoe, sole, briefs }` colours.
+- `look`: `{ skin, iris, shirt, denim, shoe, sole, briefs }` colors.
 - `style`: `{ attack, heavy, after }`, as for `setStyle`.
 
 ## Dressing
@@ -206,7 +227,7 @@ man.wear('apron', {
 });
 ```
 
-Colours change live: `setSkin`, `setEyeColor`, `setShirtColor`,
+colors change live: `setSkin`, `setEyeColor`, `setShirtColor`,
 `setJeansColor` (a tint over the indigo), `setShoeColor`, `setHairColor`,
 or `setLook({...})`.
 
@@ -217,7 +238,7 @@ either wardrobe):
 
 | | Names |
 |---|---|
-| Martial | `giTop` (a crossed front, wide sleeves), `giPants` (loose, to mid-calf), `belt` (a cloth belt with a knot and ends: its colour is `look.belt`) |
+| Martial | `giTop` (a crossed front, wide sleeves), `giPants` (loose, to mid-calf), `belt` (a cloth belt with a knot and ends: its color is `look.belt`) |
 | The business suit | `dressShirt`, `tie`, `blazer` / `blazerButtoned` (notch lapels), `trousers`, `dressBelt`, `dressShoes` |
 | Casual | `tank`, `sweater`, `hoodie` (hood down), `denimJacket` / `denimJacketButtoned`, `shorts`, `boots` |
 | Hats | `cap`, `beanie`, `fedora`, `cowboy`, `topHat` |
@@ -244,7 +265,7 @@ A hat is carried by the head as the hair is, and hides the hair it covers: it sa
 which points of the hair it lies over (`hairHides`, in his rest shape), and the cards
 touching them are not drawn while it is worn; take it off and the hair is whole.
 
-Colours: `setLook({ wool, poplin, tie, tank, knit, hoodie, gi, canvas, dress, belt,
+colors: `setLook({ wool, poplin, tie, tank, knit, hoodie, gi, canvas, dress, belt,
 beltLeather, dressShoe, boot, cap, beanie, felt, cowboyFelt, topHatFelt, hatBand })`.
 
 ## Character creator
@@ -277,8 +298,8 @@ volume his skin closes round, at a person's density: about 68 kg (150 lb) as
 baked, 82 kg at 1, 126 kg at 2 and 179 kg (395 lb) at 3; she is 53 kg as
 baked and 162 kg at 3.
 
-The face and body slots are made of the MakeHuman project's own modelling
-targets (CC0), the ones its modelling tab moves: each slot's `shape` in
+The face and body slots are made of the MakeHuman project's own modeling
+targets (CC0), the ones its modeling tab moves: each slot's `shape` in
 `people/human/features.js` names which targets make it and how much of each
 (a slider has an `up` and a `down` recipe, a choice one for each option, the
 default leaving him as he is). `node scripts/bake-human.mjs --shapes-only`
@@ -307,9 +328,9 @@ muscular). Her long hair goes with her head and back, not with the arms it
 hangs beside.
 
 Brow thickness widens the brows' cards about the line they run along. The
-skin details (age, freckles, scars, a tattoo), the lip color, the moustache
+skin details (age, freckles, scars, a tattoo), the lip color, the mustache
 and stubble are not built yet: they are kept and handed back, so a game can
-offer them now, and the asset viewer greys them out.
+offer them now, and the asset viewer grays them out.
 
 ## Hair
 
@@ -321,24 +342,24 @@ man.setHair({ beard: null });          // shaved; { hair: null } for a bald head
 The hair is made as games make it: hair cards, narrow strips each grown
 from a root along the way the hair is combed, lying on the hair under
 them, with a texture of a clump of strands cut out by the alpha test. Under
-them the skin is painted the hair's colour where it grows, so no scalp shows
+them the skin is painted the hair's color where it grows, so no scalp shows
 through. They are drawn twice: solid where the strands are, then their
 soft edges blended over. Their highlights run across the strands, as hair's
 do: two of them (Kajiya and Kay's model, shifted as Scheuermann shifts it),
 a tight white one off the strands' surface and a broader one in the hair's
-own colour (the material's `strands` flag).
+own color (the material's `strands` flag).
 
 - `sidePart` (the default): about 5 cm on top, combed across from a parting
-  over the left eye, tapering to a few millimetres over the ears and at the
+  over the left eye, tapering to a few millimeters over the ears and at the
   nape; the sideburns a band from the temple down the front of the ear.
 - `full` (`beard`): about 2 cm, 2.5 at the chin, in a barber's outline:
   from behind the top of the ear down and forward to the throat, from above
   the front of the ear across the cheek to the corner of the mouth, trimmed
-  level under the chin; the moustache down and out over the lip.
+  level under the chin; the mustache down and out over the lip.
 
 More haircuts, all for either figure (`hair`), each grown by the same cards:
 
-- Short: `buzz` (a few millimetres, a little more on top), `crew` (2.5 cm on
+- Short: `buzz` (a few millimeters, a little more on top), `crew` (2.5 cm on
   top, standing, tapered), `texturedCrop` (4 cm, tousled, brought forward in
   a fringe), `slickBack` (6 cm, combed straight back), `pompadour` (8 cm at
   the front, swept up and back), `mohawk` (a 7 cm strip of spikes, the sides shaved),
@@ -354,8 +375,8 @@ More haircuts, all for either figure (`hair`), each grown by the same cards:
 
 More facial hair (`beard`, the man's), all inside the full beard's outline,
 so the cheek line, the ear, the lips and the neckline hold: `stubble` (3 mm),
-`goatee` (chin and moustache joined), `vanDyke` (a pointed chin beard and a
-moustache apart), `soulPatch`, `chevron`, `pencil`, `handlebar` (ends waxed
+`goatee` (chin and mustache joined), `vanDyke` (a pointed chin beard and a
+mustache apart), `soulPatch`, `chevron`, `pencil`, `handlebar` (ends waxed
 out and up), `walrus`, `muttonChops` and `long` (6 cm on the cheeks, 9 at the
 chin, over the throat).
 
@@ -550,7 +571,7 @@ for a left lead, and `style.lead: 'R'` stands him southpaw.
 - Strikes: `jab`, `cross`, `hook`, `uppercut`, `elbow`, `palm`, `shuto` (a knife-hand).
 - Kicks: `front-kick`, `roundhouse`, `side-kick`, `knee`, the spinning `back-kick`, and the low `sweep-kick`.
   The standing foot stays where it is and turns on it.
-- Kung fu: `chain-punch` (Wing Chun's three up the centre line), `tiger-claw`, `crane-strike`, and the blocks
+- Kung fu: `chain-punch` (Wing Chun's three up the center line), `tiger-claw`, `crane-strike`, and the blocks
   `high-block` and `low-block`.
 - With a blade (`BLADE_MOVES`): the rising cut `rising`, the horizontal `sweep`, the fencing `lunge`, `parry` and
   `riposte` (a parry answered by a lunge), the full-turn `whirl`, and the Japanese `nukitsuke` (the draw cut),
@@ -600,8 +621,8 @@ her skeleton, so every stance and kick fits her too. Hands take the shape the st
 | `people/human/shell.js` | Garments cut from the skin: outline, ease, drape, turned edges. |
 | `people/human/textures.js` | Skin painted on the body's UVs, eyes, jersey, denim and sneakers. |
 | `people/human/motion.js` | The clips. |
-| `people/human/kit.js` | The modelling kit: grids, normals, assembly. |
+| `people/human/kit.js` | The modeling kit: grids, normals, assembly. |
 
-The asset viewer lists him, and her (**Human, female**), under **People**, with his wardrobe, colours,
+The asset viewer lists him, and her (**Human, female**), under **People**, with his wardrobe, colors,
 what each hand holds (**Holds**: a weapon, a staff, the book open or shut, a hero, a planet or a coin; **Left
 holds**: a second weapon to wield both, the book shut, a hero, a planet or a coin), the attack, his left hand and his face to set.

@@ -4,10 +4,26 @@ Weapons are separate from generic props and heroes. The viewer lists them under
 **Weapons**, and new weapon families should be added as measured assets under
 `src/weapons/`.
 
+## Contents
+
+- [Scale convention](#scale-convention)
+- [Categories](#categories)
+- [Broadsword](#broadsword)
+- [Dagger and greatsword](#dagger-and-greatsword)
+- [Morningstar](#morningstar)
+- [Named weapon families](#named-weapon-families)
+- [Default finishes](#default-finishes)
+- [Krystal sword and dagger](#krystal-sword-and-dagger)
+- [Wizard staff](#wizard-staff)
+- [Magic Egg Sword, Dagger and Greatsword](#magic-egg-sword-dagger-and-greatsword)
+- [Marc's family default finishes](#marcs-family-default-finishes)
+- [Banana dagger](#banana-dagger)
+- [Banana broadsword](#banana-broadsword)
+
 ## Scale convention
 
-Weapon dimensions use metres: **one Madness Engine world unit represents one
-metre**. The published overall length includes the pommel marble and excludes only
+Weapon dimensions use meters: **one Madness Engine world unit represents one
+meter**. The published overall length includes the pommel marble and excludes only
 any surrounding scene or display environment. The glass-and-spark marble is
 integrated into the hilt as its pommel, not placed under the sword as a stand. Keep each weapon at its real dimensions; do not normalize different
 weapon classes to the same screen height.
@@ -20,7 +36,7 @@ Useful historical proportion targets for future assets:
 | Broadsword | 0.95–1.05 m | 0.72–0.82 m | One-handed, broad double-edged blade |
 | Greatsword | 1.35–1.65 m | 1.00–1.25 m | Two-handed grip |
 
-These are modelling targets, not claims that every historical example shared
+These are modeling targets, not claims that every historical example shared
 one standard dimension.
 
 ## Categories
@@ -75,7 +91,7 @@ as the pommel. A hollow, tapered metal ferrule flares around the marble's upper 
 narrows to a handle-matched top rim. A small upper cap and domed guard boss
 cover the grip end without burying the handle. The blade and hilt each accept one of the 12
 shared `METALS` finishes and change independently; the grip has a live hex
-colour setter.
+color setter.
 
 ```js
 import * as GFX from 'madness-engine/gfx';
@@ -112,7 +128,7 @@ weapon class.
 
 The dagger uses a compact 97 mm grip instead of the broadsword's 140 mm grip, with eight leather-wrap ridges rather than twelve (four fewer rungs) while preserving the broadsword's wrap spacing. The greatsword uses a 280 mm grip (twice the broadsword's 140 mm) for a two-handed hold. Its overall length therefore includes the longer handle. The dagger is proportioned as a dagger rather than a shortened-looking
 broadsword: its overall length falls within the documented 0.30–0.45 m
-dagger target. The greatsword falls within the 1.35–1.65 m target. Its 88 mm blade width is deliberately much broader than the broadsword, following the broad, substantial blade silhouette in the supplied Ice reference. Both use the same metre-based coordinates and the same default material options as the broadsword.
+dagger target. The greatsword falls within the 1.35–1.65 m target. Its 88 mm blade width is deliberately much broader than the broadsword, following the broad, substantial blade silhouette in the supplied Ice reference. Both use the same meter-based coordinates and the same default material options as the broadsword.
 
 ```js
 import * as GFX from 'madness-engine/gfx';
@@ -136,7 +152,7 @@ positioned and uniformly scaled to a 198 mm tip-to-tip envelope. The haft is a
 straight polished metal shaft joined directly to the head. Below it is the
 shared 240 mm leather grip, tapered hollow ferrule, metal grip seat and
 glass-and-spark marble pommel. The head, shaft and metal fittings share one
-selectable `METALS` finish; the leather grip colour remains independently
+selectable `METALS` finish; the leather grip color remains independently
 selectable.
 
 Published dimensions: approximately 1.18 m overall, 700 mm exposed metal
@@ -288,6 +304,7 @@ unchanged. `setMetal()` changes the finish, and `setWood()` puts the wood back.
 | `vine` | `true` or `false`: the roots entwined up the shaft (fixed at creation) | `true` |
 | `tendrils` | whole number from 8 to 32: how many roots make the cradle (fixed at creation) | `18` |
 | `seed` | any number: shapes the gnarls (fixed at creation) | `7` |
+| `detail` | positive number: scales the shaft, root, and tube mesh subdivisions | `1` |
 
 ```js
 import * as GFX from 'madness-engine/gfx';
