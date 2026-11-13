@@ -151,8 +151,10 @@ const man = createHuman(GFX);                  // briefs, t-shirt, jeans, sneake
 scene.add(man.group);
 man.hold(createKrystalSword(GFX));             // right hand, by the grip, under the guard
 
-stage.run((dt, time) => {
-  man.pose({ clip: 'walk', t: time - started, time, speed: 1 });
+let elapsed = 0;
+stage.run((dt) => {
+  elapsed += dt;
+  man.pose({ clip: 'walk', t: elapsed, time: elapsed, speed: 1 });
 });
 ```
 
