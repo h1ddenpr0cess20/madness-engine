@@ -94,3 +94,36 @@ test('the vehicles index has the freighter and the car', () => {
   assert.equal(typeof vehicles.createFreighter, 'function');
   assert.equal(typeof vehicles.createElectricCar, 'function');
 });
+
+test('nothing is drawn across a wheel arch: the door lines, the handles and the leaves stand between the wheels', () => {
+  const car = createElectricCar(GFX);
+  // The arch is the wheel's circle and a hand's breadth round it.
+  const arch = ELECTRIC_CAR.tireRadius + 0.006 * (ELECTRIC_CAR.tireRadius / 0.6) + 0.07;
+  const detail = Object.keys(car.parts).filter((n) => /^(door_line|door_handle|leaf_badge)/.test(n));
+  assert.ok(detail.length >= 8, detail.join(', '));
+  for (const name of detail) {
+    const box = boxOf(car.parts[name]);
+    for (const axle of ELECTRIC_CAR.axles) {
+      assert.ok(box.max.z < axle - arch || box.min.z > axle + arch, `${name} (z ${box.min.z.toFixed(2)} to ${box.max.z.toFixed(2)}) is over the wheel at z = ${axle}`);
+    }
+  }
+});
+
+test('the lights and badges stand proud of the body they are mounted on, not buried in it', () => {
+  const car = createElectricCar(GFX);
+  const body = boxOf(car.parts.body_shell), face = boxOf(car.parts.front_valance);
+  const proud = 0.005;
+  assert.ok(boxOf(car.parts.tail_bar).min.z < body.min.z - proud, 'the tail bar shows at the back');
+  for (const name of ['led_bar_centre', 'led_bar_wing_l', 'led_bar_wing_r', 'headlamp_l', 'headlamp_r', 'bolt_badge', 'bumper']) {
+    assert.ok(boxOf(car.parts[name]).max.z > face.max.z + proud, `${name} shows at the front`);
+  }
+  assert.ok(boxOf(car.parts.rear_bumper).min.z < body.min.z - proud, 'the rear bumper shows');
+  // ...and each is still joined to it: it reaches back into the body, so it does not float.
+  assert.ok(boxOf(car.parts.tail_bar).max.z > body.min.z + 0.005, 'the tail bar is on the body');
+  for (const name of ['led_bar_centre', 'headlamp_l', 'bolt_badge']) assert.ok(boxOf(car.parts[name]).min.z < face.max.z, `${name} is on the face`);
+  for (const side of ['l', 'r']) {
+    const line = boxOf(car.parts[`door_line_${side}_f`]);
+    const x = Math.max(Math.abs(line.min.x), Math.abs(line.max.x));
+    assert.ok(x > ELECTRIC_CAR.bodyWidth / 2, `the door lines show on the ${side} side`);
+  }
+});

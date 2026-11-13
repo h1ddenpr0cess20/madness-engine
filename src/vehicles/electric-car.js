@@ -24,7 +24,7 @@ import { attachDriving } from './driving.js';
 export const ELECTRIC_CAR = Object.freeze({
   name: 'electric-car',
   /** Overall, from the tail to the nose, across the mirrors, and to the top of the roof. */
-  length: 4.11,
+  length: 4.14,
   width: 2.07,
   height: 1.52,
   /** The body is 1.84 m across. */
@@ -148,9 +148,9 @@ export function createElectricCar(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   for (const [z, y] of [...top].reverse()) roof.lineTo(z, y - 0.018);
   add('roof_panel', across(roof, 1.72, 0.02), M.white);
 
-  // The B pillars: a white strip down each side of the glass, a little raked.
+  // The B pillars: a white strip down each side of the glass, a little raked, where the door ends.
   const pillar = new GFX.Shape();
-  pillar.moveTo(1.02, BELT - 0.01); pillar.lineTo(0.90, BELT - 0.01); pillar.lineTo(0.80, 1.43); pillar.lineTo(0.94, 1.43);
+  pillar.moveTo(0.68, BELT - 0.01); pillar.lineTo(0.55, BELT - 0.01); pillar.lineTo(0.44, 1.43); pillar.lineTo(0.58, 1.43);
   [-1, 1].forEach((s, i) => {
     const g = across(pillar, 0.026, 0);
     g.translate(s * 0.925, 0, 0);
@@ -191,14 +191,15 @@ export function createElectricCar(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   add('bolt_badge', boltGeo, M.green, [0, 0.52, 3.355]);
 
   // ---------- the back: a light bar across the tail, a dark bumper ----------
-  add('tail_bar', box(1.34, 0.06, 0.05), M.tail, [0, 0.78, -0.68]);
-  add('rear_bumper', box(1.76, 0.12, 0.12), M.trim, [0, 0.43, -0.64]);
+  add('tail_bar', box(1.34, 0.06, 0.05), M.tail, [0, 0.78, -0.72]);
+  add('rear_bumper', box(1.76, 0.12, 0.12), M.trim, [0, 0.43, -0.665]);
 
   // ---------- the sides: shut lines for the doors, handles, the leaf badges and the dark skirts ----------
   [-1, 1].forEach((s, i) => {
     const side = i ? 'r' : 'l';
-    for (const z of [2.0, -0.10]) add(`door_line_${side}_${z > 1 ? 'f' : 'r'}`, box(0.012, 0.60, 0.012), M.trim, [s * 0.925, 0.63, z]);
-    for (const z of [1.58, 0.34]) add(`door_handle_${side}_${z > 1 ? 'f' : 'r'}`, box(0.014, 0.026, 0.15), M.trim, [s * 0.926, 0.84, z]);
+    // One door a side (a two-door hatch): its shut lines, in the long panel between the arches, and its handle.
+    for (const z of [2.0, 0.55]) add(`door_line_${side}_${z > 1 ? 'f' : 'r'}`, box(0.012, 0.60, 0.012), M.trim, [s * 0.925, 0.63, z]);
+    add(`door_handle_${side}`, box(0.014, 0.026, 0.15), M.trim, [s * 0.926, 0.84, 0.95]);
     add(`side_skirt_${side}`, box(0.05, 0.14, FRONT - REAR - 2 * (ARCH - BEVEL) - 0.04), M.trim, [s * 0.915, 0.38, (REAR + FRONT) / 2]);
   });
   const leafOf = (m) => {
