@@ -1,368 +1,56 @@
 # Madness Engine
 
-An engine for rolling games, and a library of everything the rolling games
-have made so far. The engine has a WebGPU / WebGL 2 renderer, ball physics
-written by hand, the controls, the camera, the stage, sound, flying bits and
-weather, and the toolkit models are sculpted with. The library holds every
-character, prop, hero, texture, sky and song from
-[Madness](https://github.com/h1ddenpr0cess20/madness), Dungeon Roller,
-Catroller, Rock 'n' Roller I–III, Metroll, Metrlol and Petroll, and the mood
-of every set (its light, its sky, the film it is shot on), filed by what
-each thing is, so a new game can use any of it and nothing has to be made
-twice.
+Madness Engine is a reusable JavaScript engine and asset library for browser-based rolling games. It provides rendering, physics, input, cameras, stages, audio, effects, and a shared collection of models, materials, textures, scenery, and music.
 
-It is plain JavaScript modules with no dependencies and no build step of its
-own. A game's bundler (Vite) takes it from `node_modules`.
+It uses WebGPU when available and falls back to WebGL 2. The engine is distributed as plain JavaScript modules, with no build step of its own. It is designed to be consumed by games using Vite.
+
+## Install
 
 ```sh
 npm install github:h1ddenpr0cess20/madness-engine
 ```
+
+## Use
+
+Import only the modules your game needs:
 
 ```js
 import * as GFX from 'madness-engine/gfx';
 import { createStage } from 'madness-engine/stage';
 import { World, createBall, stepBall } from 'madness-engine/physics';
 import { createMarble } from 'madness-engine/heroes/marble';
-import punk from 'madness-engine/characters/punk';
-import { paintRoom } from 'madness-engine/textures/rooms/venue';
-import noir from 'madness-engine/moods/noir';
 ```
 
-`examples/starter` is a whole small game built from nothing but the engine:
-a board with a ramp, the glass marble, a rat going round, gold to collect,
-confetti, sound and the band; `?mood=noir` (or any other set's name) shoots
-it in that set's mood. Start a new game by copying it:
+A stage provides the renderer, scene, camera, lights, and game loop. Physics and the shared asset library are independent modules, so a game can use the parts it needs.
+
+## Start with the example
+
+The starter example is a small game built with the engine. It includes a board, a marble, a moving character, collectibles, effects, and sound.
 
 ```sh
-cd examples/starter && npm install && npm run dev
+cd examples/starter
+npm install
+npm run dev
 ```
 
-`examples/human-world` is a test world for the human (`people/human`):
-Gravemoor's town at night (from the rpg-test-world game), you with the
-banana broadsword, and a crowd of the same man in every colour of skin,
-eyes, shirt, jeans and shoes, each armed from the engine's weapons, who
-come at you swinging. `?mobs=20` sets how many.
+The `examples/human-world` directory contains a separate test world for the human character system.
+
+## Documentation
+
+Detailed guides and reference material belong in the documentation, not in this overview.
+
+- [Documentation](docs/)
+- [Asset library catalogue](docs/library.md)
+- [Moving a game onto the engine](docs/dropping-in.md)
+- [People and character system](docs/people.md)
+- [Weapons](docs/weapons.md)
+
+For development and verification commands, see the repository's scripts and package configuration.
+
+## Development
 
 ```sh
-cd examples/human-world && npm install && npm run dev
-```
-
-## Bowling ball
-
-The engine includes a high-resolution glossy resin bowling ball with three true recessed finger wells and six seamless surface designs: classic marble, spiral ribbons, flame ribbons, a two-tone split, a blotchy marble and solid. Its palette and surface design can be changed at runtime without rebuilding the sphere:
-
-```js
-import * as GFX from 'madness-engine/gfx';
-import { createBowlingBall } from 'madness-engine/props/bowling-ball';
-
-const bowlingBall = createBowlingBall(GFX, {
-  colors: { base: '#192d59', swirl: '#d83b7c', accent: '#f2ba64' },
-  design: 'marble', // 'spiral', 'flame', 'split', 'blotch' or 'solid'
-});
-scene.add(bowlingBall.group);
-
-bowlingBall.setColors({ base: '#153a31', swirl: '#78d6ad', accent: '#f4e28b' });
-```
-
-## Bouncy ball
-
-A rubber bouncy ball: a smooth sphere (no finger holes) in a soft rubber finish, with a mould seam round its middle, in seven patterns of its own: solid, swirl (two colours folded through each other), rubber marble (three, in thin folded bands), tie-dye spiral, a band, superball flecks and a beach ball's panels. It squashes and springs back when it lands. The physics gives a ball its own bounce: `RUBBER` (or the livelier `SUPERBALL`) keeps most of each hit's speed, so it hops along and dribbles to rest:
-
-```js
-import { createBouncyBall } from 'madness-engine/props/bouncy-ball';
-import { createBall, stepBall, RUBBER } from 'madness-engine/physics';
-
-const look = createBouncyBall(GFX, { design: 'swirl', colors: { base: '#e8343f', swirl: '#ffd23f', accent: '#2f6fe0' } });
-const body = createBall({ r: look.radius, ...RUBBER });
-// each step: const hit = stepBall(body, world, ax, az, dt);
-//   look.group.position.set(body.x, body.y, body.z);
-//   if (hit.impact > 1) look.squash(hit.impact, [body.nx, body.ny, body.nz]);
-//   look.update(dt);   // and turn look.spin as it rolls
-```
-
-## Putter
-
-A customizable putter, built like the swords: real size in metres, a wrapped leather grip and a metal cap on each end, and the shared twelve metals chosen separately for the head, the shaft and the fittings. It has three head shapes (blade, mallet and half-moon) with a face insert and a sight line, and the sight line can glow. Everything can be changed after it is built:
-
-```js
-import * as GFX from 'madness-engine/gfx';
-import { createPutter } from 'madness-engine/props/putter';
-
-const putter = createPutter(GFX, {
-  head: 'mallet', headMetal: 'chrome', shaftMetal: 'steel',
-  gripColor: '#ff3fa4', accentColor: '#39ff88', glow: 1,
-});
-scene.add(putter.group);
-
-putter.setHeadStyle('blade');
-putter.setHeadMetal('rose gold');
-putter.setLength(0.89); // metres, 0.76 to 0.95
-```
-
-It is built standing on its butt with the head at the far end, as the swords are. `putter.playRotation` is the turn about z that lays the head on the floor, sole level, and `putter.sole` is the point of the sole under the shaft.
-
-## The engine
-
-| Import | What it is |
-|---|---|
-| `madness-engine/gfx` | The engine's own graphics API and renderer. It uses WebGPU where the browser has it and WebGL 2 where it doesn't (`?renderer=webgl` pins it), with physically based shading, transmission, shadows and instancing (`InstancedMesh`: one geometry, many copies, one draw call, standard and basic materials, in the shadow map too). `gfx/renderer`, `gfx/webgl`, `gfx/webgpu` and the rest are its parts. |
-| `madness-engine/physics` | Sphere physics over a triangle soup, with moving boxes, still boxes and cylinders: `World`, `createBall`, `stepBall`, `collideBalls`, `rollSpin`, `turn`. Units are tiles. `new World({ cols, rows, slideUnder })`. |
-| `madness-engine/input` | Keys, mouse, touch and gamepad reduced to one stick, a view to turn and zoom, and one-shot presses. Options: `boost` (a held button), and `presses` and `padPresses` (a game's own buttons). |
-| `madness-engine/view`, `views/arcade`, `views/close`, `views/town` | Where the camera sits round the ball, and `toGround` (the stick as a push along the ground). The arcade's corner, the same a little nearer, or higher and further back for streets; `defineView({ home, limits })` for your own. |
-| `madness-engine/stage` | The screen: `createStage(host, { sky, room, lights, lens, view, ui })` gives the renderer, scene, camera and lights the way every game sets them up, follows a target, and `stage.run(update)` is the loop. `fixtures: n` gives it `n` real lights (`stage.fixtureLights`) for a light show to set. `stage.setMood(mood)` dresses it in a set's mood from `moods/` (its light, sky, reflections and film). `stage.keyFrom` is where the key light comes from, to move the sun. It also exports `createRenderer` (WebGPU, falling back to WebGL 2, and carrying on in WebGL 2 if the GPU is lost) and `domeU`. |
-| `madness-engine/ocean` | An endless sea to the horizon and the sky over it, worked out as it is drawn: `createOcean(GFX, { sea, sky })` gives a group to add to the scene, `update(dt)`, `setSea(name or sea, seconds)` and `setSky(name or sky, seconds)` (each change turns smoothly into the next), `exposure`, and `dress(stage)`, which lights the stage by the same sun and paints what shiny things reflect from the same sky. The water is sixteen Gerstner waves on a grid of rings that goes with the camera, finest underfoot; it steepens, pinches and breaks into foam with the wind, glows through its thin crests, ripples, reflects the sky and glints with the sun, and fades into the haze, in GLSL and WGSL alike. `ocean.sea.sample(x, z)` is the same sum in JavaScript (height, normal, how fast it rises) for whatever floats on it, and `displace(x0, z0)` for whatever drifts with the water. The phases go to the shaders modulo 2π, worked out in double precision at the camera, so it stays smooth however far out and however long. `SEAS` (`glass`, `calm`, `breeze`, `swell`, `storm`: up to crests twenty tiles from trough to top) and `SKIES` (`dawn`, `noon`, `dusk`, `storm`, `night`) are the presets, and any object of the same shape will do; `mixSky(a, b, f)` is a sky between two, for a time of day. `ocean/waves`, `ocean/sky` and `ocean/shaders` are its parts. |
-| `madness-engine/flora` | Trees of the California coast drawn into a `Mesher`: `palm` (a date palm with a bent trunk and drooping fronds), `fanPalm` (the tall, thin Washingtonia), `redwood` and `cypress`, each `(m, { hi, seed })` with a near and a cheaper far version, leaves near-white in the game's leaf materials. Also `leafy` (`form`: oak, maple, elm or birch) and `spruce`: trees of tapered, forking limbs and alpha-tested leaf cards (material `leafCard` / `needleCard`, textured with `foliageTexture(GFX, 'broad' \| 'needle')` from `madness-engine/textures/foliage`), for games that want real-looking trees. |
-| `madness-engine/film` | The film the picture is shot on, as Rock 'n' Roller II, III and Metroll shoot it: `createFilm(host, { canvas, ui })` gives `set(film)`, which puts a grade on the picture (a CSS filter on the canvas and nothing else), a vignette or a sandstorm's haze and a dancing grain over it, and the interface on the same stock where the film says so (the noir's). The stage has one, `stage.film`. |
-| `madness-engine/audio` | Sound made with Web Audio and no samples: `createAudio({ storageKey, glue, onWake })` gives `tone`, `burst`, `jingle`, `loop` (a roll, an engine, a crowd), the mute switch and the music and effects levels. Silent until `wake()`. |
-| `madness-engine/effects` | Bits that fly: `createEffects(GFX, scene, { ground })` gives `burst`, `spawn` (tumbling, bouncing, fading), `ring`, and the weather (`setWeather('rain' \| 'sand' \| 'snow' \| 'petals')`). Also `shardGeometry`, `CONFETTI`, `PICKS`, `WEATHER`. |
-| `madness-engine/storage` | `saveSlot(key)`: one guarded slot in browser storage. `SETTINGS` and `pickSettings` for the settings every game has. |
-| `madness-engine/models/sdf`, `rig`, `skins`, `model` | The sculpting kit: signed-distance shapes meshed into skinned models, with a skeleton and clips. `createModel(GFX, def)` stands one up, and `createStatic` makes a prop. |
-| `madness-engine/models/bake` | Baking those models in background workers: `serveBakes`, `createBakeLibrary`, `createCastLibrary`. `models/legacy-bake` is the older bake the street models use. |
-| `madness-engine/kit`, `madness-engine/color` | The prop kit, which gathers plain shapes into one geometry per finish, and `linearRGB`. |
-| `madness-engine/mesher` | A low-poly mesher for building whole models out of plain shapes: `Mesher` has `box`, `beam` (square, cut to meet), `cylinder`, `cone`, `ring`, `gable`, `hip`, `sphere` and `rock` (a faceted, flat-shaded rock with a flat base), each with a material name and a colour, under a stack of transforms (`at`, `push`/`pop`). `finish()` gives the vertex arrays by material, and a `Batch` stamps those templates (placed, turned, scaled, tinted) into one set of arrays per material to draw in a few calls. For many copies of one model, `partGeometry(GFX, part)` makes a part an indexed geometry for a `GFX.InstancedMesh`, which draws every copy in one call from eight numbers a copy (`add(x, y, z, yaw, scale, tint)`, placed as `Batch.stamp` places them). |
-
-## The library
-
-Everything the games have made, filed by what it is rather than by which game
-made it. **`docs/library.md` lists every item, with a line on what it is and
-which games it came from.**
-
-| Import | What is there |
-|---|---|
-| `madness-engine/characters/<name>` | 196 people, creatures and monsters: ten plain everyday people to use in any game (old, heavy, bald and bearded, casual, smart, attractive: five men and five women, none carrying anything), children from a baby to a teenager (a boy and a girl at each age) two mothers, one holding a baby and one pushing a stroller, and an elf for Santa (the Boy in an elf's costume and pointed ears), the gig crowd, the tourists, the metalheads, the dungeon's goblins, orcs, skeletons and dragon, the cats and the mouse. Each is a sculpted definition for `createModel` (`import punk from …`). `madness-engine/characters` is all of them by name (`CHARACTERS`). `humanoid`, `quadruped`, `person` and `wardrobe` are the bodies and clothes they are built on. |
-| `madness-engine/props/<name>` | Sculpted things to pick up, for `createStatic`, including a corner store's whole stock (`props/groceries`: apples to ice cream, 23 lines and the carton they ship in). `madness-engine/props` exports `PROPS` plus the standalone, colorable RPG dice set (`DICE`); import `madness-engine/props/dice` for `createDieProp` and the D4, numbered/pip D6, D8, D10, D% (00–90), D12 and D20 factories. Set `color` for resin, `markingColor` for all numbers/pips, or `numberColor` / `pipColor` independently; `highlightColor` changes the D20's 20. |
-| `madness-engine/heroes/<name>` | The balls the games are played as: `marble`, `die`, `yarn/…`, `hamster`, `morningstar` (the spiked ball; `createMetalMorningStar` adds the coin/globe `METALS` finishes without changing its shape or snap behaviour), `mace` (`createMetalMace` and `createMetalPlayer` provide the same metal finish with the existing roll and squash physics), and `rock`. |
-| `madness-engine/scenery/<name>` | The town's `street`, `vehicles` (each with its `body` and the `wheel` it rolls on, which `mountWheels` stands on the body to roll and steer), `civic`, `discourse`, `odds` and `oil`, and the `dungeon`'s walls, torches and exit; and the `lightshow`: the rig that lights a venue and keeps the beat, with `createLightshow(GFX, venue)` and a fixture for every light the Rock 'n' Roller and Metroll sets have: bulbs, PAR cans, moving heads, strobes and lightning, the mirror ball, lasers, chandeliers, festoons, neon, marquees, klieg lights, blinds and streetlamps. Hand `update` the beat and `stage.fixtureLights` (`createStage(host, { fixtures: 5 })`) and the fixtures nearest the ball get real lights. `lightshow.rocknroller`, `.rocknroller-ii` and `.rocknroller-iii` are each game's. |
-| `madness-engine/textures/…` | `painters`: the canvas toolkit and some twenty floors and walls (concrete, planks, cobble, marble, tatami, brick and more). `venue`: the clubs' floors, walls, belts, grilles, gaffer tape, shutters, panels and glows. `town/…`: the town's painters and surfaces. `lava`. `rooms/<name>`: what shiny things reflect (`studio`, `vault`, `house`, `venue`, `town`), each a `paintRoom`. `skies/<name>`: what surrounds the scene (`haze`, `embers`, `night`, `skyline`, `horizons`, `town`), each a `paintSky`. Hand them to `createStage({ sky, room })`. |
-| `madness-engine/buildings` | The buildings of a medieval town, drawn on the `mesher`: 35 models (`cottage`, `house`, `townhouse`, `stall`, `shop`, `merchant`, `croft`, `smallholding`, `grange`, `workshop`, `joinery`, `guildhall`, `farmstead`, `mill`, `granary`, `quarry`, `ironmine`, `smithy`, `tavern`, `chapel`, `market`, `watchtower`, `barracks`, `gatehouse`, `cathedral` and the rest) and the `castle`, each in four variants, and a site where one is going up. `buildings/california` adds a California beach city: `bungalow`, `ranchhouse`, `beachhouse`, `dingbat`, `aptblock`, `condotower`, `stripmall`, `boutique`, `officetower`, `warehouse`, `factory`, `techpark`, `police`, `firehouse`, `school`, `park`, `plaza`, `hospital`, `clinic`, `library`, `university`, `seaport` (its quay and cranes to the back), `airport` (six tiles by ten, a runway and a terminal), `marina` (its docks to the back), `stadium`, `datacenter`, and `cityhall`, a stepped glass tower in four sizes by `level` (`CALIFORNIA_FOOTPRINTS`). `createBuildings({ sizeOf })` gives `modelFor(type, { level, variant, building, progress })`, which returns the model's `parts` for a `Batch`, where it smokes, its lights and any part that turns by itself. `FOOTPRINTS` is the size in tiles each is drawn for. The timber of a wall leaves its windows and doors alone, and braces lean in from both ends. `buildings/common` has the pieces the models are made of (`faces`, `windowOn`, `doorOn`, `halfTimber`, `chimney`, `fenceRun`, `barrel`, `crate`, `logPile` and more) and `buildings/parts` the shared `gabled` body, `cart` and `wheel`, for making more. Written by hand: `npm run extract` does not touch it. |
-| `madness-engine/vehicles` | Vehicles you drive, at real size in metres, built from plain shapes in one design language (a low raked nose under a black wrap-around glass canopy, a light bar across the front, a bolt badge, leaf badges): `createFreighter(GFX, options)`, an electric cab-over delivery truck with four axles and duals behind, and `createElectricCar(GFX, options)`, a compact cab-forward hatchback with a white roof over wrap-around black glass. Options: `scale` (game units to the metre; 0.41 sits them in the town's traffic), `paint`, `accent`, `light` and `wheels` (`'treaded'`, the default: a rounded tire with tread on the freighter's own rim, about 3,000 triangles a wheel, or `'classic'`: the plain square-edged tire it was first drawn with, a quarter of that). `vehicle.update(dt, { throttle, brake, steer, handbrake })` drives it (accelerating, braking and reversing, a steering lock that shrinks with speed, a turn about the back wheels), rolls its wheels and steers the front ones; `speed`, `kmh`, `heading`, `steerAngle` and `reset()` are its state, and `FREIGHTER`, `FREIGHTER_DRIVE`, `ELECTRIC_CAR` and `ELECTRIC_CAR_DRIVE` its measures and driving numbers. Each faces +z with its wheels on y = 0 and its origin at the back wheels, as the town's traffic does (`scenery/vehicles`). |
-| `madness-engine/moods/<name>` | 42 moods, one for every set of Rock 'n' Roller I–III and Metroll: the noir (black and white, grainier, the interface gone grey with it, rain, the noir's sax), the western's sepia, the musical's Technicolor, the horror's sick green, London's fog, Tokyo's neon and its petals, Egypt's sandstorm, Birmingham's steel, Norway's frost, and the rest. Each has its light, its sky and reflections (with `paintSky()` and `paintRoom()`), its `film`, its `weather` for `effects.setWeather`, its `music` (band, theme and tempo), and the set's own `look` and `palette`. `madness-engine/moods` is all of them (`MOODS`), and `moods/grades` every grade by name on the film its game gives it (`GRADES`: `noir`, `sepia`, `technicolor`, `horror`, `scifi`, `fog`, `neon` and the rest). `stage.setMood(noir)`. |
-| `madness-engine/music/…` | `band`: a whole band (drums, bass, guitars through a distortion and a cabinet, a lead, synths) with its songs in `THEMES`. `createBand(audio.ctx, audio.music, audio.noise).start(theme, tempo)`. `theory` holds the scales, the song form and the effects. `score` is a smaller orchestra with its own themes. |
-
-### Versions
-
-Where games made different versions of the same thing (Rock 'n' Roller II's
-rubber alien is not Metrlol's), each version is kept. The default, at
-`<kind>/<name>`, is the version the most games have; on a tie it is the
-newest game's. Each other version sits beside it as
-`<kind>/<name>.<game>`, named after the oldest game that has it:
-`characters/alien` and `characters/alien.rocknroller-ii`. A version that
-was only the default again under another name (or another character in
-all but name, as the Agent was the A&R Suit) is gone, and the games that
-had it use the default.
-
-### The same people in other colours
-
-Every `person` (the 140 or so people of `characters/`) can be dressed in other colours without a new model:
-`variant(changes)` gives a definition of its own to hand to `createModel`, and nothing is changed that is not
-given, so a game that never calls it draws exactly what it always has.
-
-```js
-import punk from 'madness-engine/characters/punk';
-import cop from 'madness-engine/characters/cop';
-import { diverse } from 'madness-engine/characters/person';
-
-createModel(GFX, punk.variant({ skin: '#8d5524', hair: '#b0502a', eyes: '#3a6a3a', look: { legs: '#224466' } }));
-createModel(GFX, cop.variant({ look: { torso: '#7a1020', sleeve: '#7a1020', cuff: '#7a1020', legs: '#7a1020' } }));
-createModel(GFX, cop.variant(diverse(seed)));      // a skin tone, hair and eyes from the palettes, the same for the same seed
-```
-
-- `skin`: skin, the bare arms and legs too. `eyes`, `brow`: irises and brows. `hair`: hair, and the beard, moustache,
-  crest or braids that are hair too (fur worn over the shoulders is not); brows follow it, a little darker, unless
-  `brow` is given.
-- `look`: what they wear, by part (`torso`, `sleeve`, `cuff`, `hand` for gloves, `legs`, `boot`, `belt`, `buckle`,
-  `sole`, `shin`, `sandals`), only those a person has. A part that was cloth stays cloth (mottled, lighter on top). Where
-  several parts are one colour (a suit) and all are given a new one, whatever else is made in that colour (a coat's
-  skirts) goes with them.
-- `colors`: any other colour, such as a hat's: `{ '#1e2a4e': '#102a6a' }` draws everything the person is made of
-  in the first colour in the second. A `Map` also takes the colour functions a character's own file draws in.
-- `name`. Variants chain, and asking twice for the same colours gives the same definition (so it is baked once).
-
-`punk.palette()` says what can be changed and what it is now: `{ skin, eyes, brow, hair, look: { torso, … }, groups }`
-(`groups` are the parts that are one colour, best changed together). `SKIN_TONES`, `HAIR_COLORS` and `EYE_COLORS` are
-the palettes `diverse` draws from. The asset viewer has a Colours panel on every person: pick a colour, or Randomise,
-and Copy code gives the `variant(…)` call.
-
-### Talking
-
-Every `person` (and `robot`) has a `talk` clip: their idle with a conversation laid over it. It is made to be
-driven, so its amounts are numbers you ease rather than a fixed loop, and the body moves into and out of speech
-without a seam (a clip itself switches instantly):
-
-```js
-model.pose({ clip: 'talk', time, talk: 0.8, beat: 0, think: 0, listen: 0 });
-```
-
-- `talk` (0 to 1, default 1): how much they are speaking. Scale it by how loud the voice is for someone who gets
-  animated. At 0 they are exactly at rest, so one clip can stand for idle and talking both.
-- `beat` (0 to 1): a point landing right now: a firmer gesture and a nod. Set it on the word and let it die away
-  over half a second.
-- `think` (0 to 1): a pause to think, a hand up to the chin and the head cocked.
-- `listen` (0 to 1): somebody else is talking, with the odd nod.
-
-Both hands gesture, except for someone who holds something ready (the robot's right hand has its weapon), who talks
-with the free one. `talking(skeleton, amounts, { armed })` in `characters/humanoid` is the same gesture for a
-body of your own. A character whose hands are full by design (the Suit's phone and briefcase) keeps them full.
-The dungeon's monsters have the older body, which has no `talk` clip.
-
-## The games still work as they did
-
-Nothing here changes the games: each keeps its own files until it chooses to
-take the engine's. `npm run verify -- --games <folder with the games in>`
-proves that the engine can stand in for each game's own copies:
-
-1. **Physics, input and view, bit for bit.** The same seeded worlds, the same
-   scripted sessions (keys, mouse, two-finger gestures, gamepad, the touch
-   button) and the same state after every step, on both. The renderer's
-   shaders are compared with the game's own, comments aside.
-2. **The library.** Every file it took from the game is the game's own code,
-   once the engine's own changes to it are made (`scripts/extract/edits.mjs`),
-   and each import goes to the same thing. The game must also have nothing the
-   library should have taken but hasn't. The bands play every theme with the
-   same Web Audio calls as the game's own music. Every set's mood, and every
-   grade, is what the game's own code and stylesheet make of the set now.
-3. **The game's own test suite**, on a copy with the engine's files swapped
-   in, against the same suite on an untouched copy. Those suites include
-   autopilots that play every level.
-4. **As a package**, with `--package`: the engine is `npm pack`ed and
-   installed into a copy of each game. Everything the engine and the library
-   have of the game is taken from the package, the game's tests run, and
-   `vite build` bundles it.
-
-`docs/dropping-in.md` covers moving a game onto the engine.
-
-Every game but Metroll has moved: Madness, Dungeon Roller, Catroller, Rock
-'n' Roller I–III, Metrlol and Petroll import `madness-engine/...` for all
-of it and keep no copies. Madness's marble, sky and studio are the
-library's, and so are Dungeon Roller's d20, monsters, treasure, dungeon,
-lava and score, Catroller's cats, mouse, yarn ball, music and house, the
-Rock 'n' Roller games' Rock, cast, props, rigs, bands, textures and the
-mood of every set, and the town games' people, streets, vehicles,
-surfaces, sky, reflections, balls, hamster and band. For a game on the engine
-(`ON_ENGINE` in `scripts/extract/sources.mjs`), what the library has of it
-is the source: `npm run extract` keeps those files as they are (its moods,
-and the cores of the long modules it shares, too), and `npm run verify`
-checks that the game keeps no copies and runs its tests on this engine
-(and, with `--package`, on the packed engine, and builds it).
-
-## Where the cast is finer than in the games
-
-The engine's mesher (`models/sdf.js` `build`) refines where the grid is too
-coarse for the detail: an edge is split where the surface bends sharply
-across it, where a line of paint crosses it, or where its middle is off the
-surface, and the new vertex is put on the surface. That costs up to 30%
-more vertices (a definition's `refine`, 0 for none), and the bakes take
-about 40% longer. Far off (`detail` under 1), a small part such as a pupil
-keeps enough of a grid to stay round.
-
-The sculpts were tuned to the old mesher's errors in one place: the eyes of
-the people (`humanoid`) and of the animals (`quadruped`) sat with their
-fronts just under the skin of the face, and showed only because the coarse
-mesh cut corners. Each eye is now set by where the face actually is.
-
-The people (`humanoid`, under every `person`) are rebuilt. Their trunk is
-one form lofted on a smooth curve through its sections (the seat, the
-waist, the ribs, the chest and the shoulders), wider than it is deep and
-squared off at the sides, in three pieces on the hips, spine and chest
-bones so that it bends; a belly is part of that curve rather than a ball
-stuck on. Arms and legs are clean tapered limbs. Clothes are shapes in the
-outline: a short sleeve stands off the arm, a long one ends in a cuff the
-hand comes out of, a loose shirt's tail stands out over the trousers,
-trouser legs hang straight to the shoe, shorts end above the knee, and a
-belt is fitted to the waist. The head and neck are a mesh of their own on
-a finer grid, so the face is crisp and the neck meets the collar on a
-clean line: big eyes with an iris darker at its rim, a line of lashes on
-an upper lid, a softer lower lid and two catch-lights; arched brows (pulled
-down in a frown); a nose with a bridge, tip and nostrils; a mouth carved in
-with lips; ears with a rim, bowl and lobe; a flush in the cheeks. The hands
-are a palm, four curled fingers and a thumb, loosely closed so what they
-hold is held, and a bare forearm goes with the hand so there is no seam at
-the wrist. Shoes stand on a welted sole, flat underneath; someone barefoot
-has feet with arches and toes. Hair is in strands. Cloth is cleaner, with a
-soft sheen. And what a person wears is put on them (`fit`): a badge, a
-button, a chain or a bag that stood just off the body (or off the coat it
-is on) is moved onto it, a hat that rested on the crown with a gap under
-its rim is lowered until the rim sits on the head (never past the brows),
-and a small piece sunk out of sight is brought out; what is held out from
-the body stays where it is. All of it costs the people about 1.4 times the
-vertices (2.15 at most, for bare arms) and their bakes about twice as long.
-
-Every model is shaded by the whole of itself (`build`'s `shadow`): a part
-meshed on its own, a hat or a hand or a head, is darkened where the parts
-round it come close, so hats shade hair, collars shade necks and arms shade
-sides.
-
-The `quadruped`s' legs have the muscle of the shoulder or the haunch at the
-top and a clean shin below, with no knob at the knee, and their hooves are
-wider at the ground, sloped in front, cleft and flat underneath.
-
-The animals have more besides. The `quadruped`s' eyes have pupils,
-catch-lights and lids; their noses (with nostrils) and ears (cupped and
-coloured inside when they stand up) are meshes of their own on grids as
-fine as the head is small; they have mouths, and their paws have toes. The
-birds' wings end in overlapping, tapered flight feathers, not four round
-fingers. The crocodile's and the gator's teeth, and the kangaroo's ears and
-nose, have grids of their own. Catroller's cats have ears that are thin
-shells up on the crown, growing out of the head, and tails that curve
-along their length (a shape can share itself between bones) and round off
-at the tip. Their feet stay on the floor: after each pose, and any blend into it, a
-foot that has gone through the floor is lifted onto it by bending its leg
-just enough, and the tail by raising it at the root (a definition's
-`settle`).
-
-These, and the vertex budgets (half as many again, to make room for the
-finer meshes, and the people's 2.2 times that), are changes to files the library takes from the games.
-`scripts/extract/edits.mjs` says what they are. `npm run extract` makes
-them as it takes the files, and `npm run verify` makes them before it
-compares the files and in the copy of each game whose tests it runs.
-
-## Keeping the library up to date
-
-`npm run extract -- --games <folder>` rebuilds the library from the games
-(`scripts/extract/`). `sources.mjs` says what is taken from each game and where
-it goes. The script writes `scripts/extract/origins.json`, which records where
-each game file went, and `docs/library.md`. The moods (`moods.mjs`) are made
-by building each set with the game's own code and reading what its stage and
-its stylesheet do with the set's look. Run it when a game gains a character,
-a texture or a set, or changes a look. The verify fails until you do.
-
-## Developing
-
-```sh
-npm test       # the engine's own tests
+npm test
 npm run lint
-npm run extract -- --games ..  # rebuilds the library from the games
-npm run verify -- --games ..   # every game beside this folder; --only a,b to pick; --skip-tests for the quick part; --package for the package install and build
 ```
-
-
-## Weapons
-
-Measured, display-ready weapon assets are documented in [docs/weapons.md](docs/weapons.md). The first is a one-metre-class broadsword, built at real-world scale with independent blade and hilt metal finishes, a selectable leather grip colour, and the glass-and-spark marble hero integrated into the bottom of its grip as the pommel, with a tapered, handle-fitted metal bezel.
-
-
-The Weapons shelf includes a broadsword, dagger, greatsword and a handled
-morningstar. The dagger and greatsword retain the broadsword's blade profile;
-the greatsword has a two-hand grip. The morningstar reuses the existing
-spiked head with a selectable metal haft, leather grip and marble pommel.
-See [docs/weapons.md](docs/weapons.md) for dimensions and construction.
-
-Every weapon also carries its `handling`: `hands` (`one-handed` or `two-handed`) and `range` (`short`, `medium` or `long` by striking reach, or `ranged`). The Weapons shelf is grouped by hands, and the ranged staff has its own shelf. See [Categories](docs/weapons.md#categories).
-
-## People
-
-A real-size human (1.76 m; one world unit a metre, as the weapons are),
-built to be dressed, posed and animated, and to carry the weapons:
-`createHuman(GFX)` from `madness-engine/people`. A whole base body with
-garments worn over it as their own meshes (briefs, t-shirt, jeans,
-sneakers; or your own), which hide what they cover so nothing shows
-through. 66 bones: the engine's movement clips (plus `yell`), and
-collarbones, three bones a finger, toes, jaw and tongue, eyes, lids, brows,
-lips and the mouth's corners; he talks and shouts with his mouth. `man.hold(sword)` puts a weapon in his hand. He fights:
-stances from boxing, karate, kung fu (horse, tiger, crane, cat, Wing Chun), muay thai, taekwondo, fencing,
-kendo and iaido, strikes, kicks, blocks and sword cuts made from them, and a standing and a kneeling bow
-(`style.stance`, `style.attack`, the `stance` and `bow` clips). See [docs/people.md](docs/people.md).
-
-The asset viewer saves a screenshot (P) and records an animated GIF (V) of what is on screen: of the animation
-playing, or of a full turn round the model.
 
