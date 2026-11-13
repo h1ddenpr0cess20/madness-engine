@@ -1,4 +1,4 @@
-import { doorOn, faces, panel, pickFrom, windowOn } from '../common.js';
+import { faces, panel, pickFrom, windowOn } from '../common.js';
 import { block, glassTier, grid } from './kit.js';
 
 /**

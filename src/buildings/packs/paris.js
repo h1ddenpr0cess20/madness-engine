@@ -1,5 +1,5 @@
 import { doorOn, faces, panel, pickFrom, windowOn } from '../common.js';
-import { awning, block, glassTier, grid, slabOn, sheet } from './kit.js';
+import { awning, block, grid, slabOn, sheet } from './kit.js';
 
 /**
  * A Paris pack: an apartment block under its mansard, a brasserie on a corner

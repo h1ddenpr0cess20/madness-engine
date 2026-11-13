@@ -906,8 +906,7 @@ export function diner(m, v) {
 }
 
 /** A gas station: a canopy on four posts over two islands of pumps, a mini-mart behind, and a pole sign by the road. */
-export function gasstation(m, v) {
-  const { rnd } = v;
+export function gasstation(m) {
   m.box('plain', -1.45, 0, -1.45, 1.45, 0.01, 1.45, '#4a4b4f', { skip: ['bottom'] });
   // The mini-mart at the back, with a sign on its front.
   const F = slabBlock(m, -1.3, -1.35, -0.2, -0.3, 0.01, 0.7, '#f0ece4', { parapet: 0.08 });
@@ -957,8 +956,7 @@ export function mission(m, v) {
 }
 
 /** A lighthouse on a rock: a tapering white tower with a red band, a gallery and a lantern under a dome, and a keeper's cottage beside it. */
-export function lighthouse(m, v) {
-  const { rnd } = v;
+export function lighthouse(m) {
   m.rock('stone', 0, -0.05, 0, 0.95, 0.12, 0.9, PALETTE.stone[0], { detail: 1, seed: 4 });
   const tx = -0.3, tz = -0.2;
   m.cylinder('plaster', tx, 0.07, tz, 0.205, 0.25, 0.83, 16, '#f4f4f0', { caps: false });

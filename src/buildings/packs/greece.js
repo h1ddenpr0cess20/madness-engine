@@ -1,5 +1,5 @@
 import { doorOn, faces, panel, pickFrom, windowOn } from '../common.js';
-import { block, grid } from './kit.js';
+import { block } from './kit.js';
 
 /**
  * A Greek pack: whitewashed island houses stepped up a hill with blue doors, a
