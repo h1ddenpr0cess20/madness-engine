@@ -98,4 +98,11 @@ npm test
 npm run lint
 ```
 
-When working on the shared asset library, `npm run extract` rebuilds it from the source games. `npm run verify` checks that the games can use the engine in place of their local copies; both commands accept a `--games` path to the directory containing those projects.
+When working on the shared asset library, rebuild it from the source games and verify the consuming projects with:
+
+```sh
+npm run extract -- --games <path-to-games>
+npm run verify -- --games <path-to-games>
+```
+
+The path should point to the directory containing the game projects.
