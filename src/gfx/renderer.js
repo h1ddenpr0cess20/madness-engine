@@ -489,6 +489,8 @@ function describe(object, geometry, material, side, context, frame) {
       antiTile: material.antiTile === true && !!material.map,
       // Skin and the like: a detail map over the colour map's layout (it needs both the map and the bump), and light scattered under the surface.
       detailMap: !!material.detailMap && !!material.map && !!material.bumpMap,
+      // Where it glows, over the colour map's layout (lit windows on a facade, the letters of a sign).
+      emissiveMap: !!material.emissiveMap && !!material.map,
       subsurface: physical && material.subsurface > 0,
       vertexColors: material.vertexColors === true,
       flat: material.flatShading === true || !hasNormal,
@@ -548,7 +550,7 @@ function describe(object, geometry, material, side, context, frame) {
         params.attenuationColor = colorArray(material.attenuationColor);
       }
     }
-    return { key, params, textures: { map: material.map, bumpMap: material.bumpMap, detailMap: material.detailMap } };
+    return { key, params, textures: { map: material.map, bumpMap: material.bumpMap, detailMap: material.detailMap, emissiveMap: material.map ? material.emissiveMap : null } };
   }
 
   if (material.isMeshBasicMaterial || material.isLineBasicMaterial) {

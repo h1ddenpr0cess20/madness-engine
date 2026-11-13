@@ -92,6 +92,7 @@ function standardDefines(key) {
     USE_STRANDS: key.strands,
     USE_ANTITILE: key.antiTile,
     USE_DETAILMAP: key.detailMap,
+    USE_EMISSIVEMAP: key.emissiveMap,
     USE_SUBSURFACE: key.subsurface,
     ALPHA_TEST: key.alphaTest > 0 ? key.alphaTest.toFixed(4) : null,
     ...(key.envMap ? cubeUVDefines(key.env) : {}),

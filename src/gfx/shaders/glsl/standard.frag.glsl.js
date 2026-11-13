@@ -59,6 +59,9 @@ in vec3 vViewPosition;
   uniform sampler2D map;
   in vec2 vMapUv;
 #endif
+#ifdef USE_EMISSIVEMAP
+  uniform sampler2D emissiveMap;
+#endif
 #ifdef USE_DETAILMAP
   uniform sampler2D detailMap;
   uniform float detailScale;
@@ -201,6 +204,9 @@ void main() {
   vec4 diffuseColor = vec4( diffuse, opacity );
   ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
   vec3 totalEmissiveRadiance = emissive;
+  #ifdef USE_EMISSIVEMAP
+    totalEmissiveRadiance *= texture( emissiveMap, vMapUv ).rgb;
+  #endif
 
   #ifdef USE_MAP
     diffuseColor *= TILED( map, vMapUv );

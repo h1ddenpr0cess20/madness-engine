@@ -159,6 +159,8 @@ export class WebGPUBackend {
         { binding: 4, visibility: F, sampler: { type: 'filtering' } },
         { binding: 5, visibility: F, texture: { sampleType: 'float' } },
         { binding: 6, visibility: F, sampler: { type: 'filtering' } },
+        { binding: 7, visibility: F, texture: { sampleType: 'float' } },
+        { binding: 8, visibility: F, sampler: { type: 'filtering' } },
       ],
     });
     this.builtinLayout = d.createPipelineLayout({ bindGroupLayouts: [this.frameLayout, this.drawLayout] });
@@ -537,7 +539,8 @@ export class WebGPUBackend {
     const map = textures.map ? this._texture(textures.map) : null;
     const bump = textures.bumpMap ? this._texture(textures.bumpMap) : null;
     const detail = textures.detailMap ? this._texture(textures.detailMap) : null;
-    const id = `${map?.id ?? '-'}|${bump?.id ?? '-'}|${detail?.id ?? '-'}`;
+    const glow = textures.emissiveMap ? this._texture(textures.emissiveMap) : null;
+    const id = `${map?.id ?? '-'}|${bump?.id ?? '-'}|${detail?.id ?? '-'}|${glow?.id ?? '-'}`;
     let group = this.drawGroups.get(id);
     if (!group) {
       group = this.device.createBindGroup({
@@ -550,6 +553,8 @@ export class WebGPUBackend {
           { binding: 4, resource: bump ? bump.sampler : this.linear },
           { binding: 5, resource: (detail ? detail.texture : this.dummy2D).createView() },
           { binding: 6, resource: detail ? detail.sampler : this.linear },
+          { binding: 7, resource: (glow ? glow.texture : this.dummy2D).createView() },
+          { binding: 8, resource: glow ? glow.sampler : this.linear },
         ],
       });
       this.drawGroups.set(id, group);

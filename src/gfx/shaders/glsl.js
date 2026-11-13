@@ -84,6 +84,7 @@ function standardDefines(key) {
     USE_STRANDS: key.strands,
     USE_ANTITILE: key.antiTile,
     USE_DETAILMAP: key.detailMap,
+    USE_EMISSIVEMAP: key.emissiveMap,
     USE_SUBSURFACE: key.subsurface,
   }) + `#define NUM_DIR_LIGHTS ${key.numDir}\n#define NUM_POINT_LIGHTS ${key.numPoint}\n`
     + `#define NUM_HEMI_LIGHTS ${key.numHemi}\n#define NUM_DIR_LIGHT_SHADOWS ${key.numDirShadows}\n`

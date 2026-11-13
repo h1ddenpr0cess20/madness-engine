@@ -170,7 +170,10 @@ fn strandSpecular(L: vec3f, lightColor: vec3f, N: vec3f, V: vec3f, T: vec3f, jit
 @fragment
 fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) vec4f {
   var diffuseColor = vec4f(u_draw.diffuse, u_draw.opacity);
-  let totalEmissiveRadiance = u_draw.emissive;
+  var totalEmissiveRadiance = u_draw.emissive;
+  #ifdef USE_EMISSIVEMAP
+  totalEmissiveRadiance *= textureSample(t_emissive, s_emissive, in.mapUv).rgb;
+  #endif
   #ifdef USE_MAP
   #ifdef USE_ANTITILE
   diffuseColor *= untiled(t_map, s_map, in.mapUv, dpdx(in.mapUv), dpdy(in.mapUv));

@@ -1128,6 +1128,8 @@ export class MeshStandardMaterial extends Material {
     this.map = null;
     this.emissive = new Color(0x000000);
     this.emissiveIntensity = 1.0;
+    // Where it glows: the emissive colour times this texture, laid as the colour map is (it needs the map): lit windows, a sign's letters.
+    this.emissiveMap = null;
     this.bumpMap = null;
     this.bumpScale = 1;
     // Over the map's layout (it needs the map and the bump map): r a relief of its own (scaled by detailScale),
