@@ -239,7 +239,7 @@ const FORMS = {
   // A vase: limbs up and out from low on the trunk, the crown wide at the top: an elm, a honey locust.
   elm: { trunk: 0.34, c: 1.0, R: [0.52, 0.38], limbs: 4, spread: 0.55, bark: ['#655648', '#544739'], r: 0.044, fill: 0.9 },
   // Slim and upright, a leader to the top, pale bark marked dark, a narrow crown that hangs: a birch.
-  birch: { trunk: 0.5, c: 0.98, R: [0.27, 0.48], limbs: 6, spread: 0.6, bark: ['#e4e0d6', '#2e2b28'], r: 0.026, fill: 0.85, leader: true, droop: 0.25 },
+  birch: { trunk: 0.5, c: 0.98, R: [0.27, 0.48], limbs: 6, spread: 0.6, bark: ['#e4e0d6', '#2e2b28'], r: 0.026, fill: 0.6, leader: true, droop: 0.25 },
 };
 
 /**
@@ -274,8 +274,10 @@ export function leafy(m, { hi = true, seed = 0, form = 'oak', leaf = 'leafCard',
   }
   if (F.leader) {
     // A birch's leader, on up through the crown, and its dark marks.
-    const tip = v3.add(center, [0, Ry * 0.85, 0]);
+    // It ends inside the crown, in leaves of its own: not a bare pole out of the top.
+    const tip = v3.add(center, [0, Ry * 0.6, 0]);
     limb(m, bark, top, tip, r * 0.75, r * 0.2, sides, bark0);
+    leaves.push(tip, v3.lerp(top, tip, 0.75), v3.lerp(top, tip, 0.5));
     if (hi) for (let k = 0; k < 9; k++) {
       const y = 0.08 + k * 0.1, a = rnd() * Math.PI * 2, rr = r * (1.02 - 0.3 * (y / F.trunk));
       if (y > F.trunk) break;
@@ -290,6 +292,7 @@ export function leafy(m, { hi = true, seed = 0, form = 'oak', leaf = 'leafCard',
     if (depth === 0) {
       limb(m, bark, p, target, rr, rr * 0.5, hi ? 4 : 3, bark0);
       leaves.push(target, v3.lerp(p, target, 0.55));
+      if (F.leader) leaves.push(v3.lerp(p, target, 0.82));
       return;
     }
     limb(m, bark, p, mid, rr, rr * 0.72, Math.max(3, sides - (2 - depth)), bark0);
@@ -325,7 +328,8 @@ export function leafy(m, { hi = true, seed = 0, form = 'oak', leaf = 'leafCard',
     const normal = v3.norm(v3.add(out, [0, 0.35, 0]));
     for (let k = 0; k < per; k++) {
       const face = v3.norm(v3.add(out, [(rnd() - 0.5) * 1.6, (rnd() - 0.2) * 1.2, (rnd() - 0.5) * 1.6]));
-      const up = F.droop ? v3.norm(v3.add(v3.mul(out, 0.5), [0, -0.8, 0])) : v3.norm(v3.add(out, [0, 0.6, 0]));
+      // The spray reaches out from its twig (a birch's hangs a little), so the twig's end is in leaves.
+      const up = F.droop ? v3.norm(v3.add(out, [0, -0.3, 0])) : v3.norm(v3.add(out, [0, 0.6, 0]));
       card(m, leaf, v3.add(p, v3.mul(out, -size * 0.25)), face, up, size * (0.85 + 0.3 * rnd()), normal, col, Math.floor(rnd() * 4));
     }
   }

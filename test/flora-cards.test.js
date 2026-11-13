@@ -38,3 +38,24 @@ test('the foliage atlas is leaves on a clear ground, coloured right to its edge'
     for (let i = 0; i < a.data.length; i += 4) if (!a.data[i + 3]) assert.ok(a.data[i] + a.data[i + 1] + a.data[i + 2] > 60);
   }
 });
+
+test("a tree's limbs end in its leaves: no bare branch out of the crown", () => {
+  for (const form of ['oak', 'birch']) for (const hi of [true, false]) {
+    let bare = 0, all = 0;
+    for (let s = 0; s < 4; s++) {
+      const p = parts(leafy, { form, hi, seed: s }), L = p.leafCard.pos, B = p.bark.pos, cards = [];
+      // Each card is two quads, 12 corners: its middle, and half its width round it, is leaves.
+      for (let i = 0; i < L.length; i += 36) {
+        const c = [0, 0, 0];
+        for (let k = 0; k < 12; k++) for (let a = 0; a < 3; a++) c[a] += L[i + k * 3 + a] / 12;
+        cards.push([c, Math.hypot(L[i] - L[i + 3], L[i + 1] - L[i + 4], L[i + 2] - L[i + 5]) * 0.5]);
+      }
+      for (let i = 0; i < B.length; i += 3) {
+        if (B[i + 1] < 0.6) continue;
+        all++;
+        if (!cards.some(([c, r]) => Math.hypot(c[0] - B[i], c[1] - B[i + 1], c[2] - B[i + 2]) < r)) bare++;
+      }
+    }
+    assert.ok(bare / all < 0.02, `${form} ${hi ? 'near' : 'far'}: ${(100 * bare / all).toFixed(1)}% of the upper wood bare`);
+  }
+});
