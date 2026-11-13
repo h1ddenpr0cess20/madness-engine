@@ -28,7 +28,7 @@ The guides explain how the systems fit together. The reference pages describe th
 ## Development workflows
 
 - [Adding the engine to an existing game](dropping-in.md) — migration approach, current game status, and compatibility verification.
-- [Asset ideas backlog](ideas.md) — an internal planning list, not a catalog of assets already in the engine.
+- [Asset ideas backlog](development/asset-backlog.md) — an internal planning list, not a catalog of assets already in the engine.
 
 ## Keeping the documentation accurate
 
