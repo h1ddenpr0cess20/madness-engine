@@ -11,7 +11,7 @@ Madness Engine covers the common parts of a 3D game, from drawing and simulation
 | Area | Included systems |
 |---|---|
 | **Rendering** | The engine's graphics API, WebGPU/WebGL 2 renderers, materials, lighting, shadows, transmission, and instancing. |
-| **Simulation** | Ball physics, collision against world geometry and moving objects, rolling behaviour, and shared world utilities. |
+| **Simulation** | Ball physics, collision against world geometry and moving objects, rolling behavior, and shared world utilities. |
 | **Game framework** | Stage setup, cameras and views, keyboard/mouse/touch/gamepad input, browser storage, and common game settings. |
 | **Audio and effects** | Procedural audio through Web Audio, music systems, particle effects, and weather. |
 | **Environment** | Ocean and sky systems, scene moods, film treatments, lighting setups, and environmental presets. |
@@ -29,11 +29,11 @@ The engine also collects reusable content created across the games. Assets are o
 | **Heroes and props** | Playable rolling characters, dice, weapons, pickups, furniture, and general-purpose props. |
 | **Buildings and scenery** | Building models, streets, vehicles, flora, environmental pieces, and other world geometry. |
 | **Textures and materials** | Surface painters, floors and walls, foliage, venue materials, reflective rooms, and skies. |
-| **Moods and music** | Reusable visual themes, colour palettes, lighting and weather presets, film treatments, bands, and music systems. |
+| **Moods and music** | Reusable visual themes, color palettes, lighting and weather presets, film treatments, bands, and music systems. |
 
 The library is intentionally shared: a project can use an existing character, prop, texture, or environment instead of creating and maintaining another copy. Where games have distinct versions of an asset, those versions can be kept separately.
 
-The full catalogue is maintained in **[docs/library.md](docs/library.md)**. It lists the available assets and where they originated; this README is only an overview.
+The generated [library catalog](docs/library.md) lists game-derived assets in the extracted library categories and records their source projects. It is not a complete inventory of every engine-authored module or asset.
 
 ## Installation
 
@@ -79,9 +79,11 @@ The other examples are standalone projects and have their own package files and 
 
 ## Documentation
 
-The README describes the project and its main parts. Detailed API notes, inventories, and workflow instructions belong in the documentation.
+The README describes the project and its main parts. Practical guides, API references, asset specifications, and development workflows are organized in the **[documentation index](docs/README.md)**.
 
-- **[Asset library catalogue](docs/library.md)** — Available assets and their source projects.
+- **[Getting started](docs/guides/getting-started.md)** — Create a stage, run the frame loop, and add physics.
+- **[API references](docs/reference/)** — Stage, graphics, physics, input, and module imports.
+- **[Generated library catalog](docs/library.md)** — Extracted game-derived assets and their source projects.
 - **[Adding an existing game to the engine](docs/dropping-in.md)** — Integration and migration process.
 - **[People and characters](docs/people.md)** — Human models, clothing, animation, and related systems.
 - **[Weapons](docs/weapons.md)** — Weapon assets and their construction.
