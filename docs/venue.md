@@ -1,40 +1,99 @@
-# The venue kit
+# Venue system
 
-The rolling games (Rock 'n' Roller I–III, Metroll) were built from each other,
-and each carried its own copy of the code that builds, plays and draws a level.
-The copies differed only in what things are called. The kit is that code once,
-in `src/venue/`; a game keeps its names, its rosters and its content.
+The venue modules provide the tile-based world format used by the rolling games. A `Venue` describes the floor, walls, hazards, moving obstacles, lighting, pickups, props, and foes for one level. The simulation, mesh-building, and game rules are separate modules, so the level data can be used without baking in a particular game's roster or scoring rules.
 
-Import as `madness-engine/venue/<module>`.
+Import modules through their subpaths:
 
-| Module | What it is |
+```js
+import { Venue, buildVenue } from 'madness-engine/venue/venue';
+import { createVenueMeshes, createExit } from 'madness-engine/venue/scenery';
+import { createGig, stepGig } from 'madness-engine/venue/gig';
+```
+
+## Build a venue
+
+A venue is created with a name, grid size, palette, and optional game metadata:
+
+```js
+const venue = new Venue({
+  name: 'Warehouse',
+  cols: 24,
+  rows: 18,
+  palette,
+  act: 1,
+  tempo: 120,
+  look: {},
+});
+```
+
+Each cell can be empty or contain a surface described by four corner heights. The grid uses integer tile coordinates. The venue's x and z axes follow the angled board orientation used by the rolling games.
+
+## Geometry and layout methods
+
+The main layout methods return the venue, so calls can be chained.
+
+| Method | Purpose |
 |---|---|
-| `venue/venue` | `Venue`: a grid of tiles with four corner heights each, and everything on them (walls, exit, zap floor, ice, sticky floor, belts, bumpers, gates, breakaways, lifts, lamps and the light rig, foes, drops and pyro on the beat, pickups, props). `buildVenue(venue)` turns it into meshes' vertex data and a physics `World`. |
-| `venue/dig` | `digger(venue, { x, z, h, heading })`: describe a level a piece at a time (hall, room, ledge, bridge, stairs, ramp, chute, turn, gap, ferry, shaft, exit). A cursor keeps the pieces meeting. |
-| `venue/helpers` | Small helpers for placing things across a dug piece: `across`, `barred`, `flat`, `loop`, `along`, and so on. |
-| `venue/gig` | `createGig(GFX, index, { loadVenue, createActors, pickups })` and `stepGig`: one venue as it is played, with no drawing or sound. The rules: grip, rev, sticky floor, ice, belts, bumpers, breakaways, gates, hits and smashes, falls, pickups. |
-| `venue/hype`, `venue/integrity`, `venue/smash`, `venue/roll` | The score and combo, the hero's integrity (and its spare), how a hit is graded, and how the ball turns as it rolls. |
-| `venue/loading` | `createLoading(root, label, library)`: the loading screen while models bake. `library` is the game's `{ isBaked, ready, SCULPTED }`. |
-| `venue/foemesh` | `createFoeMeshes({ foes, cast, isBaked, ready })` gives `createFoeMesh(GFX, kind)`: a foe's mesh with its clips (idle, walk, attack, ko), or a stand-in until its model has baked. The roster itself stays the game's. |
-| `models/viewer` | `startViewer({ definitions })`: the models turntable page (`#view`, `#bar`). |
-| `venue/scenery` | `createVenueMeshes(GFX, built, venue)` draws a built venue, `createExit(GFX, venue, { last, signs })` the exit. The electrified floor is the engine's lava pit (`textures/lavapit`) turned to blue by the palette's `zapHue` (default 2.9). |
+| `surface(x, z, w, d, height, options)` | Set a rectangle of tile surfaces. `height(X, Z)` supplies the corner height in grid coordinates. |
+| `flat(x, z, w, d, h, options)` | Set a flat rectangle at height `h`. |
+| `slope(x, z, w, d, from, to, axis, options)` | Create a straight ramp along the x or z axis. |
+| `stairs(x, z, w, d, from, to, axis, options)` | Create a run of flat steps. |
+| `chute(x, z, w, d, from, to, axis, options)` | Create a banked channel that rises toward its sides. |
+| `bend(x, z, size, h, pivot, options)` | Create a banked corner around a pivot. |
+| `bowl(x, z, w, d, h, depth, options)` | Create a shallow dish. |
+| `wall(x, z, w, d, top, options)` | Raise walls above the neighboring floor. |
+| `enclose(x, z, w, d, options)` | Add selected sides around a rectangular area. |
+| `room(x, z, w, d, h, options)` | Create a room from a floor and surrounding walls. |
+| `floorOf(x, z, w, d, tex)` | Assign a floor texture to cells. |
+| `pillar(x, z, rise, options)` | Add a pillar. |
+| `block(x, z, w, d, rise, options)` | Add a raised block, optionally with a prop. |
+| `prop(kind, x, z, options)` | Place a prop marker. |
+| `clear(x, z, w, d)` / `gap(x, z, w, d)` | Clear cells or mark a gap. |
 
-## What a game gives it
+Use `cell(x, z)` to read a cell and `heightAt(x, z)` to query the surface height. `isSafe(x, z)`, `lowest`, and `highest` expose useful level checks and bounds.
 
-- `loadVenue(index)` returns a `Venue`; `createActors(GFX, venue, world, { killY })` returns what moves in it. `gig.js` reads `pickups`, `props`, `doors`, `spikes`, `bumpers`, and calls `place`, `step`, `drain`, `velocityOf`, `hurt`, `smashProp`, `breakDoor` and `open` on it.
-- `pickups`: a table from the game's own kind names to what each does (`score`, `heal`, `revive`, `pass`, `token`). The default is `PICKUPS`.
-- Pickup methods on the venue (`pick`, `popcorn`, `tape`) are the game's, as a subclass over `venue.pickup(kind, x, z, amount)`.
-- Posters (`bill()`), exit signs (`signs`), the cast and the foes' roster are the game's.
+## Hazards, obstacles, and pickups
 
-## Names
+The venue data also has methods for common gameplay elements:
 
-| Games had | The kit has |
+- `zap(x, z, w, d, h, options)` marks electrified floor.
+- `exit(x, z, w, d, h)` marks the exit area.
+- `foe(kind, x, z, options)` places a foe marker with a range, optional path, and facing.
+- `drop(x, z, options)` and `pyro(x, z, options)` schedule beat-driven hazards.
+- `lift(x, z, w, d, h, options)` creates a moving lift.
+- `sticky`, `ice`, and `belt` mark special floor effects.
+- `bumper`, `gate`, and `panel` create moving or breakable obstacles.
+- `pickup(kind, x, z, amount)` records a game-defined pickup.
+- `lamp` and `light` add lighting fixtures and rig entries.
+
+The methods record level data. They do not define the game's reward values, actor implementations, sound effects, or UI.
+
+## Build collision and render data
+
+`buildVenue(venue)` converts the venue description into the built geometry and physics data used by the game. `createVenueMeshes(GFX, built, venue)` creates the scene objects for that built venue. `createExit(GFX, venue, options)` builds the exit marker and signage.
+
+The venue's palette and texture choices feed into the mesh builder. Keep the palette consistent with the game-specific material and scenery setup.
+
+## Simulation
+
+`venue/gig` handles the shared rolling-game simulation:
+
+- `createGig(GFX, index, options)` creates a playable gig using the game's `loadVenue` and `createActors` callbacks.
+- `stepGig(gig, push, dt, options)` advances the simulation.
+- `putBack(gig)` resets the gig.
+- `resultOf(gig)` returns the run's summary statistics.
+
+The simulation module exports tuning constants for grip, rev, sticky ground, ice, belts, bumpers, and the fixed simulation step. Scoring, actor construction, pickup meaning, and presentation remain game-specific.
+
+## Related modules
+
+| Module | Responsibility |
 |---|---|
-| `gig.rock`, `gig.troll` | `gig.hero` |
-| `encores`, `lighters`, `takes` | `revives` (and `encore()`, `retake()` are `revive()`) |
-| `out.encore`, `out.retake` | `out.revived` |
-| `stats.picks`, `stats.popcorn`, `hype.picks` | `stats.pickups`, `hype.pickups` |
-| `stats.globes`, `records`, `reels`, `demos` | `stats.tokens` |
-| `speaker()` | `drop()` |
-| `ROCK_RADIUS`, `BALL_RADIUS` | `BALL_RADIUS` |
-| `GRADES[g].say` | the game's own table; the kit has the titles |
+| `venue/dig` | Cursor-based level construction. |
+| `venue/helpers` | Helpers for laying out venue geometry. |
+| `venue/scenery` | Venue meshes and exit visuals. |
+| `venue/gig` | Shared rolling-game simulation. |
+| `venue/hype`, `venue/integrity`, `venue/smash`, `venue/roll` | Score/combo, player integrity, impact grading, and rolling motion. |
+| `venue/loading`, `venue/foemesh` | Loading UI and game-specific foe mesh integration. |
+
+See the [module map](reference/modules.md) for other engine import paths.
