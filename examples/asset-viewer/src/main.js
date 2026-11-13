@@ -785,14 +785,16 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 
 /** How long the clips that repeat on their own take to come round, in seconds: what a GIF of one of them is, to loop cleanly. */
 const LOOPS = { walk: 0.698 * 2, run: 0.419 * 4 };
-const loopSeconds = (clip) => LOOPS[clip] ?? 1.6;
+const loopSeconds = (clip) => view.built?.loops?.[clip] ?? LOOPS[clip] ?? 1.6;
 
 /** Poses the thing for the clock as it stands. */
 function poseNow() {
   if (!view.built?.pose) return;
   const t = view.clock - view.clipStart;
   // The one-shot clips loop, so there is always something to see.
-  view.built.pose({ clip: view.clip, t: view.clip === 'idle' || view.clip === 'walk' || view.clip === 'run' ? t : t % 1.6, time: view.clock, seed: 1, speed: 1 });
+  // A thing that says how long its clips take (a bouncy ball's bounce) loops each on its own length.
+  const own = view.built.loops?.[view.clip];
+  view.built.pose({ clip: view.clip, t: own ? t % own : view.clip === 'idle' || view.clip === 'walk' || view.clip === 'run' ? t : t % 1.6, time: view.clock, seed: 1, speed: 1 });
 }
 
 /** Moves the camera and lights as they follow what is looked at, and draws. */

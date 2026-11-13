@@ -26,3 +26,11 @@ test('the asset viewer exposes four palette channels, surface patterns and rando
   assert.ok(viewer.includes("$('bowlingdesign').onchange"));
   assert.ok(viewer.includes('view.draft = { ...randomBowlingBallPalette(Math.random, current), design };'));
 });
+
+test('the bouncy ball bounces in the viewer: clips worked out with the physics, each looping on its own length', () => {
+  assert.ok(catalog.includes("clips: ['still', ...Object.keys(clips)]"));
+  for (const clip of ["bounce: record(", "'hop along': record("]) assert.ok(catalog.includes(clip));
+  assert.ok(catalog.includes('...RUBBER'));
+  assert.ok(viewer.includes('view.built.loops?.[view.clip]'));
+  assert.ok(viewer.includes('view.built?.loops?.[clip]'));
+});
