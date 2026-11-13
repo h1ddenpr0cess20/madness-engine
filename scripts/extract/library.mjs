@@ -249,6 +249,66 @@ const ABOUT = {
   music: 'Made on the spot with Web Audio. `band` is a whole band with its songs (`THEMES`), `theory` its scales, forms and effects; `score` a smaller orchestra with its own themes.',
 };
 
+/**
+ * Americanizes generated Markdown prose without changing inline code or code fences.
+ * Source comments are kept as written; this is a presentation-only pass for the catalog.
+ */
+export function americanizeMarkdown(text) {
+  const replacements = [
+    [/\bcolours\b/gi, 'colors'],
+    [/\bcolouring\b/gi, 'coloring'],
+    [/\bcoloured\b/gi, 'colored'],
+    [/\bcolourful\b/gi, 'colorful'],
+    [/\bcolour\b/gi, 'color'],
+    [/\bmodelling\b/gi, 'modeling'],
+    [/\bmodelled\b/gi, 'modeled'],
+    [/\bmetres\b/gi, 'meters'],
+    [/\bmetre\b/gi, 'meter'],
+    [/\bstylised\b/gi, 'stylized'],
+    [/\bbehaviour\b/gi, 'behavior'],
+    [/\bcatalogue\b/gi, 'catalog'],
+    [/\bcentres\b/gi, 'centers'],
+    [/\bcentre\b/gi, 'center'],
+    [/\bgreys\b/gi, 'grays'],
+    [/\bgrey\b/gi, 'gray'],
+    [/\bfibres\b/gi, 'fibers'],
+    [/\bfibre\b/gi, 'fiber'],
+    [/\blicences\b/gi, 'licenses'],
+    [/\blicence\b/gi, 'license'],
+    [/\borganised\b/gi, 'organized'],
+    [/\borganise\b/gi, 'organize'],
+    [/\boptimised\b/gi, 'optimized'],
+    [/\boptimise\b/gi, 'optimize'],
+    [/\btravelling\b/gi, 'traveling'],
+    [/\bcancelled\b/gi, 'canceled'],
+    [/\blabelled\b/gi, 'labeled'],
+    [/\bfavourites\b/gi, 'favorites'],
+    [/\bfavourite\b/gi, 'favorite'],
+    [/\btheatre\b/gi, 'theater'],
+  ];
+  let fence = null;
+  let fenceLength = 0;
+  return text.split('\n').map((line) => {
+    const marker = /^\s*(\x60{3,}|~{3,})/.exec(line);
+    if (marker) {
+      const character = marker[1][0];
+      if (fence === null) {
+        fence = character;
+        fenceLength = marker[1].length;
+      } else if (character === fence && marker[1].length >= fenceLength) {
+        fence = null;
+        fenceLength = 0;
+      }
+      return line;
+    }
+    if (fence !== null) return line;
+    return line.split(/(\x60+[^\x60]*?\x60+)/g).map((part, index) => {
+      if (index % 2) return part;
+      return replacements.reduce((value, [pattern, replacement]) => value.replace(pattern, replacement), part);
+    }).join('');
+  }).join('\n');
+}
+
 /** Text for a markdown table cell: a backslash is escaped first, so the one the pipe gets is not undone. */
 function cell(text) {
   return text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
@@ -376,7 +436,7 @@ export async function build(dirs) {
     writeFileSync(join(SRC, path), text);
   }
   writeFileSync(ORIGINS, `${JSON.stringify(origins, null, 2)}\n`);
-  writeFileSync(join(SRC, '..', 'docs', 'library.md'), contents(places, moods));
+  writeFileSync(join(SRC, '..', 'docs', 'library.md'), americanizeMarkdown(contents(places, moods)));
 
   for (const kind of KINDS) {
     const mine = [...places.entries()].filter(([p]) => p.startsWith(`${kind}/`));
