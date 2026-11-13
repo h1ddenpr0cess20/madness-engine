@@ -426,6 +426,13 @@ function colourRows(item) {
       ['Finger holes', pal.holes, c.holes, (v) => { c.holes = v; }, () => { delete c.holes; }],
     ];
   }
+  if (pal.kind === 'bouncy-ball') {
+    return [
+      ['Rubber', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
+      ['Second colour', pal.swirl, c.swirl, (v) => { c.swirl = v; }, () => { delete c.swirl; }],
+      ['Third colour', pal.accent, c.accent, (v) => { c.accent = v; }, () => { delete c.accent; }],
+    ];
+  }
   if (pal.kind === 'bowling-pin') {
     return [
       ['Base resin', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
@@ -496,6 +503,7 @@ function colourGroup(item) {
   const isDice = item.palette.kind === 'dice';
   const isBowlingBall = item.palette.kind === 'bowling-ball';
   const isBowlingPin = item.palette.kind === 'bowling-pin';
+  const isBouncyBall = item.palette.kind === 'bouncy-ball';
   const isWeapon = item.palette.kind === 'weapon';
   const isGraniteWeapon = item.palette.kind === 'granite-weapon';
   const isMorningstar = item.palette.kind === 'morningstar';
@@ -520,19 +528,21 @@ function colourGroup(item) {
     }
     weaponRows.style.display = 'grid';
   }
-  $('colourdiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall ? 'Randomise colours' : 'Randomise';
+  $('colourdiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall || isBouncyBall ? 'Randomise colours' : 'Randomise';
   $('colourdiverse').title = isBowlingPin
     ? 'Generate a coordinated random resin and enamel palette for this pin'
     : isBowlingBall
       ? 'Pick a coordinated random bowling-ball palette'
       : 'Randomise this character palette';
-  $('bowlingdesignrow').style.display = isBowlingBall || isBowlingPin ? '' : 'none';
-  if (isBowlingBall || isBowlingPin) {
+  $('bowlingdesignrow').style.display = isBowlingBall || isBowlingPin || isBouncyBall ? '' : 'none';
+  if (isBowlingBall || isBowlingPin || isBouncyBall) {
     const choices = isBowlingPin
       ? [['classic', 'Classic resin'], ['pearl', 'Pearlescent resin'], ['swirl', 'Ribbon swirl']]
-      : [['marble', 'Classic marble'], ['spiral', 'Spiral ribbons'], ['flame', 'Flame ribbons'], ['split', 'Two-tone split'], ['blotch', 'Blotchy marble']];
+      : isBouncyBall
+        ? [['solid', 'Solid rubber'], ['swirl', 'Swirl'], ['marble', 'Rubber marble'], ['tiedye', 'Tie-dye spiral'], ['stripe', 'Band'], ['confetti', 'Superball flecks'], ['beach', 'Beach ball']]
+        : [['marble', 'Classic marble'], ['spiral', 'Spiral ribbons'], ['flame', 'Flame ribbons'], ['split', 'Two-tone split'], ['blotch', 'Blotchy marble'], ['solid', 'Solid']];
     $('bowlingdesign').replaceChildren(...choices.map(([value, label]) => el('option', { value }, label)));
-    $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : 'marble');
+    $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : isBouncyBall ? 'swirl' : 'marble');
     $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
   }
   if (isGraniteWeapon) {
@@ -557,6 +567,8 @@ function colourGroup(item) {
       ? 'Choose the morningstar head and haft metal, then set the leather grip colour. Metal finishes update immediately; Apply commits the grip colour.'
     : isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
+    : isBouncyBall
+      ? 'A rubber bouncy ball: choose a pattern and its three colours. Apply updates the ball. In a game, pair it with the physics\' RUBBER bounce.'
     : isBowlingBall
       ? 'Choose a surface design and change the base resin, swirl, accent veins, and recessed finger-hole colour. Apply updates the ball.'
       : isBowlingPin
@@ -581,6 +593,10 @@ $('colourdiverse').onclick = () => {
   if (view.item.palette?.kind === 'bowling-pin') {
     const design = view.draft.design ?? view.colours.design ?? view.item.palette.design ?? 'classic';
     view.draft = { ...view.draft, ...randomBowlingPinPalette(), design };
+  } else if (view.item.palette?.kind === 'bouncy-ball') {
+    const design = view.draft.design ?? view.colours.design ?? view.item.palette.design ?? 'swirl';
+    const hue = Math.random() * 360, col = (h, s, l) => '#' + new GFX.Color().setHSL(((h % 360) + 360) % 360 / 360, s, l).getHexString();
+    view.draft = { base: col(hue, 0.85, 0.52), swirl: col(hue + 60 + Math.random() * 60, 0.9, 0.58), accent: col(hue + 180 + Math.random() * 40, 0.8, 0.5), design };
   } else if (view.item.palette?.kind === 'bowling-ball') {
     const current = { ...view.item.palette, ...view.colours, ...view.draft };
     const design = current.design ?? 'marble';
@@ -594,7 +610,7 @@ $('colourdiverse').onclick = () => {
 };
 $('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
 $('bowlingdesign').onchange = () => {
-  if (!['bowling-ball', 'bowling-pin'].includes(view.item?.palette?.kind)) return;
+  if (!['bowling-ball', 'bowling-pin', 'bouncy-ball'].includes(view.item?.palette?.kind)) return;
   view.draft.design = $('bowlingdesign').value;
   colourGroup(view.item);
 };
@@ -605,6 +621,13 @@ $('colourcopy').onclick = async () => {
       + "import { createDieProp } from 'madness-engine/props/dice';\n\n"
       + "const die = createDieProp(GFX, '" + view.item.dieType + "', "
       + JSON.stringify(view.colours, null, 2) + ");";
+  } else if (view.item.palette?.kind === 'bouncy-ball') {
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { createBouncyBall } from 'madness-engine/props/bouncy-ball';\n"
+      + "import { createBall, RUBBER } from 'madness-engine/physics';\n\n"
+      + "const bouncyBall = createBouncyBall(GFX, { colors: "
+      + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'swirl') + "' });\n"
+      + "const body = createBall({ r: bouncyBall.radius, ...RUBBER });";
   } else if (view.item.palette?.kind === 'bowling-ball') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingBall } from 'madness-engine/props/bowling-ball';\n\n"

@@ -16,6 +16,7 @@ import { tiled } from '../../../src/textures/painters.js';
 import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
+import { createBouncyBall } from '../../../src/props/bouncy-ball.js';
 import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { CHOCOLATES } from '../../../src/textures/chocolate.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
@@ -557,6 +558,23 @@ function bowlingBallItems() {
   }];
 }
 
+/** A rubber bouncy ball, beside the bowling ball. */
+function bouncyBallItems() {
+  return [{
+    id: 'props/bouncy-ball',
+    category: 'Props',
+    group: 'balls',
+    name: 'Bouncy ball',
+    source: 'props/bouncy-ball',
+    kind: 'object',
+    palette: { kind: 'bouncy-ball', design: 'swirl', base: '#e8343f', swirl: '#ffd23f', accent: '#2f6fe0' },
+    build({ colours = {} } = {}) {
+      const made = createBouncyBall(GFX, { colors: colours, design: colours.design ?? 'swirl' });
+      return { object: made.group, info: { Source: 'props/bouncy-ball', Design: made.design, Material: 'rubber', ...countOf(made.group) } };
+    },
+  }];
+}
+
 /** A standalone premium resin bowling pin, grouped beside the bowling ball. */
 function bowlingPinItems() {
   return [{
@@ -1073,7 +1091,7 @@ export async function loadCatalog(onProgress = () => {}) {
   }
 
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
-  items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
+  items.push(...diceItems(), ...bowlingBallItems(), ...bouncyBallItems(), ...bowlingPinItems());
   items.push(...weaponItems(), staffItem(), metalStaffItem());
   items.push(...humanItems(), robotItem());
   items.push(...buildingItems());

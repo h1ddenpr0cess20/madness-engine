@@ -46,6 +46,7 @@ export const PROPS = {
 };
 export { DICE, DICE_TYPES, createDieProp, createD4, createD6, createD6Pips, createD8, createD10, createDPercentile, createD12, createD20 } from '../dice.js';
 export { BOWLING_BALL_DESIGNS, BOWLING_BALL_RADIUS, createBowlingBall } from './bowling-ball.js';
+export { BOUNCY_BALL_DESIGNS, BOUNCY_BALL_RADIUS, createBouncyBall } from './bouncy-ball.js';
 export { PODIUM_ACCENT, PODIUM_SIZE, PODIUM_TILT, PODIUM_TOP, podiumOf } from './podium.js';
 export { BOWLING_PIN_DESIGNS, BOWLING_PIN_HEIGHT, BOWLING_PIN_RADIUS, createBowlingPin } from './bowling-pin.js';
 export { createBitcoinCoin } from './bitcoin-coin.js';

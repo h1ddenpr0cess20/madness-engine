@@ -11,7 +11,8 @@ test('the bowling ball is registered on the Props shelf, not Heroes', () => {
   assert.ok(catalog.includes("category: 'Props'"));
   assert.ok(catalog.includes("group: 'balls'"));
   assert.ok(catalog.includes("import { createBowlingBall } from '../../../src/props/bowling-ball.js';"));
-  assert.ok(catalog.includes("items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());"));
+  assert.ok(catalog.includes("items.push(...diceItems(), ...bowlingBallItems(), ...bouncyBallItems(), ...bowlingPinItems());"));
+  assert.ok(catalog.includes("id: 'props/bouncy-ball'"));
   assert.ok(!catalog.includes("['bowling ball'"));
 });
 

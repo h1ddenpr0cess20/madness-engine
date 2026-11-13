@@ -3,7 +3,7 @@
  * The dark wells are recessed into the ball; there are no raised decorative rims.
  */
 export const BOWLING_BALL_RADIUS = 0.52;
-export const BOWLING_BALL_DESIGNS = Object.freeze(['marble', 'spiral', 'flame', 'split', 'blotch']);
+export const BOWLING_BALL_DESIGNS = Object.freeze(['marble', 'spiral', 'flame', 'split', 'blotch', 'solid']);
 
 const DEFAULT_DESIGN = 'marble';
 const DEFAULTS = { base: '#192d59', swirl: '#d83b7c', accent: '#f2ba64', holes: '#090d18' };
@@ -61,7 +61,12 @@ function paint(GFX, geometry, radius, palette, attribute, design) {
     const polarFade = Math.sqrt(Math.max(0, 1 - y * y));
     let ribbon, vein, accentPower = 20;
 
-    if (design === 'spiral') {
+    if (design === 'solid') {
+      // One colour of resin, only a faint cloud in it.
+      ribbon = 0.04 * fbm(x * 2.2, y * 2.2, z * 2.2);
+      vein = 0;
+      accentPower = 1;
+    } else if (design === 'spiral') {
       const phase = longitude * 8 + latitude * 7
         + 0.85 * Math.sin(longitude * 2 + latitude * 3)
         + 0.22 * Math.sin(longitude * 4 - latitude * 5);
@@ -101,7 +106,7 @@ function paint(GFX, geometry, radius, palette, attribute, design) {
         + 0.45 * Math.sin(longitude * 5 + latitude * 3)) * polarFade;
     }
 
-    const direct = design === 'split' || design === 'blotch';
+    const direct = design === 'split' || design === 'blotch' || design === 'solid';
     const swirlMix = direct ? ribbon : smooth(0.25, 0.75, ribbon);
     const accentMix = direct
       ? (design === 'split' ? 0.82 : 0.85) * vein
@@ -443,3 +448,6 @@ export function createBowlingBall(GFX, options = {}) {
     },
   };
 }
+
+/** The noise the bowling ball's patterns are made of (smooth, 0 to 1), for other balls' (props/bouncy-ball). */
+export { fbm as ballNoise };
