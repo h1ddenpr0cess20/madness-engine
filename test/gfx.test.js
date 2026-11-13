@@ -118,6 +118,7 @@ test('a material with an emissive map glows only where the map says, over the co
   assert.match(fs, /uniform sampler2D emissiveMap/);
   assert.match(fs, /totalEmissiveRadiance \*= texture\( emissiveMap, vMapUv \)/);
   assert.match(moduleSource({ ...key, emissiveMap: true }), /totalEmissiveRadiance \*= textureSample\(t_emissive, s_emissive, in\.mapUv\)/);
-  assert.doesNotMatch(programSources(key)[1], /emissiveMap/);
+  assert.doesNotMatch(programSources(key)[1], /#define USE_EMISSIVEMAP/);
+  assert.match(fs, /#define USE_EMISSIVEMAP/);
   assert.equal(new gfx.MeshStandardMaterial().emissiveMap, null);
 });
