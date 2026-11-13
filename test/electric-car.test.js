@@ -31,7 +31,7 @@ test('two axles: the front two wheels steer, the back two do not, and every whee
     w.getWorldPosition(at);
     near(at.y, ELECTRIC_CAR.tireRadius + 0.006 * (ELECTRIC_CAR.tireRadius / 0.6), 1e-6, `${w.name} on the ground`);
     near(Math.abs(at.x), 0.76, 1e-9, `${w.name} stands out to the side`);
-    assert.ok([0, 2.8].some((z) => Math.abs(at.z - z) < 1e-9), `${w.name} is on an axle`);
+    assert.ok(ELECTRIC_CAR.axles.some((z) => Math.abs(at.z - z) < 1e-9), `${w.name} is on an axle`);
   }
   for (const w of car.steeredWheels) assert.ok(w.getWorldPosition(at).z > 2);
 });
