@@ -327,6 +327,12 @@ export class BufferAttribute {
     this.count = array.length / itemSize;
     this.normalized = normalized;
     this.version = 0;
+    /**
+     * Whether the array is let go once the GPU has it: for big geometry that never changes (a city's streets and
+     * walls), so it is not held twice, once in the page and once on the card. Its `count` stays; its `array` is
+     * then empty (of the same type), and it cannot be changed or read back.
+     */
+    this.freeAfterUpload = false;
   }
 
   set needsUpdate(value) { if (value === true) this.version++; }
@@ -1122,11 +1128,21 @@ export class MeshStandardMaterial extends Material {
     this.map = null;
     this.emissive = new Color(0x000000);
     this.emissiveIntensity = 1.0;
+    // Where it glows: the emissive colour times this texture, laid as the colour map is (it needs the map): lit windows, a sign's letters.
+    this.emissiveMap = null;
+    // The share (0 to 1) of the map's repeats that glow, each by its own chance (and a little brighter or dimmer):
+    // a facade whose texture is one window lights some windows and not others. 0 for every repeat alike.
+    this.emissiveScatter = 0;
+    // How many cells each repeat of the map is split into for the scatter, [across, up]: a texture of three panes
+    // lights each pane by its own chance with [3, 1].
+    this.emissiveCells = [1, 1];
     this.bumpMap = null;
     this.bumpScale = 1;
     // Over the map's layout (it needs the map and the bump map): r a relief of its own (scaled by detailScale),
     // g the roughness (0.5 as the material's, to twice it), b how much of the bump map shows.
     this.detailMap = null;
+    /** Whether a big tiled surface hides its repeat (see renderer.js). */
+    this.antiTile = false;
     this.detailScale = 1;
     this.envMapIntensity = 1.0;
     this.flatShading = false;

@@ -59,9 +59,32 @@ in vec3 vViewPosition;
   uniform sampler2D map;
   in vec2 vMapUv;
 #endif
+#ifdef USE_EMISSIVEMAP
+  uniform sampler2D emissiveMap;
+#endif
 #ifdef USE_DETAILMAP
   uniform sampler2D detailMap;
   uniform float detailScale;
+#endif
+#ifdef USE_ANTITILE
+  // A tile repeated over a street or a lawn shows as a grid from any height. Here each lookup takes the tile twice,
+  // shifted by amounts a slow noise picks (one of eight), and blends them: the pattern never lines up the same way
+  // twice, and the mip level follows the true layout, so there are no seams (after Inigo Quilez's texture repetition).
+  float antiTileHash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
+  float antiTileNoise( vec2 p ) {
+    vec2 i = floor( p ), f = fract( p );
+    f = f * f * ( 3.0 - 2.0 * f );
+    return mix( mix( antiTileHash( i ), antiTileHash( i + vec2( 1.0, 0.0 ) ), f.x ), mix( antiTileHash( i + vec2( 0.0, 1.0 ) ), antiTileHash( i + vec2( 1.0, 1.0 ) ), f.x ), f.y );
+  }
+  vec4 untiled( sampler2D s, vec2 uv, vec2 dx, vec2 dy ) {
+    float l = antiTileNoise( uv * 0.37 ) * 8.0;
+    float ia = floor( l ), f = fract( l );
+    vec2 offA = sin( vec2( 3.0, 7.0 ) * ia ), offB = sin( vec2( 3.0, 7.0 ) * ( ia + 1.0 ) );
+    return mix( textureGrad( s, uv + offA, dx, dy ), textureGrad( s, uv + offB, dx, dy ), smoothstep( 0.2, 0.8, f ) );
+  }
+  #define TILED( s, uv ) untiled( s, uv, dFdx( uv ), dFdy( uv ) )
+#else
+  #define TILED( s, uv ) texture( s, uv )
 #endif
 #ifdef USE_SUBSURFACE
   uniform vec3 subsurfaceColor;
@@ -82,9 +105,9 @@ in vec3 vViewPosition;
   vec2 dHdxy_fwd() {
     vec2 dSTdx = dFdx( vBumpMapUv );
     vec2 dSTdy = dFdy( vBumpMapUv );
-    float Hll = bumpScale * texture( bumpMap, vBumpMapUv ).x;
-    float dBx = bumpScale * texture( bumpMap, vBumpMapUv + dSTdx ).x - Hll;
-    float dBy = bumpScale * texture( bumpMap, vBumpMapUv + dSTdy ).x - Hll;
+    float Hll = bumpScale * TILED( bumpMap, vBumpMapUv ).x;
+    float dBx = bumpScale * TILED( bumpMap, vBumpMapUv + dSTdx ).x - Hll;
+    float dBy = bumpScale * TILED( bumpMap, vBumpMapUv + dSTdy ).x - Hll;
     vec2 dH = vec2( dBx, dBy );
     #ifdef USE_DETAILMAP
       // The detail map, on the colour map's layout: how much of the fine bump shows here (b), and a
@@ -181,9 +204,31 @@ void main() {
   vec4 diffuseColor = vec4( diffuse, opacity );
   ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
   vec3 totalEmissiveRadiance = emissive;
+  #ifdef USE_EMISSIVEMAP
+    totalEmissiveRadiance *= texture( emissiveMap, vMapUv ).rgb;
+  #endif
+  #if defined( EMISSIVE_SCATTER ) && defined( USE_MAP )
+    {
+      // Each repeat of the map (a window) by its own chance; the vertex colour (a building's tint) shuffles them.
+      #ifdef EMISSIVE_CELLS
+        float seed = dot( floor( vMapUv * EMISSIVE_CELLS ), vec2( 12.9898, 78.233 ) );
+      #else
+        float seed = dot( floor( vMapUv ), vec2( 12.9898, 78.233 ) );
+      #endif
+      #if defined( USE_COLOR ) || defined( USE_INSTANCING )
+        seed += dot( vColor.rgb, vec3( 39.3, 11.1, 23.7 ) ) * 17.0;
+      #endif
+      float on = fract( sin( seed ) * 43758.5453 ), bright = fract( sin( seed * 1.7 + 3.1 ) * 24634.6345 );
+      totalEmissiveRadiance *= step( on, EMISSIVE_SCATTER ) * ( 0.6 + 0.8 * bright );
+    }
+  #endif
 
   #ifdef USE_MAP
-    diffuseColor *= texture( map, vMapUv );
+    diffuseColor *= TILED( map, vMapUv );
+    #ifdef USE_ANTITILE
+      // And the whole drifts a little lighter and darker over tens of tiles, as a real surface weathers.
+      diffuseColor.rgb *= 0.86 + 0.28 * antiTileNoise( vMapUv * 0.045 + 17.0 );
+    #endif
   #endif
   #if defined( USE_COLOR ) || defined( USE_INSTANCING )
     diffuseColor *= vColor;

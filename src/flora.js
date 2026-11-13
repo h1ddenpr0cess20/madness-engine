@@ -185,6 +185,187 @@ export function pine(m, { hi = true, seed = 0, needle = 'needle', bark = 'bark' 
   m.bough(needle, 0, 0.22 + (hi ? 0.95 : 0.88) + 0.12, 0, 0.1, 0.3, hi ? 8 : 5, '#e0e0e0', { seed: v });
 }
 
+// ———————————————————————————————————————————————— trees of limbs and leaf cards
+
+const v3 = {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  mul: (a, k) => [a[0] * k, a[1] * k, a[2] * k],
+  lerp: (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+};
+
+/** A limb: a tapered tube from a (radius r0) to b (radius r1), `sides` round, smooth-shaded. */
+function limb(m, mat, a, b, r0, r1, sides, col) {
+  const d = v3.norm(v3.sub(b, a));
+  const u = v3.norm(v3.cross(d, Math.abs(d[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0])), w = v3.cross(d, u);
+  const ring = (c, r, k) => { const t = (k / sides) * Math.PI * 2, o = v3.add(v3.mul(u, Math.cos(t)), v3.mul(w, Math.sin(t))); return [v3.add(c, v3.mul(o, r)), o]; };
+  for (let k = 0; k < sides; k++) {
+    const [a0, n0] = ring(a, r0, k), [a1, n1] = ring(a, r0, k + 1), [b1] = ring(b, r1, k + 1), [b0] = ring(b, r1, k);
+    m.quad(mat, a0, a1, b1, b0, col, { normals: [n0, n1, n1, n0], uv: [[k / sides, 0], [(k + 1) / sides, 0], [(k + 1) / sides, 1], [k / sides, 1]] });
+  }
+}
+
+/**
+ * A leaf card: a square of the foliage atlas (textures/foliage.js) at `p`, `size` across, turned to face `face`
+ * with its twig toward `up`; drawn both ways round, each side shaded as the crown is at that point (`normal`), and
+ * coloured `col` (darker inside the crown and under it).
+ */
+function card(m, mat, p, face, up, size, normal, col, square) {
+  const f = v3.norm(face);
+  let e2 = v3.sub(up, v3.mul(f, v3.dot(up, f)));
+  if (Math.hypot(...e2) < 1e-4) e2 = v3.cross(f, [1, 0, 0]);
+  e2 = v3.norm(e2);
+  const e1 = v3.cross(e2, f), h = size / 2;
+  // The twig sits at the bottom middle of its square: the card hangs from p outward.
+  const at = (x, y) => v3.add(p, v3.add(v3.mul(e1, x * h), v3.mul(e2, y * h + h * 0.75)));
+  const A = at(-1, -1), B = at(1, -1), C = at(1, 1), D = at(-1, 1);
+  const u0 = (square % 2) * 0.5 + 0.004, v0 = Math.floor(square / 2) * 0.5 + 0.004, u1 = u0 + 0.492, v1 = v0 + 0.492;
+  // The atlas's rows run down; v up the card.
+  const uv = [[u0, v1], [u1, v1], [u1, v0], [u0, v0]];
+  const normals = [normal, normal, normal, normal];
+  m.quad(mat, A, B, C, D, col, { uv, normals });
+  m.quad(mat, D, C, B, A, col, { uv: [uv[3], uv[2], uv[1], uv[0]], normals });
+}
+
+/** The forms of the leafy trees: trunk height, the crown's middle and radii, limbs, how they spread, the bark. */
+const FORMS = {
+  // Wide and round, low limbs reaching out: an oak, a street maple grown big.
+  oak: { trunk: 0.4, c: 0.9, R: [0.5, 0.42], limbs: 5, spread: 1.05, bark: ['#5f4a38', '#4e3d2f'], r: 0.046, fill: 1 },
+  // Rounder and denser, limbs steeper: a maple, a linden.
+  maple: { trunk: 0.36, c: 0.92, R: [0.46, 0.48], limbs: 4, spread: 0.75, bark: ['#6a5c4e', '#575046'], r: 0.042, fill: 1.15 },
+  // A vase: limbs up and out from low on the trunk, the crown wide at the top: an elm, a honey locust.
+  elm: { trunk: 0.34, c: 1.0, R: [0.52, 0.38], limbs: 4, spread: 0.55, bark: ['#655648', '#544739'], r: 0.044, fill: 0.9 },
+  // Slim and upright, a leader to the top, pale bark marked dark, a narrow crown that hangs: a birch.
+  birch: { trunk: 0.5, c: 0.98, R: [0.27, 0.48], limbs: 6, spread: 0.6, bark: ['#e4e0d6', '#2e2b28'], r: 0.026, fill: 0.6, leader: true, droop: 0.25 },
+};
+
+/**
+ * A leafy tree of limbs and leaf cards, standing on y = 0, a little over a tile high (as `oak`, crown half a tile
+ * across): a trunk that flares at the root, limbs that fork toward the crown's edge, and clusters of leaf cards at
+ * their tips, with more about the crown's shell so it reads full. `form` is oak, maple, elm or birch; `leaf` the
+ * material of the cards (textures/foliage.js `foliageTexture(GFX, 'broad')`, alpha-tested), `bark` of the wood.
+ * `hi` false draws a far version: a few limbs and a third of the cards, bigger.
+ */
+export function leafy(m, { hi = true, seed = 0, form = 'oak', leaf = 'leafCard', bark = 'bark' } = {}) {
+  const F = FORMS[form] ?? FORMS.oak, rnd = rngFor(seed, 29 + Object.keys(FORMS).indexOf(form));
+  const [Rx, Ry] = [F.R[0] * (0.9 + 0.2 * rnd()), F.R[1] * (0.9 + 0.2 * rnd())];
+  const center = [(rnd() - 0.5) * 0.06, F.c, (rnd() - 0.5) * 0.06];
+  const sides = hi ? 7 : 4;
+  // Where in the crown a point is: 0 at its middle, 1 at its shell.
+  const shell = (p) => Math.hypot((p[0] - center[0]) / Rx, (p[1] - center[1]) / Ry, (p[2] - center[2]) / Rx);
+  const onShell = (dir, k) => v3.add(center, [dir[0] * Rx * k, dir[1] * Ry * k, dir[2] * Rx * k]);
+  const outward = (p) => v3.norm([(p[0] - center[0]) / (Rx * Rx), (p[1] - center[1]) / (Ry * Ry), (p[2] - center[2]) / (Rx * Rx)]);
+  const bark0 = F.bark[0];
+  const leaves = [];
+
+  // The trunk: a flared foot, then up in a few bends to where the limbs part (to the top, for a leader).
+  const top = [center[0] * 0.6, F.trunk, center[2] * 0.6];
+  const r = F.r * (0.9 + 0.2 * rnd());
+  limb(m, bark, [0, -0.06, 0], [0, 0.06, 0], r * 1.6, r * 1.1, sides, bark0);
+  let prev = [0, 0.06, 0], pr = r * 1.1;
+  const segs = hi ? 3 : 1;
+  for (let k = 1; k <= segs; k++) {
+    const t = k / segs, p = [top[0] * t + (rnd() - 0.5) * 0.02, 0.06 + (top[1] - 0.06) * t, top[2] * t + (rnd() - 0.5) * 0.02], rr = r * (1 - 0.25 * t);
+    limb(m, bark, prev, p, pr, rr, sides, bark0);
+    prev = p; pr = rr;
+  }
+  if (F.leader) {
+    // A birch's leader, on up through the crown, and its dark marks.
+    // It ends inside the crown, in leaves of its own: not a bare pole out of the top.
+    const tip = v3.add(center, [0, Ry * 0.6, 0]);
+    limb(m, bark, top, tip, r * 0.75, r * 0.2, sides, bark0);
+    leaves.push(tip, v3.lerp(top, tip, 0.75), v3.lerp(top, tip, 0.5));
+    if (hi) for (let k = 0; k < 9; k++) {
+      const y = 0.08 + k * 0.1, a = rnd() * Math.PI * 2, rr = r * (1.02 - 0.3 * (y / F.trunk));
+      if (y > F.trunk) break;
+      const c = [Math.cos(a) * rr, y, Math.sin(a) * rr], d = [-Math.sin(a), 0, Math.cos(a)];
+      m.quad(bark, v3.add(c, v3.mul(d, -0.012)), v3.add(c, v3.mul(d, 0.012)), v3.add(c, [d[0] * 0.012, 0.012, d[2] * 0.012]), v3.add(c, [-d[0] * 0.012, 0.012, -d[2] * 0.012]), F.bark[1], { normals: Array(4).fill([Math.cos(a), 0, Math.sin(a)]) });
+    }
+  }
+
+  // The limbs: from the trunk's top (or up the leader) toward points on the crown's shell, forking as they go.
+  const grow = (p, target, rr, depth) => {
+    const mid = v3.add(v3.lerp(p, target, 0.5 + 0.15 * rnd()), [(rnd() - 0.5) * 0.05, (rnd() - 0.3) * 0.05, (rnd() - 0.5) * 0.05]);
+    if (depth === 0) {
+      limb(m, bark, p, target, rr, rr * 0.5, hi ? 4 : 3, bark0);
+      leaves.push(target, v3.lerp(p, target, 0.55));
+      if (F.leader) leaves.push(v3.lerp(p, target, 0.82));
+      return;
+    }
+    limb(m, bark, p, mid, rr, rr * 0.72, Math.max(3, sides - (2 - depth)), bark0);
+    const kids = hi ? 2 + (rnd() < 0.5 ? 1 : 0) : 2;
+    for (let k = 0; k < kids; k++) {
+      const dir = v3.norm(v3.add(v3.norm(v3.sub(target, center)), [(rnd() - 0.5) * 0.9, (rnd() - 0.4) * 0.6, (rnd() - 0.5) * 0.9]));
+      const t2 = onShell(dir, 0.72 + 0.22 * rnd());
+      grow(mid, F.droop ? v3.add(t2, [0, -F.droop * Ry * rnd(), 0]) : t2, rr * 0.68, depth - 1);
+    }
+  };
+  const n = hi ? F.limbs : Math.max(3, F.limbs - 2);
+  for (let k = 0; k < n; k++) {
+    const az = (k / n) * Math.PI * 2 + rnd() * 0.8;
+    const el = F.spread * (0.6 + 0.5 * rnd());
+    const dir = [Math.sin(el) * Math.cos(az), Math.cos(el), Math.sin(el) * Math.sin(az)];
+    const from = F.leader ? [top[0], top[1] + (Ry * 1.2) * (k / n) * 0.8, top[2]] : top;
+    grow(from, onShell(dir, 0.8), r * 0.62, hi ? 2 : 1);
+  }
+
+  // The leaves: clusters at the limbs' tips and along them, and more about the shell where there are gaps.
+  const extra = Math.round((hi ? 60 : 16) * F.fill);
+  for (let k = 0; k < extra; k++) {
+    const y = rnd() * 2 - 1, a = rnd() * Math.PI * 2, s = Math.sqrt(1 - y * y);
+    leaves.push(onShell([s * Math.cos(a), y * 0.9 + (F.droop ? -0.1 : 0.1), s * Math.sin(a)], 0.55 + 0.42 * rnd()));
+  }
+  const size = (hi ? 0.3 : 0.46) * Math.min(1.25, Math.max(0.75, Rx / 0.45));
+  const per = hi ? 2 : 1;
+  for (const p of leaves) {
+    const out = outward(p), sh = Math.min(1, shell(p));
+    // Shaded by where it is: dark inside and underneath, light at the top of the shell.
+    const lit = (0.5 + 0.5 * sh) * (0.72 + 0.28 * ((p[1] - (center[1] - Ry)) / (2 * Ry)));
+    const col = [lit, lit, lit];
+    const normal = v3.norm(v3.add(out, [0, 0.35, 0]));
+    for (let k = 0; k < per; k++) {
+      const face = v3.norm(v3.add(out, [(rnd() - 0.5) * 1.6, (rnd() - 0.2) * 1.2, (rnd() - 0.5) * 1.6]));
+      // The spray reaches out from its twig (a birch's hangs a little), so the twig's end is in leaves.
+      const up = F.droop ? v3.norm(v3.add(out, [0, -0.3, 0])) : v3.norm(v3.add(out, [0, 0.6, 0]));
+      card(m, leaf, v3.add(p, v3.mul(out, -size * 0.25)), face, up, size * (0.85 + 0.3 * rnd()), normal, col, Math.floor(rnd() * 4));
+    }
+  }
+}
+
+/**
+ * A spruce (or fir) of needle cards: a straight trunk to the top and whorls of boughs round it, each a card of
+ * needles (textures/foliage.js `'needle'`) reaching out and down a little, longest near the ground; a little over
+ * a tile and a half high, half a tile across at the foot, as `pine`.
+ */
+export function spruce(m, { hi = true, seed = 0, needle = 'needleCard', bark = 'bark' } = {}) {
+  const rnd = rngFor(seed, 41), H = 1.55 + rnd() * 0.15, R = 0.48 + rnd() * 0.08;
+  limb(m, bark, [0, -0.05, 0], [0, H * 0.98, 0], 0.045, 0.006, hi ? 6 : 4, '#4e3a2a');
+  const whorls = hi ? 11 : 6;
+  for (let w = 0; w < whorls; w++) {
+    const f = w / (whorls - 1), y = 0.16 + f * (H - 0.28);
+    const len = R * Math.pow(1 - f * 0.92, 0.95) * (0.9 + 0.2 * rnd());
+    const count = hi ? 6 : 4;
+    for (let k = 0; k < count; k++) {
+      const a = (k / count) * Math.PI * 2 + w * 0.7 + rnd() * 0.4, out = [Math.cos(a), 0, Math.sin(a)];
+      const droop = -0.25 - 0.2 * (1 - f);
+      const dir = v3.norm([out[0], droop, out[2]]);
+      const side = [-out[2], 0, out[0]];
+      const lit = 0.55 + 0.45 * f;
+      const normal = v3.norm([out[0], 0.7, out[2]]);
+      // The bough lies flat-ish (its face up), the spray hanging out along it; a second card across it, on edge.
+      const flat = v3.norm(v3.cross(dir, side));
+      card(m, needle, [out[0] * 0.02, y, out[2] * 0.02], flat[1] < 0 ? v3.mul(flat, -1) : flat, dir, len, normal, [lit, lit, lit], Math.floor(rnd() * 4));
+      if (hi) card(m, needle, [out[0] * 0.02, y - 0.01, out[2] * 0.02], side, dir, len * 0.8, normal, [lit * 0.9, lit * 0.9, lit * 0.9], Math.floor(rnd() * 4));
+    }
+  }
+  // The leader: a small spray straight up.
+  card(m, needle, [0, H - 0.18, 0], [1, 0, 0], [0, 1, 0], 0.22, [0, 1, 0], [1, 1, 1], 0);
+  card(m, needle, [0, H - 0.18, 0], [0, 0, 1], [0, 1, 0], 0.22, [0, 1, 0], [1, 1, 1], 1);
+}
+
 const BLOOM = { spring: '#f6d8e8', summer: null, autumn: '#d8402a', winter: null };
 
 /** A fruit tree from an orchard: a short trunk, a round crown, blossom in spring and fruit in autumn (`season`). Two variants, by `seed`. */
@@ -228,4 +409,4 @@ export function ore(m, { hi = true, seed = 0 } = {}) {
 }
 
 /** The trees by name, for a game that picks one. */
-export const FLORA = Object.freeze({ palm, fanPalm, redwood, cypress, oak, birch, pine, fruitTree, boulder, ore });
+export const FLORA = Object.freeze({ palm, fanPalm, redwood, cypress, oak, birch, pine, fruitTree, boulder, ore, leafy, spruce });

@@ -82,12 +82,16 @@ function standardDefines(key) {
     HAS_NORMAL: key.hasNormal,
     USE_INSTANCING: key.instanced,
     USE_STRANDS: key.strands,
+    USE_ANTITILE: key.antiTile,
     USE_DETAILMAP: key.detailMap,
+    USE_EMISSIVEMAP: key.emissiveMap,
     USE_SUBSURFACE: key.subsurface,
   }) + `#define NUM_DIR_LIGHTS ${key.numDir}\n#define NUM_POINT_LIGHTS ${key.numPoint}\n`
     + `#define NUM_HEMI_LIGHTS ${key.numHemi}\n#define NUM_DIR_LIGHT_SHADOWS ${key.numDirShadows}\n`
     + (key.envMap ? cubeUVDefines(key.env) : '')
-    + (key.alphaTest > 0 ? `#define USE_ALPHATEST\n#define ALPHA_TEST ${key.alphaTest.toFixed(4)}\n` : '');
+    + (key.alphaTest > 0 ? `#define USE_ALPHATEST\n#define ALPHA_TEST ${key.alphaTest.toFixed(4)}\n` : '')
+    + (key.emissiveScatter > 0 ? `#define EMISSIVE_SCATTER ${key.emissiveScatter.toFixed(3)}\n` : '')
+    + (key.emissiveCells ? `#define EMISSIVE_CELLS vec2( ${key.emissiveCells[0].toFixed(1)}, ${key.emissiveCells[1].toFixed(1)} )\n` : '');
 }
 
 export function programSources(key, material) {

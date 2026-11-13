@@ -93,3 +93,53 @@ test('instanced programs read the copies, and plain ones do not', async () => {
   assert.match(depthWGSL(true), /instanceLook/);
   assert.doesNotMatch(depthWGSL(), /instanceLook/);
 });
+
+test('a material that hides its repeat samples its tiles through the anti-tiling lookup, in both languages', async () => {
+  const { programSources } = await import('../src/gfx/shaders/glsl.js');
+  const { moduleSource } = await import('../src/gfx/shaders/wgsl.js');
+  const key = { kind: 'standard', output: 'srgb', opaque: true, hasNormal: true, vertexColors: true, map: true, bumpMap: true, numDir: 1, numPoint: 0, numHemi: 1, numDirShadows: 1 };
+  const [, fs] = programSources({ ...key, antiTile: true });
+  assert.match(fs, /#define USE_ANTITILE/);
+  assert.match(fs, /vec4 untiled\(/);
+  const wgsl = moduleSource({ ...key, antiTile: true });
+  assert.match(wgsl, /fn untiled\(/);
+  assert.match(wgsl, /untiled\(t_map, s_map, in\.mapUv/);
+  assert.match(wgsl, /untiled\(t_bump, s_bump/);
+  assert.doesNotMatch(moduleSource(key), /untiled/);
+  assert.equal(new (await import('../src/gfx/index.js')).MeshStandardMaterial().antiTile, false);
+});
+
+test('a material with an emissive map glows only where the map says, over the colour map\'s layout, in both languages', async () => {
+  const { programSources } = await import('../src/gfx/shaders/glsl.js');
+  const { moduleSource } = await import('../src/gfx/shaders/wgsl.js');
+  const gfx = await import('../src/gfx/index.js');
+  const key = { kind: 'standard', output: 'srgb', opaque: true, hasNormal: true, vertexColors: true, map: true, bumpMap: false, numDir: 1, numPoint: 0, numHemi: 1, numDirShadows: 1 };
+  const [, fs] = programSources({ ...key, emissiveMap: true });
+  assert.match(fs, /uniform sampler2D emissiveMap/);
+  assert.match(fs, /totalEmissiveRadiance \*= texture\( emissiveMap, vMapUv \)/);
+  assert.match(moduleSource({ ...key, emissiveMap: true }), /totalEmissiveRadiance \*= textureSample\(t_emissive, s_emissive, in\.mapUv\)/);
+  assert.doesNotMatch(programSources(key)[1], /#define USE_EMISSIVEMAP/);
+  assert.match(fs, /#define USE_EMISSIVEMAP/);
+  assert.equal(new gfx.MeshStandardMaterial().emissiveMap, null);
+});
+
+test('emissive scatter lights each repeat of the map by its own chance: a share of the windows, in both languages', async () => {
+  const { programSources } = await import('../src/gfx/shaders/glsl.js');
+  const { moduleSource } = await import('../src/gfx/shaders/wgsl.js');
+  const gfx = await import('../src/gfx/index.js');
+  const key = { kind: 'standard', output: 'srgb', opaque: true, hasNormal: true, vertexColors: true, map: true, numDir: 1, numPoint: 0, numHemi: 1, numDirShadows: 0 };
+  assert.match(programSources({ ...key, emissiveScatter: 0.55 })[1], /#define EMISSIVE_SCATTER 0\.550/);
+  assert.match(moduleSource({ ...key, emissiveScatter: 0.55 }), /step\(on, 0\.550\)/);
+  assert.doesNotMatch(programSources(key)[1], /#define EMISSIVE_SCATTER/);
+  assert.equal(new gfx.MeshStandardMaterial().emissiveScatter, 0);
+});
+
+test('emissive cells split each repeat of the map for the scatter: a pane at a time, in both languages', async () => {
+  const { programSources } = await import('../src/gfx/shaders/glsl.js');
+  const { moduleSource } = await import('../src/gfx/shaders/wgsl.js');
+  const key = { kind: 'standard', output: 'srgb', opaque: true, hasNormal: true, vertexColors: true, map: true, numDir: 1, numPoint: 0, numHemi: 1, numDirShadows: 0, emissiveScatter: 0.4 };
+  assert.match(programSources({ ...key, emissiveCells: [3, 1] })[1], /#define EMISSIVE_CELLS vec2\( 3\.0, 1\.0 \)/);
+  assert.match(moduleSource({ ...key, emissiveCells: [3, 1] }), /floor\(in\.mapUv \* vec2f\(3\.0, 1\.0\)\)/);
+  assert.doesNotMatch(programSources(key)[1], /#define EMISSIVE_CELLS/);
+  assert.doesNotMatch(moduleSource(key), /in\.mapUv \* vec2f/);
+});

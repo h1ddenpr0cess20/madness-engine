@@ -109,6 +109,9 @@ fn vs(in: VertexInput) -> Varyings {
 #ifdef USE_TRANSMISSION
 #include <transmission>
 #endif
+#ifdef USE_ANTITILE
+#include <antitile>
+#endif
 #ifdef USE_BUMPMAP
 #include <bump>
 #endif
@@ -167,9 +170,36 @@ fn strandSpecular(L: vec3f, lightColor: vec3f, N: vec3f, V: vec3f, T: vec3f, jit
 @fragment
 fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) vec4f {
   var diffuseColor = vec4f(u_draw.diffuse, u_draw.opacity);
-  let totalEmissiveRadiance = u_draw.emissive;
+  var totalEmissiveRadiance = u_draw.emissive;
+  #ifdef USE_EMISSIVEMAP
+  totalEmissiveRadiance *= textureSample(t_emissive, s_emissive, in.mapUv).rgb;
+  #endif
+  #ifdef EMISSIVE_SCATTER
   #ifdef USE_MAP
+  {
+    // Each repeat of the map (a window) by its own chance; the vertex colour (a building's tint) shuffles them.
+    #ifdef EMISSIVE_CELLS
+    var seed = dot(floor(in.mapUv * EMISSIVE_CELLS), vec2f(12.9898, 78.233));
+    #else
+    var seed = dot(floor(in.mapUv), vec2f(12.9898, 78.233));
+    #endif
+    #if defined(USE_COLOR) || defined(USE_INSTANCING)
+    seed += dot(in.color.rgb, vec3f(39.3, 11.1, 23.7)) * 17.0;
+    #endif
+    let on = fract(sin(seed) * 43758.5453);
+    let bright = fract(sin(seed * 1.7 + 3.1) * 24634.6345);
+    totalEmissiveRadiance *= step(on, EMISSIVE_SCATTER) * (0.6 + 0.8 * bright);
+  }
+  #endif
+  #endif
+  #ifdef USE_MAP
+  #ifdef USE_ANTITILE
+  diffuseColor *= untiled(t_map, s_map, in.mapUv, dpdx(in.mapUv), dpdy(in.mapUv));
+  // And the whole drifts a little lighter and darker over tens of tiles, as a real surface weathers.
+  diffuseColor = vec4f(diffuseColor.rgb * (0.86 + 0.28 * antiTileNoise(in.mapUv * 0.045 + 17.0)), diffuseColor.a);
+  #else
   diffuseColor *= textureSample(t_map, s_map, in.mapUv);
+  #endif
   #endif
   #if defined(USE_COLOR) || defined(USE_INSTANCING)
   diffuseColor *= in.color;
