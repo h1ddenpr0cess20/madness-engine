@@ -16,7 +16,6 @@ The granite option uses the exact API key `'grey'` (not `'gray'`).
 | `depth` | `0.72` | Counter depth in meters; supported range is 0.55–1.1 m. |
 | `height` | `0.92` | Counter height in meters; supported range is 0.7–1.2 m. |
 | `granite` | `'grey'` | Key in the granite library. |
-
 | `wood` | `'walnut'` | Key in `WOOD_SPECIES`. |
 | `hardwareMetal` | `'brass'` | Finish for cabinet pulls and hinges. |
 | `environment` | `null` | Optional reflection environment for metal hardware. |

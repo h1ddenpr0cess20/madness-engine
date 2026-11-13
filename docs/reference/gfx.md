@@ -15,7 +15,7 @@ The public `GFX` entry point re-exports the engine's math, core scene types, and
 - Scene graph: `Scene`, `Group`, `Object3D`, and `Mesh`.
 - Geometry: `BufferGeometry`, `BufferAttribute`, and the built-in geometry constructors.
 - Materials: basic, standard, and physical material classes, plus the engine's custom shader material support.
-- Cameras and lighting: perspective and orthographic cameras, directional, point, spot, and hemisphere lights.
+- Cameras and lighting: perspective and orthographic cameras, directional, point, and hemisphere lights.
 - Math: vectors, matrices, quaternions, colors, and bounding volumes.
 - Textures: texture objects and canvas textures, wrapping modes, mapping modes, and color-space constants.
 

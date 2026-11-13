@@ -304,6 +304,7 @@ unchanged. `setMetal()` changes the finish, and `setWood()` puts the wood back.
 | `vine` | `true` or `false`: the roots entwined up the shaft (fixed at creation) | `true` |
 | `tendrils` | whole number from 8 to 32: how many roots make the cradle (fixed at creation) | `18` |
 | `seed` | any number: shapes the gnarls (fixed at creation) | `7` |
+| `detail` | positive number: scales the shaft, root, and tube mesh subdivisions | `1` |
 
 ```js
 import * as GFX from 'madness-engine/gfx';
