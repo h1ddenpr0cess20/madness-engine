@@ -174,6 +174,20 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #ifdef USE_EMISSIVEMAP
   totalEmissiveRadiance *= textureSample(t_emissive, s_emissive, in.mapUv).rgb;
   #endif
+  #ifdef EMISSIVE_SCATTER
+  #ifdef USE_MAP
+  {
+    // Each repeat of the map (a window) by its own chance; the vertex colour (a building's tint) shuffles them.
+    var seed = dot(floor(in.mapUv), vec2f(12.9898, 78.233));
+    #if defined(USE_COLOR) || defined(USE_INSTANCING)
+    seed += dot(in.color.rgb, vec3f(39.3, 11.1, 23.7)) * 17.0;
+    #endif
+    let on = fract(sin(seed) * 43758.5453);
+    let bright = fract(sin(seed * 1.7 + 3.1) * 24634.6345);
+    totalEmissiveRadiance *= step(on, EMISSIVE_SCATTER) * (0.6 + 0.8 * bright);
+  }
+  #endif
+  #endif
   #ifdef USE_MAP
   #ifdef USE_ANTITILE
   diffuseColor *= untiled(t_map, s_map, in.mapUv, dpdx(in.mapUv), dpdy(in.mapUv));

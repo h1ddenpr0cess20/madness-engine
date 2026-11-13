@@ -207,6 +207,17 @@ void main() {
   #ifdef USE_EMISSIVEMAP
     totalEmissiveRadiance *= texture( emissiveMap, vMapUv ).rgb;
   #endif
+  #if defined( EMISSIVE_SCATTER ) && defined( USE_MAP )
+    {
+      // Each repeat of the map (a window) by its own chance; the vertex colour (a building's tint) shuffles them.
+      float seed = dot( floor( vMapUv ), vec2( 12.9898, 78.233 ) );
+      #if defined( USE_COLOR ) || defined( USE_INSTANCING )
+        seed += dot( vColor.rgb, vec3( 39.3, 11.1, 23.7 ) ) * 17.0;
+      #endif
+      float on = fract( sin( seed ) * 43758.5453 ), bright = fract( sin( seed * 1.7 + 3.1 ) * 24634.6345 );
+      totalEmissiveRadiance *= step( on, EMISSIVE_SCATTER ) * ( 0.6 + 0.8 * bright );
+    }
+  #endif
 
   #ifdef USE_MAP
     diffuseColor *= TILED( map, vMapUv );

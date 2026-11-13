@@ -122,3 +122,14 @@ test('a material with an emissive map glows only where the map says, over the co
   assert.match(fs, /#define USE_EMISSIVEMAP/);
   assert.equal(new gfx.MeshStandardMaterial().emissiveMap, null);
 });
+
+test('emissive scatter lights each repeat of the map by its own chance: a share of the windows, in both languages', async () => {
+  const { programSources } = await import('../src/gfx/shaders/glsl.js');
+  const { moduleSource } = await import('../src/gfx/shaders/wgsl.js');
+  const gfx = await import('../src/gfx/index.js');
+  const key = { kind: 'standard', output: 'srgb', opaque: true, hasNormal: true, vertexColors: true, map: true, numDir: 1, numPoint: 0, numHemi: 1, numDirShadows: 0 };
+  assert.match(programSources({ ...key, emissiveScatter: 0.55 })[1], /#define EMISSIVE_SCATTER 0\.550/);
+  assert.match(moduleSource({ ...key, emissiveScatter: 0.55 }), /step\(on, 0\.550\)/);
+  assert.doesNotMatch(programSources(key)[1], /#define EMISSIVE_SCATTER/);
+  assert.equal(new gfx.MeshStandardMaterial().emissiveScatter, 0);
+});

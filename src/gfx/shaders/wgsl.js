@@ -95,6 +95,7 @@ function standardDefines(key) {
     USE_EMISSIVEMAP: key.emissiveMap,
     USE_SUBSURFACE: key.subsurface,
     ALPHA_TEST: key.alphaTest > 0 ? key.alphaTest.toFixed(4) : null,
+    EMISSIVE_SCATTER: key.emissiveScatter > 0 ? key.emissiveScatter.toFixed(3) : null,
     ...(key.envMap ? cubeUVDefines(key.env) : {}),
   };
 }

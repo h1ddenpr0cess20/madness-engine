@@ -491,6 +491,8 @@ function describe(object, geometry, material, side, context, frame) {
       detailMap: !!material.detailMap && !!material.map && !!material.bumpMap,
       // Where it glows, over the colour map's layout (lit windows on a facade, the letters of a sign).
       emissiveMap: !!material.emissiveMap && !!material.map,
+      // Which of the map's repeats glow: a share, each repeat (a window) by its own chance.
+      emissiveScatter: material.emissiveScatter > 0 && !!material.map ? Math.min(1, material.emissiveScatter) : 0,
       subsurface: physical && material.subsurface > 0,
       vertexColors: material.vertexColors === true,
       flat: material.flatShading === true || !hasNormal,
