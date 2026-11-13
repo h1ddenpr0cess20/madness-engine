@@ -1,6 +1,8 @@
 import { Mesher } from '../mesher.js';
 import { PALETTE, barrel, crate, drawTimber, logPile, pickFrom, rngFor } from './common.js';
 import * as california from './california.js';
+import * as newyork from './newyork.js';
+import { PACK_FOOTPRINTS, PACK_MODELS } from './packs/index.js';
 import * as castle from './castle.js';
 import * as civic from './civic.js';
 import * as farm from './farm.js';
@@ -10,6 +12,8 @@ import * as works from './works.js';
 
 export { castleScaffold } from './castle.js';
 export { CALIFORNIA_FOOTPRINTS } from './california.js';
+export { NEWYORK_FOOTPRINTS } from './newyork.js';
+export { PACK_LABELS, PACK_OF } from './packs/index.js';
 export { createGraniteKitchen } from '../props/granite-kitchen.js';
 
 /**
@@ -27,9 +31,10 @@ export { createGraniteKitchen } from '../props/granite-kitchen.js';
  * from 0 to 1): a footing, walls that rise, scaffolding and stacked materials.
  */
 
-// The California models, without the footprints that come with them.
+// The California and New York models, without the footprints that come with them.
 const coast = Object.fromEntries(Object.entries(california).filter(([k]) => k !== 'CALIFORNIA_FOOTPRINTS'));
-export const MODELS = { ...homes, ...farm, ...works, ...industry, ...civic, ...coast, castle: castle.castle };
+const city = Object.fromEntries(Object.entries(newyork).filter(([k]) => k !== 'NEWYORK_FOOTPRINTS'));
+export const MODELS = { ...homes, ...farm, ...works, ...industry, ...civic, ...coast, ...city, ...PACK_MODELS, castle: castle.castle };
 
 /** The footprint each model is drawn for: [width along the street, depth] in tiles. */
 export const FOOTPRINTS = Object.freeze({
@@ -40,6 +45,8 @@ export const FOOTPRINTS = Object.freeze({
   well: [1, 1], green: [3, 3], tavern: [3, 3], chapel: [3, 4], healer: [2, 2], market: [3, 3],
   watchtower: [2, 2], barracks: [4, 3], gatehouse: [2, 2], cathedral: [5, 7], castle: [6, 6],
   ...california.CALIFORNIA_FOOTPRINTS,
+  ...newyork.NEWYORK_FOOTPRINTS,
+  ...PACK_FOOTPRINTS,
 });
 
 /** A frame of scaffolding round a rectangle: poles, ledgers and a plank platform. */

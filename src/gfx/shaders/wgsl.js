@@ -20,6 +20,7 @@
 
 import { preprocess } from './preprocess.js';
 
+import antitile from './wgsl/chunks/antitile.wgsl.js';
 import bindings from './wgsl/chunks/bindings.wgsl.js';
 import bump from './wgsl/chunks/bump.wgsl.js';
 import common from './wgsl/chunks/common.wgsl.js';
@@ -51,7 +52,7 @@ export const MAX_POINT_LIGHTS = 8;
 export const MAX_HEMI_LIGHTS = 4;
 
 const CHUNKS = {
-  bindings, bump, common, cube_uv, draw, frame, instancing, iridescence, output,
+  antitile, bindings, bump, common, cube_uv, draw, frame, instancing, iridescence, output,
   physical_lighting, pmrem_vertex, shadow_vertex, shadowmap, transmission,
 };
 
@@ -89,9 +90,13 @@ function standardDefines(key) {
     NUM_DIR_LIGHT_SHADOWS: key.numDirShadows,
     USE_ALPHATEST: key.alphaTest > 0,
     USE_STRANDS: key.strands,
+    USE_ANTITILE: key.antiTile,
     USE_DETAILMAP: key.detailMap,
+    USE_EMISSIVEMAP: key.emissiveMap,
     USE_SUBSURFACE: key.subsurface,
     ALPHA_TEST: key.alphaTest > 0 ? key.alphaTest.toFixed(4) : null,
+    EMISSIVE_SCATTER: key.emissiveScatter > 0 ? key.emissiveScatter.toFixed(3) : null,
+    EMISSIVE_CELLS: key.emissiveCells ? `vec2f(${key.emissiveCells[0].toFixed(1)}, ${key.emissiveCells[1].toFixed(1)})` : null,
     ...(key.envMap ? cubeUVDefines(key.env) : {}),
   };
 }

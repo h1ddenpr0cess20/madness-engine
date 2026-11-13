@@ -106,9 +106,12 @@ export function closestOnTriangle(px, py, pz, t, i, out) {
  * underside. Left off, a ball under any box is pushed down, as in the tracks.
  */
 export class World {
-  constructor({ cols, rows, slideUnder = false }) {
+  constructor({ cols, rows, slideUnder = false, x0 = 0, z0 = 0 }) {
     this.cols = cols;
     this.rows = rows;
+    /** Where its grid begins, in tiles: a world can be one piece of a bigger one (see `Worlds`), anywhere in it. */
+    this.x0 = x0;
+    this.z0 = z0;
     this.slideUnder = slideUnder;
     this._tris = [];
     this._buckets = Array.from({ length: cols * rows }, () => []);
@@ -124,8 +127,8 @@ export class World {
   addStatic(box) {
     box.solid = true;
     box.vx = box.vy = box.vz = 0;
-    const x0 = Math.max(0, Math.floor(box.min[0])), x1 = Math.min(this.cols - 1, Math.floor(box.max[0]));
-    const z0 = Math.max(0, Math.floor(box.min[2])), z1 = Math.min(this.rows - 1, Math.floor(box.max[2]));
+    const x0 = Math.max(0, Math.floor(box.min[0] - this.x0)), x1 = Math.min(this.cols - 1, Math.floor(box.max[0] - this.x0));
+    const z0 = Math.max(0, Math.floor(box.min[2] - this.z0)), z1 = Math.min(this.rows - 1, Math.floor(box.max[2] - this.z0));
     for (let z = z0; z <= z1; z++) {
       for (let x = x0; x <= x1; x++) {
         const k = z * this.cols + x;
@@ -141,8 +144,8 @@ export class World {
     cy.cylinder = true;
     cy.solid = true;
     cy.vx = cy.vy = cy.vz = 0;
-    const x0 = Math.max(0, Math.floor(cy.x - cy.r)), x1 = Math.min(this.cols - 1, Math.floor(cy.x + cy.r));
-    const z0 = Math.max(0, Math.floor(cy.z - cy.r)), z1 = Math.min(this.rows - 1, Math.floor(cy.z + cy.r));
+    const x0 = Math.max(0, Math.floor(cy.x - cy.r - this.x0)), x1 = Math.min(this.cols - 1, Math.floor(cy.x + cy.r - this.x0));
+    const z0 = Math.max(0, Math.floor(cy.z - cy.r - this.z0)), z1 = Math.min(this.rows - 1, Math.floor(cy.z + cy.r - this.z0));
     for (let z = z0; z <= z1; z++) {
       for (let x = x0; x <= x1; x++) {
         const k = z * this.cols + x;
@@ -157,7 +160,8 @@ export class World {
   boxesNear(x, z, r, out) {
     out.length = 0;
     for (const b of this.boxes) out.push(b);
-    const x0 = Math.floor(x - r), x1 = Math.floor(x + r), z0 = Math.floor(z - r), z1 = Math.floor(z + r);
+    const x0 = Math.max(0, Math.floor(x - r - this.x0)), x1 = Math.min(this.cols - 1, Math.floor(x + r - this.x0));
+    const z0 = Math.max(0, Math.floor(z - r - this.z0)), z1 = Math.min(this.rows - 1, Math.floor(z + r - this.z0));
     for (let gz = z0; gz <= z1; gz++) {
       for (let gx = x0; gx <= x1; gx++) {
         const list = this._statics.get(gz * this.cols + gx);
@@ -170,10 +174,10 @@ export class World {
   addTriangle(ax, ay, az, bx, by, bz, cx, cy, cz) {
     const index = this._tris.length / 9;
     this._tris.push(ax, ay, az, bx, by, bz, cx, cy, cz);
-    const x0 = Math.max(0, Math.floor(Math.min(ax, bx, cx) - 1e-4));
-    const x1 = Math.min(this.cols - 1, Math.floor(Math.max(ax, bx, cx) + 1e-4));
-    const z0 = Math.max(0, Math.floor(Math.min(az, bz, cz) - 1e-4));
-    const z1 = Math.min(this.rows - 1, Math.floor(Math.max(az, bz, cz) + 1e-4));
+    const x0 = Math.max(0, Math.floor(Math.min(ax, bx, cx) - this.x0 - 1e-4));
+    const x1 = Math.min(this.cols - 1, Math.floor(Math.max(ax, bx, cx) - this.x0 + 1e-4));
+    const z0 = Math.max(0, Math.floor(Math.min(az, bz, cz) - this.z0 - 1e-4));
+    const z1 = Math.min(this.rows - 1, Math.floor(Math.max(az, bz, cz) - this.z0 + 1e-4));
     for (let z = z0; z <= z1; z++) {
       for (let x = x0; x <= x1; x++) this._buckets[z * this.cols + x].push(index);
     }
@@ -199,8 +203,8 @@ export class World {
   /** Calls `visit(i)` once for each triangle near the footprint of a sphere at (x, z). */
   near(x, z, r, visit) {
     const stamp = ++this._stamp;
-    const x0 = Math.max(0, Math.floor(x - r)), x1 = Math.min(this.cols - 1, Math.floor(x + r));
-    const z0 = Math.max(0, Math.floor(z - r)), z1 = Math.min(this.rows - 1, Math.floor(z + r));
+    const x0 = Math.max(0, Math.floor(x - r - this.x0)), x1 = Math.min(this.cols - 1, Math.floor(x + r - this.x0));
+    const z0 = Math.max(0, Math.floor(z - r - this.z0)), z1 = Math.min(this.rows - 1, Math.floor(z + r - this.z0));
     for (let gz = z0; gz <= z1; gz++) {
       for (let gx = x0; gx <= x1; gx++) {
         const bucket = this._buckets[gz * this.cols + gx];
@@ -212,6 +216,76 @@ export class World {
         }
       }
     }
+  }
+}
+
+/**
+ * A world made of pieces that come and go: for a map too big to hold at once (a city, a country), each piece
+ * its own `World` over its own patch (`x0`, `z0`, `cols`, `rows`), added as the ball nears it and removed when
+ * it is left behind. It stands in for a World wherever one is asked for (`stepBall`): a ball near the seam
+ * between two pieces touches both, as if they were one. A piece's triangles may run past its patch; give it a
+ * patch that covers them all.
+ *
+ * Asked what is near a ball, it copies the few triangles it finds into a small table of its own, so the
+ * pieces never have to be joined into one long list.
+ */
+export class Worlds {
+  constructor({ slideUnder = false, capacity = 4096 } = {}) {
+    this.slideUnder = slideUnder;
+    this.pieces = new Set();
+    this.boxes = [];
+    this._grow(capacity);
+  }
+
+  _grow(n) {
+    const t = new Float32Array(n * 9), m = new Float32Array(n * 3);
+    if (this.triangles) { t.set(this.triangles); m.set(this.normals); }
+    this.triangles = t;
+    this.normals = m;
+    this.capacity = n;
+  }
+
+  add(world) { this.pieces.add(world); return world; }
+  remove(world) { this.pieces.delete(world); }
+
+  /** Whether a piece covers (x, z), in tiles: the ball is on known ground. */
+  covers(x, z) {
+    for (const w of this.pieces) if (x >= w.x0 && z >= w.z0 && x < w.x0 + w.cols && z < w.z0 + w.rows) return true;
+    return false;
+  }
+
+  near(x, z, r, visit) {
+    let count = 0;
+    for (const w of this.pieces) {
+      if (x + r < w.x0 || z + r < w.z0 || x - r > w.x0 + w.cols || z - r > w.z0 + w.rows) continue;
+      const t = w.triangles, n = w.normals;
+      w.near(x, z, r, (i) => {
+        // Past the table's end, the rest are left out this once, and the table grows for the next step (stepBall
+        // holds on to the table it was handed for the whole of a step, so it cannot change under it).
+        if (count >= this.capacity) return;
+        this.triangles.set(t.subarray(i * 9, i * 9 + 9), count * 9);
+        this.normals.set(n.subarray(i * 3, i * 3 + 3), count * 3);
+        visit(count++);
+      });
+    }
+    if (count >= this.capacity) this._growNext = true;
+  }
+
+  /** Call between steps: grows the table if a step found it too small. */
+  settle() {
+    if (this._growNext) { this._growNext = false; this._grow(this.capacity * 2); }
+  }
+
+  boxesNear(x, z, r, out) {
+    out.length = 0;
+    for (const b of this.boxes) out.push(b);
+    const more = [];
+    for (const w of this.pieces) {
+      if (x + r < w.x0 || z + r < w.z0 || x - r > w.x0 + w.cols || z - r > w.z0 + w.rows) continue;
+      w.boxesNear(x, z, r, more);
+      for (const b of more) if (!out.includes(b)) out.push(b);
+    }
+    return out;
   }
 }
 

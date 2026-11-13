@@ -159,6 +159,8 @@ export class WebGPUBackend {
         { binding: 4, visibility: F, sampler: { type: 'filtering' } },
         { binding: 5, visibility: F, texture: { sampleType: 'float' } },
         { binding: 6, visibility: F, sampler: { type: 'filtering' } },
+        { binding: 7, visibility: F, texture: { sampleType: 'float' } },
+        { binding: 8, visibility: F, sampler: { type: 'filtering' } },
       ],
     });
     this.builtinLayout = d.createPipelineLayout({ bindGroupLayouts: [this.frameLayout, this.drawLayout] });
@@ -537,7 +539,8 @@ export class WebGPUBackend {
     const map = textures.map ? this._texture(textures.map) : null;
     const bump = textures.bumpMap ? this._texture(textures.bumpMap) : null;
     const detail = textures.detailMap ? this._texture(textures.detailMap) : null;
-    const id = `${map?.id ?? '-'}|${bump?.id ?? '-'}|${detail?.id ?? '-'}`;
+    const glow = textures.emissiveMap ? this._texture(textures.emissiveMap) : null;
+    const id = `${map?.id ?? '-'}|${bump?.id ?? '-'}|${detail?.id ?? '-'}|${glow?.id ?? '-'}`;
     let group = this.drawGroups.get(id);
     if (!group) {
       group = this.device.createBindGroup({
@@ -550,6 +553,8 @@ export class WebGPUBackend {
           { binding: 4, resource: bump ? bump.sampler : this.linear },
           { binding: 5, resource: (detail ? detail.texture : this.dummy2D).createView() },
           { binding: 6, resource: detail ? detail.sampler : this.linear },
+          { binding: 7, resource: (glow ? glow.texture : this.dummy2D).createView() },
+          { binding: 8, resource: glow ? glow.sampler : this.linear },
         ],
       });
       this.drawGroups.set(id, group);
@@ -594,6 +599,8 @@ export class WebGPUBackend {
 
   _buffer(attribute, usage, sync) {
     let entry = this.buffers.get(attribute);
+    // Its array let go once it was uploaded (freeAfterUpload): the buffer is all there is.
+    if (entry && attribute.freeAfterUpload && entry.version !== -1) return entry;
     const array = attribute.array instanceof Float64Array ? new Float32Array(attribute.array) : attribute.array;
     const size = alignTo(array.byteLength, 4);
     if (!entry || entry.size !== size) {
@@ -610,6 +617,7 @@ export class WebGPUBackend {
         this.device.queue.writeBuffer(entry.buffer, 0, padded);
       }
       entry.version = attribute.version;
+      if (attribute.freeAfterUpload) attribute.array = new attribute.array.constructor(0);
     }
     return entry;
   }
@@ -658,11 +666,26 @@ export class WebGPUBackend {
           [image.width, image.height],
         );
       } else {
-        this.device.queue.copyExternalImageToTexture(
-          { source: image, flipY: texture.flipY },
-          { texture: entry.texture, premultipliedAlpha: texture.premultiplyAlpha },
-          [image.width, image.height],
-        );
+        try {
+          this.device.queue.copyExternalImageToTexture(
+            { source: image, flipY: texture.flipY },
+            { texture: entry.texture, premultipliedAlpha: texture.premultiplyAlpha },
+            [image.width, image.height],
+          );
+        } catch (err) {
+          // The browser could not copy the picture (out of memory on the card, a canvas it lost): the frame goes on
+          // with a plain grey texel in its place, rather than the whole loop stopping on one texture.
+          if (!this._copyWarned) { console.warn(`gfx: a texture could not be uploaded (${err.message}); drawn plain instead.`); this._copyWarned = true; }
+          entry.texture.destroy();
+          entry.texture = this.device.createTexture({ size: [1, 1], format, usage: T.TEXTURE_BINDING | T.COPY_DST });
+          this.device.queue.writeTexture({ texture: entry.texture }, new Uint8Array([200, 200, 200, 255]), { bytesPerRow: 4 }, [1, 1]);
+          entry.sampler = this._sampler(false, 1, texture.wrapS, texture.wrapT);
+          entry.version = texture.version;
+          entry.id = `${texture.id}.${texture.version}`;
+          this.drawGroups.clear();
+          this.customGroups?.clear();
+          return entry;
+        }
       }
       if (mipmaps) this._generateMipmaps(entry.texture, format);
       entry.sampler = this._sampler(mipmaps, texture.anisotropy, texture.wrapS, texture.wrapT);

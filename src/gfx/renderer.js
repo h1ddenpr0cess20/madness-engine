@@ -51,6 +51,13 @@ const colorArray = (c, scale = 1) => [c.r * scale, c.g * scale, c.b * scale];
  * The renderer the stage drives: `render(scene, camera)` once a frame, the
  * canvas at `domElement`. Build one with `createRenderer()`.
  */
+
+/** A material's emissive cells as [across, up], whole and at least 1; null for one cell a repeat. */
+const cellsOf = (c) => {
+  const a = Math.max(1, Math.round(c?.[0] ?? 1)), b = Math.max(1, Math.round(c?.[1] ?? 1));
+  return a === 1 && b === 1 ? null : [a, b];
+};
+
 export class Renderer {
   constructor(backend, canvas) {
     this.backend = backend;
@@ -484,8 +491,17 @@ function describe(object, geometry, material, side, context, frame) {
       alphaTest: material.alphaTest > 0 ? material.alphaTest : 0,
       // Hair: highlights across the strands, which run along the map's v.
       strands: material.strands === true && !!material.map,
+      // Ground and walls tiled over a big area: each lookup blends two copies of the tile shifted by a slow noise, so
+      // the repeat does not show as a grid, and the colour drifts a little across the whole.
+      antiTile: material.antiTile === true && !!material.map,
       // Skin and the like: a detail map over the colour map's layout (it needs both the map and the bump), and light scattered under the surface.
       detailMap: !!material.detailMap && !!material.map && !!material.bumpMap,
+      // Where it glows, over the colour map's layout (lit windows on a facade, the letters of a sign).
+      emissiveMap: !!material.emissiveMap && !!material.map,
+      // Which of the map's repeats glow: a share, each repeat (a window) by its own chance.
+      emissiveScatter: material.emissiveScatter > 0 && !!material.map ? Math.min(1, material.emissiveScatter) : 0,
+      // How many cells each repeat is split into for it: [across, up], as whole numbers.
+      emissiveCells: material.emissiveScatter > 0 && !!material.map ? cellsOf(material.emissiveCells) : null,
       subsurface: physical && material.subsurface > 0,
       vertexColors: material.vertexColors === true,
       flat: material.flatShading === true || !hasNormal,
@@ -545,7 +561,7 @@ function describe(object, geometry, material, side, context, frame) {
         params.attenuationColor = colorArray(material.attenuationColor);
       }
     }
-    return { key, params, textures: { map: material.map, bumpMap: material.bumpMap, detailMap: material.detailMap } };
+    return { key, params, textures: { map: material.map, bumpMap: material.bumpMap, detailMap: material.detailMap, emissiveMap: material.map ? material.emissiveMap : null } };
   }
 
   if (material.isMeshBasicMaterial || material.isLineBasicMaterial) {
