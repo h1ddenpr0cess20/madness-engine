@@ -19,7 +19,7 @@ The crossing guard, shopper, mail carrier, old-timer and barista are made. These
 - `stockboy`: boxes stacked higher than his head, about to topple. (bodega)
 - `lottoguy`: a fan of scratch cards, a coin, and a long hard look at each one. (bodega)
 - `paramedic`: a bag and a radio. Distinct from `medic`, which is the festival tent.
-- `meterwarden`: a ticket machine on a strap and a peaked cap. Everyone's favourite.
+- `meterwarden`: a ticket machine on a strap and a peaked cap. Everyone's favorite.
 - `schoolkid`: a backpack bigger than the kid, a lunchbox and a scraped knee. Goes with the crossing guard.
 - `grandma`: a tartan shopping trolley on two wheels and a rain bonnet. (Not `nonna`, who cooks.)
 - `hotdogvendor`: a cart with an umbrella. `hotdog` is the mascot and `vendor` is the stadium seller, so this is a third.
