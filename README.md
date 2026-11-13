@@ -1,31 +1,73 @@
 # Madness Engine
 
-Madness Engine is a reusable JavaScript engine and asset library for browser-based rolling games. It provides rendering, physics, input, cameras, stages, audio, effects, and a shared collection of models, materials, textures, scenery, and music.
+Madness Engine is a reusable JavaScript engine and shared asset library for browser-based games. It grew out of the Madness games, bringing their renderer, physics, game systems, tools, and accumulated art assets into one place so projects can build on the same foundation instead of maintaining separate copies.
 
-It uses WebGPU when available and falls back to WebGL 2. The engine is distributed as plain JavaScript modules, with no build step of its own. It is designed to be consumed by games using Vite.
+The engine is made of small ES modules. A game imports the systems and assets it needs, and can combine them with its own code and content. The renderer uses **WebGPU** when available and falls back to **WebGL 2**.
 
-## Install
+## What it provides
+
+Madness Engine covers the common parts of a 3D game, from drawing and simulation to the content used to build a world.
+
+| Area | Included systems |
+|---|---|
+| **Rendering** | The engine's graphics API, WebGPU/WebGL 2 renderers, materials, lighting, shadows, transmission, and instancing. |
+| **Simulation** | Ball physics, collision against world geometry and moving objects, rolling behaviour, and shared world utilities. |
+| **Game framework** | Stage setup, cameras and views, keyboard/mouse/touch/gamepad input, browser storage, and common game settings. |
+| **Audio and effects** | Procedural audio through Web Audio, music systems, particle effects, and weather. |
+| **Environment** | Ocean and sky systems, scene moods, film treatments, lighting setups, and environmental presets. |
+| **Modeling tools** | Signed-distance-field modeling, skeletons, skinned models, animation, background baking, and a low-poly mesher for building geometry. |
+
+These systems are intended to work together, but they are not tied to one game structure. Projects can use the full stage and rendering setup or import individual modules where that makes more sense.
+
+## Shared asset library
+
+The engine also collects reusable content created across the games. Assets are organized by type rather than by the project they originally came from, which makes it possible to use the same content in different games.
+
+| Asset area | Contents |
+|---|---|
+| **Characters and people** | Human characters, creatures, monsters, rigs, body definitions, clothing, and character variants. |
+| **Heroes and props** | Playable rolling characters, dice, weapons, pickups, furniture, and general-purpose props. |
+| **Buildings and scenery** | Building models, streets, vehicles, flora, environmental pieces, and other world geometry. |
+| **Textures and materials** | Surface painters, floors and walls, foliage, venue materials, reflective rooms, and skies. |
+| **Moods and music** | Reusable visual themes, colour palettes, lighting and weather presets, film treatments, bands, and music systems. |
+
+The library is intentionally shared: a project can use an existing character, prop, texture, or environment instead of creating and maintaining another copy. Where games have distinct versions of an asset, those versions can be kept separately.
+
+The full catalogue is maintained in **[docs/library.md](docs/library.md)**. It lists the available assets and where they originated; this README is only an overview.
+
+## Installation
+
+Install the repository from GitHub:
 
 ```sh
 npm install github:h1ddenpr0cess20/madness-engine
 ```
 
-## Use
+Madness Engine is distributed as plain JavaScript ES modules. It has no separate build step; the consuming game can bundle the modules with Vite.
 
-Import only the modules your game needs:
+## Using the engine
+
+Import the modules a game needs. For example:
 
 ```js
 import * as GFX from 'madness-engine/gfx';
 import { createStage } from 'madness-engine/stage';
 import { World, createBall, stepBall } from 'madness-engine/physics';
 import { createMarble } from 'madness-engine/heroes/marble';
+import punk from 'madness-engine/characters/punk';
 ```
 
-A stage provides the renderer, scene, camera, lights, and game loop. Physics and the shared asset library are independent modules, so a game can use the parts it needs.
+A stage brings together the renderer, scene, camera, and lighting. The physics, input, audio, effects, modeling tools, and asset libraries can be used alongside it or independently.
 
-## Start with the example
+## Examples
 
-The starter example is a small game built with the engine. It includes a board, a marble, a moving character, collectibles, effects, and sound.
+The repository includes working projects that demonstrate different parts of the engine.
+
+- **[Starter game](examples/starter/)** — A small playable project with a board, marble, moving character, collectibles, effects, and sound. It is the best starting point for a new game.
+- **[Human world](examples/human-world/)** — A test environment for the human character and animation systems.
+- **[Asset viewer](examples/asset-viewer/)** — A browser-based way to inspect the engine's assets.
+
+Run the starter example:
 
 ```sh
 cd examples/starter
@@ -33,24 +75,27 @@ npm install
 npm run dev
 ```
 
-The `examples/human-world` directory contains a separate test world for the human character system.
+The other examples are standalone projects and have their own package files and run instructions.
 
 ## Documentation
 
-Detailed guides and reference material belong in the documentation, not in this overview.
+The README describes the project and its main parts. Detailed API notes, inventories, and workflow instructions belong in the documentation.
 
-- [Documentation](docs/)
-- [Asset library catalogue](docs/library.md)
-- [Moving a game onto the engine](docs/dropping-in.md)
-- [People and character system](docs/people.md)
-- [Weapons](docs/weapons.md)
+- **[Asset library catalogue](docs/library.md)** — Available assets and their source projects.
+- **[Adding an existing game to the engine](docs/dropping-in.md)** — Integration and migration process.
+- **[People and characters](docs/people.md)** — Human models, clothing, animation, and related systems.
+- **[Weapons](docs/weapons.md)** — Weapon assets and their construction.
+- **[Venue systems](docs/venue.md)** — Venue components and setup.
 
-For development and verification commands, see the repository's scripts and package configuration.
+See the **[docs directory](docs/)** for the other subject-specific notes.
 
 ## Development
+
+The repository's development scripts cover tests, linting, library extraction, and compatibility verification. Development requires Node.js 22.12 or newer.
 
 ```sh
 npm test
 npm run lint
 ```
 
+When working on the shared asset library, `npm run extract` rebuilds it from the source games. `npm run verify` checks that the games can use the engine in place of their local copies; both commands accept a `--games` path to the directory containing those projects.
