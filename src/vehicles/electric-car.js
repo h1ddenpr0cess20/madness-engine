@@ -59,12 +59,12 @@ export const ELECTRIC_CAR_DRIVE = Object.freeze({
  * @param {number} [options.scale] Game units to the metre (default 1).
  * @param {number|string} [options.paint] The body's color (default near white).
  * @param {number|string} [options.accent] The green of the leaves and the bolt.
- * @param {'alloy'|'classic'} [options.wheels] The wheel: a treaded tire on a spoked alloy rim (default), or the plain disc it was first drawn with.
+ * @param {'treaded'|'classic'} [options.wheels] The tires: rounded and treaded (default), or the plain square-edged ones it was first drawn with. The rim is the same either way.
  * @param {number|string} [options.light] The glow of the front light bar and the lamps.
  * @returns the car: `group` to add to the scene; `update(dt, input)`; `reset()`; the state (`speed`, `kmh`, `heading`,
  *   `steerAngle`); `wheels`, `steeredWheels` and the rest of the parts by name; `materials` and `dimensions`.
  */
-export function createElectricCar(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x36a05a, light = 0x86ecff, wheels: wheelStyle = 'alloy' } = {}) {
+export function createElectricCar(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x36a05a, light = 0x86ecff, wheels: wheelStyle = 'treaded' } = {}) {
   const M = {
     white: new GFX.MeshStandardMaterial({ name: 'body_white', color: paint, roughness: 0.30, metalness: 0.22 }),
     glass: new GFX.MeshStandardMaterial({ name: 'glass_dark', color: 0x0c1116, roughness: 0.42, metalness: 0.06 }),

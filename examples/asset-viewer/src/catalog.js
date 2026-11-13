@@ -898,7 +898,7 @@ function humanItem(sex) {
 /** The vehicles you drive (src/vehicles): each stands still in the viewer, and its clips run the same driving model a game does. */
 const VEHICLE_PAINTS = Object.assign(['white', 'red', 'blue', 'green', 'yellow', 'black'], { default: 'white' });
 const VEHICLE_PAINT = { white: '#f4f5f6', red: '#c8382c', blue: '#2c5fc8', green: '#2f8f4e', yellow: '#e0b020', black: '#26292d' };
-const VEHICLE_WHEELS = Object.assign(['alloy', 'classic'], { default: 'alloy' });
+const VEHICLE_WHEELS = Object.assign(['treaded', 'classic'], { default: 'treaded' });
 /** What the driver does in each clip: { throttle, brake, steer (+ left), handbrake }. */
 const VEHICLE_CLIPS = {
   idle: {},
@@ -912,7 +912,7 @@ function vehicleItem({ id, name, create, dimensions, drive }) {
   return {
     id: `vehicles/${id}`, category: 'Vehicles', group: 'vehicles', name, source: `vehicles/${id}`, kind: 'object',
     options: { paint: VEHICLE_PAINTS, wheels: VEHICLE_WHEELS },
-    async build({ paint = 'white', wheels = 'alloy' } = {}) {
+    async build({ paint = 'white', wheels = 'treaded' } = {}) {
       const vehicle = create(GFX, { paint: VEHICLE_PAINT[paint] ?? VEHICLE_PAINT.white, wheels });
       let clip = 'idle', last = 0;
       // The vehicle is driven with the game's own update and held where it is, so the wheels roll and steer as they do in a game.

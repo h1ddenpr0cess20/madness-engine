@@ -9,12 +9,13 @@ import { createFreighter, FREIGHTER } from '../src/vehicles/freighter.js';
 const M = { tire: new GFX.MeshStandardMaterial(), rim: new GFX.MeshStandardMaterial(), trim: new GFX.MeshStandardMaterial() };
 const trianglesOf = (mesh) => mesh.geometry.attributes.position.count / 3;
 const boxOf = (o) => { o.updateMatrixWorld(true); return new GFX.Box3().setFromObject(o); };
+const close = (a, b, what) => assert.ok(Math.abs(a - b) < 1e-5, `${what}: ${a} vs ${b}`);
 
-test('the alloy wheel is three meshes: a tire, a rim and the dark face behind the spokes', () => {
+test('the treaded wheel is three meshes: the tire, the rim and the lug holes', () => {
   const kit = wheelKit(GFX, M, { radius: 0.6, width: 0.345 });
   const w = kit.make('x', 1);
-  assert.deepEqual(w.children.map((c) => c.name), ['tire_x', 'rim_x', 'hardware_x']);
-  assert.equal(kit.style, 'alloy');
+  assert.deepEqual(w.children.map((c) => c.name), ['tire_x', 'rim_x', 'lugs_x']);
+  assert.equal(kit.style, 'treaded');
   assert.throws(() => wheelKit(GFX, M, { radius: 0.6, width: 0.345, style: 'square' }), /unknown wheel style/);
 });
 
@@ -22,8 +23,8 @@ test('the tire is round-shouldered and treaded, not a bald cylinder with square 
   const { make, tread } = wheelKit(GFX, M, { radius: 0.6, width: 0.345 });
   const tire = make('x', 1).children[0];
   // Hundreds of tread blocks and a lathed profile: a plain cylinder is a few dozen triangles.
-  assert.ok(trianglesOf(tire) > 3000, `${trianglesOf(tire)} triangles`);
-  // It stays inside the wheel's size, so it still stands on the ground and fits its arch.
+  assert.ok(trianglesOf(tire) > 2000, `${trianglesOf(tire)} triangles`);
+  // It stays inside the wheel's size, so it still stands on the ground and fits its arch and its neighbor.
   const box = boxOf(tire);
   assert.ok(box.max.y <= 0.6 + tread + 1e-6 && box.max.z <= 0.6 + tread + 1e-6, 'no taller than its tread');
   assert.ok(box.max.x - box.min.x <= 0.345 + 1e-6, 'no wider than the wheel');
@@ -38,18 +39,32 @@ test('the tire is round-shouldered and treaded, not a bald cylinder with square 
   assert.ok(radii.size > 3, 'the tread has depth');
 });
 
-test('the rim has spokes over a dark recessed face, and the face of the left and the right wheel point outward', () => {
-  const kit = wheelKit(GFX, M, { radius: 0.34, width: 0.235 });
-  const right = kit.make('r', 1), left = kit.make('l', -1);
-  const rim = (w) => w.children[1].geometry.attributes.position;
-  const xs = (p) => { let hi = -Infinity, lo = Infinity; for (let i = 0; i < p.count; i++) { hi = Math.max(hi, p.getX(i)); lo = Math.min(lo, p.getX(i)); } return [lo, hi]; };
-  const [rlo, rhi] = xs(rim(right)), [llo, lhi] = xs(rim(left));
-  assert.ok(rhi > 0.1 && rlo > -0.12 && rlo < -0.05, 'the right wheel\'s lip is on +x');
-  assert.ok(llo < -0.1 && lhi < 0.12 && lhi > 0.05, 'the left wheel\'s lip is on −x');
-  assert.ok(trianglesOf(right.children[1]) > 400, 'ten spokes, a lip, a hub and nuts');
+test('the rim is the one the freighter was drawn with: the same disc, hub cap and lug holes as the classic wheel', () => {
+  for (const [radius, width] of [[0.6, 0.345], [0.34, 0.235]]) {
+    for (const face of [1, -1]) {
+      const a = wheelKit(GFX, M, { radius, width }).make('a', face);
+      const b = wheelKit(GFX, M, { radius, width, style: 'classic' }).make('b', face);
+      // The classic wheel's rim is its barrel, face and hub cap; its lug holes the eight lugs.
+      const union = (meshes) => meshes.reduce((box, m) => box.union(boxOf(m)), new GFX.Box3());
+      const classicRim = b.children.filter((c) => /^(barrel|alloy_face|hub_cap)_/.test(c.name));
+      const classicLugs = b.children.filter((c) => c.name.startsWith('lug_'));
+      assert.equal(classicLugs.length, 8);
+      const [rim, lugs] = [boxOf(a.children[1]), boxOf(a.children[2])];
+      const [wantRim, wantLugs] = [union(classicRim), union(classicLugs)];
+      for (const axis of ['x', 'y', 'z']) {
+        close(rim.min[axis], wantRim.min[axis], `rim min ${axis}`); close(rim.max[axis], wantRim.max[axis], `rim max ${axis}`);
+        close(lugs.min[axis], wantLugs.min[axis], `lugs min ${axis}`); close(lugs.max[axis], wantLugs.max[axis], `lugs max ${axis}`);
+      }
+      // The face is on the side it is told: +x for the right wheel, −x for the left.
+      assert.ok(face > 0 ? rim.max.x > rim.min.x + 0.1 * width && rim.max.x > width / 2 - 0.03 * (radius / 0.6) : rim.min.x < -width / 2 + 0.03 * (radius / 0.6));
+    }
+  }
+  // Eight lug holes and a plain disc: not spokes. (The rim has a few hundred triangles at most.)
+  const w = wheelKit(GFX, M, { radius: 0.6, width: 0.345 }).make('x', 1);
+  assert.ok(trianglesOf(w.children[1]) < 400 && trianglesOf(w.children[2]) === 8 * 14 * 4);
 });
 
-test('both vehicles take the alloy wheel by default and the classic one on request', () => {
+test('both vehicles take the treaded tire by default and the classic one on request', () => {
   const car = createElectricCar(GFX), classic = createElectricCar(GFX, { wheels: 'classic' });
   assert.equal(car.wheels[0].children.length, 3);
   assert.equal(classic.wheels[0].children.length, 13);
