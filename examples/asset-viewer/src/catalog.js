@@ -27,6 +27,8 @@ import { JEWEL_CHOICES } from '../../../src/heroes/rock-jewel.js';
 import { dress, extraItems } from './extras.js';
 import { WEAPON_ASSETS, weaponShelf } from './weapon-assets.js';
 import { RANGE } from '../../../src/weapons/categories.js';
+import { createFreighter, FREIGHTER, FREIGHTER_DRIVE } from '../../../src/vehicles/freighter.js';
+import { createElectricCar, ELECTRIC_CAR, ELECTRIC_CAR_DRIVE } from '../../../src/vehicles/electric-car.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
 const proceduralProps = import.meta.glob(['../../../src/props/*.js', '../../../src/props/**/*.js']);
@@ -895,6 +897,52 @@ function humanItem(sex) {
 }
 
 /** The robot: a slim humanoid machine on the human's rig, its shell resin, metal or wood and its frame metal; each chosen live. */
+/** The vehicles you drive (src/vehicles): each stands still in the viewer, and its clips run the same driving model a game does. */
+const VEHICLE_PAINTS = Object.assign(['white', 'red', 'blue', 'green', 'yellow', 'black'], { default: 'white' });
+const VEHICLE_PAINT = { white: '#f4f5f6', red: '#c8382c', blue: '#2c5fc8', green: '#2f8f4e', yellow: '#e0b020', black: '#26292d' };
+const VEHICLE_WHEELS = Object.assign(['treaded', 'classic'], { default: 'treaded' });
+/** What the driver does in each clip: { throttle, brake, steer (+ left), handbrake }. */
+const VEHICLE_CLIPS = {
+  idle: {},
+  drive: { throttle: 1 },
+  'turn left': { throttle: 1, steer: 1 },
+  'turn right': { throttle: 1, steer: -1 },
+  reverse: { brake: 1 },
+};
+
+function vehicleItem({ id, name, create, dimensions, drive }) {
+  return {
+    id: `vehicles/${id}`, category: 'Vehicles', group: 'vehicles', name, source: `vehicles/${id}`, kind: 'object',
+    options: { paint: VEHICLE_PAINTS, wheels: VEHICLE_WHEELS },
+    async build({ paint = 'white', wheels = 'treaded' } = {}) {
+      const vehicle = create(GFX, { paint: VEHICLE_PAINT[paint] ?? VEHICLE_PAINT.white, wheels });
+      let clip = 'idle', last = 0;
+      // The vehicle is driven with the game's own update and held where it is, so the wheels roll and steer as they do in a game.
+      const pose = ({ clip: now = 'idle', time = 0 }) => {
+        if (now !== clip) { clip = now; vehicle.reset(); last = time; }
+        const dt = Math.max(0, time - last);
+        last = time;
+        vehicle.update(dt, VEHICLE_CLIPS[clip] ?? {});
+        vehicle.group.position.set(0, 0, 0);
+        vehicle.group.rotation.y = 0;
+      };
+      pose({ clip: 'idle', time: 0 });
+      return {
+        object: vehicle.group, pose, clips: Object.keys(VEHICLE_CLIPS),
+        info: {
+          Source: `vehicles/${id}`, Wheels: `${vehicle.wheels.length} (${vehicle.steeredWheels.length} steer)`,
+          Length: `${dimensions.length} m`, 'Top speed': `${Math.round(drive.maxForward * 3.6)} km/h`, ...countOf(vehicle.group),
+        },
+      };
+    },
+  };
+}
+
+const vehicleItems = () => [
+  vehicleItem({ id: 'electric-car', name: 'Electric car', create: createElectricCar, dimensions: ELECTRIC_CAR, drive: ELECTRIC_CAR_DRIVE }),
+  vehicleItem({ id: 'freighter', name: 'Electric freighter', create: createFreighter, dimensions: FREIGHTER, drive: FREIGHTER_DRIVE }),
+];
+
 function robotItem() {
   return {
     id: 'people/robot',
@@ -1078,6 +1126,7 @@ export async function loadCatalog(onProgress = () => {}) {
   items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
   items.push(...weaponItems(), staffItem(), metalStaffItem());
   items.push(...humanItems(), robotItem());
+  items.push(...vehicleItems());
   items.push(...buildingItems());
 
   // A painter re-exported from another file (venue.js passes the floors and walls of painters.js on) is listed once.
@@ -1101,7 +1150,7 @@ export async function loadCatalog(onProgress = () => {}) {
 
   items.push(...FIXTURES.map(fixtureItem), ...extraItems());
   items.push(...Object.entries(MOODS).map(moodItem));
-  const order = ['People', 'Characters', 'Props', 'Weapons', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
+  const order = ['People', 'Characters', 'Props', 'Weapons', 'Animated props', 'Stage gear', 'Scenery & vehicles', 'Vehicles', 'Heroes', 'Lights', 'Flora', 'Water', 'Effects', 'Dungeon', 'Buildings', 'Textures', 'Skies', 'Rooms', 'Moods'];
   // By category, and within one by shelf, so that each shelf's things are together under its heading.
   return items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }
