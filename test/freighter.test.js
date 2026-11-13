@@ -41,7 +41,7 @@ test('four axles: two steer at the front, two on duals behind, every wheel on th
 });
 
 test('it is built from the freighter\'s own parts: every mesh is named once, and the scale and paint are options', () => {
-  const f = createFreighter(GFX, { scale: 0.41, paint: '#c8382c', accent: 0x123456 });
+  const f = createFreighter(GFX, { scale: 0.41, paint: '#c8382c', accent: 0x123456, wheels: 'classic' });
   const names = [];
   f.group.traverse((o) => { if (o.geometry) names.push(o.name); });
   assert.equal(new Set(names).size, names.length, 'no two parts share a name');

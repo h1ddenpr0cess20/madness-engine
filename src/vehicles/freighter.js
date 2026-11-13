@@ -19,6 +19,9 @@
  * its speed, its turning circle and its look are the same at any scale.
  */
 
+import { arc, across as acrossOf, roundRect as roundRectOf, wheelKit } from './parts.js';
+import { attachDriving } from './driving.js';
+
 /** The truck's measures, in metres. */
 export const FREIGHTER = Object.freeze({
   name: 'freighter',
@@ -59,19 +62,18 @@ export const FREIGHTER_DRIVE = Object.freeze({
   maxStep: 0.05,
 });
 
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
 /**
  * @param {object} GFX The engine's graphics API.
  * @param {object} [options]
  * @param {number} [options.scale] Game units to the metre (default 1).
  * @param {number|string} [options.paint] The body's color (default near white).
  * @param {number|string} [options.accent] The green of the leaves and the bolt.
+ * @param {'alloy'|'classic'} [options.wheels] The wheel: a treaded tire on a spoked alloy rim (default), or the plain disc it was first drawn with.
  * @param {number|string} [options.light] The glow of the light bar and the lamps.
  * @returns the freighter: `group` to add to the scene; `update(dt, input)`; `reset()`; the state (`speed`, `kmh`,
  *   `heading`, `steerAngle`); `wheels`, `steeredWheels` and the rest of the parts by name; `materials` and `dimensions`.
  */
-export function createFreighter(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x36a05a, light = 0x86ecff } = {}) {
+export function createFreighter(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x36a05a, light = 0x86ecff, wheels: wheelStyle = 'alloy' } = {}) {
   const M = {
     white: new GFX.MeshStandardMaterial({ name: 'body_white', color: paint, roughness: 0.30, metalness: 0.22 }),
     glass: new GFX.MeshStandardMaterial({ name: 'glass_dark', color: 0x0c1116, roughness: 0.42, metalness: 0.06 }),
@@ -96,25 +98,9 @@ export function createFreighter(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x3
     return m;
   };
   const box = (w, h, d) => new GFX.BoxGeometry(w, h, d);
-  const roundRect = (w, h, r) => {
-    const s = new GFX.Shape();
-    s.moveTo(-w / 2 + r, -h / 2);
-    s.lineTo(w / 2 - r, -h / 2); s.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
-    s.lineTo(w / 2, h / 2 - r); s.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
-    s.lineTo(-w / 2 + r, h / 2); s.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
-    s.lineTo(-w / 2, -h / 2 + r); s.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
-    return s;
-  };
-  /** A longitudinal side profile pushed across the width of the vehicle. `width` is the finished width: the bevel widens the profile outward by `bevel`. */
-  const across = (shape, width, bevel) => {
-    const depth = width - 2 * bevel;
-    const g = new GFX.ExtrudeGeometry(shape, {
-      depth, bevelEnabled: bevel > 0, bevelThickness: bevel * 0.7,
-      bevelSize: bevel, bevelSegments: 6, curveSegments: 32,
-    });
-    g.rotateY(-Math.PI / 2); g.translate(depth / 2, 0, 0);
-    return g;
-  };
+  const roundRect = (w, h, r) => roundRectOf(GFX, w, h, r);
+  /** A longitudinal side profile pushed across the width of the vehicle (`vehicles/parts`). */
+  const across = (shape, width, bevel) => acrossOf(GFX, shape, width, bevel);
 
   // ---------- cab: low nose, steeply raked canopy ----------
   const cab = new GFX.Shape();
@@ -198,53 +184,13 @@ export function createFreighter(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x3
 
   // ---------- wheels: alloy face, lug holes, center cap ----------
   const TIRE_R = FREIGHTER.tireRadius, TIRE_W = FREIGHTER.tireWidth;
-  const tireGeo = new GFX.CylinderGeometry(TIRE_R, TIRE_R, TIRE_W, 44);
-  const treadGeo = new GFX.CylinderGeometry(TIRE_R + 0.006, TIRE_R + 0.006, TIRE_W * 0.72, 44, 1, true);
-  const dishGeo = new GFX.CylinderGeometry(0.445, 0.445, 0.05, 36);
-  const barrelGeo = new GFX.CylinderGeometry(0.44, 0.44, TIRE_W * 0.9, 32);
-  const lugGeo = new GFX.CylinderGeometry(0.052, 0.052, 0.07, 14);
-  const capGeo = new GFX.CylinderGeometry(0.10, 0.085, 0.09, 20);
-
-  /** One wheel, its axis along x; `face` is +1 when the alloy face points +x. */
-  const makeWheel = (id, face) => {
-    const g = new GFX.Group();
-    g.name = `wheel_${id}`;
-    const spin = [0, 0, Math.PI / 2];
-    const mk = (n, geo, mat, x) => {
-      const m = new GFX.Mesh(geo, mat);
-      m.name = n; m.position.x = x; m.rotation.set(...spin); m.castShadow = true;
-      g.add(m);
-      return m;
-    };
-    mk(`tire_${id}`, tireGeo, M.tire, 0);
-    mk(`tread_${id}`, treadGeo, M.tire, 0);
-    mk(`barrel_${id}`, barrelGeo, M.rim, 0);
-    const fx = face * (TIRE_W / 2 - 0.018);
-    mk(`alloy_face_${id}`, dishGeo, M.rim, fx);
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      const lug = new GFX.Mesh(lugGeo, M.trim);
-      lug.name = `lug_${id}_${i}`;
-      lug.position.set(fx + face * 0.014, Math.cos(a) * 0.285, Math.sin(a) * 0.285);
-      lug.rotation.set(0, 0, Math.PI / 2);
-      g.add(lug);
-    }
-    mk(`hub_cap_${id}`, capGeo, M.rim, fx + face * 0.055);
-    return g;
-  };
+  const kit = wheelKit(GFX, M, { radius: TIRE_R, width: TIRE_W, style: wheelStyle });
+  const makeWheel = kit.make;
 
   // The wheel-arch lip: a ring sector round the axle, hugging the tread (the engine's Shape has no arcs, so it is drawn in short lines).
   const archShape = new GFX.Shape();
-  const arc = (r, from, to, first) => {
-    const steps = 64;
-    for (let i = 0; i <= steps; i++) {
-      const a = from + ((to - from) * i) / steps;
-      if (first && i === 0) archShape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
-      else archShape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-    }
-  };
-  arc(TIRE_R + 0.095, Math.PI * 0.07, Math.PI * 0.93, true);
-  arc(TIRE_R + 0.02, Math.PI * 0.93, Math.PI * 0.07, false);
+  arc(archShape, 0, 0, TIRE_R + 0.095, Math.PI * 0.07, Math.PI * 0.93, { first: true });
+  arc(archShape, 0, 0, TIRE_R + 0.02, Math.PI * 0.93, Math.PI * 0.07);
 
   // Axle positions as the truck was drawn (nose at −z), from the front.
   const axles = [-5.00, -3.55, 1.75, 3.55];
@@ -304,60 +250,9 @@ export function createFreighter(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x3
   group.scale.setScalar(scale);
 
   // ---------- driving ----------
-  const D = FREIGHTER_DRIVE;
-  const state = { speed: 0, steer: 0, heading: 0 };
-
   const api = {
     group, chassis: truck, parts, wheels, steeredWheels, materials: M,
-    dimensions: FREIGHTER, drive: D, scale,
-
-    /** Metres a second, forward positive. */
-    get speed() { return state.speed; },
-    get kmh() { return Math.abs(state.speed) * 3.6; },
-    /** The turn about y, in radians; positive is to the left. */
-    get heading() { return state.heading; },
-    /** The angle the front wheels are turned to. */
-    get steerAngle() { return state.steer; },
-
-    /**
-     * Drives for `dt` seconds. `input` is `{ throttle, brake, steer, handbrake }`: `throttle` and `brake` 0 to 1 (the
-     * brake backs it up once it is stopped), `steer` −1 to 1 with + to the left, and `handbrake`. Moves and turns
-     * `group` and rolls the wheels. Returns `speed` in metres a second.
-     */
-    update(dt, { throttle = 0, brake = 0, steer: want = 0, handbrake = false } = {}) {
-      dt = Math.min(Math.max(dt, 0), D.maxStep);
-      if (throttle > 0) state.speed += D.accel * throttle * dt;
-      else if (brake > 0) state.speed -= D.brake * brake * dt;
-      else state.speed -= Math.sign(state.speed) * Math.min(Math.abs(state.speed), D.coast * dt);
-      if (handbrake) state.speed -= Math.sign(state.speed) * Math.min(Math.abs(state.speed), D.handbrake * dt);
-      state.speed = clamp(state.speed, -D.maxReverse, D.maxForward);
-
-      // The wheels' lock shrinks as it goes faster, and they follow the stick with a lag.
-      const limit = D.steerLock * (1 - Math.min(Math.abs(state.speed) / D.steerFade, D.steerFadeMax));
-      state.steer += (clamp(want, -1, 1) * limit - state.steer) * Math.min(1, D.steerRate * dt);
-
-      // The bicycle model: it turns about the back wheels by how far the front ones are turned.
-      if (Math.abs(state.speed) > 0.01) {
-        state.heading += (state.speed / D.wheelbase) * Math.tan(state.steer) * dt;
-        group.position.x += Math.sin(state.heading) * state.speed * dt * scale;
-        group.position.z += Math.cos(state.heading) * state.speed * dt * scale;
-        group.rotation.y = state.heading;
-      }
-
-      const spin = (state.speed / TIRE_R) * dt;
-      for (const w of wheels) w.rotation.x -= spin;
-      for (const w of steeredWheels) w.rotation.y = state.steer;
-      return state.speed;
-    },
-
-    /** Stops it, straightens the wheels and stands it at the origin, facing +z (or where `position` and `heading` say). */
-    reset({ position = [0, 0, 0], heading = 0 } = {}) {
-      state.speed = 0; state.steer = 0; state.heading = heading;
-      group.position.set(...position);
-      group.rotation.y = heading;
-      for (const w of wheels) w.rotation.x = 0;
-      for (const w of steeredWheels) w.rotation.y = 0;
-    },
+    dimensions: FREIGHTER, drive: FREIGHTER_DRIVE, scale,
   };
-  return api;
+  return attachDriving(api, { group, wheels, steeredWheels, radius: TIRE_R, drive: FREIGHTER_DRIVE, scale });
 }

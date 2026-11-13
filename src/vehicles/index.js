@@ -6,3 +6,4 @@
  *     import { createFreighter } from 'madness-engine/vehicles';
  */
 export * from './freighter.js';
+export * from './electric-car.js';
