@@ -18,6 +18,8 @@ import { tiled } from '../../../src/textures/painters.js';
 import { DICE_TYPES, createDieProp } from '../../../src/dice.js';
 import { createBowlingBall } from '../../../src/props/bowling-ball.js';
 import { createBowlingPin } from '../../../src/props/bowling-pin.js';
+import { createBouncyBall } from '../../../src/props/bouncy-ball.js';
+import { createBall, RUBBER, rollSpin, stepBall, turn, World } from '../../../src/physics.js';
 import { METALS as METAL_FINISHES } from '../../../src/props/metalglobe.js';
 import { CHOCOLATES } from '../../../src/textures/chocolate.js';
 import { WOOD_FINISHES, WOOD_SPECIES } from '../../../src/textures/wood.js';
@@ -556,6 +558,90 @@ function bowlingBallItems() {
       return {
         object: made.group,
         info: { Source: 'props/bowling-ball', Design: made.design, ...countOf(made.group) },
+      };
+    },
+  }];
+}
+
+/**
+ * A bouncy ball's clips, worked out with the engine's own physics (its RUBBER bounce) and the ball's own squash, then
+ * played back by the clock: `bounce` is dropped onto the floor and bounces till it rests; `hop along` is thrown
+ * forward and hops and rolls across. Recorded a frame at a time, so a clip plays the same every time round (and in a
+ * GIF).
+ */
+function bouncyClips(made) {
+  const STEP = 1 / 120, R = made.radius;
+  const world = (() => {
+    const w = new World({ cols: 24, rows: 24 });
+    for (let z = 0; z < 24; z++) for (let x = 0; x < 24; x++) {
+      w.addTriangle(x, 0, z, x, 0, z + 1, x + 1, 0, z);
+      w.addTriangle(x + 1, 0, z, x, 0, z + 1, x + 1, 0, z + 1);
+    }
+    return w.finish();
+  })();
+  const frame = made.group.children[0], unturn = frame.children[0];
+  const record = (start, seconds, rest) => {
+    const body = createBall({ x: 12 + start.x, y: start.y, z: 12, r: R, ...RUBBER });
+    body.vx = start.vx; body.vy = start.vy ?? 0;
+    const q = [0, 0, 0, 1], w = [0, 0, 0], frames = [];
+    let still = 0;
+    made.update(1);
+    for (let t = 0; t < seconds; t += STEP) {
+      const hit = stepBall(body, world, 0, 0, STEP);
+      if (hit.impact > 0.6) made.squash(hit.impact * 0.55, [body.nx, body.ny, body.nz]);
+      made.update(STEP);
+      // Rolling on the floor it spins as it rolls; in the air it keeps the spin it left with.
+      if (body.grounded) rollSpin(body, w);
+      turn(q, w, STEP);
+      const qa = (x) => [x.x, x.y, x.z, x.w];
+      frames.push({ p: [body.x - 12, body.y, body.z - 12], q: [...q], s: frame.scale.toArray(), o: frame.position.toArray(), f: qa(frame.quaternion), u: qa(unturn.quaternion) });
+      still = body.grounded && Math.abs(body.vy) < 0.05 && Math.hypot(body.vx, body.vz) < 0.02 && Math.abs(made.squashed) < 0.002 ? still + STEP : 0;
+      if (rest && still > rest) break;
+    }
+    return frames;
+  };
+  const clips = {
+    bounce: record({ x: 0, y: 1.9, vx: 0 }, 12, 0.7),
+    'hop along': record({ x: -1.7, y: 1.3, vx: 1.15, vy: 2 }, 3.4, 0),
+  };
+  const show = (f) => {
+    made.group.position.set(f.p[0], f.p[1], f.p[2]);
+    made.spin.quaternion.set(f.q[0], f.q[1], f.q[2], f.q[3]);
+    frame.scale.fromArray(f.s); frame.position.fromArray(f.o); frame.quaternion.set(...f.f); unturn.quaternion.set(...f.u);
+  };
+  const still = () => show({ p: [0, R, 0], q: [0, 0, 0, 1], s: [1, 1, 1], o: [0, 0, 0], f: [0, 0, 0, 1], u: [0, 0, 0, 1] });
+  return {
+    clips: ['still', ...Object.keys(clips)],
+    loops: Object.fromEntries(Object.entries(clips).map(([k, f]) => [k, f.length * STEP])),
+    pose({ clip, t }) {
+      const frames = clips[clip];
+      if (!frames) return still();
+      const k = Math.floor((((t % (frames.length * STEP)) + frames.length * STEP) % (frames.length * STEP)) / STEP);
+      show(frames[Math.min(frames.length - 1, k)]);
+    },
+    still,
+  };
+}
+
+/** A rubber bouncy ball, beside the bowling ball: still, or bouncing (the Animation clips). */
+function bouncyBallItems() {
+  return [{
+    id: 'props/bouncy-ball',
+    category: 'Props',
+    group: 'balls',
+    name: 'Bouncy ball',
+    source: 'props/bouncy-ball',
+    kind: 'object',
+    palette: { kind: 'bouncy-ball', design: 'swirl', base: '#e8343f', swirl: '#ffd23f', accent: '#2f6fe0' },
+    build({ colours = {} } = {}) {
+      const made = createBouncyBall(GFX, { colors: colours, design: colours.design ?? 'swirl' });
+      const anim = bouncyClips(made);
+      anim.still();
+      // Framed for the whole hop: from the floor to the top of the drop, and across the hop along.
+      return {
+        object: made.group, pose: anim.pose, clips: anim.clips, loops: anim.loops,
+        frame: { center: [0, 0.95, 0], radius: 1.15 },
+        info: { Source: 'props/bouncy-ball', Design: made.design, Material: 'rubber', Bounce: `RUBBER (${RUBBER.bounce})`, ...countOf(made.group) },
       };
     },
   }];
@@ -1123,7 +1209,7 @@ export async function loadCatalog(onProgress = () => {}) {
   }
 
   items.push(...HEROES.map(heroItem), ...MOVING.map(movingItem));
-  items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());
+  items.push(...diceItems(), ...bowlingBallItems(), ...bouncyBallItems(), ...bowlingPinItems());
   items.push(...weaponItems(), staffItem(), metalStaffItem());
   items.push(...humanItems(), robotItem());
   items.push(...vehicleItems());

@@ -11,7 +11,8 @@ test('the bowling ball is registered on the Props shelf, not Heroes', () => {
   assert.ok(catalog.includes("category: 'Props'"));
   assert.ok(catalog.includes("group: 'balls'"));
   assert.ok(catalog.includes("import { createBowlingBall } from '../../../src/props/bowling-ball.js';"));
-  assert.ok(catalog.includes("items.push(...diceItems(), ...bowlingBallItems(), ...bowlingPinItems());"));
+  assert.ok(catalog.includes("items.push(...diceItems(), ...bowlingBallItems(), ...bouncyBallItems(), ...bowlingPinItems());"));
+  assert.ok(catalog.includes("id: 'props/bouncy-ball'"));
   assert.ok(!catalog.includes("['bowling ball'"));
 });
 
@@ -24,4 +25,12 @@ test('the asset viewer exposes four palette channels, surface patterns and rando
   assert.ok(viewer.includes("'Randomise colours'"));
   assert.ok(viewer.includes("$('bowlingdesign').onchange"));
   assert.ok(viewer.includes('view.draft = { ...randomBowlingBallPalette(Math.random, current), design };'));
+});
+
+test('the bouncy ball bounces in the viewer: clips worked out with the physics, each looping on its own length', () => {
+  assert.ok(catalog.includes("clips: ['still', ...Object.keys(clips)]"));
+  for (const clip of ["bounce: record(", "'hop along': record("]) assert.ok(catalog.includes(clip));
+  assert.ok(catalog.includes('...RUBBER'));
+  assert.ok(viewer.includes('view.built.loops?.[view.clip]'));
+  assert.ok(viewer.includes('view.built?.loops?.[clip]'));
 });

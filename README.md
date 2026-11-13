@@ -49,7 +49,7 @@ cd examples/human-world && npm install && npm run dev
 
 ## Bowling ball
 
-The engine includes a high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs: classic marble, spiral ribbons, flame ribbons, a two-tone split and a blotchy marble. Its palette and surface design can be changed at runtime without rebuilding the sphere:
+The engine includes a high-resolution glossy resin bowling ball with three true recessed finger wells and six seamless surface designs: classic marble, spiral ribbons, flame ribbons, a two-tone split, a blotchy marble and solid. Its palette and surface design can be changed at runtime without rebuilding the sphere:
 
 ```js
 import * as GFX from 'madness-engine/gfx';
@@ -57,11 +57,27 @@ import { createBowlingBall } from 'madness-engine/props/bowling-ball';
 
 const bowlingBall = createBowlingBall(GFX, {
   colors: { base: '#192d59', swirl: '#d83b7c', accent: '#f2ba64' },
-  design: 'marble', // 'spiral', 'flame', 'split' or 'blotch'
+  design: 'marble', // 'spiral', 'flame', 'split', 'blotch' or 'solid'
 });
 scene.add(bowlingBall.group);
 
 bowlingBall.setColors({ base: '#153a31', swirl: '#78d6ad', accent: '#f4e28b' });
+```
+
+## Bouncy ball
+
+A rubber bouncy ball: a smooth sphere (no finger holes) in a soft rubber finish, with a mould seam round its middle, in seven patterns of its own: solid, swirl (two colours folded through each other), rubber marble (three, in thin folded bands), tie-dye spiral, a band, superball flecks and a beach ball's panels. It squashes and springs back when it lands. The physics gives a ball its own bounce: `RUBBER` (or the livelier `SUPERBALL`) keeps most of each hit's speed, so it hops along and dribbles to rest:
+
+```js
+import { createBouncyBall } from 'madness-engine/props/bouncy-ball';
+import { createBall, stepBall, RUBBER } from 'madness-engine/physics';
+
+const look = createBouncyBall(GFX, { design: 'swirl', colors: { base: '#e8343f', swirl: '#ffd23f', accent: '#2f6fe0' } });
+const body = createBall({ r: look.radius, ...RUBBER });
+// each step: const hit = stepBall(body, world, ax, az, dt);
+//   look.group.position.set(body.x, body.y, body.z);
+//   if (hit.impact > 1) look.squash(hit.impact, [body.nx, body.ny, body.nz]);
+//   look.update(dt);   // and turn look.spin as it rolls
 ```
 
 ## Putter

@@ -33,9 +33,18 @@ export const ROLL_DRAG = 0.55;
 export const FALL_LIMIT = 4.25;
 export const BREAK_SPEED = Math.sqrt(2 * GRAVITY * FALL_LIMIT);
 
-/** Impacts harder than this bounce; softer ones just stop. */
+/** Impacts harder than this bounce; softer ones just stop. A ball can have its own (`createBall`'s `bounce`, `bounceFrom`). */
 const BOUNCE_FROM = 4;
 const BOUNCE = 0.32;
+
+/**
+ * A rubber ball's bounce: most of the speed it hits with comes back (a superball keeps more still), and even a
+ * gentle drop bounces, so it hops along a bumpy street and dribbles to rest.
+ *
+ *     const ball = createBall({ r: 0.35, ...RUBBER });
+ */
+export const RUBBER = Object.freeze({ bounce: 0.8, bounceFrom: 0.9 });
+export const SUPERBALL = Object.freeze({ bounce: 0.9, bounceFrom: 0.7 });
 
 /** A contact this much "up" or more counts as standing on something. */
 const FLOOR = 0.45;
@@ -290,9 +299,11 @@ export class Worlds {
 }
 
 /** A ball: where it is, how fast it goes, and what it was last standing on. */
-export function createBall({ x = 0, y = 0, z = 0, r = 0.35, mass = 1 } = {}) {
+export function createBall({ x = 0, y = 0, z = 0, r = 0.35, mass = 1, bounce = BOUNCE, bounceFrom = BOUNCE_FROM } = {}) {
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, r, mass,
+    /** How much of a hit's speed comes back (0 to 1), for hits harder than `bounceFrom` (m/s). */
+    bounce, bounceFrom,
     grounded: false,
     /** The normal of what it stands on (meaningful while grounded). */
     nx: 0, ny: 1, nz: 0,
@@ -378,7 +389,7 @@ export function stepBall(ball, world, ax, az, dt, { push = PUSH, airPush = AIR_P
     if (vn < 0) {
       const hit = -vn;
       if (hit > result.impact) result.impact = hit;
-      const k = hit > BOUNCE_FROM ? 1 + BOUNCE : 1;
+      const k = hit > (ball.bounceFrom ?? BOUNCE_FROM) ? 1 + (ball.bounce ?? BOUNCE) : 1;
       ball.vx -= nx * vn * k; ball.vy -= ny * vn * k; ball.vz -= nz * vn * k;
     }
     if (ny > FLOOR) {
