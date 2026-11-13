@@ -328,7 +328,7 @@ hangs beside.
 Brow thickness widens the brows' cards about the line they run along. The
 skin details (age, freckles, scars, a tattoo), the lip color, the moustache
 and stubble are not built yet: they are kept and handed back, so a game can
-offer them now, and the asset viewer greys them out.
+offer them now, and the asset viewer grays them out.
 
 ## Hair
 
