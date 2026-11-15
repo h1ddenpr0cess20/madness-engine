@@ -105,11 +105,11 @@ jobs:
             );
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'artifacts/turkey.png', fullPage: true });
-            const busResponse = await page.goto(
-              'http://127.0.0.1:4173/#vehicles%2Felectric-bus',
-              { waitUntil: 'commit', timeout: 60000 },
-            );
-            if (!busResponse?.ok()) throw new Error(`Asset viewer returned HTTP ${busResponse?.status()} for the electric bus`);
+            await page.evaluate(async () => {
+              const bus = window.assetViewer?.catalog?.find((item) => item.id === 'vehicles/electric-bus');
+              if (!bus) throw new Error('Electric bus is missing from the asset viewer catalog');
+              await window.assetViewer.show(bus);
+            });
             await page.waitForFunction(
               () => document.querySelector('#title b')?.textContent?.toLowerCase().includes('electric bus')
                 && document.querySelector('#busy')?.style.display === 'none',
