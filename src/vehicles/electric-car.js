@@ -216,9 +216,30 @@ export function createElectricCar(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   add('leaf_badge_right', leafOf(-1), M.green, [0.935, 0.42, 1.52], [0, -Math.PI / 2, -0.30]);
   add('battery_pack', box(1.30, 0.10, 1.9), M.trim, [0, 0.25, (REAR + FRONT) / 2]);
 
-  // ---------- wheels: the freighter's, in a tub the arch opens onto ----------
-  for (const z of D.axles) add(`wheel_tub_${z === FRONT ? 'f' : 'r'}`, box(2 * (WHEEL_X - 0.02), 0.5, 2 * (ARCH - BEVEL) + 0.04), M.trim, [0, 0.55, z]);
+  // ---------- wheels: a curved inner wheelhouse and a body-coloured arch lip ----------
+  // The old wheel tubs were rectangular blocks. Give the inside of each opening the same round profile
+  // as the body cut-out, leaving a small clearance around the tread instead of a square ceiling.
+  const WELL_OUTER = ARCH - BEVEL;
+  const WELL_INNER = TIRE_R + kit.tread + 0.018;
+  const wellReach = Math.asin((FLOOR - WHEEL_Y) / WELL_OUTER);
+  const wellShape = new GFX.Shape();
+  arc(wellShape, 0, 0, WELL_OUTER, Math.PI - wellReach, wellReach, { first: true, steps: 48 });
+  arc(wellShape, 0, 0, WELL_INNER, wellReach, Math.PI - wellReach, { steps: 48 });
+
+  // The outer white lip follows the tread with a modest, even gap, as on the electric freighter.
+  const fenderShape = new GFX.Shape();
+  arc(fenderShape, 0, 0, TIRE_R + 0.095, Math.PI * 0.07, Math.PI * 0.93, { first: true, steps: 48 });
+  arc(fenderShape, 0, 0, TIRE_R + 0.02, Math.PI * 0.93, Math.PI * 0.07, { steps: 48 });
+
   const wheels = [], steeredWheels = [];
+  D.axles.forEach((z, ai) => {
+    const axle = ai === 0 ? 'f' : 'r';
+    add(`wheel_tub_${axle}`, across(wellShape, 2 * (WHEEL_X - 0.02), 0), M.trim, [0, WHEEL_Y, z]);
+    [-1, 1].forEach((s) => {
+      const side = s < 0 ? 'l' : 'r';
+      add(`fender_${ai}_${side}`, across(fenderShape, TIRE_W + 0.06, 0.01), M.white, [s * WHEEL_X, WHEEL_Y, z]);
+    });
+  });
   D.axles.forEach((z, ai) => {
     [-1, 1].forEach((s) => {
       const side = s < 0 ? 'l' : 'r';
