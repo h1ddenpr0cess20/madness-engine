@@ -165,12 +165,12 @@ export function createElectricCar(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
 
   // ---------- the face: a dark fascia, a light bar across it, lamps, a chin, the bolt ----------
   const valance = new GFX.Shape();
-  valance.moveTo(2.98, FLOOR);
+  valance.moveTo(FRONT + ARCH, FLOOR);
   valance.lineTo(3.24, FLOOR);
   valance.quadraticCurveTo(3.31, 0.33, 3.31, 0.58);
   valance.lineTo(3.28, 0.70);
   valance.quadraticCurveTo(3.25, 0.76, 3.12, 0.78);
-  valance.lineTo(2.98, 0.78);
+  valance.lineTo(FRONT + ARCH, 0.78);
   add('front_valance', across(valance, 1.80, 0.05), M.trim);
   const chin = across(roundRectOf(GFX, 0.07, 0.07, 0.025), 1.70, 0);
   chin.translate(0, 0.37, 3.345);
@@ -216,8 +216,7 @@ export function createElectricCar(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   add('leaf_badge_right', leafOf(-1), M.green, [0.935, 0.42, 1.52], [0, -Math.PI / 2, -0.30]);
   add('battery_pack', box(1.30, 0.10, 1.9), M.trim, [0, 0.25, (REAR + FRONT) / 2]);
 
-  // ---------- wheels: the freighter's, in a tub the arch opens onto ----------
-  for (const z of D.axles) add(`wheel_tub_${z === FRONT ? 'f' : 'r'}`, box(2 * (WHEEL_X - 0.02), 0.5, 2 * (ARCH - BEVEL) + 0.04), M.trim, [0, 0.55, z]);
+  // ---------- wheels: the freighter's, in the open arches the body shell is cut with ----------
   const wheels = [], steeredWheels = [];
   D.axles.forEach((z, ai) => {
     [-1, 1].forEach((s) => {
