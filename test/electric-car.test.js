@@ -95,6 +95,37 @@ test('the vehicles index has the freighter and the car', () => {
   assert.equal(typeof vehicles.createElectricCar, 'function');
 });
 
+test('the car wheel wells are rounded and each tire has a matching body-colour fender lip', () => {
+  const car = createElectricCar(GFX);
+  const tread = 0.006 * (ELECTRIC_CAR.tireRadius / 0.6);
+  const outer = ELECTRIC_CAR.tireRadius + tread + 0.07;
+  const inner = ELECTRIC_CAR.tireRadius + tread + 0.018;
+
+  for (const [ai, z] of ELECTRIC_CAR.axles.entries()) {
+    const axle = ai === 0 ? 'f' : 'r';
+    const well = car.parts[`wheel_tub_${axle}`];
+    assert.equal(well.geometry.type, 'ExtrudeGeometry', `${axle} wheel well uses a curved profile, not a box`);
+
+    const positions = well.geometry.attributes.position;
+    let minRadius = Infinity, maxRadius = -Infinity;
+    for (let i = 0; i < positions.count; i++) {
+      const radius = Math.hypot(positions.getY(i), positions.getZ(i));
+      minRadius = Math.min(minRadius, radius);
+      maxRadius = Math.max(maxRadius, radius);
+    }
+    near(minRadius, inner, 1e-5, `${axle} wheel-well inner radius`);
+    near(maxRadius, outer, 1e-5, `${axle} wheel-well outer radius`);
+
+    for (const side of ['l', 'r']) {
+      const fender = car.parts[`fender_${ai}_${side}`];
+      assert.ok(fender, `${axle} ${side} fender exists`);
+      assert.equal(fender.material, car.materials.white, 'fender keeps the car body colour');
+      const bounds = boxOf(fender);
+      assert.ok(bounds.max.y > ELECTRIC_CAR.tireRadius + 0.02 + ELECTRIC_CAR.tireRadius, 'fender follows the upper half of the tire');
+    }
+  }
+});
+
 test('nothing is drawn across a wheel arch: the door lines, the handles and the leaves stand between the wheels', () => {
   const car = createElectricCar(GFX);
   // The arch is the wheel's circle and a hand's breadth round it.
