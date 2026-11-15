@@ -29,11 +29,12 @@ test('the cargo box is replaced by coach glazing and a passenger rear window', (
     'leaf_badge_left', 'leaf_badge_right']) assert.ok(bus.parts[name], name);
   assert.equal('cargo_body' in bus.parts, false);
   assert.equal('rear_doors' in bus.parts, false);
-  const at = new GFX.Vector3();
-  bus.parts.front_windshield.getWorldPosition(at);
-  const front = at.z;
-  bus.parts.rear_window.getWorldPosition(at);
-  assert.ok(front > at.z, 'windshield is ahead of rear window');
+  const windshield = boundsOf(bus.parts.front_windshield);
+  const glassWidth = windshield.max[0] - windshield.min[0];
+  const glassHeight = windshield.max[1] - windshield.min[1];
+  assert.ok(glassWidth > 2.2, 'windshield spans most of the coach width');
+  assert.ok(glassHeight > 1.4, 'windshield follows the long raked nose');
+  assert.ok(windshield.max[1] > 3.4, 'windshield reaches the roofline');
 });
 
 test('paint, accents and lights retain the electric freighter palette', () => {
