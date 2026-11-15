@@ -101,7 +101,7 @@ test('the car wheel wells are rounded and each tire has a matching body-colour f
   const outer = ELECTRIC_CAR.tireRadius + tread + 0.07;
   const inner = ELECTRIC_CAR.tireRadius + tread + 0.018;
 
-  for (const [ai, z] of ELECTRIC_CAR.axles.entries()) {
+  for (let ai = 0; ai < ELECTRIC_CAR.axles.length; ai++) {
     const axle = ai === 0 ? 'f' : 'r';
     const well = car.parts[`wheel_tub_${axle}`];
     assert.equal(well.geometry.type, 'ExtrudeGeometry', `${axle} wheel well uses a curved profile, not a box`);
