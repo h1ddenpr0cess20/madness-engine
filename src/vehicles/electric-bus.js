@@ -115,8 +115,16 @@ export function createElectricBus(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   shell.quadraticCurveTo(-6.08, 1.10, -6.00, 1.12);
   add('coach_body', across(shell, 2.50, 0.06), M.white);
 
-  // A wide, swept windshield; the upper edge sits farther back than the nose.
-  add('front_windshield', box(2.30, 1.52, 0.055), M.glass, [0, 2.84, -5.45], [0.52, 0, 0]);
+  // The windshield follows the coach's actual raked nose profile, laid across the full front width.
+  const windshield = new GFX.Shape();
+  windshield.moveTo(-6.12, 1.94);
+  windshield.quadraticCurveTo(-6.14, 2.04, -6.06, 2.18);
+  windshield.lineTo(-5.31, 3.62);
+  windshield.quadraticCurveTo(-5.22, 3.76, -5.08, 3.70);
+  windshield.lineTo(-5.17, 3.48);
+  windshield.lineTo(-5.94, 2.02);
+  windshield.quadraticCurveTo(-6.02, 1.92, -6.12, 1.94);
+  add('front_windshield', across(windshield, 2.30, 0.012), M.glass);
 
   // Long passenger windows on both sides, separated by slim body-color pillars.
   const sideGlass = new GFX.Shape();
