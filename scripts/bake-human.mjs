@@ -435,6 +435,8 @@ const weights = order.map((v) => {
       const grow = vs.reduce((s, i) => s + dot(sub(at(i), dc), norm(sub(posed[i], c))), 0) / vs.length;
       if (Math.abs(grow) > 1e-5) eyes[S] = Math.round(grow * 1e5) / 1e5;
     }
+    // The shonen face's eyes are drawn far larger than any lid target can open them: the eyeballs grow to fill (the hero's a little, 1.8 mm of radius; the heroine's a lot, 3.5 mm).
+    if (name === 'faceStyle:shonen') eyes.L = eyes.R = FEMALE ? 0.0035 : 0.0018;
     out[name] = { q: Number(q.toPrecision(6)), bits: wide ? 16 : 8, i: b64(index), d: b64(offset), pivots, ...(Object.keys(eyes).length ? { eyes } : {}) };
     bytes += index.byteLength + offset.byteLength;
     console.log('shape', name.padEnd(20), 'vertices', String(idx.length).padStart(6), 'most', (most * 1000).toFixed(1), 'mm', Object.keys(eyes).length ? `eyes ${JSON.stringify(eyes)}` : '');

@@ -837,18 +837,18 @@ async function humanStaff(choice) {
 
 /** The real-size, dressable humans, a man and a woman: the wardrobe, the look, the face and hands, and a weapon from the shelf to hold. */
 function humanItems() {
-  return [humanItem('male'), humanItem('female')];
+  return [humanItem('male'), humanItem('female'), humanItem('male', true), humanItem('female', true)];
 }
 
 /** One figure's item: `sex` 'male' (bearded) or 'female' (long blonde hair). */
-function humanItem(sex) {
+function humanItem(sex, shonen = false) {
   const female = sex === 'female';
   return {
-    id: female ? 'people/human-female' : 'people/human',
+    id: `people/${shonen ? 'shonen' : 'human'}${female ? '-female' : ''}`,
     category: 'People',
     group: 'people',
-    name: female ? 'Human, female (dressable base)' : 'Human (dressable base)',
-    source: 'people/human',
+    name: shonen ? (female ? 'Shonen heroine (dressable)' : 'Shonen hero (dressable)') : female ? 'Human, female (dressable base)' : 'Human (dressable base)',
+    source: shonen ? 'people/shonen' : 'people/human',
     kind: 'object',
     async build() {
       const [{ createHuman, CLIPS: clips, garmentsFor, HAND_POSES, customizationFor, DEFAULT_OUTFIT, DEFAULT_OUTFIT_FEMALE }, { STANCES, MOVES, BOWS }, { DANCES }, weapons, metals] = await Promise.all([
@@ -858,7 +858,7 @@ function humanItem(sex) {
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
-      const man = createHuman(GFX, female ? { sex } : { beard: 'full' });
+      const man = shonen ? (await import('../../../src/people/shonen.js')).createShonen(GFX, { sex }) : createHuman(GFX, female ? { sex } : { beard: 'full' });
       let weapon = 'none', weaponL = 'none', attack = 'slash', handL = 'relaxed';
       let pair = man.glasses ?? 'aviator';
       const style = {};
@@ -976,7 +976,7 @@ function humanItem(sex) {
         clips,
         ui,
         environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),
-        info: { Source: 'people/human', Height: `${man.dimensions.height} m`, Outfit: man.outfit.join(', '), Bones: man.skeleton.names.length, ...countOf(man.group) },
+        info: { Source: shonen ? 'people/shonen' : 'people/human', Height: `${man.dimensions.height} m`, Outfit: man.outfit.join(', '), Bones: man.skeleton.names.length, ...countOf(man.group) },
       };
     },
   };

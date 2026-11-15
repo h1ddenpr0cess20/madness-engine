@@ -553,7 +553,8 @@ function poreTile(size = 512, cells = 56) {
  * and pinker toward the corners, with its fine vessels branching in from
  * them.
  */
-function eyeMap(iris, size = 1024) {
+function eyeMap(iris, size = 1024, anime = false) {
+  if (anime) return animeEyeMap(iris, size, anime === 'sharp');
   const ic = hex(iris), white = hex('#e6e1dc'), pinkish = hex('#d2a79e'), gold = hex('#b9914a');
   const deep = ic.map((x) => x * 0.42), bright = ic.map((x) => Math.min(255, x * 1.5 + 14));
   const lines = (a, b, c, sharp) => Math.max(0, 1 - Math.abs(noise3(a, b, c)) * sharp);
@@ -589,6 +590,42 @@ function eyeMap(iris, size = 1024) {
       k = mixc(k, [6, 5, 5], smooth(0.05, -0.03, t));
       k = mixc(k, [22, 18, 16], smooth(0.74, 1, t) * 0.88);
       c = mixc(k, c, smooth(0.92, 1.2, t));
+    }
+    return c;
+  });
+}
+
+/**
+ * The shonen eye: a clean white, a big iris filling the lids' opening (a dark limbal edge, a pale
+ * band along its bottom, shaded under the upper lid), a large black pupil, and the glints that make an
+ * anime eye shine: a big round one high on the side the light comes from, a small one low on the other.
+ */
+function animeEyeMap(iris, size, sharp = false) {
+  const ic = hex(iris), white = hex('#f6f4f2');
+  const deep = ic.map((x) => x * 0.38), light = ic.map((x) => Math.min(255, x * 1.35 + 40));
+  return paint(size, size, (u, v) => {
+    const dx = u - 0.5, dy = v - 0.5;
+    const r = Math.hypot(dx, dy), ang = Math.atan2(dy, dx), sa = Math.sin(ang);
+    // The eye's UVs put the angle from its front at radius √(a/π)/2.
+    const a = Math.PI * (2 * r) ** 2;
+    // The hero's iris is the smaller, his glints smaller and nearer the pupil; the heroine's fills her eye.
+    const edge = sharp ? 0.66 : 0.9;
+    let c = mixc(white, hex('#dcd6d6'), smooth(0.7, 1.6, a) * 0.5);
+    if (a < edge + 0.12) {
+      const t = Math.sqrt(a / edge);
+      // Dark at the top (the lid's shade), light along the bottom, deep again at the rim.
+      let k = mixc(deep, light, clamp(0.35 + 0.65 * smooth(-0.2, 1, -sa * Math.min(1, t * 1.2))));
+      k = mixc(k, ic, 0.35 * G((t - 0.55) / 0.3));
+      k = mixc(k, deep, 0.85 * smooth(0.78, 1, t));
+      // Radial streaks, soft.
+      k = k.map((x) => x * (0.94 + 0.06 * Math.sin(ang * 36)));
+      k = mixc(k, [4, 4, 8], smooth(0.34, 0.28, t));
+      c = mixc(k, c, smooth(0.97, 1.05, t));
+      // The glints, in the eye's own frame: a big one up and out, a small one down and in.
+      const g1 = Math.hypot(dx - 0.075 * 1.6, dy + 0.08 * 1.6) * 2;
+      const g2 = Math.hypot(dx + 0.07 * 1.6, dy - 0.075 * 1.6) * 2;
+      c = mixc(c, [255, 255, 255], smooth(sharp ? 0.13 : 0.2, sharp ? 0.09 : 0.15, g1) * 0.97);
+      c = mixc(c, [255, 255, 255], smooth(0.09, 0.06, g2) * 0.85);
     }
     return c;
   });
@@ -883,12 +920,12 @@ const cache = new WeakMap();
  * skin map, made once and kept. Returns null where there is no document to
  * paint on.
  */
-export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColour = null, style = null, beard = null, sex = 'male' } = {}) {
+export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColour = null, style = null, beard = null, sex = 'male', anime = false } = {}) {
   if (typeof document === 'undefined') return null;
   let byGFX = cache.get(GFX);
   if (!byGFX) cache.set(GFX, (byGFX = new Map()));
   const groom = { ...(style || beard ? { hairColour, style, beard } : {}), female: sex === 'female' };
-  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}|${sex}`;
+  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}|${sex}|${anime ? 'anime' : ''}`;
   if (byGFX.has(key)) return byGFX.get(key);
   const garments = byGFX.get('garments') ?? (() => {
     const fabrics = fabricTiles(), suit = woolMap();
@@ -918,7 +955,7 @@ export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 
   const made = {
     ...garments,
     skin: { map: texture(GFX, canvasOf(skinPixels(size, skin, groom), size)), bump: garments.pores, detail },
-    eye: texture(GFX, eyeMap(iris)),
+    eye: texture(GFX, eyeMap(iris, 1024, anime ? (sex === 'female' ? 'soft' : 'sharp') : false)),
   };
   byGFX.set(key, made);
   return made;

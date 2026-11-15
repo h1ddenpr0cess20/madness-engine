@@ -48,6 +48,49 @@ export const BUILDS = Object.freeze({
   heavy: { weight: 1, muscle: -0.15 },
 });
 
+/**
+ * The shonen face, as MakeHuman's modelling targets (the face only: the body is the figure's own), drawn
+ * the way action anime draws it. The hero: eyes a little large and narrow, sharp at the outer corners,
+ * low under straight, slanting brows; an angular jaw to a firm chin, high cheekbones; a small, simple
+ * nose and mouth. `shonen()` weights are those of a pose of the figure's own: he is the sharper, she
+ * (`shonenHeroine`) the rounder: very large, tall eyes, soft cheeks, a narrow jaw to a pointed chin.
+ */
+function shonenHero() {
+  return {
+    'eyes/{s}-eye-scale-incr': 2.2, 'eyes/{s}-eye-height2-incr': 1.1, 'eyes/{s}-eye-height1-incr': 0.6, 'eyes/{s}-eye-height3-incr': 0.5,
+    'eyes/{s}-eye-trans-down': 0.5, 'eyes/{s}-eye-trans-out': 0.2,
+    'eyes/{s}-eye-corner2-up': 1.1, 'eyes/{s}-eye-eyefold-angle-up': 0.6, 'eyes/{s}-eye-bag-decr': 0.6,
+    'nose/nose-scale-vert-decr': 0.4, 'nose/nose-scale-horiz-decr': 0.4, 'nose/nose-volume-decr': 0.35, 'nose/nose-nostrils-width-decr': 0.4, 'nose/nose-point-width-decr': 0.3,
+    'mouth/mouth-scale-horiz-decr': 0.3, 'mouth/mouth-scale-vert-decr': 0.3, 'mouth/mouth-trans-down': 0.25,
+    'mouth/mouth-upperlip-volume-decr': 0.4, 'mouth/mouth-lowerlip-volume-decr': 0.3,
+    'head/head-square': 0.3, 'head/head-invertedtriangular': 0.25, 'chin/chin-width-decr': 0.5, 'chin/chin-prominent-incr': 0.3, 'chin/chin-bones-incr': 0.2,
+    'cheek/{s}-cheek-bones-incr': 0.6, 'cheek/{s}-cheek-volume-decr': 0.4,
+    'ears/{s}-ear-scale-decr': 0.3, 'forehead/forehead-scale-vert-incr': 0.2,
+    'eyebrows/eyebrows-trans-down': 0.6, 'eyebrows/eyebrows-angle-down': 0.9,
+  };
+}
+
+function shonenHeroine() {
+  const eyes = 2.7, brow = 0.8;
+  return {
+    'eyes/{s}-eye-scale-incr': 1.35 * eyes,
+    'eyes/{s}-eye-height1-incr': 0.8 * eyes, 'eyes/{s}-eye-height2-incr': 1 * eyes, 'eyes/{s}-eye-height3-incr': 0.7 * eyes,
+    'eyes/{s}-eye-trans-down': 0.9, 'eyes/{s}-eye-trans-out': 0.6,
+    'eyes/{s}-eye-corner2-up': 0.45 * brow, 'eyes/{s}-eye-eyefold-angle-up': 0.25 * brow,
+    'eyes/{s}-eye-bag-decr': 0.6,
+    'nose/nose-scale-vert-decr': 0.8, 'nose/nose-scale-horiz-decr': 0.7, 'nose/nose-scale-depth-decr': 0.8, 'nose/nose-volume-decr': 0.7,
+    'nose/nose-width1-decr': 0.6, 'nose/nose-width2-decr': 0.6, 'nose/nose-width3-decr': 0.6, 'nose/nose-nostrils-width-decr': 0.6,
+    'nose/nose-point-width-decr': 0.5, 'nose/nose-flaring-decr': 0.6, 'nose/nose-base-up': 0.3,
+    'mouth/mouth-scale-horiz-decr': 0.55, 'mouth/mouth-scale-vert-decr': 0.45, 'mouth/mouth-scale-depth-decr': 0.4, 'mouth/mouth-trans-down': 0.35,
+    'mouth/mouth-upperlip-volume-decr': 0.5, 'mouth/mouth-lowerlip-volume-decr': 0.4, 'mouth/mouth-philtrum-volume-decr': 0.5,
+    'head/head-invertedtriangular': 0.6, 'chin/chin-width-decr': 0.9, 'chin/chin-bones-decr': 0.8, 'chin/chin-prominent-decr': 0.25,
+    'cheek/{s}-cheek-bones-decr': 0.6, 'cheek/{s}-cheek-volume-decr': 0.5, 'cheek/{s}-cheek-inner-decr': 0.4,
+    'ears/{s}-ear-scale-decr': 0.45, 'ears/{s}-ear-wing-decr': 0.5,
+    'forehead/forehead-scale-vert-incr': 0.2,
+    'eyebrows/eyebrows-trans-down': 0.35 * brow, 'eyebrows/eyebrows-angle-down': 0.5 * brow,
+  };
+}
+
 export const CUSTOMIZATION = Object.freeze([
   { group: 'Body', slots: [
     // Chosen when the human is made (createHuman's `sex`, or this feature then): a man or a woman.
@@ -131,6 +174,13 @@ export const CUSTOMIZATION = Object.freeze([
     choice('tattoo', 'Face tattoo', ['none', 'tribal', 'runes', 'tear']),
   ] },
   { group: 'Head', slots: [
+    // How the face is built: as a person's, or as a shonen anime hero's (or heroine's). The anime face
+    // also paints itself so (a flat, smooth skin, bold lashes and brows, the big glossy eye: textures.js).
+    choice('faceStyle', 'Face style', ['realistic', 'shonen'], { ready: true, shape: {
+      realistic: {},
+      shonen: shonenHero(),
+      forFemale: { realistic: {}, shonen: shonenHeroine() },
+    } }),
     choice('face', 'Face shape', ['oval', 'round', 'square', 'long', 'heart', 'diamond'], { shape: {
       oval: {},
       round: { 'head/head-round': 1 },

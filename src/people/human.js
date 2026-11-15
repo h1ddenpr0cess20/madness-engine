@@ -646,7 +646,7 @@ export function createHuman(GFX, options = {}) {
   const group = new GFX.Group();
   group.name = 'human';
   const { data: base } = bodyData(detail, sex);
-  const paintFor = () => ({ skin: look.skin, iris: look.iris, hair: look.hair, style: grooming.hair, beard: grooming.beard, sex, size: levelFor(detail) ? 2048 : 1024 });
+  const paintFor = () => ({ skin: look.skin, iris: look.iris, hair: look.hair, style: grooming.hair, beard: grooming.beard, sex, size: levelFor(detail) ? 2048 : 1024, anime: features.faceStyle === 'shonen' });
   let tex = humanTextures(GFX, paintFor());
   let mats = makeMaterials(GFX, look, tex);
   const skeleton = new Skeleton(bones(sex));
@@ -1624,13 +1624,16 @@ export function createHuman(GFX, options = {}) {
     return h.thing;
   }
 
+  /** The skin and eyes painted again, for the colours and face style he has now. */
+  function repaint() {
+    tex = humanTextures(GFX, paintFor());
+    const next = makeMaterials(GFX, look, tex);
+    for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap, detailMap: next[n].detailMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
+  }
+
   function setLook(change) {
     Object.assign(look, change);
-    if (change.skin || change.iris || change.hair) {
-      tex = humanTextures(GFX, paintFor());
-      const next = makeMaterials(GFX, look, tex);
-      for (const n of ['skin', 'eye']) Object.assign(mats[n], { map: next[n].map, bumpMap: next[n].bumpMap, detailMap: next[n].detailMap }), mats[n].color.copy(next[n].color), mats[n].needsUpdate = true;
-    }
+    if (change.skin || change.iris || change.hair) repaint();
     for (const n of ['shirt', 'shoe', 'sole', 'briefs']) if (change[n]) mats[n].color.set(change[n]);
     if (change.socks) mats.sock.color.set(change.socks);
     if (change.jacket) for (const n of ['leather', 'leatherTrim']) mats[n].color.set(change.jacket);
@@ -1722,6 +1725,7 @@ export function createHuman(GFX, options = {}) {
       for (const k of ['hair', 'beard', 'brows']) if (k in change) groom[k] = none(change[k]);
       if (Object.keys(groom).length) setHair(groom);
       if ('glasses' in change) api.setGlasses(none(change.glasses));
+      if ('faceStyle' in change) repaint();
       if (SHAPE_KEYS.some((k) => k in change)) reshape();
       return api;
     },
