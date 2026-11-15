@@ -95,34 +95,15 @@ test('the vehicles index has the freighter and the car', () => {
   assert.equal(typeof vehicles.createElectricCar, 'function');
 });
 
-test('the car wheel wells are rounded and each tire has a matching body-colour fender lip', () => {
+test('the existing body arches stay open around the car wheels', () => {
   const car = createElectricCar(GFX);
-  const tread = 0.006 * (ELECTRIC_CAR.tireRadius / 0.6);
-  const outer = ELECTRIC_CAR.tireRadius + tread + 0.07;
-  const inner = ELECTRIC_CAR.tireRadius + tread + 0.018;
-
-  for (let ai = 0; ai < ELECTRIC_CAR.axles.length; ai++) {
-    const axle = ai === 0 ? 'f' : 'r';
-    const well = car.parts[`wheel_tub_${axle}`];
-    assert.equal(well.geometry.type, 'ExtrudeGeometry', `${axle} wheel well uses a curved profile, not a box`);
-
-    const positions = well.geometry.attributes.position;
-    let minRadius = Infinity, maxRadius = -Infinity;
-    for (let i = 0; i < positions.count; i++) {
-      const radius = Math.hypot(positions.getY(i), positions.getZ(i));
-      minRadius = Math.min(minRadius, radius);
-      maxRadius = Math.max(maxRadius, radius);
-    }
-    near(minRadius, inner, 1e-5, `${axle} wheel-well inner radius`);
-    near(maxRadius, outer, 1e-5, `${axle} wheel-well outer radius`);
-
-    for (const side of ['l', 'r']) {
-      const fender = car.parts[`fender_${ai}_${side}`];
-      assert.ok(fender, `${axle} ${side} fender exists`);
-      assert.equal(fender.material, car.materials.white, 'fender keeps the car body colour');
-      const bounds = boxOf(fender);
-      assert.ok(bounds.max.y > ELECTRIC_CAR.tireRadius + 0.02 + ELECTRIC_CAR.tireRadius, 'fender follows the upper half of the tire');
-    }
+  assert.ok(car.parts.body_shell, 'the original body shell defines the wheel openings');
+  assert.equal(car.wheels.length, 4);
+  assert.equal(Object.keys(car.parts).some((name) => name.startsWith('wheel_tub_')), false, 'no black rectangular wheel tub is added');
+  assert.equal(Object.keys(car.parts).some((name) => name.startsWith('fender_')), false, 'no extra fender geometry is added');
+  for (const wheel of car.wheels) {
+    const bounds = boxOf(wheel);
+    assert.ok(bounds.max.y > ELECTRIC_CAR.tireRadius, `${wheel.name} remains exposed above the lower body`);
   }
 });
 
