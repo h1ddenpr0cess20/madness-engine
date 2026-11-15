@@ -118,8 +118,21 @@ jobs:
             );
             await page.waitForTimeout(1500);
             await page.screenshot({ path: 'artifacts/electric-bus.png', fullPage: true });
+            await page.evaluate(async () => {
+              const car = window.assetViewer?.catalog?.find((item) => item.id === 'vehicles/electric-car');
+              if (!car) throw new Error('Electric car is missing from the asset viewer catalog');
+              await window.assetViewer.show(car);
+            });
+            await page.waitForFunction(
+              () => document.querySelector('#title b')?.textContent?.toLowerCase().includes('electric car')
+                && document.querySelector('#busy')?.style.display === 'none',
+              null,
+              { timeout: 120000 },
+            );
+            await page.waitForTimeout(1500);
+            await page.screenshot({ path: 'artifacts/electric-car.png', fullPage: true });
             if (errors.length) throw new Error(errors.join('\\n'));
-            console.log('Rendered the electric bus in the asset viewer:', await page.locator('#title b').textContent());
+            console.log('Rendered the electric bus and electric car in the asset viewer.');
           } finally {
             await browser.close();
           }
