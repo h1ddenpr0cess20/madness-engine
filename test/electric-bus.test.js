@@ -30,11 +30,11 @@ test('the cargo box is replaced by coach glazing and a passenger rear window', (
   assert.equal('cargo_body' in bus.parts, false);
   assert.equal('rear_doors' in bus.parts, false);
   const windshield = boxOf(bus.parts.front_windshield);
-  const glassWidth = windshield.max[0] - windshield.min[0];
-  const glassHeight = windshield.max[1] - windshield.min[1];
+  const glassWidth = windshield.max.x - windshield.min.x;
+  const glassHeight = windshield.max.y - windshield.min.y;
   assert.ok(glassWidth > 2.2, 'windshield spans most of the coach width');
   assert.ok(glassHeight > 1.4, 'windshield follows the long raked nose');
-  assert.ok(windshield.max[1] > 3.4, 'windshield reaches the roofline');
+  assert.ok(windshield.max.y > 3.4, 'windshield reaches the roofline');
 });
 
 test('paint, accents and lights retain the electric freighter palette', () => {
