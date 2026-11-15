@@ -31,6 +31,7 @@ import { WEAPON_ASSETS, weaponShelf } from './weapon-assets.js';
 import { RANGE } from '../../../src/weapons/categories.js';
 import { createFreighter, FREIGHTER, FREIGHTER_DRIVE } from '../../../src/vehicles/freighter.js';
 import { createElectricCar, ELECTRIC_CAR, ELECTRIC_CAR_DRIVE } from '../../../src/vehicles/electric-car.js';
+import { createElectricBus, ELECTRIC_BUS, ELECTRIC_BUS_DRIVE } from '../../../src/vehicles/electric-bus.js';
 
 const sculpted = import.meta.glob('../../../src/{characters,props,scenery}/**/*.js');
 const proceduralProps = import.meta.glob(['../../../src/props/*.js', '../../../src/props/**/*.js']);
@@ -1026,6 +1027,7 @@ function vehicleItem({ id, name, create, dimensions, drive }) {
 
 const vehicleItems = () => [
   vehicleItem({ id: 'electric-car', name: 'Electric car', create: createElectricCar, dimensions: ELECTRIC_CAR, drive: ELECTRIC_CAR_DRIVE }),
+  vehicleItem({ id: 'electric-bus', name: 'Electric bus', create: createElectricBus, dimensions: ELECTRIC_BUS, drive: ELECTRIC_BUS_DRIVE }),
   vehicleItem({ id: 'freighter', name: 'Electric freighter', create: createFreighter, dimensions: FREIGHTER, drive: FREIGHTER_DRIVE }),
 ];
 
