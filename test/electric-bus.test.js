@@ -29,7 +29,7 @@ test('the cargo box is replaced by coach glazing and a passenger rear window', (
     'leaf_badge_left', 'leaf_badge_right']) assert.ok(bus.parts[name], name);
   assert.equal('cargo_body' in bus.parts, false);
   assert.equal('rear_doors' in bus.parts, false);
-  const windshield = boundsOf(bus.parts.front_windshield);
+  const windshield = boxOf(bus.parts.front_windshield);
   const glassWidth = windshield.max[0] - windshield.min[0];
   const glassHeight = windshield.max[1] - windshield.min[1];
   assert.ok(glassWidth > 2.2, 'windshield spans most of the coach width');
