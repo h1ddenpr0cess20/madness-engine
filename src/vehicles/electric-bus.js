@@ -106,9 +106,9 @@ export function createElectricBus(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   shell.lineTo(-6.10, 1.34);
   shell.quadraticCurveTo(-6.17, 1.58, -6.04, 1.84);
   shell.lineTo(-5.17, 3.53);
-  shell.quadraticCurveTo(-5.02, 3.99, -4.66, 3.99);
-  shell.lineTo(3.68, 3.99);
-  shell.quadraticCurveTo(4.04, 3.99, 4.04, 3.50);
+  shell.quadraticCurveTo(-5.02, 3.924, -4.66, 3.924);
+  shell.lineTo(3.68, 3.924);
+  shell.quadraticCurveTo(4.04, 3.924, 4.04, 3.50);
   shell.lineTo(4.04, 1.22);
   shell.quadraticCurveTo(4.04, 1.10, 3.84, 1.10);
   shell.lineTo(-5.86, 1.10);
