@@ -46,7 +46,7 @@ test('paint, accents and lights retain the electric freighter palette', () => {
   near(bus.materials.green.color.g, palette.green.g, 1e-6, 'green accent');
   near(bus.materials.led.emissive.g, palette.cyan.g, 1e-6, 'cyan LED');
   near(bus.materials.trim.color.r, palette.trim.r, 1e-6, 'charcoal trim');
-  assert.equal(ELECTRIC_BUS_DRIVE, FREIGHTER_DRIVE);
+  assert.deepEqual(ELECTRIC_BUS_DRIVE, FREIGHTER_DRIVE);
 });
 
 test('the bus drives and retains scale, customization and reset behavior', () => {
