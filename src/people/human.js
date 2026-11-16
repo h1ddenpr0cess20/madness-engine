@@ -937,37 +937,39 @@ export function createHuman(GFX, options = {}) {
   }
 
   /**
-   * How much the left hand takes the right's weapon too, in `state`: in the swings made with both hands,
+   * How much the other hand takes the weapon in hand `side` too, in `state`: in the swings made with both hands,
    * and in every weapon swing of a weapon made for two.
    */
-  function twoHanded(state) {
+  function twoHanded(state, side = 'R') {
+    const other = side === 'R' ? 'L' : 'R';
     // Held in a stance made with both hands (kendo's middle guard), or in the moves made from one.
-    if (held.R?.how === 'grip' && !held.L && ((state.clip === 'stance' || state.clip === 'attack') && stanceTakesBoth(state, style))) return 1;
+    if (held[side]?.how === 'grip' && !held[other] && ((state.clip === 'stance' || state.clip === 'attack') && stanceTakesBoth(state, style))) return 1;
     if (state.clip !== 'attack') return 0;
     // As the motion does: a swing it does not know is a slash.
     const swing = WEAPON_SWINGS.has(style.attack) || UNARMED.has(style.attack) ? style.attack : 'slash';
-    if (!(TWO_HANDED.has(swing) || (WEAPON_SWINGS.has(swing) && held.R?.hands === 'two-handed'))) return 0;
+    if (!(TWO_HANDED.has(swing) || (WEAPON_SWINGS.has(swing) && held[side]?.hands === 'two-handed'))) return 0;
     const t = state.t ?? 0;
     return Math.min(1, Math.max(0, (t - 0.04) / 0.12)) * Math.min(1, Math.max(0, (0.88 - t) / 0.12));
   }
 
   /**
-   * Turns the left arm, forearm and hand (on from the clip's pose, `amount`
-   * of the way) so the left hand closes on the right hand's weapon below
-   * it, along the grip, its knuckles the same way as the right's.
+   * Turns the arm, forearm and hand of the side that is not holding (on from the clip's pose, `amount` of the way) so that hand
+   * closes on the weapon in hand `holder` (the right, usually), at its second grip, its knuckles the same way as the holder's.
    */
-  function bothHands(amount, clear = 0) {
-    const h = held.R;
+  function bothHands(holder, amount, clear = 0) {
+    const h = held[holder];
+    const O = holder === 'R' ? 'L' : 'R';
     skeleton.compute();
-    const o = skeleton.index.get('handR') * 12, B = skeleton.matrices;
+    const o = skeleton.index.get(`hand${holder}`) * 12, B = skeleton.matrices;
     M4.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
-    const world = new GFX.Matrix4().multiplyMatrices(M4, shape ? restOf(h, 'R') : h.rest);
-    const target = new GFX.Vector3(0, h.second, 0).applyMatrix4(world);
-    const axis = new GFX.Vector3(0, 1, 0).transformDirection(world);
-    // The right hand's back (rest −x for the right hand): the left's (rest +x) goes the same way.
-    const back = new GFX.Vector3(B[o] * -1, B[o + 4] * -1, B[o + 8] * -1).normalize();
-    const grip = mirror(gripOf(sex), 1).map((v, a) => v + handShift('L')[a]), along = [0, GRIP_TILT, 1];
-    const bonesL = ['armL', 'foreL', 'handL'];
+    const world = new GFX.Matrix4().multiplyMatrices(M4, shape ? restOf(h, holder) : h.rest);
+    const target = new GFX.Vector3(...(h.frame ? h.frame.at : [0, h.second, 0])).applyMatrix4(world);
+    const axis = new GFX.Vector3(...(h.frame ? h.frame.axis : [0, 1, 0])).transformDirection(world);
+    // The holding hand's back (rest −x for the right hand, +x for the left): the other's (its mirror) goes the same way.
+    const m = holder === 'L' ? 1 : -1;
+    const back = new GFX.Vector3(B[o] * m, B[o + 4] * m, B[o + 8] * m).normalize();
+    const grip = mirror(gripOf(sex), O === 'L' ? 1 : -1).map((v, a) => v + handShift(O)[a]), along = [0, GRIP_TILT, 1];
+    const bonesL = [`arm${O}`, `fore${O}`, `hand${O}`];
     const start = bonesL.map((b) => skeleton.bone(b).rot.slice());
     const dirOf = (name, d) => {
       const q = skeleton.index.get(name) * 12, M = skeleton.matrices;
@@ -975,11 +977,16 @@ export function createHuman(GFX, options = {}) {
     };
     const cost = () => {
       skeleton.compute();
-      const p = skeleton.point('handL', grip);
+      const p = skeleton.point(`hand${O}`, grip);
       const dp = (p[0] - target.x) ** 2 + (p[1] - target.y) ** 2 + (p[2] - target.z) ** 2;
-      const da = 1 - dirOf('handL', along).dot(axis), db = 1 - dirOf('handL', [1, 0, 0]).dot(back);
+      const da = 1 - (h.frame ? Math.abs(dirOf(`hand${O}`, along).dot(axis)) : dirOf(`hand${O}`, along).dot(axis)), db = 1 - dirOf(`hand${O}`, [O === 'L' ? 1 : -1, 0, 0]).dot(back);
       // And the arm kept out of the body (and what he wears) on the way there: the elbow goes out, not in.
-      return dp + 0.004 * da + 0.0015 * db + (clear ? clear * armDepth(skeleton, clearance).L ** 2 : 0);
+      // An elbow bends one way only (forward: a negative turn of the forearm), and the arm is not twisted about its own length
+      // beyond what a shoulder, a forearm and a wrist will give: the hand has to come to the grip by a way an arm can go.
+      const over = (v, limit) => Math.max(0, Math.abs(v) - limit) ** 2;
+      const fore = skeleton.bone(`fore${O}`).rot, upper = skeleton.bone(`arm${O}`).rot, wrist = skeleton.bone(`hand${O}`).rot;
+      const joints = 0.8 * Math.max(0, fore[0] - 0.02) ** 2 + 0.06 * (over(upper[1], 0.7) + over(fore[1], 0.7) + over(wrist[1], 0.8) + over(wrist[2], 0.9) + over(upper[2], 1.2));
+      return dp + 0.004 * da + 0.0015 * db + joints + (clear ? clear * armDepth(skeleton, clearance)[O] ** 2 : 0);
     };
     let best = cost(), step = 0.25;
     for (let it = 0; it < 40 && step > 0.004; it++) {
@@ -1234,10 +1241,13 @@ export function createHuman(GFX, options = {}) {
     const gripR = held.R?.how === 'grip', gripL = held.L?.how === 'grip';
     const armed = gripR && gripL ? 'both' : gripR ? 'R' : gripL ? 'L' : null;
     // A weapon made for two hands is swung with both.
-    const both = armed && !held.L && held.R.hands === 'two-handed';
+    const lead = armed === 'both' ? null : armed;
+    const both = lead && !held[lead === 'R' ? 'L' : 'R'] && held[lead].hands === 'two-handed';
     moveBlended(state, { ...style, armed, both, heavy: style.heavy ?? 0 });
     shrug(skeleton, JOINTS);
-    const grip = held.R?.how === 'grip' && !held.L ? twoHanded(state) : 0;
+    // The hand a weapon is held in alone (a shovel may be led by either): the other takes its second grip when a move calls for two.
+    const holder = held.R?.how === 'grip' && !held.L ? 'R' : held.L?.how === 'grip' && !held.R ? 'L' : null;
+    const grip = holder ? twoHanded(state, holder) : 0;
     // Reading: the head bowed to the page.
     const reading = held.R?.how === 'book';
     if (reading) { skeleton.turn('neck', 0.12, 0, 0); skeleton.turn('head', 0.26, 0, 0); }
@@ -1247,18 +1257,18 @@ export function createHuman(GFX, options = {}) {
     carryPose(state);
     clearance ??= measure([body.data, ...[...worn.values()].map((w) => w.mesh.data)], skeleton.names, skeleton.pivots);
     if (grip) {
-      // The swinging arm kept out of his body first, then the left hand put on the grip where that leaves it.
+      // The swinging arm kept out of his body first, then the other hand put on the grip where that leaves it.
       skeleton.compute();
-      if (clearArms(skeleton, clearance, skeleton.pivots, ['R'])) skeleton.compute();
+      if (clearArms(skeleton, clearance, skeleton.pivots, [holder])) skeleton.compute();
       // (The fighting stances and moves keep the arm out of the body on the way; the old swings are as they were.)
-      bothHands(grip, state.clip === 'stance' || (state.clip === 'attack' && MOVES.includes(style.attack)) ? 25 : 0);
+      bothHands(holder, grip, state.clip === 'stance' || (state.clip === 'attack' && MOVES.includes(style.attack)) ? 25 : 0);
     }
     for (const S of ['L', 'R']) {
       const want = hands[S].shape;
       const how = held.R?.how === 'book' ? 'book' : held[S]?.how;
       const shape = how === 'tome' ? { ...HAND_POSES.tome, out: held[S].out }
         : how && how !== 'grip' ? HAND_POSES[{ palm: 'cup', pinch: 'pinch', book: 'book', tome: 'tome', bowl: 'bowl' }[how]]
-        : held[S] || (S === 'L' && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
+        : held[S] || (S === (holder === 'R' ? 'L' : 'R') && grip > 0.5) ? HAND_POSES.grip : state.clip === 'yell' ? HAND_POSES.fist
         // Fighting, the hands make the shape the stance or move calls for.
         : fightHands(state, style) && want === 'relaxed' ? HAND_POSES[fightHands(state, style)]
         // Waving, the waving hand is open, its fingers a little apart.
@@ -1349,13 +1359,18 @@ export function createHuman(GFX, options = {}) {
     object.matrixAutoUpdate = false;
     group.add(object);
     // Where a second hand takes it, below the first (toward the pommel), as far down the grip as there is.
-    const second = bounds ? Math.max(bounds.bottom + 0.03, y - 0.085) : y - 0.085;
+    // (A tool says where its second hand goes as its `secondGrip`: a number, how far down the grip, or `{ at, axis }`, the point
+    // and the way the fist closes about it, in the tool's own frame: a shovel's is the crossbar of its D-handle.)
+    const sg = thing.secondGrip;
+    const frame = sg && typeof sg === 'object' ? { at: sg.at, axis: sg.axis ?? [0, 1, 0] } : null;
+    const gap = typeof sg === 'number' ? sg : 0.085;
+    const second = frame ? frame.at[1] : bounds ? Math.max(bounds.bottom + 0.03, y - gap) : y - gap;
     // How many hands it is made for (a weapon's `handling`); anything else is taken as one-handed.
     const hands = thing.handling?.hands ?? 'one-handed';
     // Two weapons are wielded only if neither is made for two hands: one that is takes both, and the other is put down.
     const other = S === 'L' ? 'R' : 'L';
     if (held[other]?.how === 'grip' && (hands === 'two-handed' || held[other].hands === 'two-handed')) release(other);
-    held[S] = { thing, object, rest, second, hands, how: 'grip' };
+    held[S] = { thing, object, rest, second, frame, hands, how: 'grip' };
     if (last) pose(last);
     return api;
   }

@@ -51,4 +51,5 @@ export { PODIUM_ACCENT, PODIUM_SIZE, PODIUM_TILT, PODIUM_TOP, podiumOf } from '.
 export { BOWLING_PIN_DESIGNS, BOWLING_PIN_HEIGHT, BOWLING_PIN_RADIUS, createBowlingPin } from './bowling-pin.js';
 export { createBitcoinCoin } from './bitcoin-coin.js';
 export { createPoliticalCoin } from './political-coin.js';
+export { SNOW_SHOVEL_DIMENSIONS, SNOW_SHOVEL_SPEC, createSnowShovel } from './snow-shovel.js';
 export { PUTTER_DIMENSIONS, PUTTER_HEADS, PUTTER_HEAD_NAMES, PUTTER_LENGTHS, PUTTER_LIES, PUTTER_SIGHTS, PUTTER_SPEC, createPutter } from './putter.js';

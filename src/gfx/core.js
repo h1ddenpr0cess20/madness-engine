@@ -313,9 +313,24 @@ export class Scene extends Object3D {
     this.environment = null;
     /** How that studio is turned in the world. */
     this.environmentRotation = new Euler();
+    /** Haze, or null: a `FogExp2`. What is drawn with a standard or physical material fades into it with distance. */
+    this.fog = null;
   }
 }
 Scene.prototype.isScene = true;
+
+/**
+ * Exponential fog: what is `d` metres from the camera is `1 - exp(-density * d)` of the way to `color`. A density of 0.02 is a
+ * haze that hides the far hills, 0.1 a fog that closes in at about thirty metres. Lit (standard and physical) materials take it;
+ * a hand-written shader (`ShaderMaterial`) does its own.
+ */
+export class FogExp2 {
+  constructor(color = 0xffffff, density = 0.02) {
+    this.color = new Color(color);
+    this.density = density;
+  }
+}
+FogExp2.prototype.isFogExp2 = true;
 
 // ---------------------------------------------------------------- geometry
 
