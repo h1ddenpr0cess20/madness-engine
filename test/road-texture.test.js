@@ -7,7 +7,7 @@ const SIZE = 384;
 
 const luma = (color, i) => (color[i * 4] + color[i * 4 + 1] + color[i * 4 + 2]) / 3;
 
-/** How much a tile jumps across its own wrap, against how much it changes between any two neighbours inside it: about 1 when it tiles. */
+/** How much a tile jumps across its own wrap, against how much it changes between any two neighbors inside it: about 1 when it tiles. */
 function seam({ size, color }) {
   let across = 0, inside = 0;
   for (let k = 0; k < size; k++) {

@@ -61,7 +61,7 @@ export function kremlintower(m, v) {
   return { height: H + 1.3 };
 }
 
-/** A khrushchevka: a pale concrete panel block of nine storeys, with a balcony on every floor and rows of plain windows. */
+/** A khrushchevka: a pale concrete panel block of nine stories, with a balcony on every floor and rows of plain windows. */
 export function khrushchevka(m, v) {
   const { rnd } = v;
   const floors = 7 + Math.floor(rnd() * 2), fh = 0.26, H = floors * fh;

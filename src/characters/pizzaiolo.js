@@ -4,7 +4,7 @@ import { moustache } from './wardrobe.js';
 /**
  * The Pizzaiolo: from the wood-fired oven at the back of a trattoria off
  * the Campo, big and floury, in chef's whites, a tall toque, a red
- * neckerchief, flour to the elbows, a moustache, the sleeves rolled
+ * neckerchief, flour to the elbows, a mustache, the sleeves rolled
  * up, and the dough up on one hand over his head, spinning, wider every
  * turn. Spins the dough. Throws the dough. Has never missed. About 1.1
  * tiles tall with the hat.

@@ -4,7 +4,7 @@ import { moustache } from './wardrobe.js';
 /**
  * The Bobby: a London constable on the beat, in the tall custodian helmet
  * with its star badge and its knob on top, the dark tunic buttoned up in
- * silver, the chequered band, a whistle on its chain, and the hands behind
+ * silver, the checkred band, a whistle on its chain, and the hands behind
  * the back, rocking heel to toe. Evening all. Mind how you roll. About 1.0
  * tiles tall, helmet and all.
  */
@@ -48,7 +48,7 @@ export default person({
         s.limb([0, 0.8, 0.106], [Math.sin(a) * 0.026, 0.8 + Math.cos(a) * 0.026, 0.1], 0.006, 0.002, { color: '#c8ccd4', mat: 'metal', bone: 'head', k: 0.002 });
       }
       s.sphere([0, 0.8, 0.108], 0.012, { color: '#2a3a8a', mat: 'metal', bone: 'head', k: 0.002 });
-      // Silver buttons down the tunic, the chequered cuff band, the whistle chain.
+      // Silver buttons down the tunic, the checkred cuff band, the whistle chain.
       for (const y of [0.5, 0.45, 0.4, 0.36]) s.sphere([0, y, 0.077 + (0.5 - y) * 0.12], 0.007, { color: '#c8ccd4', mat: 'metal', bone: y > 0.42 ? 'chest' : 'spine', k: 0.001 });
       s.torus([0.05, 0.45, 0.06], 0.035, 0.003, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.001, rot: [1.2, 0, 0.4], arc: Math.PI });
       s.limb([0.075, 0.44, 0.072], [0.085, 0.43, 0.075], 0.006, 0.005, { color: '#c8ccd4', mat: 'metal', bone: 'chest', k: 0.001 });

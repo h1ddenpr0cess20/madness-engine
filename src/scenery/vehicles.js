@@ -6,7 +6,7 @@ import { letters } from '../models/lettering.js';
  * The traffic, sculpted: a sedan, a hatchback, a pickup, a box truck, a
  * tanker, and a rusted-out junker for the yard. Each faces +z with its
  * wheels on the ground at y = 0. The body is baked white and takes its
- * colour from its `paint` material, so one bake does every colour of car.
+ * color from its `paint` material, so one bake does every color of car.
  *
  * The wheels go round. Each definition says where its wheels are
  * (`wheels`: their hubs, how big, which steer) and which wheel it rolls on
@@ -95,20 +95,20 @@ const slab = (s, a, b, r, o) => s.box([0, 1, 2].map((i) => (a[i] + b[i]) / 2), [
 // ——————————————————————————————————————— wheels
 
 /**
- * A wheel round the x axis at c, its face to `side` (+1: +x): the tyre
+ * A wheel round the x axis at c, its face to `side` (+1: +x): the tire
  * turned from its profile — the tread with its grooves and blocks, the
  * shoulders rounded, the sidewalls bulged, a raised ring round each — and
  * in it a car's alloy (five twin spokes, the brake disc dark behind them,
  * the lip polished, a cap and five nuts) or a truck's steel wheel (a dished
  * disc with its hand holes, a big hub, a ring of nuts). From behind: the
- * tyre's other sidewall and the back of the rim, its barrel and hub.
+ * tire's other sidewall and the back of the rim, its barrel and hub.
  */
 function tyre(s, c, r, w, side, { steel = false } = {}) {
   const [cx, cy, cz] = c, face = cx + side * w / 2, hw = w / 2;
   const turn = { rot: [0, 0, Math.PI / 2] };
   const bead = r * (steel ? 0.66 : 0.68);
   const blocks = steel ? 28 : 36;
-  // The tyre: in (across, out) it is a rounded slab from the bead to the tread, the sidewalls bulging, the tread cut.
+  // The tire: in (across, out) it is a rounded slab from the bead to the tread, the sidewalls bulging, the tread cut.
   s.shape((p) => {
     const x = p[0] - cx, y = p[1] - cy, z = p[2] - cz, rho = Math.hypot(y, z), u = Math.abs(x);
     const t = Math.min(1, Math.max(0, (rho - bead) / (r - bead)));
@@ -502,7 +502,7 @@ function truck(s, spec, { withWheels = true } = {}) {
       // The cradles.
       for (const z of [t0 + 0.5, t1 - 0.4]) slab(s, [-0.4, 0.4, z - 0.06], [0.4, 0.62, z + 0.06], 0.02, { color: TRIM, mat: 'trim', k: 0.006 });
     } else {
-      // A box body on the chassis: its corner posts and rails in aluminium, ribbed along the sides, a roller door at the back.
+      // A box body on the chassis: its corner posts and rails in aluminum, ribbed along the sides, a roller door at the back.
       const b0 = -hl + 0.01, b1 = back - 0.06, y0 = 0.44, y1 = 1.62, bw = hw + 0.02;
       s.part('cargo', () => slab(s, [-bw + 0.01, y0, b0 + 0.01], [bw - 0.01, y1, b1], 0.03, { color: '#eceae4', mat: 'trim', k: 0.01 }));
       for (const [x, z] of [[1, b0], [-1, b0], [1, b1], [-1, b1]]) slab(s, [x * bw - 0.03, y0, z - 0.02], [x * bw + 0.012 * x, y1 + 0.01, z + 0.03], 0.01, { color: '#b8bcc2', mat: 'alloy', k: 0.004 });

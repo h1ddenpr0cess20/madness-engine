@@ -158,7 +158,7 @@ async function show(item) {
     const saved = view.weaponMetals[item.id] ?? {};
     options.metal = saved.metal ?? item.palette.metal ?? 'steel';
   }
-  // Another person starts in their own colours.
+  // Another person starts in their own colors.
   if (view.coloursFor !== item.id) { view.colours = {}; view.draft = {}; view.coloursFor = item.id; view.seed = 0; }
   $('busy').style.display = 'grid';
   $('err').textContent = '';
@@ -202,7 +202,7 @@ async function show(item) {
     if (item.kind === 'room') stage.setRoom(built.canvas);
     if (item.kind === 'mood') { stage.setMood(item.mood); syncLights(); }
     $('moodrow').style.display = item.kind === 'object' ? '' : 'none';
-    // Models stand on y = 0; centre the thing over the origin and look at its middle.
+    // Models stand on y = 0; center the thing over the origin and look at its middle.
     const b = built.frame ? { min: built.frame.center.map((c) => c - built.frame.radius), max: built.frame.center.map((c) => c + built.frame.radius), size: [2, 2, 2].map((v) => v * built.frame.radius) } : boundsOf(built.object);
     floor.visible = !built.noFloor && $('gridbtn').classList.contains('on');
     view.center.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
@@ -241,7 +241,7 @@ let uiTimer = null;
  * An item can hand over `ui`, a list of controls for itself: { type: 'buttons', items: [{ label, onClick }] },
  * { type: 'range', label, min, max, step, get, set }, { type: 'select', label, options, get, set },
  * { type: 'color' | 'text', label, get, set }, { type: 'check', label, get, set }, { type: 'textarea', label, apply, onApply }
- * and { type: 'heading', label }. Those with a `get` follow the item while it moves on its own; `disabled` greys a
+ * and { type: 'heading', label }. Those with a `get` follow the item while it moves on its own; `disabled` grays a
  * control out (its `title` saying why).
  */
 function renderItemUi(specs) {
@@ -297,7 +297,7 @@ function renderItemUi(specs) {
 }
 
 /**
- * The shown model as it first came: its option menus back to their defaults, its colours and saved metals
+ * The shown model as it first came: its option menus back to their defaults, its colors and saved metals
  * forgotten, and it built afresh, so whatever its own controls changed (a person's shape, outfit, weapon, face)
  * is as it was made too. The camera, light and animation are left as they are.
  */
@@ -390,9 +390,9 @@ function animGroup(built) {
   }
 }
 
-// ———————————————————————————————————————————————— colours
+// ———————————————————————————————————————————————— colors
 
-/** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
+/** What a person's colors are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
 function colourRows(item) {
   const pal = item.palette, c = view.draft;
   if (pal.kind === 'granite-weapon') return [['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }]];
@@ -458,7 +458,7 @@ function colourRows(item) {
     ['Eyes', pal.eyes, c.eyes, (v) => { c.eyes = v; }, () => { delete c.eyes; }],
     ['Brows', pal.brow, c.brow, (v) => { c.brow = v; }, () => { delete c.brow; }],
   ];
-  // Clothes that are one colour change together, so a suit stays a suit.
+  // Clothes that are one color change together, so a suit stays a suit.
   for (const slots of pal.groups) {
     const was = pal.look[slots[0]], now = c.look?.[slots[0]];
     rows.push([slots.join(' · '), was, now,
@@ -492,7 +492,7 @@ function randomBowlingPinPalette(random = Math.random) {
 /** Whether what is chosen in the pickers is not what is on show. */
 const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colours);
 
-/** The colour pickers for the person on show; nothing for what is not a person. Choosing changes nothing on show until Apply. */
+/** The color pickers for the person on show; nothing for what is not a person. Choosing changes nothing on show until Apply. */
 function colourGroup(item) {
   const group = $('colourgroup');
   group.style.display = item.palette ? '' : 'none';

@@ -7,13 +7,13 @@
  * layout units (the sky painters in skies/ scale their context up to paint sharp).
  */
 
-/** How bright a colour is, 0 to 1. */
+/** How bright a color is, 0 to 1. */
 export function lum(hex) {
   const n = parseInt(hex.slice(1, 7), 16);
   return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
 }
 
-/** Whether a sky (its colours top to bottom) is a night one. */
+/** Whether a sky (its colors top to bottom) is a night one. */
 export const isNight = (sky) => lum(sky[0]) < 0.16;
 
 /** A seeded run of numbers 0–1. */
@@ -143,7 +143,7 @@ export function grain(ctx, canvas, amount = 0.035) {
   ctx.restore();
 }
 
-/** The sky's backdrop, finished: haze over the horizon, stars and the moon or clouds, as the sky's colours say. */
+/** The sky's backdrop, finished: haze over the horizon, stars and the moon or clouds, as the sky's colors say. */
 export function finishSky(ctx, width, height, sky, { stars = false, base = height * 0.5, seed = 7, moonAt = null, cloudy = true } = {}) {
   const night = isNight(sky);
   haze(ctx, width, base, sky[sky.length - 1], night ? 0.35 : 0.5);

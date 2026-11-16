@@ -4,7 +4,7 @@ import { bowler, moustache, suitFront } from './wardrobe.js';
 
 /**
  * The City Gent: up from the Bank on his way to the club, in a charcoal
- * pinstripe, a bowler, a white shirt and the old school tie; a moustache;
+ * pinstripe, a bowler, a white shirt and the old school tie; a mustache;
  * the brolly rolled tight and never once opened, leant on like a cane, and
  * The Times folded under the other arm. Terribly sorry. Not sorry. Prods
  * with the brolly. About 0.95 tiles tall.

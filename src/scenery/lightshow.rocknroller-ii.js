@@ -4,7 +4,7 @@ import { canvas, cached, copyOf, glowTexture, random, texture } from '../texture
  * The light show. Every set is lit by a rig, and the rig keeps the beat:
  *
  *   bulb     a caged bulb: warm, steady, with a little flicker.
- *   par      a PAR can: a coloured wash and a shaft of haze, changing colour
+ *   par      a PAR can: a colored wash and a shaft of haze, changing color
  *            on the beat (`program`: 'chase', 'pulse', 'rainbow', 'static').
  *   spot     a moving head: a beam and a pool of light that wander the floor,
  *            `radius` either way of the fixture, or of `aim` (an offset in
@@ -12,7 +12,7 @@ import { canvas, cached, copyOf, glowTexture, random, texture } from '../texture
  *   strobe   flashes white on the beat. Never more than three times a
  *            second, and where `flashing` is off it only glows.
  *   ball     a mirror ball: it turns, and throws a field of sparkles across
- *            the floor, in colours that chase.
+ *            the floor, in colors that chase.
  *   laser    a fan of thin beams, sweeping.
  *   chandelier  crystal and candle-bulbs on brass arms, hung high: warm,
  *            steady, glittering a little as it sways.
@@ -57,7 +57,7 @@ const SOFT = { lift: 1.4, spread: 1.5, gain: 0.42 };
 /** The most flashes a second a strobe makes. */
 export const STROBE_MAX_HZ = 3;
 
-/** A colour as [r, g, b] each 0–1, linear enough for lights. */
+/** A color as [r, g, b] each 0–1, linear enough for lights. */
 const rgb = (hex) => {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
@@ -69,7 +69,7 @@ const smooth = (a, b, x) => {
 };
 
 /**
- * The colour a fixture shows at `beat`: it steps through its `colors`, one
+ * The color a fixture shows at `beat`: it steps through its `colors`, one
  * every `every` beats (`shift` of them out of step with the rest), fading
  * across the step in the last tenth of it.
  */
@@ -355,7 +355,7 @@ export function createLightshow(GFX, venue) {
   const rig = venue.look.rig ?? {};
   const defaults = { colors: rig.colors ?? ['#ff3a8a', '#2ad0ff'], program: rig.program ?? 'chase', every: rig.every ?? 2 };
 
-  /** What every fixture offers the stage's lights: where, what colour, how bright, how far it carries. */
+  /** What every fixture offers the stage's lights: where, what color, how bright, how far it carries. */
   const sources = [];
 
   const halo = (colour, size) => {
@@ -581,7 +581,7 @@ export function createLightshow(GFX, venue) {
     };
   }
 
-  // ——— a PAR can on a post: a wash of colour, a shaft down, a pool where it lands. The can faces where its beam lands, lens first.
+  // ——— a PAR can on a post: a wash of color, a shaft down, a pool where it lands. The can faces where its beam lands, lens first.
   function par(f) {
     const y = heightOf(f.x, f.z);
     const high = f.height ?? 1.6;

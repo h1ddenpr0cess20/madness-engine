@@ -5,7 +5,7 @@ import { finishSky, grain, seeded } from '../skyfinish.js';
  * The sky round the stop, painted on a canvas: a gradient from `sky`, the
  * air hazing toward the horizon, stars and the moon if it is night or
  * clouds if it is day, and along the horizon (`horizon`, in `skyline`'s
- * colour): rolling `hills`, range behind range, with a town's lights on
+ * color): rolling `hills`, range behind range, with a town's lights on
  * them; a `city` of towers and blocks, two deep, lit window by window;
  * snow-capped `peaks`, the snow lying in the gullies and lit on one side;
  * `dunes` with the pyramids on them; the flat `sea` with the moon's or the

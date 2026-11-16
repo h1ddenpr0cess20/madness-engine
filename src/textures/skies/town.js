@@ -11,7 +11,7 @@ const SKY = [[0, '#03040c'], [0.3, '#070a1c'], [0.44, '#121a36'], [0.5, '#2a2a44
  * light it from below, and on the horizon the silhouettes of cracking
  * towers and flare stacks burning, derricks with red lights on top, and
  * the lights of the next town. On Metrlol's horizon (`on: 'city'`) the next
- * city's towers stand there instead, with data centres and their status
+ * city's towers stand there instead, with data centers and their status
  * lights and wind turbines with red lights on top.
  */
 export function paintSky(u, { width = 2048, ridge = true, on = 'refineries', scale = 2 } = {}) {
@@ -84,7 +84,7 @@ export function paintSky(u, { width = 2048, ridge = true, on = 'refineries', sca
     };
     skyline(width * 0.08, width * 0.14);
     skyline(width * 0.56, width * 0.12);
-    // Data centres: long low sheds, rows of blue and green lights along them.
+    // Data centers: long low sheds, rows of blue and green lights along them.
     for (const [x0, w] of [[0.33, 0.07], [0.78, 0.09]]) {
       ctx.fillStyle = ink;
       ctx.fillRect(width * x0, horizon - 14, width * w, 16);

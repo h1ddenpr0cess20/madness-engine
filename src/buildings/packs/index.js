@@ -11,7 +11,7 @@ import * as tokyo from './tokyo.js';
 /**
  * The city packs: each a set of buildings for one place. `PACK_MODELS` are the
  * models, `PACK_FOOTPRINTS` the tiles each is drawn for, `PACK_OF` the pack a
- * type belongs to, and `PACK_LABELS` the name of each pack for a catalogue.
+ * type belongs to, and `PACK_LABELS` the name of each pack for a catalog.
  */
 const PACKS = { amsterdam, greece, istanbul, mexico, moscow, paris, rio, southwest, tokyo };
 

@@ -85,7 +85,7 @@ export function beanie(s, { color = '#16161a', fold = null } = {}) {
   shell(s, (p) => edge(p) - p[1], { color, mat: 'cloth', part: 'outer', thick: 0.01, lift: 0.002, over: ['head', 'hair'], bone: 'head', k: 0.005 });
   const rib = rgb(color).map((v) => v * 0.78);
   s.paint((p) => Math.max(Math.abs(((Math.atan2(p[0], p[2]) * 18 / Math.PI) % 1 + 1) % 1 - 0.5) * 0.02 - 0.003, edge(p) + 0.03 - p[1]), rib, 0.0015);
-  // The turned-up brim, in its own colour if it has one.
+  // The turned-up brim, in its own color if it has one.
   if (fold !== false) {
     shell(s, (p) => Math.max(edge(p) - 0.002 - p[1], p[1] - edge(p) - 0.03), { color: fold ?? color, mat: 'cloth', part: 'outer2', thick: 0.006, lift: 0.0005, over: ['outer'], bone: 'head', k: 0.003 });
   }
@@ -160,7 +160,7 @@ const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone ==
 /**
  * The battle vest: sleeveless denim over everything, open down the front,
  * studded at the shoulders, the back covered in patches. `patches` of them,
- * in colours that were each somebody's favourite, a big one in the middle.
+ * in colors that were each somebody's favorite, a big one in the middle.
  */
 export function battleVest(s, { color = '#34445e', patches = 10, seed = 1, studs = true, big = '#e8e4d8', open = 0.022, back = true } = {}) {
   const rnd = seeded(seed);
@@ -181,7 +181,7 @@ export function battleVest(s, { color = '#34445e', patches = 10, seed = 1, studs
     list.push([x, y, 0.014 + rnd() * 0.016, 0.012 + rnd() * 0.016, colours[Math.floor(rnd() * colours.length)]]);
   }
   for (const [x, y, w2, h, col] of list) s.paint((p) => { const r = Math.max(Math.abs(p[0] - x) - w2, Math.abs(p[1] - y) - h, 0.05 + p[2]); return r > 0.003 ? r : Math.max(r, onVest(p)); }, col, 0.002);
-  // The big one, centred: a banner across the back with a dark stripe through it.
+  // The big one, centered: a banner across the back with a dark stripe through it.
   if (back) s.paint((p) => { const r = Math.max(Math.abs(p[0]) - 0.06, Math.abs(p[1] - 0.46) - 0.034, 0.05 + p[2]); return r > 0.003 ? r : Math.max(r, onVest(p)); }, big, 0.002);
   if (back) s.paint((p) => { const r = Math.max(Math.abs(p[0]) - 0.05, Math.abs(p[1] - 0.46) - 0.01, 0.05 + p[2]); return r > 0.003 ? r : Math.max(r, onVest(p)); }, '#101014', 0.002);
   if (studs) {
@@ -337,7 +337,7 @@ function outline(style, u, v) {
  * the left fist, if `pose` is given, so it is held), a headstock with its
  * tuners, a fretboard with frets, pickups, a bridge, knobs and strings.
  * `style` 'strat', 'v' (flying V), 'acoustic' or 'bass'; `body` its
- * colour, `neck` the wood's.
+ * color, `neck` the wood's.
  */
 export function guitar(s, { body = '#d81c2a', style = 'strat', neck = '#c8a060', pose = null, guard = '#f2efe6' } = {}) {
   const acoustic = style === 'acoustic', bass = style === 'bass';

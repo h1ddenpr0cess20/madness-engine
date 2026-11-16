@@ -333,7 +333,7 @@ export function createStar({ stage, GFX, metal = null }) {
   const fwd = new GFX.Vector3();
 
   /**
-   * Fit and centre in one pass each: place the camera, project the corners,
+   * Fit and center in one pass each: place the camera, project the corners,
    * then correct the distance and the focus from where they actually landed.
    * Measuring beats predicting here — an oblique view of a flat body throws
    * the silhouette off the axis it is pointed down, and three passes lands
@@ -369,7 +369,7 @@ export function createStar({ stage, GFX, metal = null }) {
         if (ndc.y > maxY) maxY = ndc.y;
       }
 
-      // Walk the focus by however far off centre the silhouette came out, in
+      // Walk the focus by however far off center the silhouette came out, in
       // the camera's own basis, then rescale the distance to the fit we want.
       camera.matrixWorld.extractBasis(right, up, fwd);
       focus

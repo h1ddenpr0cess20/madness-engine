@@ -1,7 +1,7 @@
 import { paintSky } from '../skies/cosmos.js';
 
 /**
- * The fortune teller's parlour, as Krystal's brass and glass see it: the
+ * The fortune teller's parlor, as Krystal's brass and glass see it: the
  * night (`skies/cosmos.js`) with a couple of warm lamps low in the dark and a
  * violet glow off the cloth below. Only ever seen in reflections: without the
  * lamps, polished brass under a night sky reflects night, and comes out black.

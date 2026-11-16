@@ -3,7 +3,7 @@ import { paintSky } from '../textures/skies/skyline.js';
 
 /**
  * Stop 1: London. The first night of the tour, in the rain, of course. Off
- * the tour bus at the kerb, along a wet street of phone boxes and black
+ * the tour bus at the curb, along a wet street of phone boxes and black
  * cabs, into a square where a guardsman is marching and the pigeons own
  * the place; down the steps into the Underground, along the platform (mind
  * the gap) where the phone boxes come down the escalator shaft on the beat;

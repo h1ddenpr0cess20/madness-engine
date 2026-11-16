@@ -6,7 +6,7 @@ import { createVisionMaterial } from '../heroes/krystal/vision.js';
  * A clear glass Earth: a sphere of glass (a transmissive physical material,
  * as Alan's eye, the marble and Krystal's ball are) with the continents
  * etched on it from real coordinates (`textures/earth/map.js`), and room
- * inside for something to move: Krystal's coloured mist, a colorized map of
+ * inside for something to move: Krystal's colored mist, a colorized map of
  * anything over the Earth (`setField`), or both.
  *
  * The etching is frosted glass: milky land with a fine bright coast, on a
@@ -19,7 +19,7 @@ import { createVisionMaterial } from '../heroes/krystal/vision.js';
  *     const globe = createGlassGlobe(GFX, { radius: 1 });
  *     scene.add(globe.group);
  *     globe.orient(40, -95);              // North America to the front
- *     globe.setField(canvas);             // a map of colour inside the glass
+ *     globe.setField(canvas);             // a map of color inside the glass
  *     stage.run((dt) => globe.update(dt));
  */
 
@@ -114,7 +114,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
   const mood = { ...MIST };
   let flow = seed * 100;
 
-  // --- a field of colour, as mist: the haze (`textures/earth/haze.js`) reads a map of the Earth as it marches through the glass
+  // --- a field of color, as mist: the haze (`textures/earth/haze.js`) reads a map of the Earth as it marches through the glass
   let field = null;
   const worldScale = new GFX.Vector3();
   let fieldTexture = null;
@@ -147,7 +147,7 @@ export function createGlassGlobe(GFX, { radius = RADIUS, mist: withMist = false,
     },
 
     /**
-     * Puts a map of colour inside the glass as mist: `source` is a canvas
+     * Puts a map of color inside the glass as mist: `source` is a canvas
      * covering the Earth, equirectangular, -180 on the left and 90 at the top,
      * painted in the colors it is to show. The mist is thick in a shell just
      * under the glass, so from outside it reads as the map, and it drifts. Drawn

@@ -2,7 +2,7 @@ import { bag, cloth, hold, person, shell, strap } from './person.js';
 
 /**
  * The Raver: a neon-green bucket hat, a whistle on a string, a vest with
- * nothing under it, baggy trousers the colour of a highlighter, trainers
+ * nothing under it, baggy trousers the color of a highlighter, trainers
  * with soles like cakes, a lollipop that is a pacifier, and a glow stick in
  * each fist. Has been dancing since Friday. It is Monday. Will not be
  * told. About 0.95 tiles tall, and bouncing at a hundred and forty.

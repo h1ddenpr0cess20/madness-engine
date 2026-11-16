@@ -18,7 +18,7 @@
  *  5. Bakes each vertex's ambient occlusion (how much of the sky it sees).
  *  6. Writes the result as one compact module.
  *  7. Bakes the character creator's shapes (features.js) from MakeHuman's
- *     modelling targets: each one's offsets at his size and in his pose,
+ *     modeling targets: each one's offsets at his size and in his pose,
  *     vertex by vertex, and how far it moves each of his joints, into
  *     src/people/human/data/shapes.js (hers, from MakeHuman's female
  *     targets on her body, into shapes-female.js). `--shapes-only` writes
@@ -342,7 +342,7 @@ const weights = order.map((v) => {
 });
 
 // ————————————————————————————————————————————— 7. the character creator's shapes
-// Each is a sum of MakeHuman's modelling targets (features.js says which, and how much). A target
+// Each is a sum of MakeHuman's modeling targets (features.js says which, and how much). A target
 // moves the vertices of its wide A-pose at its own size; each offset is scaled to him and turned as
 // the vertex was turned into our pose, by its own skin weights. A joint moves as the vertices it sits
 // among do: MakeHuman's joints are the middles of sets of helper vertices, so each moves by their mean.
@@ -412,7 +412,7 @@ const weights = order.map((v) => {
       idx.push(j); ds.push(d);
       most = Math.max(most, Math.abs(d[0]), Math.abs(d[1]), Math.abs(d[2]));
     });
-    // A byte an axis where that is a quarter of a millimetre or finer, two bytes where it is not.
+    // A byte an axis where that is a quarter of a millimeter or finer, two bytes where it is not.
     const wide = most / 127 > 0.00025;
     const q = most / (wide ? 32767 : 127) || 1;
     const index = Uint16Array.from(idx), offset = new (wide ? Int16Array : Int8Array)(ds.length * 3);
@@ -443,8 +443,8 @@ const weights = order.map((v) => {
 // released as CC0 (public domain) by the MakeHuman team (makehumancommunity.org).
 // Do not edit by hand. Each shape (features.js names them) is the vertices it
 // moves (\`i\`, base64 Uint16 indices into data/base.js), their offsets (\`d\`,
-// base64 Int8 or Int16, as \`bits\` says, × \`q\` metres, in his pose), how far it moves each of his joints
-// (\`pivots\`, metres) and how much it grows each eye's radius (\`eyes\`).
+// base64 Int8 or Int16, as \`bits\` says, × \`q\` meters, in his pose), how far it moves each of his joints
+// (\`pivots\`, meters) and how much it grows each eye's radius (\`eyes\`).
 export const SHAPES = ${JSON.stringify(out)};
 `;
   mkdirSync('src/people/human/data', { recursive: true });

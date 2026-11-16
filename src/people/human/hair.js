@@ -9,16 +9,16 @@ import { EYE, FACE } from './skeleton.js';
  * a narrow strip grown from a root on the scalp (or the face) along the way
  * the hair is combed, lying on the hair under it, with a texture of a clump
  * of strands on it, its gaps cut out by the alpha test. Under the cards the
- * skin is painted the hair's colour where it grows (textures.js), so no
+ * skin is painted the hair's color where it grows (textures.js), so no
  * scalp shows between them.
  *
  * A style says where hair grows (its line on the head), how long it is at
  * each place, which way it is combed, how much it stands off the head, and
  * how many cards it takes. The cut here is a short side part: about 5 cm
  * on top, combed across from a parting over the left eye, tapering to a few
- * millimetres over the ears and at the nape. The beard is a full beard of
+ * millimeters over the ears and at the nape. The beard is a full beard of
  * about 2 cm, longer at the chin: a natural cheek line from the sideburn to
- * the corner of the moustache, a neckline two fingers above the Adam's
+ * the corner of the mustache, a neckline two fingers above the Adam's
  * apple, along the jaw.
  *
  * The cards' normals are the head's under them, so the hair shades as one
@@ -50,12 +50,12 @@ const HAIRLINE = profile([
   [1.5, 1.655], [1.68, 1.666], [1.86, 1.662], [2.06, 1.647], [2.3, 1.627], [2.6, 1.614], [Math.PI, 1.607],
 ]);
 
-/** How much hair grows on the scalp at `p` (rest, metres), with normal `n`: 0 to 1, soft at the hairline. */
+/** How much hair grows on the scalp at `p` (rest, meters), with normal `n`: 0 to 1, soft at the hairline. */
 export function scalpCover(p, n) {
   if (p[1] < 1.58) return 0;
   // Only the outside of the head (not the inside of the mouth or the ear's hollow).
   if (n && dot(n, sub(p, SKULL)) <= 0) return 0;
-  // A hairline is never a clean line: it wavers, and thins out over a few millimetres.
+  // A hairline is never a clean line: it wavers, and thins out over a few millimeters.
   // (Taken over a little span of bearings, so its steep parts — the sideburn's edges — are soft too.)
   const b = bearing(p);
   const H = (HAIRLINE(b - 0.05) + HAIRLINE(b - 0.025) + HAIRLINE(b) + HAIRLINE(b + 0.025) + HAIRLINE(b + 0.05)) / 5
@@ -63,9 +63,9 @@ export function scalpCover(p, n) {
   return smooth(H - 0.004, H + 0.006, p[1]);
 }
 
-// The beard's top edge, by distance from the middle of the face: the moustache under the
+// The beard's top edge, by distance from the middle of the face: the mustache under the
 // nose, then the cheek line rising to the sideburn.
-// From the corner of the moustache it runs straight up the cheek to the top of the sideburn, at the
+// From the corner of the mustache it runs straight up the cheek to the top of the sideburn, at the
 // top of the ear.
 const CHEEKLINE = profile([[0, 1.6035], [0.015, 1.6045], [0.026, 1.6], [0.035, 1.606], [0.05, 1.628], [0.065, 1.655], [0.075, 1.675], [0.09, 1.69]]);
 
@@ -82,7 +82,7 @@ function lipsAt(s) {
 // The full beard's outline, seen from the side, as a barber draws it: a line from behind the top
 // of the ear down and forward across the neck to the throat (its back edge); a line from above the
 // front of the ear down across the cheek to just under the corner of the mouth (its top edge); and
-// a level line under the chin, where it is trimmed (BEARD_FLOOR). In metres, [y, z] at each end.
+// a level line under the chin, where it is trimmed (BEARD_FLOOR). In meters, [y, z] at each end.
 const BEARD_BACK = [[1.6697, 0.0127], [1.5048, 0.1148]];
 const BEARD_TOP = [[1.685, 0.0383], [1.527, 0.2057]];
 const BEARD_FLOOR = 1.533;
@@ -90,7 +90,7 @@ const BEARD_FLOOR = 1.533;
 const zOn = ([[y0, z0], [y1, z1]], y) => z0 + ((y - y0) * (z1 - z0)) / (y1 - y0);
 const yOn = ([[y0, z0], [y1, z1]], z) => y0 + ((z - z0) * (y1 - y0)) / (z1 - z0);
 
-/** The beard's top edge over `p`: the line across the cheek, and in front, between the nose and the lip, the moustache's own line. */
+/** The beard's top edge over `p`: the line across the cheek, and in front, between the nose and the lip, the mustache's own line. */
 function beardTop(p) {
   const front = smooth(0.036, 0.028, Math.abs(p[0]));
   return CHEEKLINE(Math.abs(p[0])) * front + yOn(BEARD_TOP, p[2]) * (1 - front);
@@ -129,7 +129,7 @@ const MOUTH_Y = FACE.mouth[1];
 const lipMask = (reach) => (p) => smooth(reach + 0.008, reach, Math.abs(p[0])) * smooth(MOUTH_Y - 0.001, MOUTH_Y + 0.003, p[1]);
 /** The chin below the lower lip, out to `reach`, down to the neckline. */
 const chinMask = (reach) => (p) => smooth(reach + 0.006, reach, Math.abs(p[0])) * smooth(MOUTH_Y - 0.004, MOUTH_Y - 0.012, p[1]);
-/** The mouth ringed (moustache and chin joined round the lips), out to `reach`. */
+/** The mouth ringed (mustache and chin joined round the lips), out to `reach`. */
 const ringMask = (reach) => (p) => smooth(reach + 0.008, reach, Math.abs(p[0]));
 
 /**
@@ -373,7 +373,7 @@ function fall(style, [root, n0], L, layer, fine, rnd) {
       }
     }
     // Off it: kept outside the neck, the shoulders and the back, lying on them, and over what is worn
-    // there (a jacket stands a few centimetres off the skin; its collar less).
+    // there (a jacket stands a few centimeters off the skin; its collar less).
     const o = T.outside(p);
     if (o) {
       const want = 0.006 + (style.over ?? 0) * smooth(1.52, 1.4, p[1]) + thick * 0.6;
@@ -428,8 +428,8 @@ function card(part, strand, width, column, weights, shade, rootFade = 0) {
   const ts = [], pts = [], normals = [];
   strand.pts.forEach((p, i) => { if (keep[i]) { ts.push(i / all); pts.push(p); normals.push(strand.normals[i]); } });
   const steps = pts.length - 1;
-  // Where along the texture each point is: evenly, or (for long hair, `rootFade` metres) the texture's
-  // fading-in roots kept to the first few centimetres, the rest of it spread over the length.
+  // Where along the texture each point is: evenly, or (for long hair, `rootFade` meters) the texture's
+  // fading-in roots kept to the first few centimeters, the rest of it spread over the length.
   const arc = [0];
   for (let i = 1; i <= steps; i++) arc.push(arc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
   const L = arc[steps] || 1;
@@ -577,7 +577,7 @@ const SIDE_PART = Object.freeze({
     weight: 0.35,
     /** Full on top; close on the tapered sides and back. */
     volume: (p) => 0.1 + 0.2 * smooth(1.71, 1.75, p[1]) * smooth(2.5, 1.8, bearing(p)),
-    /** About 5 cm on top (a touch more at the front), tapering down the sides and back to a few millimetres. */
+    /** About 5 cm on top (a touch more at the front), tapering down the sides and back to a few millimeters. */
     length(p) {
       const b = bearing(p);
       const top = 0.053 - 0.017 * smooth(1.2, 2.7, b);
@@ -635,7 +635,7 @@ function hangs(name, seed, cards, endAt, partX = 0, back = 0.55, fringe = false)
 export const HAIRSTYLES = Object.freeze({
   sidePart: SIDE_PART,
   long: LONG,
-  /** A clipper cut: a few millimetres all over, a little more on top, lying close. */
+  /** A clipper cut: a few millimeters all over, a little more on top, lying close. */
   buzz: Object.freeze({
     ...SIDE_PART,
     name: 'buzz',
@@ -1046,7 +1046,7 @@ export const BROWS = Object.freeze({
   /** Groomed and fine: a thin, clean line with a lifted arch and a tapering tail, the hairs lying flat along it. */
   /**
    * His natural brows, shaped and plucked: the same hairs, as many to the
-   * square centimetre and as long, kept to a narrower line with a clean
+   * square centimeter and as long, kept to a narrower line with a clean
    * edge under it, lifted to an arch two-thirds out and tapered to a fine
    * tail.
    */
@@ -1103,7 +1103,7 @@ const FULL_BEARD = Object.freeze({
     follow: 2.2,
     weight: 0.2,
     volume: 0.4,
-    /** About 2 cm, 2.5 at the chin; the moustache shorter, to just over the lip. */
+    /** About 2 cm, 2.5 at the chin; the mustache shorter, to just over the lip. */
     length(p, n) {
       const s = Math.abs(p[0]), M = FACE.mouth;
       const chin = smooth(0.035, 0.015, s) * smooth(1.575, 1.56, p[1]);
@@ -1111,14 +1111,14 @@ const FULL_BEARD = Object.freeze({
       const lip = smooth(M[1] + 0.004, M[1] + 0.009, p[1]) * smooth(0.035, 0.028, s);
       let L = 0.017 + 0.009 * chin + 0.003 * under;
       L = L * (1 - lip) + 0.0085 * lip;
-      // Shorter toward the cheek line (the moustache keeps its length), and shorter still up the
+      // Shorter toward the cheek line (the mustache keeps its length), and shorter still up the
       // side of the face, fading into the cropped sideburn above it.
       const cheek = smooth(0.028, 0.036, s), side = smooth(0.05, 0.068, s);
       const top = beardTop(p);
       return L * (1 - cheek * 0.45 * smooth(top - 0.016, top - 0.004, p[1]))
         * (1 - side * 0.8 * smooth(top - 0.045, top - 0.004, p[1]));
     },
-    /** Down the cheeks and jaw, a little forward off the chin; back toward the neck under the jaw; the moustache down and out. */
+    /** Down the cheeks and jaw, a little forward off the chin; back toward the neck under the jaw; the mustache down and out. */
     comb(p, n) {
       const s = Math.abs(p[0]), m = Math.sign(p[0]) || 1, M = FACE.mouth;
       const lip = smooth(M[1] + 0.002, M[1] + 0.007, p[1]) * smooth(0.04, 0.025, s);
@@ -1157,7 +1157,7 @@ export const BEARDS = Object.freeze({
     length: flat(0.0032),
     widthAt: undefined,
   }),
-  /** A goatee: the chin and the moustache joined round the mouth, the cheeks clean. */
+  /** A goatee: the chin and the mustache joined round the mouth, the cheeks clean. */
   goatee: Object.freeze({
     ...FULL_BEARD,
     name: 'goatee',
@@ -1166,7 +1166,7 @@ export const BEARDS = Object.freeze({
     cards: 1900,
     length: (p, n) => FULL_BEARD.length(p, n) * 0.9,
   }),
-  /** A Van Dyke: a pointed chin beard, a moustache apart from it, the cheeks and the lip's corners clean. */
+  /** A Van Dyke: a pointed chin beard, a mustache apart from it, the cheeks and the lip's corners clean. */
   vanDyke: Object.freeze({
     ...FULL_BEARD,
     name: 'vanDyke',
@@ -1174,7 +1174,7 @@ export const BEARDS = Object.freeze({
     cover: (p, n) => beardCoverTo(1.505)(p, n) * Math.max(lipMask(0.037)(p), chinMask(0.019)(p)),
     floor: 1.505,
     cards: 1500,
-    /** The chin's point longer, to 3.5 cm; the moustache a little longer than the full beard's. */
+    /** The chin's point longer, to 3.5 cm; the mustache a little longer than the full beard's. */
     length(p, n) {
       const chin = chinMask(0.019)(p);
       return FULL_BEARD.length(p, n) * (1 + 0.55 * chin + 0.25 * (1 - chin));
@@ -1193,7 +1193,7 @@ export const BEARDS = Object.freeze({
     cards: 400,
     length: flat(0.013),
   }),
-  /** A chevron: a full, even moustache, level with the lip, trimmed at the corners of the mouth. */
+  /** A chevron: a full, even mustache, level with the lip, trimmed at the corners of the mouth. */
   chevron: Object.freeze({
     ...FULL_BEARD,
     name: 'chevron',
@@ -1202,7 +1202,7 @@ export const BEARDS = Object.freeze({
     cards: 1100,
     length: (p, n) => FULL_BEARD.length(p, n) * 1.25,
   }),
-  /** A pencil moustache: a thin line high on the lip, 3 mm tall. */
+  /** A pencil mustache: a thin line high on the lip, 3 mm tall. */
   pencil: Object.freeze({
     ...FULL_BEARD,
     name: 'pencil',
@@ -1212,7 +1212,7 @@ export const BEARDS = Object.freeze({
     width: 0.005,
     length: flat(0.0065),
   }),
-  /** A handlebar: a long moustache combed out over the lip, its ends waxed out and up past the mouth's corners. */
+  /** A handlebar: a long mustache combed out over the lip, its ends waxed out and up past the mouth's corners. */
   handlebar: Object.freeze({
     ...FULL_BEARD,
     name: 'handlebar',
@@ -1323,9 +1323,9 @@ export function buildBeard(name, detail = 1) {
 
 /**
  * The strand texture: four clumps of hair side by side (two thick, one
- * looser, one of strays), white, to be coloured by the material. Each strand
+ * looser, one of strays), white, to be colored by the material. Each strand
  * tapers to its tip and ends at a length of its own; the clumps draw in
- * toward their tips. Where there is no hair the colour is the hair's
+ * toward their tips. Where there is no hair the color is the hair's
  * still, so filtering at the edges does not darken them.
  */
 export function hairTexels(width = 512, height = 1024) {

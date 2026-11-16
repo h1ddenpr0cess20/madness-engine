@@ -7,10 +7,10 @@ import { Sculpt } from '../src/models/sdf.js';
 
 const { cop, punk, viking } = CHARACTERS;
 
-/** Whether every colour in `set` is within a few steps of `hex` (cloth is mottled, skin rosier toward the front). */
+/** Whether every color in `set` is within a few steps of `hex` (cloth is mottled, skin rosier toward the front). */
 const near = (set, hex, tol = 6) => [...set].every((c) => [1, 3, 5].every((i) => Math.abs(parseInt(c.slice(i, i + 2), 16) - parseInt(hex.slice(i, i + 2), 16)) <= tol));
 
-/** The colours (as hex) each part/material is made in, read off a sculpt. */
+/** The colors (as hex) each part/material is made in, read off a sculpt. */
 function coloursOf(def) {
   const s = new Sculpt();
   def.sculpt(s);
@@ -28,11 +28,11 @@ test('a character reports what can be recoloured, and what colour it is now', ()
   assert.equal(p.eyes, '#3a5a8a');
   assert.match(p.skin, /^#[0-9a-f]{6}$/);
   assert.deepEqual(Object.keys(p.look), ['torso', 'sleeve', 'cuff', 'legs', 'boot', 'belt', 'buckle']);
-  // The coat is one colour: its parts are best changed together.
+  // The coat is one color: its parts are best changed together.
   assert.deepEqual(p.groups[0], ['torso', 'sleeve', 'cuff', 'legs']);
-  // What is not a colour (how high a boot is) is not offered.
+  // What is not a color (how high a boot is) is not offered.
   assert.ok(!('boots' in punk.palette().look));
-  // A bare arm has no colour of its own.
+  // A bare arm has no color of its own.
   assert.ok(!('sleeve' in viking.palette().look));
 });
 

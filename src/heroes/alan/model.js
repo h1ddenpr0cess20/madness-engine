@@ -1,7 +1,7 @@
 import { createIrisTexture, RINGS } from './iris.js';
 import { createSkyTexture, skyColour } from '../../textures/skies/cloudsea.js';
 
-/** The eye, in metres of nothing in particular: the stage frames whatever size it is. */
+/** The eye, in meters of nothing in particular: the stage frames whatever size it is. */
 export const RADIUS = 0.8;
 
 /** The sky round the scene: far enough off that the eye's own drift doesn't move it. */
@@ -9,7 +9,7 @@ const BACKDROP_RADIUS = 60;
 
 /**
  * Where the iris sits inside the glass, as fractions of the radius. A real
- * iris is a few millimetres behind the cornea; this one is set back far enough
+ * iris is a few millimeters behind the cornea; this one is set back far enough
  * that the ball in front of it magnifies it a little, like a marble.
  */
 export const IRIS_DEPTH = 0.56;

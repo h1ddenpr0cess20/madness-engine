@@ -8,7 +8,7 @@
  * seams where one would meet itself. Inside is a mist of the same color,
  * Krystal's, drawn in the glass as her visions are.
  *
- * `createJewelRock(GFX, { colour })` gives the same handle as `createRock`, so
+ * `createJewelRock(GFX, { color })` gives the same handle as `createRock`, so
  * it rolls, squashes and turns as the granite does; `createJewelBoulder` the
  * stone alone. The colors are the `JEWELS` below, by name (`JEWEL_CHOICES`), or
  * any six-digit hex as `color`.
@@ -47,7 +47,7 @@ const CREASE_COS = Math.cos(Math.PI / 6);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const ramp = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 
-/** The color `colour` names, or `color` as given; a bad hex is refused. */
+/** The color `color` names, or `color` as given; a bad hex is refused. */
 export function jewelHex(colour = 'sapphire', color = null) {
   if (color !== null) {
     if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError(`jewel color must be a six-digit hex color, got ${color}`);
@@ -144,7 +144,7 @@ function creaseNormals(GFX, geometry) {
 }
 
 /**
- * The jewel stone alone: `{ mesh, geometry, material, glass, mist, setColour, setMist }`. `mesh` is a group of the glass
+ * The jewel stone alone: `{ mesh, geometry, material, glass, mist, setColor, setMist }`. `mesh` is a group of the glass
  * and its mist, and both move together, so the stone is drawn at whatever scale its parent gives it.
  */
 export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mist = true, detail = GRANITE_DETAIL, size = 1 } = {}) {
@@ -244,7 +244,7 @@ export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mis
   };
 }
 
-/** A jewel rock: `createRock`, with the jewel stone in the color asked for and its mist. `colour` is a `JEWELS` name. */
+/** A jewel rock: `createRock`, with the jewel stone in the color asked for and its mist. `color` is a `JEWELS` name. */
 export function createJewelRock(GFX, { colour = 'sapphire', color = null, mist = true, radius = 0.45, ...opts } = {}) {
   let asset = null;
   const rock = createRock(GFX, {

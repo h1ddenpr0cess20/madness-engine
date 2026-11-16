@@ -1,5 +1,5 @@
 /**
- * Jupiter's clouds as a 2:1 colour layout, rows from 90N down, columns from
+ * Jupiter's clouds as a 2:1 color layout, rows from 90N down, columns from
  * -180 east, made by `scripts/jupiter-map.py` from one photograph of the disc
  * (its visible hemisphere; the far side is the mean of each latitude's belts).
  * Do not edit by hand.

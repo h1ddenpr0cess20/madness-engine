@@ -1,7 +1,7 @@
 import { cosmosColour, createCosmosTexture } from '../../textures/skies/cosmos.js';
 import { createVisionMaterial } from './vision.js';
 
-/** The ball, in metres of nothing in particular: the stage frames whatever size it is. */
+/** The ball, in meters of nothing in particular: the stage frames whatever size it is. */
 export const RADIUS = 0.8;
 
 /** How far inside the glass the visions stop, as a fraction of the radius. */
@@ -11,7 +11,7 @@ export const VISION_RADIUS = 0.95;
 const BACKDROP_RADIUS = 60;
 
 /**
- * The stand's outline, turned about the upright, in radii from the centre of
+ * The stand's outline, turned about the upright, in radii from the center of
  * the ball: a round foot, a waisted stem, and a cup the ball sits down into.
  * The foot is flat right out to a small round at its edge, so it sits down on
  * the cloth rather than lifting off it on a bevel.
@@ -25,7 +25,7 @@ const STAND = [
   [0.6, -0.79], [0.5, -0.88], [0.3, -0.97], [0.0, -1.02],
 ];
 
-/** Where the stand meets the table, in radii below the centre of the ball. */
+/** Where the stand meets the table, in radii below the center of the ball. */
 export const FOOT = 1.62;
 
 /** The brass: old, a little worn, still catching the light. */
@@ -39,7 +39,7 @@ function brass(GFX, name) {
 }
 
 /**
- * The crystal ball on its stand, centred on the ball.
+ * The crystal ball on its stand, centered on the ball.
  *
  * The glass is a transmissive physical material, as Alan's is, so it shows the
  * night behind refracted. The visions (`vision.js`) are their own sphere just

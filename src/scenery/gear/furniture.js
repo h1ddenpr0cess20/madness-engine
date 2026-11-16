@@ -93,7 +93,7 @@ function rack(GFX, { rise = 1.1, w = 1, d = 1 }) {
   };
 }
 
-/** Velvet theatre seats, a row of them over every tile of the block, all facing the same way (+z, before `rot`). */
+/** Velvet theater seats, a row of them over every tile of the block, all facing the same way (+z, before `rot`). */
 function seat(GFX, { rise = 0.8, w = 1, d = 1, rot = 0 }) {
   const group = new GFX.Group();
   const velvet = std(GFX, '#9a1428', { roughness: 0.9 });
@@ -307,7 +307,7 @@ function racking(GFX, { w = 1, d = 1, rise = 1.3 }) {
   return { group };
 }
 
-/** A camping tent: a dome of nylon in a colour of its own, a darker door at the front (+z), guy lines out to pegs. */
+/** A camping tent: a dome of nylon in a color of its own, a darker door at the front (+z), guy lines out to pegs. */
 function dome(GFX, { w = 2, d = 2, rise = 0.9, seed = 0 }) {
   const group = new GFX.Group();
   const colours = ['#e0384a', '#2a8ad8', '#f0b02a', '#3aa858', '#8a4ad0', '#f06a2a'];

@@ -2,7 +2,7 @@ import { bag, cloth, hold, onBody, person, plate, strap } from './person.js';
 import { glasses, suitFront } from './wardrobe.js';
 
 /**
- * The Eurocrat: a grey suit, a blue tie with a ring of yellow stars on it,
+ * The Eurocrat: a gray suit, a blue tie with a ring of yellow stars on it,
  * round glasses, a lanyard, and a folder that is the draft of the draft.
  * There is a form. There is always a form. About 0.95 tiles tall.
  */

@@ -3,10 +3,10 @@ import { glowMat, mat } from './common.js';
 /**
  * What the ball bounces off (a bumper's `look`), each `radius` wide at its
  * foot, a ring of light round it that flashes when it throws the ball back:
- * a red oil drum, a stage monitor wedge, a palm in a tub, a stack of tyres,
+ * a red oil drum, a stage monitor wedge, a palm in a tub, a stack of tires,
  * a stone urn, a grave cross, a skull on a post, a rune stone, a candle as
  * tall as a person, a gear on a post, a burning barrel, a beach ball and a
- * round viking shield on a stand. `rest` and `flash` are the ring's colours.
+ * round viking shield on a stand. `rest` and `flash` are the ring's colors.
  */
 
 /** A ring of light on the ground round the foot of a bumper. */
@@ -67,7 +67,7 @@ export const BUMPERS = {
     return { objects, parts: [trunk], rest: [0.2, 1, 0.6], flash: [1, 1, 0.8] };
   },
 
-  /** A stack of tyres, three high. */
+  /** A stack of tires, three high. */
   tyres(GFX, { radius, ringMat }) {
     const rubber = mat(GFX, '#16161a', { roughness: 0.9 });
     const parts = [];
@@ -124,7 +124,7 @@ export const BUMPERS = {
     return { objects, parts: [cranium, jaw], rest: [0.3, 1, 0.3], flash: [0.9, 1, 0.7] };
   },
 
-  /** A rune stone: a tall grey slab with a face of cut marks, leaning. */
+  /** A rune stone: a tall gray slab with a face of cut marks, leaning. */
   runestone(GFX, { radius, ringMat }) {
     const stone = mat(GFX, '#6a6e74', { roughness: 0.95, flatShading: true });
     const slab = new GFX.Mesh(new GFX.BoxGeometry(radius * 0.9, 0.95, radius * 0.4), stone);

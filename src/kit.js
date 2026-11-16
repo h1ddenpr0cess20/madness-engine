@@ -2,8 +2,8 @@ import { linearRGB } from './color.js';
 
 /**
  * Props are built from plain shapes — boxes, cylinders, cones, spheres —
- * each with a colour. A kit gathers them, already placed, into one
- * vertex-coloured geometry per finish (matte, shiny, glowing), so a whole
+ * each with a color. A kit gathers them, already placed, into one
+ * vertex-colored geometry per finish (matte, shiny, glowing), so a whole
  * town of pumps, houses and fences draws in a handful of calls.
  */
 
@@ -24,7 +24,7 @@ export function createKit(GFX) {
     return geometries.get(key);
   };
 
-  /** Add `geometry` (unit-sized, centred) scaled to `size`, turned by `rot` ([x, y, z] radians), at `at`. */
+  /** Add `geometry` (unit-sized, centered) scaled to `size`, turned by `rot` ([x, y, z] radians), at `at`. */
   function add(geometry, at, size, rot, colour, finish) {
     const out = parts[finish] ?? parts.matte;
     e.set(rot[0], rot[1], rot[2]);
@@ -43,7 +43,7 @@ export function createKit(GFX) {
   }
 
   const kit = {
-    /** A box centred on `at`, `size` across. */
+    /** A box centered on `at`, `size` across. */
     box(at, size, colour, { rot = [0, 0, 0], finish = 'matte' } = {}) {
       add(cached('box', () => new GFX.BoxGeometry(1, 1, 1)), at, size, rot, colour, finish);
       return kit;
@@ -52,7 +52,7 @@ export function createKit(GFX) {
     slab(x0, y0, z0, x1, y1, z1, colour, opts) {
       return kit.box([(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], [x1 - x0, y1 - y0, z1 - z0], colour, opts);
     },
-    /** An upright cylinder centred on `at`, radius `r` (or [top, bottom]) and `h` tall; `rot` lays it down. */
+    /** An upright cylinder centered on `at`, radius `r` (or [top, bottom]) and `h` tall; `rot` lays it down. */
     cyl(at, r, h, colour, { rot = [0, 0, 0], finish = 'matte', segments = 16, open = false } = {}) {
       const [rt, rb] = Array.isArray(r) ? r : [r, r];
       const k = rb || 1;

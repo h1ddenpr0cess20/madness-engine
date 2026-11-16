@@ -3,7 +3,7 @@
  * under wrap-around black glass (a steeply raked windshield, side glass broken by one white pillar, a hatch window)
  * with a white roof floating over it, a dark face with a light bar across it that turns up the corners, a lightning-bolt
  * badge, a leaf on each side, a red light bar across the tail and the freighter's wheels. It is built from plain shapes
- * at real size, in metres, and drives through the same model as the freighter (`vehicles/driving`) on numbers of its
+ * at real size, in meters, and drives through the same model as the freighter (`vehicles/driving`) on numbers of its
  * own: quicker, lighter on the brakes and tighter in the turns.
  *
  *     const car = createElectricCar(GFX, { paint: '#2c5fc8' });
@@ -14,13 +14,13 @@
  *
  * It faces +z with its wheels on the ground at y = 0, and its origin is on the ground at the back wheels, which is what
  * it turns about. Heading 0 drives toward +z; a positive heading, and a positive `steer`, turn it to the left. `scale`
- * sets how big a metre is in the game's units (0.41 sits it in the town's traffic).
+ * sets how big a meter is in the game's units (0.41 sits it in the town's traffic).
  */
 
 import { arc, across as acrossOf, roundRect as roundRectOf, wheelKit } from './parts.js';
 import { attachDriving } from './driving.js';
 
-/** The car's measures, in metres. */
+/** The car's measures, in meters. */
 export const ELECTRIC_CAR = Object.freeze({
   name: 'electric-car',
   /** Overall, from the tail to the nose, across the mirrors, and to the top of the roof. */
@@ -38,7 +38,7 @@ export const ELECTRIC_CAR = Object.freeze({
   unit: 'm',
 });
 
-/** How it drives, in metres, seconds and radians (see `vehicles/driving` for what each is). 38 m/s is 137 km/h. */
+/** How it drives, in meters, seconds and radians (see `vehicles/driving` for what each is). 38 m/s is 137 km/h. */
 export const ELECTRIC_CAR_DRIVE = Object.freeze({
   accel: 5.0,
   brake: 9.0,
@@ -63,7 +63,7 @@ const bezier = (a, c, b, t) => [
 /**
  * @param {object} GFX The engine's graphics API.
  * @param {object} [options]
- * @param {number} [options.scale] Game units to the metre (default 1).
+ * @param {number} [options.scale] Game units to the meter (default 1).
  * @param {number|string} [options.paint] The body's color (default near white).
  * @param {number|string} [options.accent] The green of the leaves and the bolt.
  * @param {'treaded'|'classic'} [options.wheels] The tires: rounded and treaded (default), or the plain square-edged ones it was first drawn with. The rim is the same either way.

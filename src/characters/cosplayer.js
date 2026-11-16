@@ -56,7 +56,7 @@ export default person({
     shell(s, (p) => Math.max(0.4 - p[1], p[1] - 0.535, -p[2] + 0.01), { ...BLUE, thick: 0.012, lift: 0.002, over: ['top'], keep: trunkOnly, bone: 'chest' });
     for (const m of [1, -1]) for (const y of [0.475, 0.455, 0.435]) shell(s, (p) => Math.max(Math.abs(p[0] - m * 0.055) - 0.026, Math.abs(p[1] - y) - 0.0035, 0.03 - p[2]), { color: '#f0c020', mat: 'plastic', part: 'outer2', thick: 0.002, lift: 0, over: ['outer'], bone: 'chest' });
     shell(s, (p) => Math.max(Math.abs(p[0]) - 0.035, Math.abs(p[1] - 0.37) - 0.028, 0.02 - p[2]), { ...RED, part: 'outer2', thick: 0.008, lift: 0.001, over: ['top'], keep: trunkOnly, bone: 'spine' });
-    // The skirt armour over the hips, plates of white with a red one in front.
+    // The skirt armor over the hips, plates of white with a red one in front.
     skirt(s, trunk(1, 0), { top: 0.34, hem: 0.255, flare: 1.12, color: WHITE, mat: 'plastic', part: 'outer', b: 1 });
     // The beam sword: a hilt through the fist, a guard, and the glowing foam blade out past the thumb.
     const G = pose.grip('R');

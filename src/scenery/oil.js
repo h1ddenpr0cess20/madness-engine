@@ -110,7 +110,7 @@ export const pumpbeam = {
   },
 };
 
-/** An oil drum: ribbed, its lid rimmed, a band of colour. */
+/** An oil drum: ribbed, its lid rimmed, a band of color. */
 export const drum = {
   name: 'drum', cell: 0.032,
   materials: { paint: { roughness: 0.4, metalness: 0.4, clearcoat: 0.6 }, steel: STEEL },
@@ -143,7 +143,7 @@ function sunflower(s, k, body, mat, stripe) {
   s.paint((p) => Math.abs(Math.abs(p[0]) - 0.02 * k) - 0.006 * k, stripe, 0.004 * k);
 }
 
-/** A sunflower seed: grey-black with cream stripes from end to end. */
+/** A sunflower seed: gray-black with cream stripes from end to end. */
 export const seed = {
   name: 'seed', cell: 0.009,
   materials: { husk: { roughness: 0.45, clearcoat: 0.5 } },

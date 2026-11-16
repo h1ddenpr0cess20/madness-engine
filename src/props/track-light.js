@@ -4,12 +4,12 @@
  * hung on a stem from the rail rather than stood on a post. A track can carry its own warm light: the renderer has
  * point lights only (eight at most), so a whole track shares one, set where it lights its target best.
  *
- * `length` is the rail's, in metres; `cans` how many hang from it, spaced evenly along it; `drop` how far each can
+ * `length` is the rail's, in meters; `cans` how many hang from it, spaced evenly along it; `drop` how far each can
  * hangs below the rail; `finish` the metal (black, bronze, white); `color` the lamps' (lens and light); `light`
  * whether the track carries a light, `intensity`, `reach` and `decay` that light's, and `lightAt` where it stands,
  * relative to the rail's middle.
  *
- * Coordinates are metres: the rail runs along x, its middle at the origin, the cans below it. `aim(point)` turns
+ * Coordinates are meters: the rail runs along x, its middle at the origin, the cans below it. `aim(point)` turns
  * every can to face a point given in the track's own coordinates, `aimCan(index, point)` one can, and
  * `aimAt(worldPoint)` faces a point in the world once the track is placed.
  *

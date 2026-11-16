@@ -3,7 +3,7 @@
  * picture from each). A crust of dark basalt plates drifts and grinds over
  * it, each plate domed and grainy, fine cracks crazing it, its edges lit
  * from the melt beneath; between the plates the melt shows in the cracks,
- * hottest in the middle of them, the colour of the heat — red, orange,
+ * hottest in the middle of them, the color of the heat — red, orange,
  * yellow, nearly white — streaming as it moves; pools of it well up and
  * crust over again, embers wink on the crust, bubbles swell and burst, and
  * the whole of it pulses. It lights itself: what it draws is what you see,
@@ -45,7 +45,7 @@ vec2 plates(vec2 p, float t) {
   }
   return vec2(d1, d2 - d1);
 }
-// The colour of the heat, 0 (dull red) to 1 (nearly white).
+// The color of the heat, 0 (dull red) to 1 (nearly white).
 vec3 glow(float h) {
   vec3 c = mix(vec3(0.3, 0.025, 0.0), vec3(0.95, 0.22, 0.02), smoothstep(0.0, 0.45, h));
   c = mix(c, vec3(1.0, 0.6, 0.12), smoothstep(0.4, 0.75, h));

@@ -9,7 +9,7 @@ const BY_FIGURE = { male: HIS, female: HERS };
 
 /**
  * The character creator's shapes put on the human. Each slot that changes
- * his shape (features.js) is made of MakeHuman's own modelling targets,
+ * his shape (features.js) is made of MakeHuman's own modeling targets,
  * baked into data/shapes.js at his size and in his pose: for each, how far
  * it moves every vertex of the base mesh, every joint of his skeleton, and
  * each eye.
@@ -36,7 +36,7 @@ function decode(b64, Type) {
 }
 
 const unpacked = new Map();
-/** One of figure `sex`'s baked shapes, unpacked once: the vertices it moves and by how much (metres), its joints and eyes. */
+/** One of figure `sex`'s baked shapes, unpacked once: the vertices it moves and by how much (meters), its joints and eyes. */
 function shapeOf(name, sex) {
   const key = `${sex}:${name}`;
   if (!unpacked.has(key)) {
@@ -136,7 +136,7 @@ export function shapeFor(features) {
   return { sex, amounts, delta, pivots, eyes, lift, height: figureOf(sex).height + top + lift - hi, browThickness: thick, mass: massOf(sex, delta) };
 }
 
-/** About how dense a person is, kg a litre (more muscle, a little more; more fat, a little less). */
+/** About how dense a person is, kg a liter (more muscle, a little more; more fat, a little less). */
 const DENSITY = 1030;
 
 /**

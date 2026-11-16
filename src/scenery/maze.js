@@ -5,7 +5,7 @@
  * it is grown from a seed so a night is the same maze every time it is
  * played. Growing it is a depth-first walk (a "recursive backtracker"),
  * which makes long, winding corridors; then some of the dead ends are
- * knocked through into a neighbour (`braid`), so there are loops to dodge
+ * knocked through into a neighbor (`braid`), so there are loops to dodge
  * round, and a few blocks of cells are opened into rooms.
  *
  * Sides are named for the way out of the cell: N is −z, S is +z, W is −x

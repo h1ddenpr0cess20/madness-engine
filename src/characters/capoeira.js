@@ -2,7 +2,7 @@ import { cloth, hold, onBody, person, strap } from './person.js';
 
 /**
  * The Capoeirista: from the roda on the beach at Ipanema, bare to the
- * waist, in the white abadá trousers and the coloured cord of his grade
+ * waist, in the white abadá trousers and the colored cord of his grade
  * knotted at the hip, the ginga swaying side to side, low, the arms
  * guarding the face, and then out of nowhere a cartwheel or a kick round
  * over his own head. Is it a dance? Is it a fight? It is a kick. At you.

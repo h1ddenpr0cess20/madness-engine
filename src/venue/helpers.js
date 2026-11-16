@@ -44,7 +44,7 @@ export const centre = (p) => p.tile(Math.floor(p.length / 2), 0);
 export const aimAt = (a, b) => [b[0] - a[0], b[1] - a[1]];
 
 /**
- * A wash of colour on a room: PAR cans on its back wall, each aimed at the
+ * A wash of color on a room: PAR cans on its back wall, each aimed at the
  * middle, chasing through `colors`. `strobe` adds a strobe at the back as well.
  */
 export function wash(v, p, colors, { cans = 2, strobe = false, program = 'chase', every = 2, glow = 0.7 } = {}) {

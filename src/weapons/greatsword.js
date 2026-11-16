@@ -4,7 +4,7 @@ import { HANDS } from './categories.js';
 /**
  * A broadsword-derived greatsword. It preserves the broadsword's blade profile,
  * fuller, pommel and construction. Only blade length, blade width, grip length and
- * guard-bar thickness differ. All dimensions are in metres.
+ * guard-bar thickness differ. All dimensions are in meters.
  */
 export const GREATSWORD_DIMENSIONS = Object.freeze({
   overallLength: 1.524,

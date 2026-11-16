@@ -126,7 +126,7 @@ function bakeElsewhere(job) {
  * key, sub }), for the worker to bake it; if it can't, it is baked here.
  */
 function sculptedItem(def, category, group, name, source, job = null) {
-  // A person can be shown in other colours (characters/person.js `variant`): `palette` says which, and `colours` is the
+  // A person can be shown in other colors (characters/person.js `variant`): `palette` says which, and `colors` is the
   // viewer's choice of them, { skin, hair, eyes, brow, look: { torso, ... }, colors }.
   const people = typeof def.variant === 'function' && typeof def.palette === 'function';
   return {
@@ -956,7 +956,7 @@ function humanItem(sex) {
         { type: 'color', label: 'Beanie', get: () => man.look.beanie, set: (c) => man.setLook({ beanie: c }) },
         { type: 'color', label: 'Felt hats', get: () => man.look.felt, set: (c) => man.setLook({ felt: c }) },
         face('jaw'), face('blink'), face('smile'), face('brows'),
-        // The character creator, slot by slot: those not built yet are shown, kept, and greyed out.
+        // The character creator, slot by slot: those not built yet are shown, kept, and grayed out.
         ...customizationFor(sex).flatMap(({ group, slots }) => [
           { type: 'heading', label: group },
           ...slots.map((s) => ({

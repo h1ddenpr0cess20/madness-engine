@@ -152,7 +152,7 @@ function subway(GFX, { w, d, thickness, lift }) {
 
 // ———————————————————————————————————————————————— Tampa
 
-/** An airboat: a flat aluminium hull and a great caged propeller on a frame at the stern. */
+/** An airboat: a flat aluminum hull and a great caged propeller on a frame at the stern. */
 function airboat(GFX, { w, d, thickness, lift }) {
   const group = new GFX.Group();
   const { holder, L, top } = hull(GFX, group, { w, d, thickness, lift }, '#8a9098', { deck: '#6a7078', depth: 0.45, rail: '#3a3e44' });
@@ -220,7 +220,7 @@ function longship(GFX, { w, d, thickness, lift }) {
 
 // ———————————————————————————————————————————————— New Orleans
 
-/** A bayou skiff: a flat-bottomed wooden boat, grey with age, a push pole stuck in the water at the stern. */
+/** A bayou skiff: a flat-bottomed wooden boat, gray with age, a push pole stuck in the water at the stern. */
 function skiff(GFX, { w, d, thickness, lift }) {
   const group = new GFX.Group();
   const { holder, L, top } = hull(GFX, group, { w, d, thickness, lift }, '#6a6a60', { deck: '#7a6a52', depth: 0.45, rail: '#4a4a42' });
@@ -323,7 +323,7 @@ function van(GFX, { w, d, thickness, lift }) {
 
 // ———————————————————————————————————————————————— Wacken
 
-/** A festival mud trailer: a low flatbed on fat tyres with a rail round it and a tow bar, caked in mud. */
+/** A festival mud trailer: a low flatbed on fat tires with a rail round it and a tow bar, caked in mud. */
 function trailer(GFX, { w, d, thickness, lift }) {
   const group = new GFX.Group();
   const { holder, L, S } = heading(GFX, group, { w, d, lift });

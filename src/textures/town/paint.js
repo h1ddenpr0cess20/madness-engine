@@ -1,6 +1,6 @@
 /**
  * From Rock 'n' Roller III, with Petroleum Springs's own added at the end
- * (lawn, paving slabs, shingles, tar paper, pool tiles, kerbs).
+ * (lawn, paving slabs, shingles, tar paper, pool tiles, curbs).
  *
  * Every texture, painted on a canvas at startup: the floors and walls of the
  * sets (concrete, planks, lino, carpet, diamond plate, grass, wet asphalt,
@@ -8,7 +8,7 @@
  * curtain, corrugated iron, damask, clapboard, stucco, a spaceship's hull,
  * castle stone, wallpaper, and the backs of scenery flats), and the bits and
  * pieces that go with them (grilles, gaffer tape, shutters, glows, beams). A floor texture is one tile across and a wall texture one
- * tile across and high, and each comes with a `bump` map. Colour mostly comes
+ * tile across and high, and each comes with a `bump` map. Color mostly comes
  * from the tile or wall under it, so the maps are near white. Under node (the
  * tests) there is no canvas, and everything is `{ map: null, bump: null }`.
  */
@@ -134,7 +134,7 @@ function pooltile(GFX) {
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
-/** The face of a kerb: poured concrete, a rounded lip along the top, scuffed black where the tyres rub. */
+/** The face of a curb: poured concrete, a rounded lip along the top, scuffed black where the tires rub. */
 function kerb(GFX) {
   const n = fractal(651, 6, 4), grit = fractal(653, 40, 2);
   const paint = (relief) => (size) => pixels(size, (u, v) => {
@@ -152,8 +152,8 @@ Object.assign(WALLS, { kerb, pooltile });
 // ———————————————————————————————————————————————————————————— facades
 
 /**
- * A building's face, one tile across and one storey high (the canvas is
- * as tall as a storey is, so nothing stretches): its wall, and its windows
+ * A building's face, one tile across and one story high (the canvas is
+ * as tall as a story is, so nothing stretches): its wall, and its windows
  * and doors, which are painted dark — a lit window is a glow laid over it
  * at night (`buildings.js`). `WINDOW` says where in it the window is, so
  * the glow can be laid over it.
@@ -166,7 +166,7 @@ export const WINDOW = Object.freeze({
 });
 
 /**
- * A storey's face, drawn in the 256-unit design (`draw` takes design units; a
+ * A story's face, drawn in the 256-unit design (`draw` takes design units; a
  * pixel loop in it takes `W * K` by `H * K` device pixels), at DETAIL, with the
  * same fine grain as every other floor and wall.
  */
@@ -231,7 +231,7 @@ function houseFace(GFX, { door = false, plain = false } = {}) {
   return { map: texture(GFX, facadeCanvas(storey, draw)(false)()), bump: texture(GFX, facadeCanvas(storey, draw)(true)(), { srgb: false }) };
 }
 
-/** An office storey: a band of glass between mullions, a spandrel panel under it. */
+/** An office story: a band of glass between mullions, a spandrel panel under it. */
 function officeFace(GFX) {
   const storey = 0.9;
   const draw = (ctx, W, H, relief) => {
@@ -425,7 +425,7 @@ export function gaffTexture(GFX) {
   });
 }
 
-/** A roll-up shutter: ribbed steel, scuffed, with CLOSED SET stencilled across it and hazard stripes at the foot. */
+/** A roll-up shutter: ribbed steel, scuffed, with CLOSED SET stenciled across it and hazard stripes at the foot. */
 export function shutterTexture(GFX) {
   return cached('shutter', () => {
     const size = 256;
@@ -523,7 +523,7 @@ export function panelTexture(GFX, look = 'flat') {
   });
 }
 
-/** A soft round glow, for halos. White in the middle, clear at the edge: tint it with the material's colour. */
+/** A soft round glow, for halos. White in the middle, clear at the edge: tint it with the material's color. */
 export function glowTexture(GFX) {
   return cached('glow', () => {
     const [c, ctx] = canvas(64);

@@ -93,7 +93,7 @@ function convex(t) {
 
 /**
  * Cloth hanging from a body table: at each height, the most of the body
- * within `reach` above it, less `slope(th)` per metre down (the cloth drawn
+ * within `reach` above it, less `slope(th)` per meter down (the cloth drawn
  * in as it falls), plus `ease`. Never inside the body.
  */
 function drape(body, { reach, slope, ease, up = 1 }) {
@@ -790,7 +790,7 @@ function toeCap(part, loop, m, detail) {
   const ankle = mirror(JOINTS.ankle, m);
   const J = Math.round(14 * detail) + 4;
   const ease = 0.0013;
-  // The skin's UV scale here (UV per metre round the edge), so the cap's knit is the same size as the shell's.
+  // The skin's UV scale here (UV per meter round the edge), so the cap's knit is the same size as the shell's.
   let du = 0, dp = 0;
   for (let k = 0; k < loop.length; k++) {
     const a = loop[k], b = loop[(k + 1) % loop.length];
@@ -1091,7 +1091,7 @@ const frontLine = (open, part) => (open ? (q, p, z) => {
   return [s * frontGap(q[1]), q[1], q[2]];
 } : null);
 
-/** The knit rib at the waist (`band`) or the wrists (`cuffs`): snug, a few millimetres thick. */
+/** The knit rib at the waist (`band`) or the wrists (`cuffs`): snug, a few millimeters thick. */
 function ribShell(detail, under, open, part) {
   return skinShell(part === 'band' ? 'waistband' : 'cuffs', J.rib ?? 'rib', {
     level: detail >= 0.8 ? 1 : 0,
@@ -1149,7 +1149,7 @@ function zip(tape, teeth, path, { pull = true } = {}) {
   box(teeth, at(0, 0.021, 0.0042), side, down, top.n, [0.0034, 0.011, 0.0008], top.w);
 }
 
-/** A rounded box: centre `c`, axes `u`, `v`, `n`, half-sizes `h`. */
+/** A rounded box: center `c`, axes `u`, `v`, `n`, half-sizes `h`. */
 function box(part, c, u, v, n, h, w) {
   part.grid(8, 16, (i, j) => {
     const lat = (i / 8 - 0.5) * Math.PI, lon = (j / 16) * Math.PI * 2;

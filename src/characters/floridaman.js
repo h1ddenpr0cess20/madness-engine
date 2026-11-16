@@ -2,7 +2,7 @@ import { axisRot, cloth, hold, person, shell } from './person.js';
 import { longHair, shades } from './metalwear.js';
 
 /**
- * Florida Man: a sunburn that is mostly a rumour on the front and a fact on the
+ * Florida Man: a sunburn that is mostly a rumor on the front and a fact on the
  * back, a Hawaiian shirt open to show it, a mullet, wraparound shades,
  * cargo shorts, flip-flops, and a beer held up to the sky. Has a story. It
  * is not a good story. It is about you. About 0.95 tiles tall.

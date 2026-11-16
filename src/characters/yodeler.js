@@ -4,8 +4,8 @@ import { moustache, sunHat } from './wardrobe.js';
 /**
  * The Yodeler: from the hut at the top of the lift, in leather lederhosen
  * with the carved bib and braces, a white shirt, red and white checked
- * sleeves rolled up, grey socks to the knee, a green felt hat with a
- * feather in it and a pin, a big moustache, and a voice the next valley
+ * sleeves rolled up, gray socks to the knee, a green felt hat with a
+ * feather in it and a pin, a big mustache, and a voice the next valley
  * can hear: the hand cupped at the mouth, the head back. About 1.0 tiles
  * tall to the feather.
  */

@@ -3,7 +3,7 @@ import { quadruped } from './quadruped.js';
 
 /**
  * The Ibex: the wild goat of the Alps, at home on a cliff a chamois would
- * think twice about. Grey-brown, a pale belly, dark down the front of the
+ * think twice about. Gray-brown, a pale belly, dark down the front of the
  * legs, a little beard, and the horns: great ridged scimitars sweeping up
  * and back, a ring for every year. It has seen rocks come down the
  * mountain before, and it has opinions. About 0.75 tiles tall to the horns.
@@ -15,7 +15,7 @@ const DARK = coat({ over: '#4a3a2a', under: '#3a2a1e', vary: 0.1, freq: 18 });
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 /**
- * The ibex's coat as it is in summer: grey-brown over the back, a dark
+ * The ibex's coat as it is in summer: gray-brown over the back, a dark
  * stripe along the flank dividing it from the pale belly, the fronts of
  * the legs dark and their backs light, a pale patch under the tail, the
  * chin and the throat dark under the beard.

@@ -4,8 +4,8 @@ import { beard, beret, moustache } from './wardrobe.js';
 
 /**
  * The Pavement Artist: up from Montmartre with an easel's worth of
- * opinions, in a beret, a loose blue smock smeared with every colour, a red
- * neckerchief, a waxed moustache and a little beard; the palette on his
+ * opinions, in a beret, a loose blue smock smeared with every color, a red
+ * neckerchief, a waxed mustache and a little beard; the palette on his
  * thumb and a brush in the other hand held up at arm's length to take your
  * measure. Will paint your portrait. You are a rock. Still life, then.
  * About 0.95 tiles tall.

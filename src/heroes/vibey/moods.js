@@ -53,5 +53,5 @@ export const ENERGY_GAIN = {
 /** The palette the star drifts through; `hue` is how fast it walks it. */
 export const PALETTE = ['#ffd166', '#ffa62b', '#ff7a2f', '#f2452e', '#ff9c4a'];
 
-/** Where the colour goes when the call is broken. */
+/** Where the color goes when the call is broken. */
 export const DEAD = '#3d3a44';

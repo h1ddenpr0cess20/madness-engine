@@ -4,7 +4,7 @@ import { cap, glasses, moustache } from './wardrobe.js';
 /**
  * The Old-Timer: been going to the same corner shop since it sold
  * everything loose, and tells them so. A tweed flat cap, round glasses, a
- * white moustache, a brown cardigan buttoned over a checked shirt, grey
+ * white mustache, a brown cardigan buttoned over a checked shirt, gray
  * flannels, polished brown shoes; a little stooped, leaning on a walking
  * stick, the shopping in a paper bag in the crook of the other arm with a
  * loaf and a bunch of celery up out of it. About 0.88 tiles tall.

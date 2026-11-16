@@ -5,7 +5,7 @@ import { crocodilian, scaly, scutes } from './croc.js';
 
 /**
  * The Gator: up out of the swamp and onto the boardwalk, long and low and
- * armoured, near black above with faint yellow bands and pale underneath,
+ * armored, near black above with faint yellow bands and pale underneath,
  * rows of scutes down the back and a crest down the tail, and the broad
  * round-ended snout of an alligator, the top teeth down outside the bottom
  * jaw and the bottom ones hidden. Has been around since the dinosaurs, and

@@ -102,7 +102,7 @@ export function createSparkGeometry(GFX, reach, { rays = sparkRays() } = {}) {
 }
 
 /**
- * The marble as a group, centred on its middle: `spin` is the part that
+ * The marble as a group, centered on its middle: `spin` is the part that
  * turns as it rolls (glass and spark together).
  */
 export function createMarble(GFX, { radius = RADIUS } = {}) {

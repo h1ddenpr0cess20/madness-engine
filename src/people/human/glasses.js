@@ -2,7 +2,7 @@ import { add, clamp, cross, frames, norm, Part, scale, spline, sub } from './kit
 import { castBody } from './body.js';
 
 /**
- * Sunglasses, made to his face: the lenses a little more than a centimetre
+ * Sunglasses, made to his face: the lenses a little more than a centimeter
  * in front of the brow, wrapped round it on a curve, resting on the nose by
  * their pads (or the bridge) and on the ears by the temples, which run back
  * along the side of the head, clear of it, and bend down behind the ears.
@@ -10,10 +10,10 @@ import { castBody } from './body.js';
  * Built at rest in the head's frame and carried rigidly by the head bone,
  * as the hair is.
  *
- * Each style: `outline(a)` → [u, v], the lens's edge in metres round its
+ * Each style: `outline(a)` → [u, v], the lens's edge in meters round its
  * middle (u out from the nose, v up) at angle `a`; the frame's `rim`
  * thickness round it and `temple` thickness; `wire` for a metal frame with a
- * bar across the brow and pads on the nose, else a moulded one whose bridge
+ * bar across the brow and pads on the nose, else a molded one whose bridge
  * sits on the nose.
  */
 export const SUNGLASSES = Object.freeze({
@@ -51,7 +51,7 @@ export const SUNGLASSES = Object.freeze({
 /** Where the lenses sit: each one's middle (left; the right is its mirror), how far ahead of the face, and how far they wrap round it. */
 const LENS = Object.freeze({ center: [0.0365, 1.653, 0.166], wrap: 0.11, tilt: 0.12, curve: 0.11 });
 
-/** A point of the left lens at [u, v] in its outline (`out` metres off the lens's surface): on a sphere, turned round the face. */
+/** A point of the left lens at [u, v] in its outline (`out` meters off the lens's surface): on a sphere, turned round the face. */
 function lensPoint(uv, out = 0) {
   const [u, v] = uv;
   // The lens's own curve, then its wrap (turned about the vertical) and its tilt (the bottom in toward the cheeks).
@@ -103,7 +103,7 @@ export function buildGlasses(name, detail = 1) {
   const A = Math.round(48 * detail) + 16, rings = 6;
   const sides = style.wire ? 6 : 10;
   for (const m of [1, -1]) {
-    // The lens: rings in to its middle, its outside and inside a millimetre apart.
+    // The lens: rings in to its middle, its outside and inside a millimeter apart.
     for (const out of [0.0008, -0.0008]) {
       lens.grid(rings, A, (i, j) => {
         const a = (j / A) * Math.PI * 2, k = 1 - i / rings, e = style.outline(a);
@@ -162,7 +162,7 @@ export function buildGlasses(name, detail = 1) {
       });
     }
   }
-  // Across the nose: a wire frame's bar over the brow and its bridge between the lenses; a moulded frame's one bridge.
+  // Across the nose: a wire frame's bar over the brow and its bridge between the lenses; a molded frame's one bridge.
   const innerAt = (a, m, dv = 0) => { const e = style.outline(a); return mirrorX(lensPoint([e[0], e[1] + dv]), m); };
   // An arch between two points: up by `rise` in the middle, and forward with the lenses' wrap.
   const arch = (a, b, rise, ahead) => Array.from({ length: 17 }, (_, i) => {

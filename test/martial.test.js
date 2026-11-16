@@ -144,7 +144,7 @@ test('no stance, move or bow puts an arm through his body, man or woman, slim or
       who.setStyle(style);
       who.pose(state);
       const d = who.armDepth();
-      // (A couple of millimetres: the same tolerance as the other clips, a little over for the sword's second hand.)
+      // (A couple of millimeters: the same tolerance as the other clips, a little over for the sword's second hand.)
       assert.ok(Math.max(d.L, d.R) < 0.005, `${sex} ${build} ${what}: an arm ${(Math.max(d.L, d.R) * 1000).toFixed(1)} mm in`);
     };
     for (const stance of STANCES.filter((s) => !STANCE_DATA[s].armed)) check(`stance ${stance}`, { clip: 'stance', time: 0.5 }, { stance });

@@ -3,8 +3,8 @@ import { SURFACES } from './surfaces.js';
 
 /**
  * The materials the ground and the walls are drawn with: each surface's
- * floor texture (`paint.js`) and its bump, the colour and the night's light
- * in the vertex colours, and how it shines — oil and puddles and tar
+ * floor texture (`paint.js`) and its bump, the color and the night's light
+ * in the vertex colors, and how it shines — oil and puddles and tar
  * glossy and reflecting the lights, the rest matte.
  */
 

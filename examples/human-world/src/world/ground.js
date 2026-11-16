@@ -19,7 +19,7 @@ export function noise(x, z, s = 0) {
   return a + (b - a) * u + (c - a + (a - b - c + d) * u) * v;
 }
 
-/** The colour each surface is tinted, before the noise: the horror's drained green-grey. */
+/** The color each surface is tinted, before the noise: the horror's drained green-gray. */
 const TINT = {
   cobble: '#7c8080', flags: '#8a8c88', dirt: '#6e6a5e', mud: '#4a463c', grass: '#4c5a40', planks: '#7a6a58', marble: '#9a9c9a', scree: '#6a6c68',
 };

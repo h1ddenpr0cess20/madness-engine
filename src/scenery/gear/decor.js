@@ -352,7 +352,7 @@ function pool(GFX, { w = 3, d = 2, rise = 0.7 }) {
   return { group };
 }
 
-/** A jukebox: a rounded cabinet of chrome and wood with a lit panel that changes colour, and a bubble of coloured tubes. */
+/** A jukebox: a rounded cabinet of chrome and wood with a lit panel that changes color, and a bubble of colored tubes. */
 function jukebox(GFX, { rise = 1.1 }) {
   const group = new GFX.Group();
   const chrome = std(GFX, '#d6d9e0', { metalness: 1, roughness: 0.2 });
@@ -467,7 +467,7 @@ export const FACING = new Set(['amp', 'drums', 'speaker', 'console', 'rack', 'ju
  * tiles, until a wall or a change of level stops it (or another prop right
  * up against it); one with its back to a wall faces away from it. So a row
  * of amps along a wall faces into the room, not along the wall at its
- * neighbour's back.
+ * neighbor's back.
  */
 export function openSide(venue, { x, z, w, d, base }) {
   const open = (i, j, near) => {

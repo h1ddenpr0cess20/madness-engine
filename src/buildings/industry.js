@@ -165,7 +165,7 @@ export function smallholding(m, v) {
 /** A grange: a yeoman's house of stone and timber at the lane, a big barn behind it and a dovecote. */
 export function grange(m, v) {
   const { rnd } = v;
-  // The house, two storeys, stone below.
+  // The house, two stories, stone below.
   m.box('rubble', -0.95, -0.35, 0.35, 0.95, 0.42, 1.3, pickFrom(rnd, PALETTE.stone), { skip: ['bottom'] });
   gabled(m, rnd, {
     x0: -0.92, x1: 0.92, z0: 0.38, z1: 1.27, h0: 0.42, h1: 0.88, roof: pickFrom(rnd, PALETTE.tile), ridgeH: 0.5, over: 0.13, base: false,
@@ -267,7 +267,7 @@ export function joinery(m, v) {
   return { smoke: [top], height: 1.5 };
 }
 
-/** A craft hall: a master's hall of two jettied storeys with a counter on the street, a forge in the back and iron in the yard. */
+/** A craft hall: a master's hall of two jettied stories with a counter on the street, a forge in the back and iron in the yard. */
 export function guildhall(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, PALETTE.plaster);
@@ -279,7 +279,7 @@ export function guildhall(m, v) {
   for (const n of ['left', 'right']) halfTimber(m, G[n], { cols: 4, rails: [0, 0.51], rnd, capped: false });
   doorOn(m, G.front, 0.35, 0.24, 0.42, pickFrom(rnd, PALETTE.door));
   for (const n of ['left', 'right']) windowOn(m, G[n], 0.9, 0.2, 0.2, 0.19, {});
-  // The upper storey leans out over the street.
+  // The upper story leans out over the street.
   const F = gabled(m, rnd, {
     x0: x0 - 0.03, x1: x1 + 0.03, z0: z0 - 0.02, z1: z1 + 0.1, h0: 0.6, h1: 1.08, wall, roof: pickFrom(rnd, PALETTE.tile), ridgeH: 0.62, over: 0.13, base: false,
     windows: [{ face: 'front', u: 0.45, shutters: pickFrom(rnd, PALETTE.shutter) }, { face: 'front', u: 0.95 }, { face: 'front', u: 1.45, shutters: pickFrom(rnd, PALETTE.shutter) }, { face: 'left', u: 0.9 }],

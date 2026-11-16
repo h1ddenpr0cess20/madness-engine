@@ -1,7 +1,7 @@
 /**
  * The electric freighter: a cab-over delivery truck with a low raked nose, a dark glass canopy, a light bar
  * across the front, a white cargo box with green leaf badges, and four axles (the two at the front steer, the two
- * at the back run on duals). It is built from plain shapes at real size, in metres, as the putter and the swords are,
+ * at the back run on duals). It is built from plain shapes at real size, in meters, as the putter and the swords are,
  * and it drives: `update(dt, input)` is the model it was made with.
  *
  *     const freighter = createFreighter(GFX);
@@ -14,15 +14,15 @@
  * on the ground at the back wheels, which is what it turns about. Heading 0 drives toward +z; a positive heading, and
  * a positive `steer`, turn it to the left.
  *
- * `scale` sets how big a metre is in the game's units (the traffic is about 0.4 of a tile to the metre, so a freighter
- * there is `scale: 0.41`). The driving is worked out in metres and seconds and put in the game's units on the way out:
+ * `scale` sets how big a meter is in the game's units (the traffic is about 0.4 of a tile to the meter, so a freighter
+ * there is `scale: 0.41`). The driving is worked out in meters and seconds and put in the game's units on the way out:
  * its speed, its turning circle and its look are the same at any scale.
  */
 
 import { arc, across as acrossOf, roundRect as roundRectOf, wheelKit } from './parts.js';
 import { attachDriving } from './driving.js';
 
-/** The truck's measures, in metres. */
+/** The truck's measures, in meters. */
 export const FREIGHTER = Object.freeze({
   name: 'freighter',
   /** Overall, from the rear doors' back to the bumper's front, across the mirrors, and to the top of the canopy. */
@@ -41,7 +41,7 @@ export const FREIGHTER = Object.freeze({
 });
 
 /**
- * How it drives, in metres, seconds and radians. Speeds are m/s (22 is 79 km/h); `accel`, `brake`, `coast` and
+ * How it drives, in meters, seconds and radians. Speeds are m/s (22 is 79 km/h); `accel`, `brake`, `coast` and
  * `handbrake` are m/s² (the brake is also reverse); `steerLock` is the angle the wheels turn to at a standstill and
  * `steerFade` the speed at which the lock has shrunk by `steerFadeMax` of itself at most; `steerRate` is how quickly the
  * wheels follow the stick, per second.
@@ -65,7 +65,7 @@ export const FREIGHTER_DRIVE = Object.freeze({
 /**
  * @param {object} GFX The engine's graphics API.
  * @param {object} [options]
- * @param {number} [options.scale] Game units to the metre (default 1).
+ * @param {number} [options.scale] Game units to the meter (default 1).
  * @param {number|string} [options.paint] The body's color (default near white).
  * @param {number|string} [options.accent] The green of the leaves and the bolt.
  * @param {'treaded'|'classic'} [options.wheels] The tires: rounded and treaded (default), or the plain square-edged ones it was first drawn with. The rim is the same either way.

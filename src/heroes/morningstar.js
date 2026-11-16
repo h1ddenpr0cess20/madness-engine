@@ -6,7 +6,7 @@ export { METALS };
  * The head of a morning star: a ball of dark forged steel with square spikes
  * set into it, the kind on the end of a chain in a museum. Chrome where the
  * light catches it (it takes its reflections from the stop's room, so it
- * picks up every colour of the rig), gunmetal where it doesn't, the spikes
+ * picks up every color of the rig), gunmetal where it doesn't, the spikes
  * brightest at the tip and darkest where they go into the ball.
  *
  * The spikes can snap: `snap(n)` breaks the first n of them off short,

@@ -5,7 +5,7 @@
  * curtain, corrugated iron, damask, clapboard, stucco, a spaceship's hull,
  * castle stone, wallpaper, and the backs of scenery flats), and the bits and
  * pieces that go with them (grilles, gaffer tape, shutters, glows, beams). A floor texture is one tile across and a wall texture one
- * tile across and high, and each comes with a `bump` map. Colour mostly comes
+ * tile across and high, and each comes with a `bump` map. Color mostly comes
  * from the tile or wall under it, so the maps are near white. Under node (the
  * tests) there is no canvas, and everything is `{ map: null, bump: null }`.
  */
@@ -158,7 +158,7 @@ export const DETAIL = 1024;
 /** Device pixels per unit of a painter's 256-unit design. */
 export const K = DETAIL / 256;
 
-/** Fine grain over a painted map, shared with its bump, so the speckle in the colour and the speckle in the relief agree. */
+/** Fine grain over a painted map, shared with its bump, so the speckle in the color and the speckle in the relief agree. */
 const GRAIN = { seed: 881 };
 
 /**
@@ -279,7 +279,7 @@ export function woodPhoto() {
 /**
  * A map and a bump painted from the walnut photograph by `paint(src, map, bump)`,
  * where `src` is the photograph's pixels (see `sample`). Until the photograph has
- * decoded the maps show `base`, a plain board colour; then they are painted again
+ * decoded the maps show `base`, a plain board color; then they are painted again
  * and the textures are marked changed. Under node both are null.
  */
 export function photoPair(GFX, base, paint, opts = {}) {
@@ -303,7 +303,7 @@ export function photoPair(GFX, base, paint, opts = {}) {
   return { map, bump, ...opts };
 }
 
-/** The photograph's colour at (x, y), wrapping, from its pixel data. */
+/** The photograph's color at (x, y), wrapping, from its pixel data. */
 export function sample(pix, x, y) {
   const i = ((((y % DETAIL) + DETAIL) % DETAIL) * DETAIL + (((x % DETAIL) + DETAIL) % DETAIL)) * 4;
   return [pix[i], pix[i + 1], pix[i + 2]];
@@ -375,7 +375,7 @@ export function checker(GFX) {
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
-/** Carpet: a field of woven pile with a diamond pattern laid in it. The theatre. */
+/** Carpet: a field of woven pile with a diamond pattern laid in it. The theater. */
 export function carpet(GFX) {
   const pile = fractal(31, 48, 2), cloud = fractal(5, 3, 3);
   const paint = (relief) => (size) => pixels(size, (u, v) => {
@@ -622,7 +622,7 @@ export function scree(GFX) {
 
 export const FLOORS = { concrete, planks, checker, carpet, plate, grass, panels, mud, asphalt, dirt, grate, cobble, snow, sand, tatami, terracotta, marble, mosaic, scree };
 
-/** Plywood: a sheet to the tile, screwed to the studs, with a stencilled mark. The garage. */
+/** Plywood: a sheet to the tile, screwed to the studs, with a stenciled mark. The garage. */
 export function plywood(GFX) {
   // A sheet to the tile: veneer grain across the sheet, the seams at its edges, and the screws along the studs.
   return photoPair(GFX, '#b89a6e', (pix, mc, bc) => {
@@ -694,7 +694,7 @@ export function block(GFX) {
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
-/** Damask paper over panelling, with a gold rail: the theatre's walls. */
+/** Damask paper over panelling, with a gold rail: the theater's walls. */
 export function damask(GFX) {
   const n = fractal(101, 6, 2);
   const paint = (relief) => (size) => pixels(size, (u, v) => {
@@ -823,8 +823,8 @@ export function stone(GFX) {
 /**
  * Ashlar: dressed stone laid in level courses, eight to the tile, each block
  * its own length and its own tone, the arrises a little worn and the joints
- * fine. At a town's scale a tile is about a storey, so a wall shows three or
- * four courses to a storey. The courses tile across and up; with `level`
+ * fine. At a town's scale a tile is about a story, so a wall shows three or
+ * four courses to a story. The courses tile across and up; with `level`
  * texture coordinates (see the mesher) they run level round a building.
  */
 export function ashlar(GFX) {
@@ -934,7 +934,7 @@ export function wallpaper(GFX) {
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
-/** The back of the set: scenery flats from behind, canvas on a timber frame, braced, stencilled with the stage. */
+/** The back of the set: scenery flats from behind, canvas on a timber frame, braced, stenciled with the stage. */
 export function flats(GFX) {
   const n = fractal(233, 4, 3), grain = fractal(239, 2, 4);
   const paint = (relief) => (size) => {

@@ -211,7 +211,7 @@ function createRig(GFX, { w, d, height }) {
   return { group, update(up, time) { lensMat.color.setRGB(1, 0.9 + 0.05 * Math.sin(time * 20), 0.75); } };
 }
 
-/** The props department's boulder: papier-mâché painted grey, lumpy, on a cable. The talent has opinions about it. */
+/** The props department's boulder: papier-mâché painted gray, lumpy, on a cable. The talent has opinions about it. */
 function createBoulder(GFX, { w, d, height }) {
   const group = new GFX.Group();
   const geometry = new GFX.IcosahedronGeometry(0.5, 1).toNonIndexed();
@@ -262,7 +262,7 @@ function createPiston(GFX, { w, d, height }) {
   return { group, update(up, time) { const k = up < 0.99 && up > 0.01 ? 1 : 0.4 + 0.3 * Math.sin(time * 6); glowMat.color.setRGB(k, 0.2 * k, 0.15 * k); } };
 }
 
-/** A wooden crate on a crane hook: slats, steel bands, stencilled. */
+/** A wooden crate on a crane hook: slats, steel bands, stenciled. */
 function createCrate(GFX, { w, d, height }) {
   const group = new GFX.Group();
   const plank = floorTexture(GFX, 'planks');
@@ -622,7 +622,7 @@ export function createLiftMesh(GFX, { w, d, thickness, style, lift = null }) {
   return { group, style, update(time) { live?.(time); } };
 }
 
-/** A closed set: a roll-up shutter of corrugated steel, stencilled CLOSED SET; or (`look` 'bars') a gate of iron bars. */
+/** A closed set: a roll-up shutter of corrugated steel, stenciled CLOSED SET; or (`look` 'bars') a gate of iron bars. */
 export function createGateMesh(GFX, { span, height, thickness, across, look }) {
   const group = new GFX.Group();
   if (look === 'border') {

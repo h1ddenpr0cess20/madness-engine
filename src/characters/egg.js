@@ -55,7 +55,7 @@ const inside = ([x, y], poly) => {
 };
 
 /**
- * Marc's speckled shell skin (skin.js), as a colour map and a bump map, with
+ * Marc's speckled shell skin (skin.js), as a color map and a bump map, with
  * the cracks drawn on: dark, branching, running out from the hole.
  */
 function shellSkin(GFX, outline, random, { width = 1024, height = 512 } = {}) {

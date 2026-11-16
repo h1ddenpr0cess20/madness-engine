@@ -14,7 +14,7 @@
  *     effects.weather(dt, ball.x, ball.y, ball.z);
  */
 
-/** Confetti and streamers: a party's colours. */
+/** Confetti and streamers: a party's colors. */
 export const CONFETTI = ['#ffd23a', '#f5f0e6', '#d81c2a', '#ffb02a', '#ffffff', '#c8a050', '#2de2ff'];
 
 /** Bright plastic: guitar picks, sweets, balloons. */
@@ -25,7 +25,7 @@ export const RAIN = Object.freeze({ drops: 900, reach: 11, height: 9, length: 0.
 
 /**
  * Weather in streaks (rain, and sand blowing across) and in flakes (snow,
- * petals): colour, how see-through, which way and how fast it goes
+ * petals): color, how see-through, which way and how fast it goes
  * ([x, y, z] tiles a second), how long a streak is along that way, or how
  * big a flake is and how much it wanders and turns, and whether it splashes.
  */

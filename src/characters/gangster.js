@@ -4,7 +4,7 @@ import { fedora, moustache, suitFront } from './wardrobe.js';
 
 /**
  * The Hood: a pinstripe suit with shoulders out to here, a black shirt and
- * a white tie, a fedora pulled down, spats, a pencil moustache, and a
+ * a white tie, a fedora pulled down, spats, a pencil mustache, and a
  * violin case under his arm. He does not play. About 0.95 tiles tall.
  */
 

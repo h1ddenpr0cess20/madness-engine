@@ -6,7 +6,7 @@ import { handlingInfo, handlingOf, HANDS, reachOf } from './categories.js';
 /**
  * The existing engine Morningstar head, unchanged in geometry and spike
  * layout, fitted to a long polished-metal haft and the shared wrapped-leather
- * grip / marble pommel assembly. All dimensions are in metres.
+ * grip / marble pommel assembly. All dimensions are in meters.
  */
 const HEAD_SCALE = 0.11;
 

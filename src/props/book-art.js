@@ -55,7 +55,7 @@ const canvasOf = (w, h) => {
   return c;
 };
 
-/** Foil: a gradient in the colour pass, plain white in the bump pass so it stands proud of the leather. */
+/** Foil: a gradient in the color pass, plain white in the bump pass so it stands proud of the leather. */
 function makeFoil(ctx, mode, hex, bg) {
   return {
     mode, bg, hex,
@@ -277,7 +277,7 @@ function trim(ctx, F, kind, x0, y0, x1, y1, rand) {
 /* the cover                                                           */
 /* ------------------------------------------------------------------ */
 
-/** Text centred at (x, y), letter by letter so it can be spaced. */
+/** Text centered at (x, y), letter by letter so it can be spaced. */
 function spaced(ctx, text, x, y, size, track, family, weight = 'bold') {
   ctx.font = `${weight} ${size}px ${family}`;
   ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
@@ -302,7 +302,7 @@ const TITLE_FONT = '"Cinzel","Trajan Pro","Palatino Linotype","Book Antiqua",Geo
 
 /**
  * The cover as one picture, outer face above and inner face below, in
- * millimetres: `s` along the unrolled cover, `z` up the book. `mode` is
+ * millimeters: `s` along the unrolled cover, `z` up the book. `mode` is
  * 'color' or 'bump' (what stands proud). Returns a canvas.
  */
 export function paintCover(g, mode) {

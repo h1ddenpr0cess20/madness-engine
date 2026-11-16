@@ -2,7 +2,7 @@ import { linearRGB } from '../color.js';
 
 /**
  * The sky over the sea, and the light it sheds: what the ocean's shaders
- * colour the dome and the water's reflections with (ocean/shaders.js), and
+ * color the dome and the water's reflections with (ocean/shaders.js), and
  * what the stage lights everything else with, so that a glass marble afloat
  * shines with the same sun that glints off the waves.
  *
@@ -10,11 +10,11 @@ import { linearRGB } from '../color.js';
  * into the linear numbers the shaders take.
  *
  *   - `sun`: where it is ([elevation, azimuth] in degrees; azimuth from +x
- *     round towards +z), its colour and how strong (the moon, at night)
+ *     round toward +z), its color and how strong (the moon, at night)
  *   - `zenith`, `horizon`: the sky overhead and at the horizon
- *   - `cloud`: the clouds' colour and how much of the sky they cover
+ *   - `cloud`: the clouds' color and how much of the sky they cover
  *   - `stars`: how many show (0 by day)
- *   - `water`: the sea's own colours: `deep` (what it is with no light in
+ *   - `water`: the sea's own colors: `deep` (what it is with no light in
  *     it), `body` (what the light picks out in it), `glow` (the light
  *     coming through the thin water at the crests, Neverending Tunnel III's
  *     glow) and `foam`
@@ -64,15 +64,15 @@ export const SKIES = Object.freeze({
   }),
 });
 
-/** Which way the sun is, from its [elevation, azimuth] in degrees: a unit [x, y, z] towards it. */
+/** Which way the sun is, from its [elevation, azimuth] in degrees: a unit [x, y, z] toward it. */
 export function sunDirection([elevation, azimuth]) {
   const e = (elevation * Math.PI) / 180, a = (azimuth * Math.PI) / 180;
   return [Math.cos(e) * Math.cos(a), Math.sin(e), Math.cos(e) * Math.sin(a)];
 }
 
 /**
- * A sky as the shaders take it: linear colours, the sun's direction, and
- * its colour times its strength.
+ * A sky as the shaders take it: linear colors, the sun's direction, and
+ * its color times its strength.
  */
 export function skyLight(sky) {
   const scale = (hex, k) => linearRGB(hex).map((c) => c * k);
@@ -107,8 +107,8 @@ export function mixLight(a, b, f, out = {}) {
 const mix3 = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
 
 /**
- * The sky's colour looking along `d` (a unit [x, y, z]), linear, as
- * `skyColour` in the shaders has it, with the clouds as an even veil of
+ * The sky's color looking along `d` (a unit [x, y, z]), linear, as
+ * `skyColor` in the shaders has it, with the clouds as an even veil of
  * `cover` rather than the shaders' drifting ones.
  */
 export function skyColour(light, d) {
@@ -168,7 +168,7 @@ export function paintRoom(sky, width = 256) {
 
 /**
  * A sky `f` of the way from sky `a` to sky `b` (both as SKIES has them):
- * the colours mixed in linear light, the sun moved along between its two
+ * the colors mixed in linear light, the sun moved along between its two
  * places, the rest in proportion. For a time of day between two skies, or a
  * slider between them.
  */

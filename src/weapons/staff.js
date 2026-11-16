@@ -294,7 +294,7 @@ export function createStaff(GFX, {
     const gap = 0.0025;
     const A = a + gap;
     const B = b + gap;
-    // Where the roots' lip meets the topper: its seat. The topper's centre rises above it.
+    // Where the roots' lip meets the topper: its seat. The topper's center rises above it.
     const rc = Math.max(0.028, a * 0.82);
     const rimDrop = B * Math.sqrt(Math.max(0.02, 1 - (rc / A) ** 2));
     const cy = D + rimDrop;
@@ -410,7 +410,7 @@ export function createStaff(GFX, {
         toppers[kind] = { asset, object: asset.group };
       } else {
         const asset = createMagicEggPommel(GFX, STAFF_DIMENSIONS.eggHalfHeight / STAFF_DIMENSIONS.eggScale);
-        // The sword's egg hangs point-down; stand it on its broad end by turning it end over end about its centre.
+        // The sword's egg hangs point-down; stand it on its broad end by turning it end over end about its center.
         const holder = new GFX.Group();
         holder.name = 'Magic Egg staff topper';
         asset.group.position.y = -STAFF_DIMENSIONS.eggHalfHeight / STAFF_DIMENSIONS.eggScale;
@@ -426,7 +426,7 @@ export function createStaff(GFX, {
     }
     const t = toppers[kind];
     t.object.visible = true;
-    // The orb group's origin is its centre, and so is the egg holder's.
+    // The orb group's origin is its center, and so is the egg holder's.
     t.object.position.y = cy;
     currentTopper = t.object;
   }
@@ -434,7 +434,7 @@ export function createStaff(GFX, {
   let topperKind = topper;
   mountTopper(topperKind);
 
-  // The top of the staff: the topper's centre and its half-height.
+  // The top of the staff: the topper's center and its half-height.
   const dims = () => HEAD_Y + headCentre + topperSpec(topperKind === 'none' ? 'orb' : topperKind).b;
 
   // The wooden parts, all at once: the current finish, wood or metal.

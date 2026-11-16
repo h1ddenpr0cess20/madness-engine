@@ -5,7 +5,7 @@
  * no renderer — so the rig can be measured in a test.
  */
 
-/** Yarn radius, in metres: six millimetre wool. */
+/** Yarn radius, in meters: six millimeter wool. */
 export const YR = 0.003;
 /** Sample spacing along the strand. */
 export const STEP = 0.0025;
@@ -62,7 +62,7 @@ export function cellOf(x, y, z) {
 
 /**
  * Winds a ball. Returns the strand as samples from the core outwards: `dirs`
- * (unit directions from the centre), `P` (positions), `cum` (arc length to
+ * (unit directions from the center), `P` (positions), `cum` (arc length to
  * each), `tS` (the strand's direction across the sphere), `rBall` (the radius
  * the ball rides on there), and the height maps the occlusion is read from.
  */
@@ -70,8 +70,8 @@ export function windBall({ seed = SEED } = {}) {
   const rnd = mulberry(seed);
   const HM = new Float32Array(6 * M * M).fill(HOLLOW);
 
-  /** rc < 0: the radius a strand centred on u must sit at to rest on the surface.
-   *  rc ≥ 0: lay a strand centred at radius rc (raises the surface under it). */
+  /** rc < 0: the radius a strand centered on u must sit at to rest on the surface.
+   *  rc ≥ 0: lay a strand centered at radius rc (raises the surface under it). */
   function footprint(u0, u1, u2, a0, a1, a2, b0, b1, b2, r, rc) {
     const rho = YR / r;
     const n = Math.min(9, Math.ceil(rho / (CELL * 0.75)));

@@ -4,7 +4,7 @@ import { finishSky, grain, land, snapshot } from '../skyfinish.js';
 /**
  * The sky round each track, painted on a canvas: a gradient from `sky`,
  * stars if it is night, and along the horizon (`horizon`, in `skyline`'s
- * colour, with a `glow` of its own colour where the place has one):
+ * color, with a `glow` of its own color where the place has one):
  *
  *   hills       rolling hills with a town's lights on them
  *   city        towers, spires and lit windows

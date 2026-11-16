@@ -7,7 +7,7 @@ import { createBladeMist, createCurvedBladeMist } from './blade-mist.js';
 import { bladeCentreline } from './blade-curve.js';
 import { assertHands, handlingInfo, handlingOf, reachOf } from './categories.js';
 
-/** Weapon geometry is expressed in metres: one engine unit equals one metre. */
+/** Weapon geometry is expressed in meters: one engine unit equals one meter. */
 export const WEAPON_WORLD_UNITS_PER_METRE = 1;
 export const MARBLE_POMMEL_RADIUS = 0.027;
 export const MARBLE_POMMEL = Object.freeze({
@@ -104,7 +104,7 @@ function createMetalEggPommel(GFX, radius, metal) {
   const verticalScale = radius / 1.03;
   mesh.scale.set(radialScale, -verticalScale, radialScale);
   // shapeEgg adds 0.01 to its local Y coordinate. Cancel that offset and
-  // centre the 54 mm shell in the pommel envelope: narrow point outward,
+  // center the 54 mm shell in the pommel envelope: narrow point outward,
   // broader shoulder toward the grip, with only the ferrule bridging the seam.
   mesh.position.y = radius + verticalScale * 0.01;
   mesh.castShadow = true;
@@ -409,7 +409,7 @@ function createGraniteShardGuard(GFX, parent, material, { centerY, span = 0.22, 
   const guard = new GFX.Group();
   guard.name = 'rough-hewn granite shard guard';
   const half = span / 2;
-  // Keep the rough-hewn silhouette mirrored about the grip centreline.
+  // Keep the rough-hewn silhouette mirrored about the grip centerline.
   const stations = [
     [-half, centerY + 0.021, 0], [-half * 0.82, centerY + 0.010, 0],
     [-half * 0.52, centerY - 0.004, 0], [-half * 0.22, centerY - 0.002, 0],
@@ -519,7 +519,7 @@ function createLightningGuard(GFX, parent, material, {
     [halfSpan * 0.88, centerY + vertical * 0.023, 0],
     [halfSpan + tipExtension, centerY + vertical * 0.030, 0],
   ];
-  // The 20.5 mm centre-root diameter gives the quillons extra visual weight;
+  // The 20.5 mm center-root diameter gives the quillons extra visual weight;
   // the 15 mm shaft eases into fine, fully integrated terminals.
   const radii = [
     0.00010,
@@ -740,7 +740,7 @@ export function bladeGeometry(GFX, { rootY, length, width }) {
     const fuller = fullerStart * fullerEnd;
     for (let j = 0; j < ringSize; j++) {
       const [x, z] = profile[j];
-      // A broad, shallow groove: never cut through the centre of the steel.
+      // A broad, shallow groove: never cut through the center of the steel.
       const across = Math.exp(-((x / 0.38) ** 2));
       const groove = 0.14 * fuller * across;
       positions.push(x * w, rootY + t * length, z * halfThickness * (1 - groove));
@@ -1187,7 +1187,7 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMateria
 
 /** A polished, sealed granite face like a countertop, using the selected stone's actual grain maps. */
 
-/** Same dominant-face projection as rock-granite's laySurface(), in world metres. */
+/** Same dominant-face projection as rock-granite's laySurface(), in world meters. */
 function graniteSurfaceUv(GFX, position, tileWorldSize) {
   if (!position || position.count % 3 !== 0) {
     throw new TypeError('graniteSurfaceUv requires non-indexed triangle positions');
@@ -2042,7 +2042,7 @@ export function buildWeapon(GFX, spec, {
     },
     setGripColor(color) {
       if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
-      // A metal grip has no leather to dye: the colour is kept but not drawn.
+      // A metal grip has no leather to dye: the color is kept but not drawn.
       leatherMaterial?.color.set(color);
       if (!threadColorExplicit && spec.wrapStyle !== 'diamond') {
         wrapMaterial.color.set(shadeHex(color, 0.68));

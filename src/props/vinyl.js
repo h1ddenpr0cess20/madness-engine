@@ -3,11 +3,11 @@ import { mix } from '../models/skins.js';
 import { letters } from '../models/lettering.js';
 
 /**
- * A crate of vinyl: a slatted wooden record crate with VINYL stencilled on
+ * A crate of vinyl: a slatted wooden record crate with VINYL stenciled on
  * its front and a hand hole in each end, packed with records in their
  * sleeves standing face out and leaning back, the way you flip through
  * them; the front one's cover a sunburst with the band's name across it,
- * the ones behind in the colours the labels could afford; and one record
+ * the ones behind in the colors the labels could afford; and one record
  * pulled halfway up out of its sleeve to be shown off. Sits on the floor,
  * about half a tile long.
  */
@@ -50,7 +50,7 @@ export default {
     }
     // The hand holes, through the top board of each end.
     for (const x of [-1, 1]) s.box([x * (W - 0.005), 0.108, 0], [0.012, 0.009, 0.04], 0.009, { op: 'sub', k: 0.001 });
-    // VINYL, stencilled across the front boards.
+    // VINYL, stenciled across the front boards.
     letters(s, 'VINYL', { at: [0, 0.02, D - 0.004], size: 0.04, width: 0.0042, color: '#16161a', depth: 0.006, spacing: 0.32 });
 
     // The sleeves, face out, leaning back on each other: only the front one is seen whole, the rest above the crate.

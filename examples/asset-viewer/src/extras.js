@@ -33,7 +33,7 @@ const ticker = () => {
   };
 };
 
-/** A Mesher's finished parts, one mesh each, coloured by material name. */
+/** A Mesher's finished parts, one mesh each, colored by material name. */
 export function meshesOf(parts, colours = {}) {
   const group = new GFX.Group();
   for (const [name, p] of Object.entries(parts)) {

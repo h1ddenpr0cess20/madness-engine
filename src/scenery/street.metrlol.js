@@ -4,7 +4,7 @@ import { coat, grainy } from '../models/skins.js';
  * The furniture of the streets and yards, sculpted. Each stands on the
  * ground at y = 0, facing +z, and says what in it is solid (`colliders`:
  * `cyl: [x, z, r, y0, y1]` and `box: [x0, y0, z0, x1, y1, z1]`, in its own
- * frame) and where it gives light (`lights`: `[x, y, z, colour, reach]`).
+ * frame) and where it gives light (`lights`: `[x, y, z, color, reach]`).
  */
 
 const PAINTED = { roughness: 0.45, clearcoat: 0.4, clearcoatRoughness: 0.2 };
@@ -171,7 +171,7 @@ export const rock = {
   },
 };
 
-/** A stack of old tyres. */
+/** A stack of old tires. */
 export const tyres = {
   name: 'tyres', cell: 0.03,
   materials: { rubber: { roughness: 0.9 } },

@@ -13,9 +13,9 @@ export const cached = (key, make) => {
 /**
  * What the posters on the walls and the stencil on the shutters say: each
  * game's own. `bands` are the names on the bill; `headline` tops the big
- * flyer (null for a band off the bill), in one of `colours`; the bill's flyer
- * is in one of `billColours`, lettered in `billInk`; `badge` is stamped on the
- * small one; `shutter` is the two words stencilled on a roll-up door. As
+ * flyer (null for a band off the bill), in one of `colors`; the bill's flyer
+ * is in one of `billColors`, lettered in `billInk`; `badge` is stamped on the
+ * small one; `shutter` is the two words stenciled on a roll-up door. As
  * Metroll has them, until a game says otherwise with `bill()`.
  */
 const BILL = {
@@ -60,7 +60,7 @@ function brick(GFX, { posters = false } = {}) {
   const poster = (ctx) => {
     const r = random(77);
     const pick = (list) => list[Math.floor(r() * list.length)];
-    // A flyer: a bold block of colour, a big shape, a name in poster letters, tape at the corners.
+    // A flyer: a bold block of color, a big shape, a name in poster letters, tape at the corners.
     const flyer = (x, y, w, h, bg, fg, name, shape, tilt) => {
       ctx.save();
       ctx.translate(x + w / 2, y + h / 2);
@@ -186,7 +186,7 @@ export function gaffTexture(GFX) {
   });
 }
 
-/** A roll-up shutter: ribbed steel, scuffed, with two words stencilled across it (BILL.shutter: CLOSED SET, STAFF ONLY) and hazard stripes at the foot. */
+/** A roll-up shutter: ribbed steel, scuffed, with two words stenciled across it (BILL.shutter: CLOSED SET, STAFF ONLY) and hazard stripes at the foot. */
 export function shutterTexture(GFX) {
   return cached('shutter', () => {
     const size = 256;
@@ -284,7 +284,7 @@ export function panelTexture(GFX, look = 'flat') {
   });
 }
 
-/** A soft round glow, for halos. White in the middle, clear at the edge: tint it with the material's colour. */
+/** A soft round glow, for halos. White in the middle, clear at the edge: tint it with the material's color. */
 export function glowTexture(GFX) {
   return cached('glow', () => {
     const [c, ctx] = canvas(64);

@@ -4,7 +4,7 @@ import { HANDS } from './categories.js';
 /**
  * A broadsword-derived dagger. Its lenticular blade keeps the exact broadsword
  * profile, fuller, point and materials; only blade length, blade width and
- * crossguard span and compact grip length differ. All dimensions are in metres.
+ * crossguard span and compact grip length differ. All dimensions are in meters.
  */
 export const DAGGER_DIMENSIONS = Object.freeze({
   overallLength: 0.401,
@@ -56,7 +56,7 @@ export const BANANA_DAGGER_SPEC = Object.freeze({
  * Broadsword-scale banana: the same curved, hooked blade and half-peeled
  * silhouette as the banana dagger, fitted to the measured broadsword envelope.
  * The peel flaps are extended slightly to remain in proportion with the longer
- * blade. Dimensions are in metres.
+ * blade. Dimensions are in meters.
  */
 export const BANANA_BROADSWORD_SPEC = Object.freeze({
   ...BANANA_DAGGER_SPEC,

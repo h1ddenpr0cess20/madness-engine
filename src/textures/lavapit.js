@@ -29,7 +29,7 @@ uniform float uGlow;
 uniform float uHue;
 varying vec3 vWorld;
 varying vec3 vNormalWorld;
-// Turns a colour round the grey axis by a radians, keeping how bright it is.
+// Turns a color round the gray axis by a radians, keeping how bright it is.
 vec3 hueTurn(vec3 c, float a) {
   float k = cos(a), s = sin(a);
   vec3 axis = vec3(0.57735);
@@ -310,7 +310,7 @@ export function lavaFlicker(time) {
 /**
  * A whole pit: a rim of dark stone, walls that go down, the lava at the
  * bottom of them, and a warm light hung over it that flickers. The pit is
- * `width` by `depth` across and `sink` deep, centred on the origin with its
+ * `width` by `depth` across and `sink` deep, centered on the origin with its
  * rim at y = 0. `update(time)` moves it.
  */
 export function createLavaPit(GFX, { width = 3, depth = 3, sink = 0.6, rim = 0.3, light = true, scale = SLIMEY_SCALE, coverage, glow, hue } = {}) {

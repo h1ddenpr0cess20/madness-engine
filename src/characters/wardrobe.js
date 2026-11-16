@@ -12,7 +12,7 @@ import { GLYPHS } from '../models/lettering.js';
 
 const HEAD = { bone: 'head' };
 
-/** Hair's color in strands running along x (a moustache) or down (a beard): lighter and darker hairs. */
+/** Hair's color in strands running along x (a mustache) or down (a beard): lighter and darker hairs. */
 function hairy(color, across = true) {
   const base = typeof color === 'function' ? color : (() => { const c = typeof color === 'string' ? rgb(color) : color; return () => c; })();
   const fn = (p, n) => {
@@ -264,7 +264,7 @@ export function suitFront(s, { shirt = '#f2f0ec', tie = '#101014', bow = false, 
 }
 
 /**
- * A moustache over the upper lip, following it: full in the middle under
+ * A mustache over the upper lip, following it: full in the middle under
  * the nose and tapering to points past the corners of the mouth. `wide` for
  * how far (above 1.25 a handlebar, its ends curled up), `pencil` for a thin
  * line, `droop` for one that hangs down at the ends (a walrus).

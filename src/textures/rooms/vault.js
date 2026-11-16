@@ -1,6 +1,6 @@
 /**
  * The vault, as an equirectangular canvas: dark stone all round, a little
- * warm light low down from torches somewhere, a cold grey shaft from above.
+ * warm light low down from torches somewhere, a cold gray shaft from above.
  * Only ever seen in reflections.
  */
 export function paintRoom(width = 1024) {

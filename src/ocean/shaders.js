@@ -31,7 +31,7 @@
  *                                  each: wave number, way (x, z), phase at the camera
  *   uNoiseC                        vec2: the foam's streaks' offset, in cells mod 256
  *   uCloudShift, uWind             vec2: the clouds' drift; the way the wind blows
- *   uSun, uSunColor                vec3: towards the sun; its light
+ *   uSun, uSunColor                vec3: toward the sun; its light
  *   uZenith, uHorizon, uCloud      vec3: the sky
  *   uSkyShape                      vec3: cloud cover, stars, unused
  *   uDeep, uBody, uGlow, uFoam     vec3: the water
@@ -137,7 +137,7 @@ float clouds(vec3 d, int octaves) {
   float cover = uSkyShape.x;
   return smoothstep(1.0 - cover - 0.1, 1.0 - cover + 0.35, fbm(p, octaves)) * smoothstep(0.0, 0.15, d.y);
 }
-// The sky looking along d, as skyColour() in ocean/sky.js.
+// The sky looking along d, as skyColor() in ocean/sky.js.
 vec3 skyColour(vec3 d, float cl) {
   float h = max(d.y, 0.0);
   float mu = max(dot(d, uSun), 0.0);
@@ -349,7 +349,7 @@ fn clouds(d: vec3f, octaves: i32) -> f32 {
   let cover = material.uSkyShape.x;
   return smoothstep(1.0 - cover - 0.1, 1.0 - cover + 0.35, fbm(p, octaves)) * smoothstep(0.0, 0.15, d.y);
 }
-// The sky looking along d, as skyColour() in ocean/sky.js.
+// The sky looking along d, as skyColor() in ocean/sky.js.
 fn skyColour(d: vec3f, cl: f32) -> vec3f {
   let h = max(d.y, 0.0);
   let mu = max(dot(d, material.uSun), 0.0);

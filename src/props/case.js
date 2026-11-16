@@ -3,10 +3,10 @@ import { mix } from '../models/skins.js';
 import { letters } from '../models/lettering.js';
 
 /**
- * A road case: black textured laminate in an aluminium frame, an angle down
+ * A road case: black textured laminate in an aluminum frame, an angle down
  * every edge and a chrome ball corner over every corner, the lid's joint
  * running round it in a bright extrusion; two butterfly latches on the
- * front, a recessed handle in each end; PICKS stencilled on the front in
+ * front, a recessed handle in each end; PICKS stenciled on the front in
  * white, FRAGILE in red on the lid, and a strip of gaffer tape with
  * BACKLINE written on it in marker. It holds picks. Sits on the floor
  * facing +z, half a tile across.
@@ -17,7 +17,7 @@ const LAM = rgb('#1c1c20'), LAM_HI = rgb('#2e2e34');
 /** Laminate: a fine pebbled grain, black. */
 const laminate = (p) => mix(LAM, LAM_HI, noise(p[0] * 520, p[1] * 520, p[2] * 520) * 0.8);
 const ALU = rgb('#c4c8d0'), ALU_DARK = rgb('#80858e');
-/** Brushed aluminium: streaked along the edge it runs down. */
+/** Brushed aluminum: streaked along the edge it runs down. */
 const alu = (axis) => (p) => {
   const q = [p[0] * 900, p[1] * 900, p[2] * 900];
   q[axis] *= 0.02;
@@ -50,7 +50,7 @@ export default {
     letters(s, 'STAGE LEFT', { at: [W - 0.002, 0.12, 0], right: [0, 0, -1], up: [0, 1, 0], size: 0.026, width: 0.0034, color: '#ece8dc', depth: 0.006, spacing: 0.26, aspect: 0.62 });
 
     s.part('frame', () => {
-      // Aluminium angle down every edge, a little proud of the faces.
+      // Aluminum angle down every edge, a little proud of the faces.
       const E = 0.0115, T = 0.0028;
       for (const x of [-1, 1]) for (const z of [-1, 1]) s.box([x * W, H / 2, z * D], [E, H / 2, E], 0.002, { color: alu(1), mat: 'alu', k: 0 });
       for (const y of [0, H]) {
@@ -60,7 +60,7 @@ export default {
       // The lid joint: a band of extrusion round it, a dark seam along its middle.
       s.box([0, JOINT, 0], [W + T, 0.011, D + T], 0.002, { color: alu(0), mat: 'alu', k: 0 });
       s.box([0, JOINT, 0], [W + T + 0.002, 0.0012, D + T + 0.002], 0, { op: 'sub', k: 0 });
-      // Hollow: only what shows outside the box is aluminium.
+      // Hollow: only what shows outside the box is aluminum.
       s.box([0, H / 2, 0], [W - 0.004, H / 2 - 0.004, D - 0.004], 0, { op: 'sub', k: 0 });
     });
     const C = { color: chrome, mat: 'chrome', k: 0.001 };

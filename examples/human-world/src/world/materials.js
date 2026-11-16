@@ -5,7 +5,7 @@ import { FLOORS, fractal, grey, pair, pixels, smoothstep, stone, ashlar, rubble,
  * named materials (`plaster`, `stone`, `thatch`…) and leave it to the game to
  * say what each is made of: here the engine's own painters give the walls,
  * the planks and the stone their grain, three more (tiles, slates, thatch)
- * are painted below, and the colour comes from the models' vertex colours,
+ * are painted below, and the color comes from the models' vertex colors,
  * which the town then drains and darkens to suit a horror picture.
  */
 

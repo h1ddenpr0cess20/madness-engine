@@ -9,7 +9,7 @@ import { glass, glow, gloss, kit, metal, seeded, std, X, Z } from './dressing.js
  * cypress stump in the Florida swamp.
  *
  * Each is built from plain shapes, standing on y = 0 over its footprint
- * (`w` by `d` tiles, centred on the origin) and, if it has a front, facing
+ * (`w` by `d` tiles, centered on the origin) and, if it has a front, facing
  * +z. No canvas: they are built under node for the tests as well.
  */
 

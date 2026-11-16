@@ -94,7 +94,7 @@ const smoothstep = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 
-/** The plain sky, horizon and dark below, from the zenith down: latitude → colour. */
+/** The plain sky, horizon and dark below, from the zenith down: latitude → color. */
 const RAMP = [
   [Math.PI / 2, SKY.zenith],
   [0.7, SKY.sky],
@@ -105,7 +105,7 @@ const RAMP = [
   [-Math.PI / 2, SKY.abyss],
 ].map(([lat, hex]) => [lat, rgb(hex)]);
 
-/** The colour of the plain sky at a latitude, as 0–255 RGB, eased from one stop of the ramp to the next. */
+/** The color of the plain sky at a latitude, as 0–255 RGB, eased from one stop of the ramp to the next. */
 export function skyColour(lat) {
   for (let i = 1; i < RAMP.length; i++) {
     const [to, low] = RAMP[i];

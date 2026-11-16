@@ -1,12 +1,12 @@
 /**
  * A Persian-style area rug: a woven medallion and border, a bound perimeter and a fringe at each end. It owns its
- * dimensions, colour map, binding and fringe, and uses only engine GFX primitives.
+ * dimensions, color map, binding and fringe, and uses only engine GFX primitives.
  *
  *   const rug = createPersianRug(GFX, { palette: 'rose', width: 2.6, depth: 2.1 });
  *   scene.add(rug.group);
  */
 
-/** The colourways: each names the field, its light, the navy border, ivory, gold, teal, coral and the darkest tone. */
+/** The colorways: each names the field, its light, the navy border, ivory, gold, teal, coral and the darkest tone. */
 export const RUG_PALETTES = Object.freeze({
   // Aged wool: tobacco, warm stone, olive, clay and softened linen.
   wool: Object.freeze({
@@ -39,7 +39,7 @@ export const RUG_DEFAULTS = Object.freeze({
   width: 3.8, depth: 3.15, thickness: 0.018, fringeLength: 0.075, palette: 'wool',
 });
 
-/** How far the woven pile stands above the foundation's top, in metres. */
+/** How far the woven pile stands above the foundation's top, in meters. */
 const PILE_LIFT = 0.006;
 
 function random(seed = 7319) {
@@ -346,8 +346,8 @@ function fringeGeometry(GFX, width, depth, surfaceY, fringeLength) {
 }
 
 /**
- * Build a woven, fringed Persian area rug. Coordinates are metres; the origin
- * is in the centre on the floor. The returned group is self-contained.
+ * Build a woven, fringed Persian area rug. Coordinates are meters; the origin
+ * is in the center on the floor. The returned group is self-contained.
  */
 export function createPersianRug(GFX, options = {}) {
   const o = { ...RUG_DEFAULTS, ...options };
@@ -389,7 +389,7 @@ export function createPersianRug(GFX, options = {}) {
   base.receiveShadow = false;
   group.add(base);
 
-  // The pile floats a few millimetres above the foundation. A 1 mm gap z-fought
+  // The pile floats a few millimeters above the foundation. A 1 mm gap z-fought
   // (shimmered) when the camera stood far off, where depth precision is coarse.
   const pileY = o.thickness + PILE_LIFT;
   const surface = new GFX.Mesh(new GFX.PlaneGeometry(o.width - 0.02, o.depth - 0.02), pile);
@@ -445,7 +445,7 @@ export function createPersianRug(GFX, options = {}) {
   };
 }
 
-/** Registration for the asset viewer: the rug in each colourway, at a few sizes. */
+/** Registration for the asset viewer: the rug in each colorway, at a few sizes. */
 export const assetViewer = Object.freeze({
   id: 'persian-rug',
   name: 'Persian rug (hand-woven, fringed)',

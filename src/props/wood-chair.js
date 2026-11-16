@@ -6,12 +6,12 @@
  *
  * `kind` picks a starting chair (dining, spindle, ladder, armchair, stool, barstool); `seat` (square, round),
  * `legs` (square, tapered, turned), `back` (slat, spindle, ladder, bow, none; a bow is the Windsor's steam-bent hoop with
- * flat arrow spindles, `spindles` of them, leaning back `rake` metres), `splay` (degrees the legs stand out, with turned
+ * flat arrow spindles, `spindles` of them, leaning back `rake` meters), `splay` (degrees the legs stand out, with turned
  * stretchers between them), `seat` (square, round, saddle: a dished, contoured Windsor seat), `curve` (how far the back bows out behind the
- * sitter, in metres, 0 for a flat back), `arch` (how far the middle of the back rises above its ends, in metres: an arched
+ * sitter, in meters, 0 for a flat back), `arch` (how far the middle of the back rises above its ends, in meters: an arched
  * top rail, with the slats and spindles following it, 0 for a straight one), `arms`, `stretchers` and every measure can be given to change it. `seatSurface` says where the seat is, so that a model can sit on it.
  *
- * Coordinates are metres: the middle of the seat on the floor, the front facing +z, the back at -z.
+ * Coordinates are meters: the middle of the seat on the floor, the front facing +z, the back at -z.
  *
  *   const chair = createWoodChair(GFX, { kind: 'armchair', species: 'cherry', finish: 'sanded' });
  */
@@ -24,7 +24,7 @@ export const SEATS = Object.freeze(['square', 'round', 'saddle']);
 export const LEGS = Object.freeze(['square', 'tapered', 'turned']);
 export const BACKS = Object.freeze(['slat', 'spindle', 'ladder', 'bow', 'none']);
 
-/** The starting measures of each kind, in metres: the seat's outside, its height from the floor, the back above it. */
+/** The starting measures of each kind, in meters: the seat's outside, its height from the floor, the back above it. */
 export const KIND_DEFAULTS = Object.freeze({
   dining: { seat: 'square', legs: 'tapered', back: 'slat', arms: false, stretchers: true, width: 0.44, depth: 0.44, height: 0.47, backHeight: 0.46 },
   spindle: { seat: 'square', legs: 'turned', back: 'spindle', arms: false, stretchers: true, width: 0.44, depth: 0.42, height: 0.47, backHeight: 0.48 },
@@ -63,7 +63,7 @@ function saddleSeat(GFX, width, depth, top, thick, dish = 0.014) {
     const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
     if (n[0] * hint[0] + n[1] * hint[1] + n[2] * hint[2] >= 0) idx.push(a, b, c); else idx.push(a, c, b);
   };
-  // The dished top: a centre and NR rings out to the rim.
+  // The dished top: a center and NR rings out to the rim.
   const centre = push(0, top - dish, 0);
   const ring = [];
   for (let r = 1; r <= NR; r++) {
@@ -435,7 +435,7 @@ export function createWoodChair(GFX, options = {}) {
   };
 }
 
-/** One of each kind in a row along x, `gap` metres apart. Gives { group, chairs }. */
+/** One of each kind in a row along x, `gap` meters apart. Gives { group, chairs }. */
 export function createChairSet(GFX, options = {}) {
   const { gap = 0.3, kinds = KINDS, ...shared } = options;
   const group = new GFX.Group();

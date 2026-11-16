@@ -3,7 +3,7 @@ import { beanie, hoodDown } from './metalwear.js';
 import { beard } from './wardrobe.js';
 
 /**
- * The Stoner: a hooded top the colour of a swamp, a beanie, jeans with the
+ * The Stoner: a hooded top the color of a swamp, a beanie, jeans with the
  * knees gone, bare feet in sandals, red eyes at half mast, a beard that
  * has not been told, and a joint the size of a carrot. Has been on this
  * couch since the last record, and is going to get up in a minute. About

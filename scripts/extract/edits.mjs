@@ -110,7 +110,7 @@ function earShapes(s, P, Hd, kind, size, o, inner) {
     if (kind === 'prick') {
       const tip = add(base, [m * r * 0.35, r * 1.1, -r * 0.1]);
       s.flake(base, tip, [0, 0, 1], r * 0.42, r * 0.05, 0.3, { ...o, bone: 'head', k: 0.008 });
-      // The hollow inside, toward the front, and the colour in it.
+      // The hollow inside, toward the front, and the color in it.
       const front = [0, r * 0.06, r * 0.075];
       s.flake(add(base, front), add(tip, [0, -r * 0.16, r * 0.04]), [0, 0, 1], r * 0.3, r * 0.03, 0.22, { op: 'sub', k: r * 0.02 });
       // Painted only on the front of the ear: the far side of the plane through its base and tip is its back.
@@ -153,7 +153,7 @@ function mouthOn(s, P, Hd, color) {
 }
 
 /**
- * The eyes, set half out of the head where it is: the eyeball the colour of
+ * The eyes, set half out of the head where it is: the eyeball the color of
  * the eye, a pupil on it, a catch-light, and a lid over the top of each.
  */
 function eyesOn(s, P, Hd, { color, lid }) {
@@ -310,9 +310,9 @@ function outside(p, c, R, r) {
 }
 
 /**
- * A head: skull and cheeks, a nose, ears, big eyes (white, a coloured iris,
+ * A head: skull and cheeks, a nose, ears, big eyes (white, a colored iris,
  * a black pupil and a catch-light) under lids, a mouth, brows. \`brow\` is
- * the brows' colour; \`ears\` false hides them (under a hood or a helmet);
+ * the brows' color; \`ears\` false hides them (under a hood or a helmet);
  * \`mood\` 1 sets the brows in a frown and the mouth firm. The head and the
  * neck are a mesh of their own, finer than the body's, so the face is
  * crisp, and the neck goes into the collar on a clean line.
@@ -405,7 +405,7 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
 `;
 
 const HUMANOID_STRANDS = `/**
- * Hair's colour (a function or hex) in strands: lighter and darker streaks
+ * Hair's color (a function or hex) in strands: lighter and darker streaks
  * running down from the crown \`at\`, fine ones over broad ones.
  */
 function strands(color, at) {
@@ -1377,7 +1377,7 @@ export function band(s, y, tilt, r, o) {
     });
 `,
       `      }
-      // What is left round the back and over the ears: a fringe of grey, lying close to the head.
+      // What is left round the back and over the ears: a fringe of gray, lying close to the head.
       // Cropped close, so it is in the skin: higher at the back, down to the ears at the sides, a soft edge.
       s.paint((p) => {
         const top = 0.7 - Math.max(0, p[2]) * 0.6 + Math.max(0, -p[2]) * 0.25;
@@ -1401,7 +1401,7 @@ export function band(s, y, tilt, r, o) {
     });
 `,
       `      }
-      // What is left round the back and over the ears: a fringe of grey, lying close to the head.
+      // What is left round the back and over the ears: a fringe of gray, lying close to the head.
       // Cropped close, so it is in the skin: higher at the back, down to the ears at the sides, a soft edge.
       s.paint((p) => {
         const top = 0.7 - Math.max(0, p[2]) * 0.6 + Math.max(0, -p[2]) * 0.25;

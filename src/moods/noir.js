@@ -6,7 +6,7 @@ import { paintSky } from '../textures/skies/skyline.js';
  * the effects crew have kept falling all night, and Rock narrating the whole
  * thing in a voice like a wet cigarette. Down off the hotel steps into a
  * street of wet asphalt and steaming manholes under the lamps, a downed
- * line fizzing in a puddle by the kerb; the detective's office up off the
+ * line fizzing in a puddle by the curb; the detective's office up off the
  * street, the light through the blinds laying bars across the floor, a
  * dame waiting, the pass in the desk and a reel behind the frosted glass of
  * the inner office; down an alley where crates come off the hoist, into the

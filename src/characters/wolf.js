@@ -3,7 +3,7 @@ import { mix, smooth } from '../models/skins.js';
 import { quadruped } from './quadruped.js';
 
 /**
- * The Wolf: out of the spruce at the edge of the car park, grey and
+ * The Wolf: out of the spruce at the edge of the car park, gray and
  * silver with a dark saddle and a pale belly and muzzle, long in the leg,
  * the ears up and the eyes pale and fixed on you and nothing else. It
  * does not howl. It has seen the corpse paint and is not impressed
@@ -13,7 +13,7 @@ import { quadruped } from './quadruped.js';
 const GREY = rgb('#686a70'), SILVER = rgb('#a4a4a2'), CREAM = rgb('#ece6da'), BLACK = rgb('#26262a'), TAWNY = rgb('#a08060');
 
 /**
- * The wolf's coat, as a wolf's is: agouti grey, each hair banded, so it
+ * The wolf's coat, as a wolf's is: agouti gray, each hair banded, so it
  * flecks light and dark; a dark saddle over the back and shoulders and
  * down the top of the tail to its black tip; tawny on the backs of the
  * ears and down the outsides of the legs; cream underneath, on the throat,
@@ -21,7 +21,7 @@ const GREY = rgb('#686a70'), SILVER = rgb('#a4a4a2'), CREAM = rgb('#ece6da'), BL
  * bridge of the nose, and a dark line down the front of each foreleg.
  */
 const COAT = (p, n) => {
-  // Agouti: a soft variation of grey and silver over the coat, and a fine fleck too small to be more than a grain.
+  // Agouti: a soft variation of gray and silver over the coat, and a fine fleck too small to be more than a grain.
   const tone = fbm(p[0] * 24, p[1] * 24, p[2] * 24, 3), fleck = noise(p[0] * 300, p[1] * 300, p[2] * 80);
   let c = mix(GREY, SILVER, smooth(0.3, 0.75, tone)).map((v) => v * (0.94 + 0.12 * fleck));
   // The saddle: over the top of the back and the withers.
@@ -42,7 +42,7 @@ const COAT = (p, n) => {
   if (p[2] > 0.08 && p[2] < 0.16 && p[1] < 0.1) c = mix(c, BLACK, smooth(0.6, 0.95, n[2]) * 0.7);
   return c;
 };
-/** The brush: grey, dark along the top, the tip black. */
+/** The brush: gray, dark along the top, the tip black. */
 const TAIL = (p, n) => {
   let c = mix(GREY, SILVER, smooth(0.3, 0.75, fbm(p[0] * 24, p[1] * 24, p[2] * 24, 3)));
   c = mix(c, BLACK, smooth(0.0, 0.7, n[1]) * 0.6);

@@ -8,7 +8,7 @@
  *
  * Every vertex then gets:
  * - a normal from the field's gradient, so the shading is smooth;
- * - a colour, blended from the shapes nearest it, varied with noise and
+ * - a color, blended from the shapes nearest it, varied with noise and
  *   painted with any `paint` volumes (stripes, bellies, eye whites);
  * - ambient occlusion from the field itself, so creases and the undersides
  *   of things go dark the way they do in clay under a light;
@@ -36,7 +36,7 @@ export function rotation([rx = 0, ry = 0, rz = 0] = []) {
   ];
 }
 
-/** p in a shape's own frame: moved to its centre and turned back by its rotation. */
+/** p in a shape's own frame: moved to its center and turned back by its rotation. */
 const local = (p, c, R) => {
   const x = p[0] - c[0], y = p[1] - c[1], z = p[2] - c[2];
   if (!R) return [x, y, z];
@@ -85,7 +85,7 @@ export function noise(x, y, z) {
  * Overlapping locks of fur, or scales: cells of a Voronoi pattern, longer
  * along `axis` by `stretch`, each raised toward its back edge (the −axis
  * side) and sunk at its borders. `height` is 0 in the creases to 1 at a
- * lock's tip; `id` is a number 0–1 for the lock, to vary its colour by.
+ * lock's tip; `id` is a number 0–1 for the lock, to vary its color by.
  * `size` is a lock's width, in tiles.
  */
 export function shingles(p, size, axis = 2, stretch = 1.8, out = { height: 0, id: 0, edge: 0 }) {
@@ -128,11 +128,11 @@ export function fbm(x, y, z, octaves = 3) {
   return s / t;
 }
 
-// ——————————————————————————————————————— colours
+// ——————————————————————————————————————— colors
 
 export function rgb(hex) {
   const n = parseInt(hex.slice(1), 16);
-  // Linear, as vertex colours are.
+  // Linear, as vertex colors are.
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
     const c = v / 255;
     return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
@@ -246,8 +246,8 @@ export class Sculpt {
      */
     this.warp = null;
     /**
-     * A tint: `tint(color, mat, part)` is asked for the colour of every shape and paint added from now on (`mat` is
-     * null for a paint) and gives the colour to use in its place. null leaves colours as they are given.
+     * A tint: `tint(color, mat, part)` is asked for the color of every shape and paint added from now on (`mat` is
+     * null for a paint) and gives the color to use in its place. null leaves colors as they are given.
      */
     this.tint = null;
   }
@@ -263,7 +263,7 @@ export class Sculpt {
     return this;
   }
 
-  /** A distance function, colour and bounds as sculpted, moved by the warp. */
+  /** A distance function, color and bounds as sculpted, moved by the warp. */
   warped(d, box, color) {
     const w = this.warp;
     if (!w) return { d, box, color };
@@ -478,7 +478,7 @@ export class Sculpt {
    * far where a ray from `from` going `dir` meets it: from radius `r` at its
    * root to a point `length` along `aim(p, n)` (a vector; it is made unit).
    * It is flattened to `flat` across the surface, takes the bone of the
-   * shape it grows from, and is coloured `color(t, p)` from root (t 0) to
+   * shape it grows from, and is colored `color(t, p)` from root (t 0) to
    * tip (1). Returns whether it found the surface.
    */
   tuft(from, dir, { aim, length = 0.04, r = 0.012, k = 0.008, color = null, mat = 'skin', bury = 0.4, flat = 1, tip = 0.12, keep = () => true, far = 1 }) {
@@ -538,7 +538,7 @@ export class Sculpt {
   }
 
   /**
-   * Colour only: inside `inside(p)` (a distance, negative inside) the surface
+   * Color only: inside `inside(p)` (a distance, negative inside) the surface
    * is painted `color`, softened over `soft`.
    */
   paint(inside, color, soft = 0.01) {
@@ -649,7 +649,7 @@ export class Sculpt {
     return [g[0] / l, g[1] / l, g[2] / l];
   }
 
-  /** Colour and bone weights at a point on the surface: from the shapes nearest it, and the paint on it. */
+  /** Color and bone weights at a point on the surface: from the shapes nearest it, and the paint on it. */
   surface(p, n, bones, cell = 0.004) {
     let best = Infinity, mat = 'skin';
     const near = [];
@@ -665,7 +665,7 @@ export class Sculpt {
     for (const [s, d] of near) {
       const t = d - best;
       if (t > 0.08) continue;
-      // Colours blend over at least a grid step, or their edges come out sawn.
+      // Colors blend over at least a grid step, or their edges come out sawn.
       const k = Math.exp(-t / Math.max(cell * 0.7, s.k * 0.35));
       const col = typeof s.color === 'function' ? s.color(p, n) : s.color;
       c = [c[0] + col[0] * k, c[1] + col[1] * k, c[2] + col[2] * k];
@@ -683,7 +683,7 @@ export class Sculpt {
         c = mix3(c, col, t);
       }
     }
-    // The four bones that matter most, normalised.
+    // The four bones that matter most, normalized.
     const top = [...weights.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
     const total = top.reduce((s, [, v]) => s + v, 0);
     const bw = top.map(([name, v]) => [bones.indexOf(name) < 0 ? 0 : bones.indexOf(name), v / total]);
@@ -716,9 +716,9 @@ function onto(sculpt, p, reach, e) {
 
 /**
  * The sculpt as a mesh, `cell` tiles to a grid step: positions, normals,
- * colours (with the occlusion in them), triangle indices, and for each
+ * colors (with the occlusion in them), triangle indices, and for each
  * vertex up to four bones and their weights. `bones` names the bones in
- * order. `shade(color, p, n, ao)` can finish a vertex's colour. `refine` is
+ * order. `shade(color, p, n, ao)` can finish a vertex's color. `refine` is
  * how many more vertices (as a fraction of what the grid makes) it may add
  * where the grid is too coarse for the detail. `shadow` is what shades it
  * (the occlusion is taken from its field): the sculpt itself, or the whole
@@ -926,7 +926,7 @@ export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, 
         const a = Math.floor(k / 4194304), b = k - a * 4194304;
         const L = len(sub(P[a], P[b]));
         if (L < shortest) continue;
-        // How far it bends across the edge (1 at about 30°), how far the colour changes, and how far off the surface its middle is.
+        // How far it bends across the edge (1 at about 30°), how far the color changes, and how far off the surface its middle is.
         let need = (1 - dot(N[a], N[b])) / 0.13;
         const ca = surfaceAt(a).color, cb = surfaceAt(b).color;
         need = Math.max(need, Math.max(Math.abs(ca[0] - cb[0]), Math.abs(ca[1] - cb[1]), Math.abs(ca[2] - cb[2])) / 0.1);
@@ -942,7 +942,7 @@ export function build(sculpt, { cell = 0.012, bones = ['root'], ambient = 0.32, 
     }
   }
 
-  // Each vertex's colour, light and bones.
+  // Each vertex's color, light and bones.
   const count = P.length;
   const position = new Float32Array(count * 3), normal = new Float32Array(count * 3), color = new Float32Array(count * 3);
   const skinIndex = new Uint8Array(count * 4), skinWeight = new Float32Array(count * 4);

@@ -3,7 +3,7 @@
  * laid along it. The blade rises from its root upright and leans toward -x.
  * Its heading turns by `bend` radians evenly along the length, and by `hook`
  * more that is saved for the last of it, so the curve tightens into a talon.
- * Distances are metres from the root; `u` runs 0 at the root to 1 at the point.
+ * Distances are meters from the root; `u` runs 0 at the root to 1 at the point.
  */
 const smooth = (a, b, v) => {
   const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
@@ -19,7 +19,7 @@ export function bladeCentreline({ length, bend, hook = 0, talon = 0, samples = 5
     centre.push([x - Math.sin(phi) * (length / samples), y + Math.cos(phi) * (length / samples)]);
   }
   return {
-    /** The centre of the blade at `u`, and which way it is heading there. */
+    /** The center of the blade at `u`, and which way it is heading there. */
     at(u) {
       const f = Math.max(0, Math.min(1, u)) * samples, k = Math.min(samples - 1, Math.floor(f)), t = f - k;
       return {

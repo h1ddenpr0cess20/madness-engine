@@ -5,7 +5,7 @@ import { moustache } from './wardrobe.js';
 
 /**
  * The Souvenir Seller: a sky-blue galabeya to the ankles with wide sleeves,
- * a white turban, pointed yellow slippers, a moustache and a smile, and a
+ * a white turban, pointed yellow slippers, a mustache and a smile, and a
  * tray on a strap round his neck heaped with gold pyramids, blue scarabs
  * and rolls of papyrus. One pyramid he holds up at you, with a keyring on
  * it. Very good price. For you, special price. About 0.9 tiles tall, and

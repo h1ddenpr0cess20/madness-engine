@@ -4,7 +4,7 @@ import { glasses } from './wardrobe.js';
 /**
  * Nonna: somebody's grandmother, everybody's, small and round and in black
  * from the headscarf to the shoes, a cardigan over the dress, glasses on a
- * chain, a grey bun, and the wooden spoon held up and shaking at you. You
+ * chain, a gray bun, and the wooden spoon held up and shaking at you. You
  * are too thin. You are a rock. You are still too thin. Sit. Eat. About
  * 0.75 tiles tall.
  */
@@ -38,7 +38,7 @@ export default person({
   },
   extras(s, J, { pose }) {
     glasses(s, { rim: '#6a5a4a' });
-    // The grey bun at the back of the head, under the headscarf.
+    // The gray bun at the back of the head, under the headscarf.
     s.part('hair', () => s.sphere([0, 0.7, -0.105], 0.042, { color: '#9a9a98', mat: 'hair', bone: 'head', k: 0.03 }));
     // The headscarf: over the top and the back of the head and the bun, framing the face, and knotted under the chin.
     const face = (p) => Math.hypot(p[0] / 0.074, (p[1] - 0.655) / 0.082) - 1;

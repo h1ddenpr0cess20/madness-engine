@@ -4,7 +4,7 @@ import { hold, person, shell, strap } from './person.js';
 /**
  * The Yeti: on holiday from the Himalaya and found its way up the Alps, a
  * giant, white and shaggy all over, the face and the hands and the great
- * flat feet bare and blue-grey, two fangs over the lip, a woolly scarf it
+ * flat feet bare and blue-gray, two fangs over the lip, a woolly scarf it
  * took off a skier wound round its neck, and half a ski pole in its fist.
  * Does not ski. Lunges for whatever comes down the mountain. A boss: about
  * 2.6 tiles tall.

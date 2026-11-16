@@ -1,8 +1,8 @@
 /**
  * A test world for the human (`madness-engine/people/human`): Gravemoor's
  * town at night (from the rpg-test-world game), you in it with the banana
- * broadsword, and a crowd of the same man in every colour of skin, eyes,
- * shirt, jeans and shoes, each with a weapon from the engine's armoury and
+ * broadsword, and a crowd of the same man in every color of skin, eyes,
+ * shirt, jeans and shoes, each with a weapon from the engine's armory and
  * the swing that goes with it. They wander, spot you, run at you shouting
  * and swing; you swing back. Three hits put one down; he gets up later.
  *
@@ -80,7 +80,7 @@ const town = buildTown();
 stage.scene.add(town.group);
 const colliders = createColliders(town.colliders);
 
-// A little more light than the mood's own, so the colours can be told apart at night.
+// A little more light than the mood's own, so the colors can be told apart at night.
 stage.hemi.color.set('#b8d0c8');
 stage.hemi.groundColor.set('#2a2028');
 stage.hemi.intensity = 1.9;

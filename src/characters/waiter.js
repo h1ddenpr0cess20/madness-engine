@@ -4,7 +4,7 @@ import { moustache, suitFront } from './wardrobe.js';
 /**
  * The Waiter: of a café on the Boulevard Saint-Germain, in a black
  * waistcoat, a white shirt, a bow tie and the long white apron down to his
- * shins, a thin moustache and his hair slicked back, the tray held high on
+ * shins, a thin mustache and his hair slicked back, the tray held high on
  * the fingertips (a bottle, two glasses) and a cloth over the other arm.
  * Has a tray, a cloth over his arm and no intention of serving you. About
  * 0.95 tiles tall.

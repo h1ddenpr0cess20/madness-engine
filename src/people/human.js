@@ -18,7 +18,7 @@ import { carried, levelOffsets, massOf, placeEyes, SHAPE_KEYS, shapeFor, thicken
 import { buildGlasses, SUNGLASSES } from './human/glasses.js';
 
 /**
- * A human, at real size (1.76 m, one world unit a metre, as the weapons
+ * A human, at real size (1.76 m, one world unit a meter, as the weapons
  * are), built to be dressed, posed and animated.
  *
  *     import * as GFX from 'madness-engine/gfx';
@@ -49,7 +49,7 @@ import { buildGlasses, SUNGLASSES } from './human/glasses.js';
 
 export { CLIPS, GARMENTS, GARMENTS_FEMALE, garmentsFor, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES, FIGURES, BUILDS };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
-/** Each figure's measures (metres), as HUMAN_DIMENSIONS gives the man's. */
+/** Each figure's measures (meters), as HUMAN_DIMENSIONS gives the man's. */
 export const DIMENSIONS = Object.freeze({
   male: HUMAN_DIMENSIONS,
   female: Object.freeze({ height: FIGURES.female.height, headHeight: 0.21, shoulderWidth: 0.37, inseam: 0.76, armLength: 0.56, handLength: 0.175, footLength: 0.245, unit: 'm' }),
@@ -278,7 +278,7 @@ const DEFAULT_LOOK = Object.freeze({
 });
 
 /**
- * The cloth of the later garments: its look colour (`of`, if another's), roughness, how much it shines at the
+ * The cloth of the later garments: its look color (`of`, if another's), roughness, how much it shines at the
  * edges, and whether it is rough-woven (it takes the t-shirt's weave for its bump).
  */
 const FABRICS = Object.freeze({
@@ -290,7 +290,7 @@ const FABRICS = Object.freeze({
   topHatFelt: { rough: 0.6, sheen: 0.4, weave: 'felt' }, hatBand: { rough: 0.6, sheen: 0.5 },
 });
 
-/** The hair's sheen: its own colour, a third of the way to white. */
+/** The hair's sheen: its own color, a third of the way to white. */
 function sheenOf(GFX, colour) {
   const c = new GFX.Color(colour);
   c.r += (1 - c.r) * 0.35; c.g += (1 - c.g) * 0.35; c.b += (1 - c.b) * 0.35;
@@ -1203,7 +1203,7 @@ export function createHuman(GFX, options = {}) {
     return stand;
   }
   const standsOf = new WeakMap();
-  /** Each of tail vertices `list`'s neighbours among them (by mesh `m`'s triangles, and where a seam splits a vertex), as rings: worked out once a cut. */
+  /** Each of tail vertices `list`'s neighbors among them (by mesh `m`'s triangles, and where a seam splits a vertex), as rings: worked out once a cut. */
   function ringsOf(m, list) {
     const got = ringsFor.get(list);
     if (got && got.data === m.data) return got;
@@ -1453,7 +1453,7 @@ export function createHuman(GFX, options = {}) {
 
   /**
    * A coin flipped (the `flip` clip, `t` 0..1): flicked up off the thumb, turning over and over, caught again
-   * and held up. How high above the hand it is (metres) and how far it has turned (radians).
+   * and held up. How high above the hand it is (meters) and how far it has turned (radians).
    */
   const FLIP = { from: 0.2, to: 0.68, height: 0.45, turns: 6 };
   function coinFlight(t) {
@@ -1542,7 +1542,7 @@ export function createHuman(GFX, options = {}) {
   }
 
   /**
-   * How far a slab (a book: `size` across, through and up its axes `x`, `y`, `z`, centred on `at`) must move along
+   * How far a slab (a book: `size` across, through and up its axes `x`, `y`, `z`, centered on `at`) must move along
    * its `y` so that none of `points` is inside it: they all on its −y side, `room` clear of it.
    */
   function pushClear(points, at, [x, y, z], size, room = 0.004) {
@@ -1595,7 +1595,7 @@ export function createHuman(GFX, options = {}) {
         M.makeBasis(new GFX.Vector3(...across), new GFX.Vector3(...face), new GFX.Vector3(...down)).setPosition(new GFX.Vector3(...at)).multiply(scale);
       } else if (h.how === 'bowl') {
         // On the hand, its holes turned into it: its +z (the holes' middle) to the palm, its +y (the two finger
-        // holes, the thumb's on the −y side) toward the fingertips; sunk a centimetre onto the fingers in them.
+        // holes, the thumb's on the −y side) toward the fingertips; sunk a centimeter onto the fingers in them.
         const f = handFrame(JOINTS, figure.fingers, m), H = boneAt(skeleton, `hand${S}`);
         const up = normV(turnBy(H, f.palm)), fwd0 = normV(turnBy(H, f.along));
         const z = up.map((v) => -v), d = fwd0[0] * z[0] + fwd0[1] * z[1] + fwd0[2] * z[2];
@@ -1719,7 +1719,7 @@ export function createHuman(GFX, options = {}) {
     get glasses() { return glasses?.name ?? null; },
     /**
      * The character creator's choices (see `CUSTOMIZATION`): every slot, those he shows yet read
-     * from him as he is (his colours, his hair), the rest as they were last set.
+     * from him as he is (his colors, his hair), the rest as they were last set.
      */
     get features() {
       return {
@@ -1744,11 +1744,11 @@ export function createHuman(GFX, options = {}) {
       if (SHAPE_KEYS.some((k) => k in change)) reshape();
       return api;
     },
-    /** How far each arm is inside his body (or what he wears) as he is posed now, by side, in metres: 0 when clear. */
+    /** How far each arm is inside his body (or what he wears) as he is posed now, by side, in meters: 0 when clear. */
     armDepth: (o) => armDepth(skeleton, clearance ??= measure([body.data, ...[...worn.values()].map((w) => w.mesh.data)], skeleton.names, skeleton.pivots), o),
     /** About how much he weighs, in kilograms, in the shape he has been given (from the volume his skin closes round). */
     get weight() { return shape?.mass ?? (baseMass[sex] ??= massOf(sex)); },
-    /** How tall he stands, in metres, in the shape he has been given. */
+    /** How tall he stands, in meters, in the shape he has been given. */
     get height() { return shape?.height ?? figureOf(sex).height; },
     setHairColor: (c) => setLook({ hair: c }),
     setShirtColor: (c) => setLook({ shirt: c }),

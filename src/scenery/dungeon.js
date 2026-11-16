@@ -40,7 +40,7 @@ const cached = (key, make) => {
 
 /**
  * A flagstone, a tile across: four slabs of uneven size, worn at the edges,
- * speckled, with a crack or two. The colour map is near white — the colour
+ * speckled, with a crack or two. The color map is near white — the color
  * comes from the tile under it — and the bump map raises the slabs out of
  * their joints.
  */

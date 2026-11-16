@@ -73,7 +73,7 @@ export function createFoeMeshes({ foes, cast, isBaked, ready }) {
     walk: '#c8a070', fly: '#9aa8ff', crawl: '#c0605a',
   };
 
-  /** A plain figure for a foe with no model (yet): a capsule and a head, in a colour by how it gets about. */
+  /** A plain figure for a foe with no model (yet): a capsule and a head, in a color by how it gets about. */
   function standIn(GFX, kind) {
     const f = foes[kind];
     const group = new GFX.Group();

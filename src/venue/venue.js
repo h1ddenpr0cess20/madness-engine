@@ -27,7 +27,7 @@ export const DEPTH = 6;
 /** Walls on the back sides of a room and on the front, above the floor. */
 export const WALL = Object.freeze({ back: 2.2, front: 0.7 });
 
-/** Colour index for wall tops: the last colour in a palette's `tiles`. */
+/** Color index for wall tops: the last color in a palette's `tiles`. */
 export const CAP = -1;
 
 /** Corner order: (x, z), (x + 1, z), (x, z + 1), (x + 1, z + 1). */
@@ -46,7 +46,7 @@ const BURST_AT = 0.6;
 export class Venue {
   /**
    * `palette`: `tiles` (floor, stairs, bridges, wall tops), `walls` (the
-   * colours down the sides), `ambient`, `trap`, `lift`, `lamp` (a colour) and
+   * colors down the sides), `ambient`, `trap`, `lift`, `lamp` (a color) and
    * the rest of what scenery.js reads. `tempo` is the beats a minute the
    * music and everything that moves in time with it keep.
    */
@@ -305,7 +305,7 @@ export class Venue {
   /**
    * One of the people (see foes.js): `kind` is one of `FOES`. Walkers stay
    * within `range` of where they start, and go round `path` (a loop of tile
-   * centres) when nothing is near; crawlers and flyers only go round it.
+   * centers) when nothing is near; crawlers and flyers only go round it.
    * `facing` is which way it looks to begin with, in radians from +z toward +x.
    */
   foe(kind, x, z, { range = 6, path = null, facing = 0 } = {}) {
@@ -548,7 +548,7 @@ function banked(u, bank) {
   return bank * Math.min(k * k, 1.8);
 }
 
-/** sRGB hex to linear RGB — vertex colours are linear. */
+/** sRGB hex to linear RGB — vertex colors are linear. */
 export function linearRGB(hex) {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
@@ -572,7 +572,7 @@ export const HEADING = Object.freeze({ '+x': [1, 0], '-x': [-1, 0], '+z': [0, 1]
  * glow round every lamp, every fixture of the light rig, every electrified
  * tile and the exit. The fixtures nearest the ball also get real lights
  * when it is drawn (`stage.js`, the engine's `scenery/lightshow`); this is what keeps the rest
- * of the venue from being black, and what gives each one its colour.
+ * of the venue from being black, and what gives each one its color.
  */
 export function bakeLight(venue) {
   const lampColour = linearRGB(venue.palette.lamp ?? '#ffb060').map((v) => v * 1.1);
@@ -764,7 +764,7 @@ export function buildVenue(venue) {
       wallKey = c.wtex ?? 'wall';
       const low = Math.min(...c.h) - DEPTH;
       const edges = [
-        // [ends, this tile's heights there, neighbour, its heights there, outward]
+        // [ends, this tile's heights there, neighbor, its heights there, outward]
         [[x, z], [x + 1, z], h00, h10, venue.cell(x, z - 1), (n) => [n.h[H01], n.h[H11]], [0, 0, -1]],
         [[x, z + 1], [x + 1, z + 1], h01, h11, venue.cell(x, z + 1), (n) => [n.h[H00], n.h[H10]], [0, 0, 1]],
         [[x, z], [x, z + 1], h00, h01, venue.cell(x - 1, z), (n) => [n.h[H10], n.h[H11]], [-1, 0, 0]],

@@ -2,7 +2,7 @@ import { noise, rgb, rotation } from '../models/sdf.js';
 import { mix } from '../models/skins.js';
 
 /**
- * A pile of guitar picks: nine of them, slid into a heap, in the colours
+ * A pile of guitar picks: nine of them, slid into a heap, in the colors
  * and the stuff picks come in — tortoiseshell, pearloid, plain celluloid
  * in pink and blue and yellow and white — each the proper shape, a rounded
  * triangle with a firm point, thin as a fingernail, some with a gold star
@@ -69,7 +69,7 @@ export const PICK_MATERIALS = {
 
 /**
  * A pick lying at `c`, turned by `rot` (lying flat at [0, a, 0]): `size` from
- * shoulder to point, `color` a colour or 'tortoise' or 'pearl', `print` a
+ * shoulder to point, `color` a color or 'tortoise' or 'pearl', `print` a
  * 'star' or a 'ring' stamped in gold on its face.
  */
 export function pick(s, c, rot, { size = 0.07, thick = 0.005, color = '#ff3a8a', print = null, mat = 'celluloid', bone = 'root' } = {}) {
@@ -108,7 +108,7 @@ export function pick(s, c, rot, { size = 0.07, thick = 0.005, color = '#ff3a8a',
 }
 
 const HEAP = [
-  // [x, y, z, turn, tilt x, tilt z, colour, print]
+  // [x, y, z, turn, tilt x, tilt z, color, print]
   [0.0, 0.0026, 0.0, 0.3, 0, 0, '#ff3a8a', null],
   [0.062, 0.0026, 0.03, 2.1, 0, 0, 'tortoise', null],
   [-0.058, 0.0026, 0.045, 4.2, 0, 0, '#2ad0ff', 'star'],

@@ -15,7 +15,7 @@ import { tag } from './human/clothes.js';
  * color), or the shell can be any of the engine's metals, or wood; the frame
  * inside (joints, actuators, rods) is a metal of its own.
  *
- *     const bot = createRobot(GFX, { color: 'white', trim: 'grey', frame: 'titanium' });
+ *     const bot = createRobot(GFX, { color: 'white', trim: 'gray', frame: 'titanium' });
  *     bot.setShell('resin', { color: '#c8202a' });   // glossy red resin
  *     bot.setShell('metal', { metal: 'chrome' });    // or any of the engine's METALS
  *     bot.setShell('wood', { wood: 'walnut' });      // or any WOOD_SPECIES

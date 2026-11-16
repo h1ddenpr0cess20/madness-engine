@@ -1,13 +1,13 @@
 /**
  * Foliage for leaf cards: a 2 by 2 atlas of sprays, each a twig from the bottom middle of its square with leaves
  * (or needles) along it, on a clear ground. The trees in flora.js (`leafy`, `spruce`) lay their cards over one
- * square of it each. Painted in pale, nearly grey green, light and dark leaf by leaf, so the vertex colour (a
+ * square of it each. Painted in pale, nearly gray green, light and dark leaf by leaf, so the vertex color (a
  * tree's own green) gives the hue and the texture the leaves.
  *
  *     const map = foliageTexture(GFX, 'broad');   // or 'needle'
  *     new GFX.MeshStandardMaterial({ map, alphaTest: 0.5, vertexColors: true });
  *
- * The clear ground takes the colour of the leaves round it, so a mip level that blends in a clear pixel does not
+ * The clear ground takes the color of the leaves round it, so a mip level that blends in a clear pixel does not
  * darken the edge of a leaf.
  */
 import { prng } from './pixel-kit.js';
@@ -101,7 +101,7 @@ export function paintFoliage({ size = 512, kind = 'broad', seed = 1 } = {}) {
       for (const l of leaves) leaf(l.p, l.ang, l.len, l.len * 0.42, l.shade, x0, y0);
     }
   }
-  // The clear ground: the colour of the nearest leaves, spread out a few times, so the mips keep the leaves' colour.
+  // The clear ground: the color of the nearest leaves, spread out a few times, so the mips keep the leaves' color.
   for (let pass = 0; pass < 8; pass++) {
     const fill = [];
     for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
@@ -118,7 +118,7 @@ export function paintFoliage({ size = 512, kind = 'broad', seed = 1 } = {}) {
     }
     for (const [i, sr, sg, sb] of fill) { r[i] = sr || 1; g[i] = sg; b[i] = sb; }
   }
-  // Past that, the leaves' mean colour.
+  // Past that, the leaves' mean color.
   let mr = 0, mg = 0, mb = 0, mc = 0;
   for (let i = 0; i < n * n; i++) if (a[i] > 0) { mr += r[i]; mg += g[i]; mb += b[i]; mc++; }
   for (let i = 0; i < n * n; i++) if (!a[i] && !r[i]) { r[i] = mr / (mc || 1); g[i] = mg / (mc || 1); b[i] = mb / (mc || 1); }

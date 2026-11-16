@@ -1,6 +1,6 @@
 import { buildTube, createYarn, SEG_IDX } from './model.js';
 
-/** As the tube in `model.js`: sides round it, and ply phase per metre over the texture's tile. */
+/** As the tube in `model.js`: sides round it, and ply phase per meter over the texture's tile. */
 const RADIAL = 8;
 const UV_PER_METRE = (3 / 0.03) / 4;
 import { STEP, YR } from './winding.js';
@@ -18,16 +18,16 @@ import { STEP, YR } from './winding.js';
  * along the strand winds it back on. Past a holder's limit, it snaps, and
  * that much yarn is gone.
  *
- * The ball is in metres, as Carol is; `root` is scaled to the house.
+ * The ball is in meters, as Carol is; `root` is scaled to the house.
  */
 
-/** Metres to a tile of the house. */
+/** Meters to a tile of the house. */
 export const TILE_METRES = 0.3;
 
-/** The longest the strand pays out before it snaps, whatever holds it, in metres. */
+/** The longest the strand pays out before it snaps, whatever holds it, in meters. */
 export const MAX_LAID = 4.5;
 
-/** Further than this in one step (metres) and the ball didn't roll there: it fell, or was put there. */
+/** Further than this in one step (meters) and the ball didn't roll there: it fell, or was put there. */
 const JUMP = 0.12;
 
 /** The floor path is sampled every 2 mm, as Carol's route is. */
@@ -141,7 +141,7 @@ export function createBall(GFX, floor) {
   }
 
   // Where the strand ends now (lost yarn has gone from the outside), and the
-  // floor path it has paid out along since it was caught, in metres.
+  // floor path it has paid out along since it was caught, in meters.
   let end = TOTAL;
   let holder = null;
   const path = [];
@@ -176,7 +176,7 @@ export function createBall(GFX, floor) {
     return lo;
   }
 
-  /** The radius the ball rides on with the bit at `a` at the contact, in metres (to its middle). */
+  /** The radius the ball rides on with the bit at `a` at the contact, in meters (to its middle). */
   const riding = (a) => {
     const [lo, hi, f] = sampleAt(cum, N, clamp(a, 0, TOTAL));
     return rBall[lo] + (rBall[hi] - rBall[lo]) * f + YR;
@@ -272,7 +272,7 @@ export function createBall(GFX, floor) {
 
   return {
     root, ball, wound, laid, material,
-    /** Yarn on the ball, in metres; what has paid out still counts until it snaps. */
+    /** Yarn on the ball, in meters; what has paid out still counts until it snaps. */
     get metres() { return end; },
     get total() { return TOTAL; },
     get holder() { return holder; },
@@ -284,7 +284,7 @@ export function createBall(GFX, floor) {
 
     /**
      * The loose end is caught where the ball is, by `who`: { snap: how many
-     * metres pay out before it snaps, letGo: whether it lets the strand wind
+     * meters pay out before it snaps, letGo: whether it lets the strand wind
      * all the way back on }. False if it is already caught.
      */
     snag(b, q, who) {
@@ -308,7 +308,7 @@ export function createBall(GFX, floor) {
     /**
      * Once a physics step, after the ball `b` (tiles) has moved: the strand
      * pays out or winds back on. Returns { radius (tiles, for the physics),
-     * snapped (metres lost, or null), piece (what was left on the floor),
+     * snapped (meters lost, or null), piece (what was left on the floor),
      * rewound (wound all the way back on) }.
      */
     step(b, dt) {
@@ -414,7 +414,7 @@ export function createBall(GFX, floor) {
       return piece;
     },
 
-    /** Winds `metres` more on (a skein found), up to a whole ball; how much went on. */
+    /** Winds `meters` more on (a skein found), up to a whole ball; how much went on. */
     windOn(metres) {
       if (holder) return 0;
       const before = end;

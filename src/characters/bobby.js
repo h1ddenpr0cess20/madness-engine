@@ -4,7 +4,7 @@ import { moustache } from './wardrobe.js';
 /**
  * The Bobby: a London constable on the beat, in the tall custodian helmet
  * with its star badge and its knob on top, the dark tunic buttoned up in
- * silver, the chequered band, a whistle on its chain, and the hands behind
+ * silver, the checkred band, a whistle on its chain, and the hands behind
  * the back, rocking heel to toe. Evening all. Mind how you roll. About 1.0
  * tiles tall, helmet and all.
  */

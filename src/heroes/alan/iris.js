@@ -1,8 +1,8 @@
 /**
  * The iris, painted once onto a canvas: a blue that is pale and nearly
  * turquoise at the collarette, deepens outwards, and is ringed at the rim by
- * a dark limbal band. Radial fibres and a few crypts keep it from reading as
- * a flat disc of colour. The pupil is its own mesh, so the centre is left a
+ * a dark limbal band. Radial fibers and a few crypts keep it from reading as
+ * a flat disc of color. The pupil is its own mesh, so the center is left a
  * dark blue it can dilate over.
  *
  * `random` is injectable so the tests can paint it the same way twice.
@@ -35,7 +35,7 @@ export function paintIris(ctx, size, { random = Math.random } = {}) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
 
-  // Fibres: thin spokes from the collarette out, some pale, some dark.
+  // Fibers: thin spokes from the collarette out, some pale, some dark.
   const fibres = 420;
   ctx.lineCap = 'round';
   for (let i = 0; i < fibres; i++) {
@@ -57,7 +57,7 @@ export function paintIris(ctx, size, { random = Math.random } = {}) {
     ctx.stroke();
   }
 
-  // The collarette: a ragged pale ring where the fibres gather.
+  // The collarette: a ragged pale ring where the fibers gather.
   ctx.strokeStyle = 'rgba(200, 240, 255, 0.35)';
   ctx.lineWidth = size * 0.006;
   ctx.beginPath();

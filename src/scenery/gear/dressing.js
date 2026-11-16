@@ -13,7 +13,7 @@ import { random } from '../../textures/venue.js';
  * rooftop plant, and the premiere's giant gold statue.
  *
  * Each is built from plain shapes, standing on y = 0 over its footprint
- * (`w` by `d` tiles, centred on the origin) and, if it has a front, facing
+ * (`w` by `d` tiles, centered on the origin) and, if it has a front, facing
  * +z. No canvas: they are built under node for the tests as well.
  */
 
@@ -341,7 +341,7 @@ function coffin(GFX, { rise = 0.6 }) {
   return { group };
 }
 
-/** Wooden crates, two to a tile, the top one turned a little: battens round the edges, a stencilled band. */
+/** Wooden crates, two to a tile, the top one turned a little: battens round the edges, a stenciled band. */
 function crate(GFX, { rise = 0.9, w = 1, d = 1, ...spec }) {
   const group = new GFX.Group();
   const k = kit(GFX, group);
@@ -610,7 +610,7 @@ function statue(GFX, { w = 3, d = 2, rise = 2.0 }) {
   return { group };
 }
 
-/** A headstone: rounded grey stone, a darker panel where the name was, a mound in front. In the Western, a wooden cross on Boot Hill. */
+/** A headstone: rounded gray stone, a darker panel where the name was, a mound in front. In the Western, a wooden cross on Boot Hill. */
 function tombstone(GFX, { rise = 0.7, venue }) {
   const group = new GFX.Group();
   const k = kit(GFX, group);
@@ -739,7 +739,7 @@ function rail(GFX, { rise = 1.1, venue, ...spec }) {
   return { group };
 }
 
-/** The plant on the roof: a grey air-conditioning box with a grille, a fan going round on top, a pipe off it. */
+/** The plant on the roof: a gray air-conditioning box with a grille, a fan going round on top, a pipe off it. */
 function vent(GFX, { rise = 1.0 }) {
   const group = new GFX.Group();
   const k = kit(GFX, group);

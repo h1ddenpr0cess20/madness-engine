@@ -2,7 +2,7 @@
  * The night Krystal sits in, painted once onto an equirectangular canvas — a
  * different one each load. Deep indigo going to black overhead, a few drifts
  * of nebula in violet, rose and teal, and stars: many faint, some bright,
- * a handful with a glint of colour.
+ * a handful with a glint of color.
  *
  * The nebula is worked out texel by texel on a small scratch canvas and
  * scaled up, rather than stacked out of canvas gradients: the browser dithers
@@ -15,7 +15,7 @@ export const COSMOS = Object.freeze({
   nadir: [10, 6, 22],
 });
 
-/** The colours the nebula drifts between. */
+/** The colors the nebula drifts between. */
 const NEBULA = [
   [120, 52, 170],
   [190, 60, 140],
@@ -31,7 +31,7 @@ function mix(a, b, t) {
   return a.map((v, i) => lerp(v, b[i], t));
 }
 
-/** The plain ramp, by elevation in radians — also what a canvasless backdrop is coloured with. */
+/** The plain ramp, by elevation in radians — also what a canvasless backdrop is colored with. */
 export function cosmosColour(elevation) {
   const up = Math.sin(elevation);
   if (up >= 0) return mix(COSMOS.horizon, COSMOS.zenith, Math.pow(up, 0.6));
@@ -130,7 +130,7 @@ export function paintCosmos(ctx, width, height, { random = Math.random } = {}) {
       const u = (x / w) * base;
       const v = (y / h) * base * 0.5;
       const cloud = Math.max(0, fbm(u + fbm(u + 3.1, v) * 1.5, v + fbm(u, v + 7.7)) - 0.42) * 2.6;
-      /** Round the colours continuously, so two drifts never meet at a seam. */
+      /** Round the colors continuously, so two drifts never meet at a seam. */
       const along = tint(u * 0.5 + 11, v * 0.5) * NEBULA.length * 1.5;
       const k = Math.floor(along);
       const colour = mix(NEBULA[k % NEBULA.length], NEBULA[(k + 1) % NEBULA.length], along - k);

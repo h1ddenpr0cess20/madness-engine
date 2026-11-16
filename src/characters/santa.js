@@ -96,7 +96,7 @@ export default person({
     shell(s, (p) => Math.max(Math.abs(p[0]) - 0.02, 0.2 - p[1], p[1] - 0.332, 0.02 - p[2]), { ...fur, over: ['top', 'outer'], bones: legs });
     shell(s, (p) => Math.max(0.2 - p[1], p[1] - 0.236), { ...fur, over: ['outer'], bones: legs });
     shell(s, (p) => Math.max(Math.abs(p[1] - 0.536) - 0.014, -p[2] - 0.045), { ...fur, over: ['top', 'head'], bone: 'neck' });
-    // The beard to the belt, its edge low on the cheeks so they show rosy, and a bushy moustache over the mouth.
+    // The beard to the belt, its edge low on the cheeks so they show rosy, and a bushy mustache over the mouth.
     beard(s, { color: '#f6f6f8', long: 1.7, thick: 0.01, high: 0.64 });
     moustache(s, { color: '#f6f6f8', wide: 1.2, droop: 0.5 });
     // The cap: red, fitted over the head and the hair down to under its band, the point falling back over his

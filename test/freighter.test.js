@@ -54,7 +54,7 @@ test('it is built from the freighter\'s own parts: every mesh is named once, and
   assert.ok(f.parts.cab_shell.castShadow && f.wheels[0].children[0].castShadow);
 });
 
-/** The numbers and the loop the freighter was made with, as the page it came from has them (metres, seconds, the truck nosed toward −z). */
+/** The numbers and the loop the freighter was made with, as the page it came from has them (meters, seconds, the truck nosed toward −z). */
 function original() {
   const s = { speed: 0, steer: 0, heading: 0, x: 0, z: 0, spin: 0 };
   return Object.assign(s, {

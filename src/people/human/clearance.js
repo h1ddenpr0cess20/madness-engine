@@ -30,7 +30,7 @@ function radial(n) {
 }
 const sectorOf = (a) => ((Math.round((a / (Math.PI * 2)) * SECTORS) % SECTORS) + SECTORS) % SECTORS;
 
-/** A sector left empty takes the larger of its neighbours', so there is no gap to reach through. */
+/** A sector left empty takes the larger of its neighbors', so there is no gap to reach through. */
 function close(prof) {
   const { r, n } = prof;
   for (let b = 0; b < n; b++) {
@@ -138,7 +138,7 @@ export function measure(meshes, names, pivots) {
     arms[S] = { shoulder: names.indexOf(`arm${S}`), parent: names.indexOf(`clavicle${S}`), spots: spots.filter((s) => s.r > 0), out: S === 'L' ? 1 : -1 };
   }
   const body = { trunk, thighs, arms };
-  // As he stands at rest (the pose he is modelled in) the upper arm already lies against his side, under
+  // As he stands at rest (the pose he is modeled in) the upper arm already lies against his side, under
   // the arm: there only what a pose takes it further in than that counts. The forearm and hand have no such
   // allowance: a heavier body is cleared of them however it stands.
   const rest = new Float32Array(names.length * 12);

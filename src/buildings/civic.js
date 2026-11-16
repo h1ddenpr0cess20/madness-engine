@@ -170,7 +170,7 @@ export function tavern(m, v) {
   return { smoke: [top1, top2], height: 1.9 };
 }
 
-/** A pointed window with a coloured pane, glowing at night. */
+/** A pointed window with a colored pane, glowing at night. */
 function lancet(m, f, u, v, w, h, col) {
   panel(m, 'glass', f, u - w / 2, v, u + w / 2, v + h * 0.7, 0.01, '#27384a');
   m.tri('glass', at(f, u - w / 2, v + h * 0.7, 0.01), at(f, u + w / 2, v + h * 0.7, 0.01), at(f, u, v + h, 0.01), '#27384a');

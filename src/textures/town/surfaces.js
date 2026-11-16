@@ -1,7 +1,7 @@
 /**
  * What the ground is made of, tile by tile: how it looks — `tex`, the floor
  * texture painted for it (`paint.js`), tinted `top`; `wtex` and `wall` for
- * the sides where it stands above its neighbour — and how it rolls.
+ * the sides where it stands above its neighbor — and how it rolls.
  *
  * - `drag`: rolling resistance, per second. Grass and dirt hold the ball
  *   back; an oil slick hardly does.
@@ -14,7 +14,7 @@
  *
  * One table for both towns: Petroll's lots and trampolines and Metrlol's
  * marble, terracotta and sea are all here, and each town uses what it lays.
- * - `map`: its colour on the map in the corner.
+ * - `map`: its color on the map in the corner.
  */
 export const SURFACES = Object.freeze({
   grass: { tex: 'grass', top: '#5a8438', wtex: 'cliff', wall: '#6a5038', drag: 1.1, grip: 1, map: '#4f7a34' },

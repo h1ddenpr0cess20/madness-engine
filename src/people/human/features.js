@@ -5,7 +5,7 @@ import { SUNGLASSES } from './glasses.js';
  * Everything about a person a character creator lets a player choose, in the
  * order such a screen shows it: the body, the skin, the face and each of its
  * features, the hair. Each slot is a choice (`options`), a slider (`min` to
- * `max`, 0 the average) or a colour, with its `default`.
+ * `max`, 0 the average) or a color, with its `default`.
  *
  * `ready` says whether the human is built to show it yet. The rest are
  * already part of a person's `features`, kept and handed back, so a game or
@@ -15,7 +15,7 @@ import { SUNGLASSES } from './glasses.js';
  * `customizationFor`.
  *
  * The face and the body are shaped by the MakeHuman project's own morph
- * targets (CC0), the ones its modelling tab moves: each slot's `shape` says
+ * targets (CC0), the ones its modeling tab moves: each slot's `shape` says
  * which of them, and how much, make it. A slider has an `up` recipe (for 1)
  * and a `down` one (for −1); a choice has one per option (the default as he
  * is). Each recipe is { 'group/target': weight }, a `{s}` in the name both

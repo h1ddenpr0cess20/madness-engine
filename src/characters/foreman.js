@@ -3,7 +3,7 @@ import { cap, moustache } from './wardrobe.js';
 
 /**
  * The Foreman: a flat cap, a brown warehouse coat down to the knee, a
- * moustache, a pencil behind the ear and a clipboard, on which is written,
+ * mustache, a pencil behind the ear and a clipboard, on which is written,
  * every time, exactly how long you have been on your break. About 0.95 tiles
  * tall.
  */

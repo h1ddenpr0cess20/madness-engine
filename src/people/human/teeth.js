@@ -19,7 +19,7 @@ const G = (t) => Math.exp(-t * t);
 const ARCH = [[0, 0.1435], [0.01, 0.1425], [0.018, 0.138], [0.025, 0.1305], [0.0292, 0.1215], [0.0312, 0.1105], [0.0324, 0.0985], [0.033, 0.088]];
 
 // Each tooth, front to back: its kind, and its crown's width along the arch, depth (lip to tongue)
-// and height, in millimetres: the average adult crowns of the dental anatomy tables (Wheeler's),
+// and height, in millimeters: the average adult crowns of the dental anatomy tables (Wheeler's),
 // taken a touch smaller (0.97) to suit his head.
 const MM = 0.001 * 0.97;
 const table = (rows) => rows.map(([kind, w, d, h]) => [kind, w * MM, d * MM, h * MM]);
@@ -101,7 +101,7 @@ function tooth(part, { kind, w, d, height }, c, T, N, up, edgeY, weights, shade,
     const y = edgeY - up * height * (1 - Math.min(1, h)) + up * s.lift * height;
     const p = [c[0] + T[0] * x + N[0] * z, y, c[2] + T[2] * x + N[2] * z];
     // Enamel is thin at the neck, where the yellow dentine shows through it, and thick and whiter over
-    // the crown; an incisor's edge is enamel alone, a little grey-blue and clear. The fissures between
+    // the crown; an incisor's edge is enamel alone, a little gray-blue and clear. The fissures between
     // the back teeth's cusps are stained darker.
     const k = shade(p) * hue;
     const neck = smooth(0.45, 0, h), edge = (kind === 'incisor' ? 1 : kind === 'canine' ? 0.5 : 0) * smooth(0.82, 0.97, h) * smooth(1.06, 0.99, h);

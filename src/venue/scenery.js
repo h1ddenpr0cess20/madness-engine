@@ -135,7 +135,7 @@ export function createVenueMeshes(GFX, built, venue) {
   };
 }
 
-/** A target on the floor to roll onto: rings and chevrons pointing in, in a spotlight's colour. */
+/** A target on the floor to roll onto: rings and chevrons pointing in, in a spotlight's color. */
 function targetTexture(GFX) {
   return cached('target', () => {
     const size = 512, mid = size / 2;

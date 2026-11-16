@@ -12,7 +12,7 @@
  * - `createGraniteKitchen`: the two of them, together, with the cutout cut to
  *   the sink. The asset viewer's entry.
  *
- * Coordinates are metres, from the middle of the counter on the floor. The front
+ * Coordinates are meters, from the middle of the counter on the floor. The front
  * of the run faces +z. A counter's length is its width along x, so two runs
  * laid end to end are a longer run: each keeps its own top and its own ends.
  */
@@ -30,7 +30,7 @@ export const SLAB = 0.075;
 /** The toe kick, under the cabinets. */
 const PLINTH = 0.08;
 /**
- * The granite top's grain, in repeats a metre: twice the boulder's grain (one
+ * The granite top's grain, in repeats a meter: twice the boulder's grain (one
  * repeat per 0.95 m rather than per 1.9 m), so the counter's pattern reads finer.
  */
 export const COUNTER_GRANITE_REPEATS_PER_METRE = 2 / GRANITE_TILE_SIZE;
@@ -44,7 +44,7 @@ const inRange = (v, a, b) => Number.isFinite(v) && v >= a && v <= b;
  * Texture coordinates for a box, from where its surface is in the world: a
  * face that looks up or down takes x and z, one that looks along x takes z and
  * y, one that looks along z takes x and y. The grain runs on across the whole
- * counter, piece to piece, `scale` repeats a metre, rather than being stretched
+ * counter, piece to piece, `scale` repeats a meter, rather than being stretched
  * once over each box.
  */
 function worldUV(GFX, geometry, offset, scale) {
@@ -93,7 +93,7 @@ function makeWoodMaterial(GFX, species, finish) {
     clearcoat: lacquered ? 1 : 0,
     clearcoatRoughness: lacquered ? 0.06 : 1,
   });
-  // One repeat of the wood's map is a metre of board.
+  // One repeat of the wood's map is a meter of board.
   material.userData.uvScale = 1;
   return material;
 }
@@ -312,7 +312,7 @@ export function createGraniteCounter(GFX, {
   // The pulls and their mounts, in their own finish, separate from the faucet.
   const hardware = makeMetalMaterial(GFX, hardwareMetal, environment);
 
-  // The granite: the boulder's own colour and bump maps, at the boulder's grain scale.
+  // The granite: the boulder's own color and bump maps, at the boulder's grain scale.
   const source = createGraniteBoulder(GFX, { colour: granite, detail: 2 });
   const graniteMat = new GFX.MeshPhysicalMaterial({
     name: 'polished granite countertop',
@@ -471,7 +471,7 @@ export function createKitchenSink(GFX, {
 
 /**
  * The asset: a counter with a sink in it, both as the parts above. `length`
- * sets the run; the sink sits a little left of centre, toward the back, as is
+ * sets the run; the sink sits a little left of center, toward the back, as is
  * usual. Returns the counter and sink groups, and the group with both in it.
  */
 export function createGraniteKitchen(GFX, {

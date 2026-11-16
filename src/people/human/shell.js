@@ -16,7 +16,7 @@ import { Part } from './kit.js';
  * `spec`:
  * - `level`: the body's level of detail to cut from (0 or 1).
  * - `field(p, zone)`: how far inside the garment's outline the skin at `p`
- *   (zone { zone, y, d, x }) is, in metres; ≤ 0 outside, and -1 where it
+ *   (zone { zone, y, d, x }) is, in meters; ≤ 0 outside, and -1 where it
  *   never goes (the hands, say). The cut follows where it is 0.
  * - `ease(p, zone)`: how far off the skin the cloth sits.
  * - `drape(p, q, zone, weights)`: where the cloth at `q` (lifted off skin point `p`, whose bone weights are `weights`, by name)
@@ -122,7 +122,7 @@ export function skinShell(name, material, spec) {
     const q = [b.p[0] + b.n[0] * e, b.p[1] + b.n[1] * e, b.p[2] + b.n[2] * e];
     return drape(b.p, q, z, named(b.w));
   });
-  // How far each stands off the skin, smoothed over its neighbours, never less than its ease.
+  // How far each stands off the skin, smoothed over its neighbors, never less than its ease.
   const nbr = verts.map(() => new Set());
   for (const f of kept) {
     for (let k = 0; k < 4; k++) {
@@ -140,7 +140,7 @@ export function skinShell(name, material, spec) {
     });
   }
   // How near the skin each may come: its ease, and beyond whatever is worn under it, that floor
-  // spread out over its neighbours (never lowered), so over an edge underneath it slopes down gently.
+  // spread out over its neighbors (never lowered), so over an edge underneath it slopes down gently.
   let floor = verts.map((v, i) => {
     const want = ease(B[i].p, zone[v]) + folds(B[i].p, zone[v]);
     return under && under[v] > 0 ? Math.max(want, under[v] + gap) : want;
@@ -181,7 +181,7 @@ export function skinShell(name, material, spec) {
     }
   }
 
-  // The cut, made fair: each vertex on it eased toward the middle of its two neighbours along it.
+  // The cut, made fair: each vertex on it eased toward the middle of its two neighbors along it.
   const cutEdges = new Map();
   for (const f of kept) {
     for (let k = 0; k < 4; k++) {
@@ -218,7 +218,7 @@ export function skinShell(name, material, spec) {
       if (q) fixed.set(i, q);
     }
     for (const [i, q] of fixed) at[i] = q;
-    // Rings of neighbours out from it, each relaxed toward the average of its own, the edge held.
+    // Rings of neighbors out from it, each relaxed toward the average of its own, the edge held.
     let ring = new Set(fixed.keys());
     const near = new Map();
     for (let r = 1; r <= 3; r++) {
