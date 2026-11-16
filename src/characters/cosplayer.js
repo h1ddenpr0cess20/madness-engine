@@ -12,7 +12,7 @@ import { cloth, hold, person, shell, skirt, trunk } from './person.js';
 const WHITE = cloth('#f4f4f8', '#c8ccd8');
 const BLUE = { color: '#1a4ad8', mat: 'plastic' };
 const RED = { color: '#d8141e', mat: 'plastic' };
-const ARMOUR = { color: WHITE, mat: 'plastic' };
+const ARMOR = { color: WHITE, mat: 'plastic' };
 
 export default person({
   name: 'cosplayer',
@@ -44,13 +44,13 @@ export default person({
     const trunkOnly = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
     s.part('kit', () => {
       // The helmet, the visor, the yellow V on the brow, the red chin.
-      s.box([0, 0.71, 0.0], [0.11, 0.1, 0.11], 0.04, { ...ARMOUR, bone: 'head', k: 0.006 });
+      s.box([0, 0.71, 0.0], [0.11, 0.1, 0.11], 0.04, { ...ARMOR, bone: 'head', k: 0.006 });
       s.box([0, 0.66, 0.1], [0.08, 0.035, 0.03], 0.01, { op: 'sub', k: 0.004 });
       s.box([0, 0.675, 0.09], [0.07, 0.02, 0.01], 0.008, { color: '#3ae0ff', mat: 'glass', bone: 'head', k: 0.002 });
       for (const m of [1, -1]) s.flake([0, 0.75, 0.11], [m * 0.08, 0.84, 0.1], [0, 0, 1], 0.012, 0.006, 0.4, { color: '#f0c020', mat: 'plastic', bone: 'head', k: 0.002 });
       s.box([0, 0.6, 0.085], [0.03, 0.018, 0.02], 0.008, { ...RED, bone: 'head', k: 0.004 });
       // The shoulders, out like crates, on the upper arms.
-      for (const m of [1, -1]) s.box([m * 0.14, 0.51, 0], [0.045, 0.045, 0.05], 0.01, { ...ARMOUR, bone: `arm${m > 0 ? 'L' : 'R'}`, k: 0.004 });
+      for (const m of [1, -1]) s.box([m * 0.14, 0.51, 0], [0.045, 0.045, 0.05], 0.01, { ...ARMOR, bone: `arm${m > 0 ? 'L' : 'R'}`, k: 0.004 });
     });
     // The chest plate: blue, fitted over the white suit, the yellow vents in it, a red block at the belly.
     shell(s, (p) => Math.max(0.4 - p[1], p[1] - 0.535, -p[2] + 0.01), { ...BLUE, thick: 0.012, lift: 0.002, over: ['top'], keep: trunkOnly, bone: 'chest' });

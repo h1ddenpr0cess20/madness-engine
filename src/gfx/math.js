@@ -1018,7 +1018,7 @@ export class Color {
         SRGBToLinear(Math.min(255, parseInt(parts[2], 10)) / 255),
       );
     }
-    throw new Error(`gfx: unsupported colour ${style}`);
+    throw new Error(`gfx: unsupported color ${style}`);
   }
 
   clone() { return new Color(this.r, this.g, this.b); }

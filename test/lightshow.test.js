@@ -16,12 +16,12 @@ const venue = (fixtures, look = {}) => ({
   heightAt: () => 0,
 });
 
-test('a fixture with one colour, or on static, never changes colour', () => {
+test('a fixture with one color, or on static, never changes color', () => {
   assert.deepEqual(colorAt({ colors: ['#ff0000'] }, 17), [1, 0, 0]);
   assert.deepEqual(colorAt({ colors: ['#ff0000', '#0000ff'], program: 'static' }, 9), [1, 0, 0]);
 });
 
-test('a chase steps through its colours, one every `every` beats, and fades across the end of each step', () => {
+test('a chase steps through its colors, one every `every` beats, and fades across the end of each step', () => {
   const f = { colors: ['#ff0000', '#00ff00', '#0000ff'], every: 2 };
   assert.deepEqual(colorAt(f, 0), [1, 0, 0]);
   assert.deepEqual(colorAt(f, 2.2), [0, 1, 0]);

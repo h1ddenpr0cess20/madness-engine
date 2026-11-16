@@ -1,5 +1,5 @@
 import { cloth, hold, person } from './person.js';
-import { moustache } from './wardrobe.js';
+import { mustache } from './wardrobe.js';
 
 /**
  * The Bobby: a London constable on the beat, in the tall custodian helmet
@@ -36,7 +36,7 @@ export default person({
     },
   },
   extras(s) {
-    moustache(s, { color: '#5a3a24' });
+    mustache(s, { color: '#5a3a24' });
     s.part('kit', () => {
       const H = { color: '#14161e', mat: 'cloth', bone: 'head' };
       // The helmet: tall, domed, a rim, the badge on the front and the knob on top.

@@ -68,7 +68,7 @@ export const BUMPERS = {
   },
 
   /** A stack of tires, three high. */
-  tyres(GFX, { radius, ringMat }) {
+  tires(GFX, { radius, ringMat }) {
     const rubber = mat(GFX, '#16161a', { roughness: 0.9 });
     const parts = [];
     const objects = [ring(GFX, ringMat, radius)];

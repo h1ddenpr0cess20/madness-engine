@@ -38,7 +38,7 @@ export const toBack = (p) => [p.back * p.across[0], p.back * p.across[1]];
 export const facingRot = ([dx, dz]) => Math.atan2(dx, dz);
 
 /** The tile in the middle of piece `p`. */
-export const centre = (p) => p.tile(Math.floor(p.length / 2), 0);
+export const center = (p) => p.tile(Math.floor(p.length / 2), 0);
 
 /** The offset in tiles from tile `a` to tile `b`, for aiming a light. */
 export const aimAt = (a, b) => [b[0] - a[0], b[1] - a[1]];
@@ -48,7 +48,7 @@ export const aimAt = (a, b) => [b[0] - a[0], b[1] - a[1]];
  * middle, chasing through `colors`. `strobe` adds a strobe at the back as well.
  */
 export function wash(v, p, colors, { cans = 2, strobe = false, program = 'chase', every = 2, glow = 0.7 } = {}) {
-  const mid = centre(p);
+  const mid = center(p);
   for (let i = 0; i < cans; i++) {
     const at = wallTile(p, Math.round(((i + 1) * p.length) / (cans + 1)));
     v.light('par', ...at, { colors, program, every, shift: i, glow, reach: 8, aim: aimAt(at, mid), height: 1.5 });

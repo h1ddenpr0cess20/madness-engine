@@ -53,7 +53,7 @@ const BRIEFS = ['#2a2b30', '#2c5aa8', '#b8342c', '#e8e4da', '#3f7a3a'];
 const HAIRS = ['#1c1410', '#2e2018', '#3b2a1f', '#5a3c26', '#7a5434', '#a8783e', '#c8a060', '#8a3a1c', '#6a6a6a', '#c8c4bc'];
 
 /** Every weapon there is but the player's own, and the swing each is used with. */
-const ARMOURY = Object.keys(WEAPONS)
+const ARMORY = Object.keys(WEAPONS)
   .filter((k) => /^create/.test(k) && !/Handle|Pommel|BananaBroadsword/.test(k))
   .map((factory) => ({
     factory,
@@ -197,7 +197,7 @@ const MOBS = clamp(Number(params.get('mobs') ?? 14), 0, 60);
 const mobDetail = Number(params.get('detail') ?? 1);
 const mobs = [];
 for (let i = 0; i < MOBS; i++) {
-  const arm = ARMOURY[i % ARMOURY.length];
+  const arm = ARMORY[i % ARMORY.length];
   const look = { skin: pick(SKINS), iris: pick(IRISES), shirt: pick(SHIRTS), denim: pick(DENIMS), shoe: pick(SHOES), sole: pick(SOLES), briefs: pick(BRIEFS), hair: pick(HAIRS) };
   const m = person({ look, weapon: WEAPONS[arm.factory](GFX), swing: arm.swing, detail: mobDetail, beard: rand() < 0.5 ? 'full' : null });
   const [x, z] = clearSpot(player.x, player.z, 12);

@@ -1,6 +1,6 @@
 import { bands, grainy } from '../models/skins.js';
 import { cloth, onBody, person, strap } from './person.js';
-import { moustache } from './wardrobe.js';
+import { mustache } from './wardrobe.js';
 
 /**
  * The Gondolier: a navy-and-white striped shirt, black trousers, a red sash,
@@ -54,7 +54,7 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    moustache(s, { color: '#1a120c', wide: 1.35 });
+    mustache(s, { color: '#1a120c', wide: 1.35 });
     s.part('kit', () => {
       // A straw boater: a flat brim, a flat-topped crown, a red ribbon round it, the ends down the back.
       const tilt = [-0.12, 0, 0.06];

@@ -23,30 +23,30 @@ test('the jewel is cut to the granite stone exactly, shape and grain', () => {
 });
 
 test('the jewel is translucent glass tinted by its color', () => {
-  const jewel = createJewelBoulder(GFX, { colour: 'emerald' });
+  const jewel = createJewelBoulder(GFX, { jewel: 'emerald' });
   const m = jewel.material;
   assert.equal(m.transmission, 1);
   assert.equal(m.attenuationColor.getHexString(), JEWELS.emerald.slice(1));
-  assert.equal(jewel.colour, JEWELS.emerald);
+  assert.equal(jewel.color, JEWELS.emerald);
   assert.ok(jewel.mesh.children.includes(jewel.glass) && jewel.mesh.children.includes(jewel.mist));
 });
 
 test('every named color is a jewel, and any hex color is too', () => {
   assert.deepEqual(JEWEL_CHOICES, Object.keys(JEWELS));
-  for (const name of JEWEL_CHOICES) assert.equal(createJewelBoulder(GFX, { colour: name }).colour, JEWELS[name]);
-  assert.equal(createJewelBoulder(GFX, { color: '#ABCDEF' }).colour, '#abcdef');
-  assert.throws(() => createJewelBoulder(GFX, { colour: 'pearl' }), /no jewel called pearl/);
+  for (const name of JEWEL_CHOICES) assert.equal(createJewelBoulder(GFX, { jewel: name }).color, JEWELS[name]);
+  assert.equal(createJewelBoulder(GFX, { color: '#ABCDEF' }).color, '#abcdef');
+  assert.throws(() => createJewelBoulder(GFX, { jewel: 'pearl' }), /no jewel called pearl/);
   assert.throws(() => createJewelBoulder(GFX, { color: 'blue' }), /six-digit hex/);
 });
 
 test('the color can be changed afterwards, the stone and its mist together', () => {
-  const jewel = createJewelBoulder(GFX, { colour: 'ruby' });
+  const jewel = createJewelBoulder(GFX, { jewel: 'ruby' });
   const before = jewel.mistMaterial.uniforms.uDuoA.value.clone();
-  jewel.setColour('amethyst');
+  jewel.setColor('amethyst');
   assert.equal(jewel.material.attenuationColor.getHexString(), JEWELS.amethyst.slice(1));
   assert.notDeepEqual(jewel.mistMaterial.uniforms.uDuoA.value, before, 'the mist takes the new color');
-  jewel.setColour('x', '#102030');
-  assert.equal(jewel.colour, '#102030');
+  jewel.setColor('x', '#102030');
+  assert.equal(jewel.color, '#102030');
 });
 
 test('the mist sits inside the stone, and can be hidden', () => {
@@ -60,11 +60,11 @@ test('the mist sits inside the stone, and can be hidden', () => {
 });
 
 test('the jewel rock is a rock: it squashes, turns and follows its position, with the stone in its color', () => {
-  const rock = createJewelRock(GFX, { colour: 'topaz', radius: 0.5 });
+  const rock = createJewelRock(GFX, { jewel: 'topaz', radius: 0.5 });
   assert.equal(rock.group.name, 'rock');
-  assert.equal(rock.colour, JEWELS.topaz);
+  assert.equal(rock.color, JEWELS.topaz);
   rock.update(1 / 60, { q: [0, 0, 0, 1], position: [1, 2, 3] });
   assert.deepEqual(rock.group.position.toArray(), [1, 2, 3]);
-  rock.setColour('garnet').setMist(false);
-  assert.equal(rock.colour, JEWELS.garnet, 'the color follows the stone');
+  rock.setColor('garnet').setMist(false);
+  assert.equal(rock.color, JEWELS.garnet, 'the color follows the stone');
 });

@@ -1,7 +1,7 @@
 import { rotation } from '../models/sdf.js';
 import { bands } from '../models/skins.js';
 import { cloth, person, strap, tube } from './person.js';
-import { moustache } from './wardrobe.js';
+import { mustache } from './wardrobe.js';
 
 /**
  * The Souvenir Seller: a sky-blue galabeya to the ankles with wide sleeves,
@@ -57,7 +57,7 @@ export default person({
     },
   },
   extras(s, J) {
-    moustache(s, { color: '#141010', wide: 1.05 });
+    mustache(s, { color: '#141010', wide: 1.05 });
     s.part('kit', () => {
       // The turban: a crown of white cloth and the wraps round it.
       const W = { color: cloth('#f6f2e8', '#c8c0b0'), mat: 'cloth', bone: 'head' };

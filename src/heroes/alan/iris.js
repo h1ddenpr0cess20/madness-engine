@@ -12,7 +12,7 @@ export const IRIS = Object.freeze({
   mid: '#2f7fd6',
   outer: '#153f8f',
   limbus: '#071733',
-  centre: '#0b1f3d',
+  center: '#0b1f3d',
 });
 
 /** Where the painted features sit, as fractions of the iris radius. */
@@ -25,8 +25,8 @@ export function paintIris(ctx, size, { random = Math.random } = {}) {
   ctx.clearRect(0, 0, size, size);
 
   const base = ctx.createRadialGradient(c, c, 0, c, c, r);
-  base.addColorStop(0, IRIS.centre);
-  base.addColorStop(RINGS.pupil, IRIS.centre);
+  base.addColorStop(0, IRIS.center);
+  base.addColorStop(RINGS.pupil, IRIS.center);
   base.addColorStop(RINGS.collarette, IRIS.collarette);
   base.addColorStop(0.62, IRIS.mid);
   base.addColorStop(RINGS.limbus, IRIS.outer);
@@ -36,10 +36,10 @@ export function paintIris(ctx, size, { random = Math.random } = {}) {
   ctx.fillRect(0, 0, size, size);
 
   // Fibers: thin spokes from the collarette out, some pale, some dark.
-  const fibres = 420;
+  const fibers = 420;
   ctx.lineCap = 'round';
-  for (let i = 0; i < fibres; i++) {
-    const a = (i / fibres) * Math.PI * 2 + random() * 0.02;
+  for (let i = 0; i < fibers; i++) {
+    const a = (i / fibers) * Math.PI * 2 + random() * 0.02;
     const from = r * (RINGS.pupil + 0.02 + random() * 0.08);
     const to = r * (0.62 + random() * 0.26);
     const light = random() < 0.55;

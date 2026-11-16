@@ -149,7 +149,7 @@ export function createMorningstar(GFX, {
         : handle.pommelAsset.kind === 'metal-ball' ? 'Solid metal ball' : 'Engine metal egg',
       'Guard': guardStyle === 'horns' ? 'Upward devil horns' : 'Original haft fitting',
       'Grip wrap': wrapStyle === 'diagonal' ? 'Diagonal leather helix' : 'Banded leather wrap',
-      'Scale': '1 world unit = 1 metre',
+      'Scale': '1 world unit = 1 meter',
     },
     get metal() { return selectedMetal; },
     get gripColor() { return selectedGripColor; },
@@ -164,7 +164,7 @@ export function createMorningstar(GFX, {
       return api;
     },
     setGripColor(color) {
-      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
+      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex color');
       handle.leatherMaterial.color.set(color);
       handle.wrapMaterial.color.set(shadeHex(color, 0.68));
       selectedGripColor = color;

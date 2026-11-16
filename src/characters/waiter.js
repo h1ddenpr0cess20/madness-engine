@@ -1,5 +1,5 @@
 import { cloth, hang, hold, person, shell, strap } from './person.js';
-import { moustache, suitFront } from './wardrobe.js';
+import { mustache, suitFront } from './wardrobe.js';
 
 /**
  * The Waiter: of a café on the Boulevard Saint-Germain, in a black
@@ -41,7 +41,7 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    moustache(s, { color: '#14100c', pencil: true });
+    mustache(s, { color: '#14100c', pencil: true });
     suitFront(s, { tie: '#0a0a0c', bow: true, buttons: '#c8ccd4' });
     // The long white apron: tied round the waist, hanging down the front to the shins.
     strap(s, [[0, 0.345, 0.095], [0.08, 0.35, 0.065], [0.105, 0.352, 0.0], [0.08, 0.355, -0.065], [0, 0.358, -0.085], [-0.08, 0.355, -0.065], [-0.105, 0.352, 0.0], [-0.08, 0.35, 0.065], [0, 0.345, 0.095]], { width: 0.012, thick: 0.003, color: SHIRT, mat: 'cloth', over: ['top', 'bottoms'], keep: TRUNK, closed: true });

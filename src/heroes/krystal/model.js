@@ -1,4 +1,4 @@
-import { cosmosColour, createCosmosTexture } from '../../textures/skies/cosmos.js';
+import { cosmosColor, createCosmosTexture } from '../../textures/skies/cosmos.js';
 import { createVisionMaterial } from './vision.js';
 
 /** The ball, in meters of nothing in particular: the stage frames whatever size it is. */
@@ -181,7 +181,7 @@ export function createBackdrop(GFX, { random, width = 4096 } = {}) {
     const c = new GFX.Color();
     for (let i = 0; i < position.count; i++) {
       const up = Math.max(-1, Math.min(1, position.getY(i) / BACKDROP_RADIUS));
-      const [r, g, b] = cosmosColour(Math.asin(up)).map(Math.round);
+      const [r, g, b] = cosmosColor(Math.asin(up)).map(Math.round);
       c.setHex((r << 16) | (g << 8) | b);
       colors.set([c.r, c.g, c.b], i * 3);
     }

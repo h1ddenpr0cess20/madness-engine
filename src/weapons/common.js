@@ -4,11 +4,11 @@ import { createMetalEgg, createGlassEgg } from '../heroes/debater-egg/index.js';
 import { createBall } from '../heroes/krystal/model.js';
 import { createGraniteBoulder, GRANITES, GRANITE_TILE_SIZE } from '../heroes/rock-granite.js';
 import { createBladeMist, createCurvedBladeMist } from './blade-mist.js';
-import { bladeCentreline } from './blade-curve.js';
+import { bladeCenterline } from './blade-curve.js';
 import { assertHands, handlingInfo, handlingOf, reachOf } from './categories.js';
 
 /** Weapon geometry is expressed in meters: one engine unit equals one meter. */
-export const WEAPON_WORLD_UNITS_PER_METRE = 1;
+export const WEAPON_WORLD_UNITS_PER_METER = 1;
 export const MARBLE_POMMEL_RADIUS = 0.027;
 export const MARBLE_POMMEL = Object.freeze({
   radius: MARBLE_POMMEL_RADIUS,
@@ -185,9 +185,9 @@ export function createMagicEggPommel(GFX, radius) {
   };
 }
 
-function createGranitePommel(GFX, radius, colour = 'grey') {
-  if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
-  const { mesh, geometry } = createGraniteBoulder(GFX, { colour, detail: 3 });
+function createGranitePommel(GFX, radius, color = 'gray') {
+  if (!Object.hasOwn(GRANITES, color)) throw new Error(`no granite called ${color}; choose ${Object.keys(GRANITES).join(', ')}`);
+  const { mesh, geometry } = createGraniteBoulder(GFX, { color, detail: 3 });
   const bounds = new GFX.Box3().setFromObject(mesh);
   const size = new GFX.Vector3();
   bounds.getSize(size);
@@ -202,29 +202,29 @@ function createGranitePommel(GFX, radius, colour = 'grey') {
   const group = new GFX.Group();
   group.name = 'granite rock pommel';
   group.add(mesh);
-  let selectedColour = colour;
+  let selectedColor = color;
   return {
     group, mesh, geometry, get material() { return mesh.material; }, radius, height,
     textureTileSize: GRANITE_TILE_SIZE * scale, kind: 'granite',
-    get colour() { return selectedColour; },
-    setColour(name) {
+    get color() { return selectedColor; },
+    setColor(name) {
       if (!Object.hasOwn(GRANITES, name)) throw new Error(`no granite called ${name}; choose ${Object.keys(GRANITES).join(', ')}`);
-      if (name !== selectedColour) {
-        const replacement = createGraniteBoulder(GFX, { colour: name, detail: 3 });
+      if (name !== selectedColor) {
+        const replacement = createGraniteBoulder(GFX, { color: name, detail: 3 });
         mesh.material.dispose?.();
         replacement.geometry.dispose?.();
         mesh.material = replacement.material;
-        selectedColour = name;
+        selectedColor = name;
       }
       return this;
     },
   };
 }
 
-function createWeaponPommel(GFX, spec, { style = 'marble', metal, material, graniteColour = 'grey' } = {}) {
+function createWeaponPommel(GFX, spec, { style = 'marble', metal, material, graniteColor = 'gray' } = {}) {
   if (style === 'marble') return { ...createWeaponPommelMarble(GFX, spec.marbleRadius), kind: 'marble' };
   if (style === 'metal-ball') return createMetalBallPommel(GFX, spec.marbleRadius, material);
-  if (style === 'granite') return createGranitePommel(GFX, spec.marbleRadius, graniteColour);
+  if (style === 'granite') return createGranitePommel(GFX, spec.marbleRadius, graniteColor);
   if (style === 'metal-egg') return createMetalEggPommel(GFX, spec.marbleRadius, metal);
   if (style === 'krystal') return createKrystalOrbPommel(GFX, spec.marbleRadius);
   if (style === 'magic-egg') return createMagicEggPommel(GFX, spec.marbleRadius);
@@ -311,10 +311,10 @@ export function createDevilHornGuard(GFX, parent, material, {
     oldBallRadius, 0.00012,
   ];
 
-  const centres = points.map((point) => new GFX.Vector3(...point));
+  const centers = points.map((point) => new GFX.Vector3(...point));
   const radialSegments = 20;
   const samplesPerSegment = 6;
-  const sampledCentres = [];
+  const sampledCenters = [];
   const sampledRadii = [];
 
   // Smoothly interpolate the original guard stations so the points flow out
@@ -330,35 +330,35 @@ export function createDevilHornGuard(GFX, parent, material, {
       .multiplyScalar(0.5);
   };
 
-  for (let segment = 0; segment < centres.length - 1; segment++) {
-    const p0 = centres[Math.max(0, segment - 1)];
-    const p1 = centres[segment];
-    const p2 = centres[segment + 1];
-    const p3 = centres[Math.min(centres.length - 1, segment + 2)];
+  for (let segment = 0; segment < centers.length - 1; segment++) {
+    const p0 = centers[Math.max(0, segment - 1)];
+    const p1 = centers[segment];
+    const p2 = centers[segment + 1];
+    const p3 = centers[Math.min(centers.length - 1, segment + 2)];
     for (let step = 0; step < samplesPerSegment; step++) {
       const t = step / samplesPerSegment;
-      sampledCentres.push(catmullRom(p0, p1, p2, p3, t));
+      sampledCenters.push(catmullRom(p0, p1, p2, p3, t));
       const smooth = t * t * (3 - 2 * t);
       sampledRadii.push(radii[segment] * (1 - smooth) + radii[segment + 1] * smooth);
     }
   }
-  sampledCentres.push(centres.at(-1).clone());
+  sampledCenters.push(centers.at(-1).clone());
   sampledRadii.push(radii.at(-1));
 
   const positions = [];
   const indices = [];
   const ringStarts = [];
-  positions.push(sampledCentres[0].x, sampledCentres[0].y, sampledCentres[0].z);
+  positions.push(sampledCenters[0].x, sampledCenters[0].y, sampledCenters[0].z);
 
-  for (let i = 1; i < sampledCentres.length - 1; i++) {
-    const tangent = sampledCentres[i + 1].clone()
-      .sub(sampledCentres[i - 1]).normalize();
+  for (let i = 1; i < sampledCenters.length - 1; i++) {
+    const tangent = sampledCenters[i + 1].clone()
+      .sub(sampledCenters[i - 1]).normalize();
     const normal = new GFX.Vector3(-tangent.y, tangent.x, 0).normalize();
     const binormal = new GFX.Vector3(0, 0, 1);
     ringStarts.push(positions.length / 3);
     for (let j = 0; j < radialSegments; j++) {
       const angle = (j / radialSegments) * Math.PI * 2;
-      const vertex = sampledCentres[i].clone()
+      const vertex = sampledCenters[i].clone()
         .addScaledVector(normal, Math.cos(angle) * sampledRadii[i])
         .addScaledVector(binormal, Math.sin(angle) * sampledRadii[i]);
       positions.push(vertex.x, vertex.y, vertex.z);
@@ -366,7 +366,7 @@ export function createDevilHornGuard(GFX, parent, material, {
   }
 
   const endTip = positions.length / 3;
-  const finalPoint = sampledCentres.at(-1);
+  const finalPoint = sampledCenters.at(-1);
   positions.push(finalPoint.x, finalPoint.y, finalPoint.z);
 
   for (let j = 0; j < radialSegments; j++) {
@@ -498,7 +498,7 @@ function createLightningGuard(GFX, parent, material, {
   }
   if (!Number.isFinite(centerY) || !Number.isFinite(span) || span <= 0
     || !Number.isFinite(thickness) || thickness <= 0) {
-    throw new TypeError('lightning guard requires a finite centre, positive span and thickness');
+    throw new TypeError('lightning guard requires a finite center, positive span and thickness');
   }
 
   const halfSpan = span / 2;
@@ -535,10 +535,10 @@ function createLightningGuard(GFX, parent, material, {
     0.00010,
   ];
 
-  const centres = stations.map((point) => new GFX.Vector3(...point));
+  const centers = stations.map((point) => new GFX.Vector3(...point));
   const radialSegments = 24;
   const samplesPerSegment = 8;
-  const sampledCentres = [];
+  const sampledCenters = [];
   const sampledRadii = [];
   const catmullRom = (p0, p1, p2, p3, t) => {
     const t2 = t * t, t3 = t2 * t;
@@ -551,41 +551,41 @@ function createLightningGuard(GFX, parent, material, {
       .multiplyScalar(0.5);
   };
 
-  for (let segment = 0; segment < centres.length - 1; segment++) {
-    const p0 = centres[Math.max(0, segment - 1)];
-    const p1 = centres[segment];
-    const p2 = centres[segment + 1];
-    const p3 = centres[Math.min(centres.length - 1, segment + 2)];
+  for (let segment = 0; segment < centers.length - 1; segment++) {
+    const p0 = centers[Math.max(0, segment - 1)];
+    const p1 = centers[segment];
+    const p2 = centers[segment + 1];
+    const p3 = centers[Math.min(centers.length - 1, segment + 2)];
     for (let step = 0; step < samplesPerSegment; step++) {
       const t = step / samplesPerSegment;
-      sampledCentres.push(catmullRom(p0, p1, p2, p3, t));
+      sampledCenters.push(catmullRom(p0, p1, p2, p3, t));
       const smooth = t * t * (3 - 2 * t);
       sampledRadii.push(radii[segment] * (1 - smooth) + radii[segment + 1] * smooth);
     }
   }
-  sampledCentres.push(centres.at(-1).clone());
+  sampledCenters.push(centers.at(-1).clone());
   sampledRadii.push(radii.at(-1));
 
   const positions = [];
   const indices = [];
   const ringStarts = [];
-  positions.push(sampledCentres[0].x, sampledCentres[0].y, sampledCentres[0].z);
-  for (let i = 1; i < sampledCentres.length - 1; i++) {
-    const tangent = sampledCentres[i + 1].clone()
-      .sub(sampledCentres[i - 1]).normalize();
+  positions.push(sampledCenters[0].x, sampledCenters[0].y, sampledCenters[0].z);
+  for (let i = 1; i < sampledCenters.length - 1; i++) {
+    const tangent = sampledCenters[i + 1].clone()
+      .sub(sampledCenters[i - 1]).normalize();
     const normal = new GFX.Vector3(-tangent.y, tangent.x, 0).normalize();
     const binormal = new GFX.Vector3(0, 0, 1);
     ringStarts.push(positions.length / 3);
     for (let j = 0; j < radialSegments; j++) {
       const angle = (j / radialSegments) * Math.PI * 2;
-      const vertex = sampledCentres[i].clone()
+      const vertex = sampledCenters[i].clone()
         .addScaledVector(normal, Math.cos(angle) * sampledRadii[i])
         .addScaledVector(binormal, Math.sin(angle) * sampledRadii[i]);
       positions.push(vertex.x, vertex.y, vertex.z);
     }
   }
   const endTip = positions.length / 3;
-  const finalPoint = sampledCentres.at(-1);
+  const finalPoint = sampledCenters.at(-1);
   positions.push(finalPoint.x, finalPoint.y, finalPoint.z);
 
   for (let j = 0; j < radialSegments; j++) {
@@ -801,22 +801,22 @@ export function shadeHex(hex, factor) {
  * capped-cylinder joints and misaligned protruding strips of the old guard.
  */
 function sweptGuardGeometry(GFX, points, radius, radialSegments = 12) {
-  const centres = points.map((p) => new GFX.Vector3(...p));
+  const centers = points.map((p) => new GFX.Vector3(...p));
   const positions = [], indices = [];
-  for (let i = 0; i < centres.length; i++) {
-    const tangent = centres[Math.min(i + 1, centres.length - 1)].clone()
-      .sub(centres[Math.max(i - 1, 0)]).normalize();
+  for (let i = 0; i < centers.length; i++) {
+    const tangent = centers[Math.min(i + 1, centers.length - 1)].clone()
+      .sub(centers[Math.max(i - 1, 0)]).normalize();
     const normal = new GFX.Vector3(-tangent.y, tangent.x, 0).normalize();
     const binormal = new GFX.Vector3(0, 0, 1);
     for (let j = 0; j < radialSegments; j++) {
       const a = (j / radialSegments) * Math.PI * 2;
-      const point = centres[i].clone()
+      const point = centers[i].clone()
         .addScaledVector(normal, Math.cos(a) * radius)
         .addScaledVector(binormal, Math.sin(a) * radius);
       positions.push(point.x, point.y, point.z);
     }
   }
-  for (let i = 0; i < centres.length - 1; i++) {
+  for (let i = 0; i < centers.length - 1; i++) {
     for (let j = 0; j < radialSegments; j++) {
       const a = i * radialSegments + j;
       const b = i * radialSegments + (j + 1) % radialSegments;
@@ -826,14 +826,14 @@ function sweptGuardGeometry(GFX, points, radius, radialSegments = 12) {
     }
   }
   const start = positions.length / 3;
-  positions.push(centres[0].x, centres[0].y, centres[0].z);
+  positions.push(centers[0].x, centers[0].y, centers[0].z);
   const end = positions.length / 3;
-  positions.push(centres.at(-1).x, centres.at(-1).y, centres.at(-1).z);
+  positions.push(centers.at(-1).x, centers.at(-1).y, centers.at(-1).z);
   for (let j = 0; j < radialSegments; j++) {
     const next = (j + 1) % radialSegments;
     indices.push(start, next, j);
-    const a = (centres.length - 1) * radialSegments + j;
-    const b = (centres.length - 1) * radialSegments + next;
+    const a = (centers.length - 1) * radialSegments + j;
+    const b = (centers.length - 1) * radialSegments + next;
     indices.push(end, a, b);
   }
   const geometry = new GFX.BufferGeometry();
@@ -1083,7 +1083,7 @@ export function peelFlapGeometries(GFX, {
  * curve instead of being sheared. Returns how far the point stands above the root.
  */
 function curveBlade(geometry, { rootY, length, bend, hook = 0, talon = 0 }) {
-  const line = bladeCentreline({ length, bend, hook, talon });
+  const line = bladeCenterline({ length, bend, hook, talon });
   const position = geometry.attributes.position;
   for (let i = 0; i < position.count; i++) {
     const u = clamp01((position.getY(i) - rootY) / length);
@@ -1127,9 +1127,9 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMateria
 
   // The dark end of the banana, in the blade's metal, continues the grip's heading.
   const tipLength = 0.0125;
-  const tipCentre = { x: end.x + heading.x * 0.004, y: end.y + heading.y * 0.004 };
+  const tipCenter = { x: end.x + heading.x * 0.004, y: end.y + heading.y * 0.004 };
   const tip = sphere(GFX, 'banana tip', accentMaterial,
-    [tipCentre.x, tipCentre.y, 0], [tipRadius * 1.02, tipLength, tipRadius * 1.02], [32, 20]);
+    [tipCenter.x, tipCenter.y, 0], [tipRadius * 1.02, tipLength, tipRadius * 1.02], [32, 20]);
   tip.rotation.z = -spec.gripCurve;
   hilt.add(tip);
   const tipDrop = Math.hypot(tipLength * Math.cos(spec.gripCurve), tipRadius * Math.sin(spec.gripCurve));
@@ -1180,7 +1180,7 @@ function createCurvedHandleAssembly(GFX, group, spec, { hiltMetal, accentMateria
     leatherMaterial: null,
     wrapMaterial,
     gripColor,
-    lowestY: Math.min(end.y - tipRadius, tipCentre.y - tipDrop),
+    lowestY: Math.min(end.y - tipRadius, tipCenter.y - tipDrop),
   };
 }
 
@@ -1390,11 +1390,11 @@ function polishedGraniteMaterial(GFX, stoneMaterial) {
  */
 function createGraniteHandleAssembly(GFX, group, spec, {
   gripColor = '#101010',
-  graniteColour = 'grey',
+  graniteColor = 'gray',
   wrapStyle = 'banded',
   threadColor,
 } = {}) {
-  const pommelAsset = createGranitePommel(GFX, spec.marbleRadius, graniteColour);
+  const pommelAsset = createGranitePommel(GFX, spec.marbleRadius, graniteColor);
   const stoneMesh = pommelAsset.mesh;
   const stoneGeometry = stoneMesh.geometry;
   const stonePosition = stoneGeometry.getAttribute('position');
@@ -1542,19 +1542,19 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
   pommelStyle = spec.pommelStyle ?? 'marble',
   wrapStyle = spec.wrapStyle ?? 'banded',
   accentMaterial,
-  graniteColour = 'grey',
+  graniteColor = 'gray',
 } = {}) {
   if (!GFX?.Group || !GFX?.Mesh || !GFX?.MeshPhysicalMaterial) {
     throw new TypeError('createWeaponHandleAssembly requires the Madness Engine GFX module');
   }
-  if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex color');
   if (pommelStyle === 'granite') {
-    return createGraniteHandleAssembly(GFX, group, spec, { gripColor, graniteColour, wrapStyle, threadColor });
+    return createGraniteHandleAssembly(GFX, group, spec, { gripColor, graniteColor, wrapStyle, threadColor });
   }
   if (!METALS[hiltMetal]) throw new Error(`no metal called ${hiltMetal}`);
-  if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex color');
   if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
-    throw new TypeError('threadColor must be a six-digit hex colour');
+    throw new TypeError('threadColor must be a six-digit hex color');
   }
 
   if (spec.gripCurve) {
@@ -1563,7 +1563,7 @@ export function createWeaponHandleAssembly(GFX, group, spec, {
 
   const hiltMaterial = metalMaterial(GFX, 'hilt metal', hiltMetal);
   const pommelAsset = createWeaponPommel(GFX, spec, {
-    style: pommelStyle, metal: hiltMetal, material: hiltMaterial, graniteColour,
+    style: pommelStyle, metal: hiltMetal, material: hiltMaterial, graniteColor,
   });
   const marble = pommelAsset.kind === 'marble' ? pommelAsset : null;
   group.add(pommelAsset.group);
@@ -1778,7 +1778,7 @@ export function buildWeapon(GFX, spec, {
   hiltMetal = 'steel',
   gripColor = '#633b2c',
   threadColor,
-  graniteColour = 'grey',
+  graniteColor = 'gray',
   bladeMist: withBladeMist = false,
   bladeMistVisible = true,
 } = {}) {
@@ -1796,9 +1796,9 @@ export function buildWeapon(GFX, spec, {
     bladeMetal = 'granite';
     hiltMetal = 'granite';
   }
-  if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex colour');
+  if (!/^#[0-9a-f]{6}$/i.test(gripColor)) throw new TypeError('gripColor must be a six-digit hex color');
   if (threadColor !== undefined && !/^#[0-9a-f]{6}$/i.test(threadColor)) {
-    throw new TypeError('threadColor must be a six-digit hex colour');
+    throw new TypeError('threadColor must be a six-digit hex color');
   }
 
   const group = new GFX.Group();
@@ -1811,7 +1811,7 @@ export function buildWeapon(GFX, spec, {
     bezelBounds, bossSeat, bossSeatBounds, leatherMaterial, wrapMaterial, pommelAsset,
     accentMaterial, lowestY = 0,
   } = createWeaponHandleAssembly(GFX, group, spec, {
-    hiltMetal, gripColor, threadColor, graniteColour,
+    hiltMetal, gripColor, threadColor, graniteColor,
     // The banana's petal tops and tips are the blade's metal, so they share its material.
     accentMaterial: bladeMaterial,
     pommelStyle: spec.pommelStyle ?? 'marble',
@@ -1983,7 +1983,7 @@ export function buildWeapon(GFX, spec, {
       marbleDiameter: marble ? marble.radius * 2 : null,
       pommelDiameter: pommelAsset.radius * 2,
       pommelStyle: pommelAsset.kind,
-      graniteColour: pommelAsset.kind === 'granite' ? pommelAsset.colour : null,
+      graniteColor: pommelAsset.kind === 'granite' ? pommelAsset.color : null,
       unit: 'm',
     }),
     info: {
@@ -1994,19 +1994,19 @@ export function buildWeapon(GFX, spec, {
       'Grip length': `${(spec.gripLength * 1000).toFixed(0)} mm`,
       'Guard span': `${(spec.guardSpan * 1000).toFixed(0)} mm`,
       'Fuller length': `${(spec.bladeLength * 750).toFixed(0)} mm (75%)`,
-      'Scale': '1 world unit = 1 metre',
+      'Scale': '1 world unit = 1 meter',
       'Pommel': pommelAsset.kind === 'banana-tip' ? 'Chrome banana tip on the grip'
         : pommelAsset.kind === 'marble' ? 'Glass marble with 3D spark'
         : pommelAsset.kind === 'metal-ball' ? 'Solid metal ball'
           : pommelAsset.kind === 'metal-egg' ? 'Engine metal egg'
           : pommelAsset.kind === 'magic-egg' ? 'Glass egg with white/yellow animated mist'
-            : pommelAsset.kind === 'granite' ? `Granite rock (${pommelAsset.colour})`
+            : pommelAsset.kind === 'granite' ? `Granite rock (${pommelAsset.color})`
             : 'Krystal glass orb with animated mist',
     },
     get bladeMetal() { return bladeMetal; },
     get hiltMetal() { return hiltMetal; },
     get gripColor() { return gripColor; },
-    get graniteColour() { return pommelAsset.kind === 'granite' ? pommelAsset.colour : null; },
+    get graniteColor() { return pommelAsset.kind === 'granite' ? pommelAsset.color : null; },
     get threadColor() { return `#${wrapMaterial.color.getHexString()}`; },
     setBladeMetal(name) {
       if (graniteWeapon) throw new Error('the granite blade is stone, not metal');
@@ -2027,9 +2027,9 @@ export function buildWeapon(GFX, spec, {
       hiltMetal = name;
       return api;
     },
-    setGraniteColour(name) {
+    setGraniteColor(name) {
       if (pommelAsset.kind !== 'granite') throw new Error('this weapon does not have a granite pommel');
-      pommelAsset.setColour(name);
+      pommelAsset.setColor(name);
       if (graniteWeapon) {
         bladeMaterial.dispose?.();
         bladeMaterial = polishedGraniteMaterial(GFX, pommelAsset.material);
@@ -2041,7 +2041,7 @@ export function buildWeapon(GFX, spec, {
       return api;
     },
     setGripColor(color) {
-      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
+      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex color');
       // A metal grip has no leather to dye: the color is kept but not drawn.
       leatherMaterial?.color.set(color);
       if (!threadColorExplicit && spec.wrapStyle !== 'diamond') {
@@ -2051,7 +2051,7 @@ export function buildWeapon(GFX, spec, {
       return api;
     },
     setThreadColor(color) {
-      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('threadColor must be a six-digit hex colour');
+      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('threadColor must be a six-digit hex color');
       wrapMaterial.color.set(color);
       threadColorExplicit = true;
       return api;

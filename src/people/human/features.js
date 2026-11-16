@@ -28,7 +28,7 @@ import { SUNGLASSES } from './glasses.js';
 
 const choice = (key, label, options, { ready = false, value = options[0], shape = null } = {}) => ({ key, label, type: 'choice', options, default: value, ready: ready || !!shape, shape });
 const slider = (key, label, { ready = false, min = -1, max = 1, value = 0, shape = null } = {}) => ({ key, label, type: 'range', min, max, default: value, ready: ready || !!shape, shape });
-const colour = (key, label, value, { ready = false } = {}) => ({ key, label, type: 'color', default: value, ready });
+const color = (key, label, value, { ready = false } = {}) => ({ key, label, type: 'color', default: value, ready });
 /** A slider's recipes: `up` for +1, `down` for −1; `beyond`, for each step past +1 (where its range goes further). */
 const updown = (up, down, beyond = null) => ({ up, down, ...(beyond ? { beyond } : {}) });
 /** The `-decr` and `-incr` targets of one modifier, as a slider's recipes, scaled by `k`. */
@@ -124,7 +124,7 @@ export const CUSTOMIZATION = Object.freeze([
     ) }),
   ] },
   { group: 'Skin', slots: [
-    colour('skin', 'Tone', '#b98a70', { ready: true }),
+    color('skin', 'Tone', '#b98a70', { ready: true }),
     slider('age', 'Age', { min: 0, max: 1 }),
     slider('freckles', 'Freckles', { min: 0, max: 1 }),
     choice('scars', 'Scars', ['none', 'cheek', 'brow', 'lip', 'eye']),
@@ -169,7 +169,7 @@ export const CUSTOMIZATION = Object.freeze([
       { 'eyes/{s}-eye-push1-in': 0.8, 'eyes/{s}-eye-push2-in': 0.8 },
       { 'eyes/{s}-eye-push1-out': 0.8, 'eyes/{s}-eye-push2-out': 0.8 },
     ) }),
-    colour('iris', 'Colour', '#5a4632', { ready: true }),
+    color('iris', 'Color', '#5a4632', { ready: true }),
   ] },
   { group: 'Brows', slots: [
     choice('brows', 'Brows', ['none', ...Object.keys(BROWS)], { ready: true, value: 'natural' }),
@@ -205,7 +205,7 @@ export const CUSTOMIZATION = Object.freeze([
     slider('mouthWidth', 'Width', { shape: range('mouth/mouth-scale-horiz', 1) }),
     slider('lipUpper', 'Upper lip', { shape: range('mouth/mouth-upperlip-volume', 1) }),
     slider('lipLower', 'Lower lip', { shape: range('mouth/mouth-lowerlip-volume', 1) }),
-    colour('lipColour', 'Lip colour', '#a86a5e'),
+    color('lipColor', 'Lip color', '#a86a5e'),
   ] },
   { group: 'Ears', slots: [
     choice('earShape', 'Shape', ['round', 'attached', 'pointed', 'elven'], { shape: {
@@ -219,11 +219,11 @@ export const CUSTOMIZATION = Object.freeze([
   ] },
   { group: 'Hair', slots: [
     choice('hair', 'Style', ['none', ...Object.keys(HAIRSTYLES)], { ready: true, value: 'sidePart' }),
-    colour('hairColour', 'Colour', '#3b2a1f', { ready: true }),
+    color('hairColor', 'Color', '#3b2a1f', { ready: true }),
   ] },
   { group: 'Facial hair', figure: 'male', slots: [
     choice('beard', 'Beard', ['none', ...Object.keys(BEARDS)], { ready: true, value: 'none' }),
-    choice('moustache', 'Moustache', ['with beard', 'none', 'chevron', 'handlebar', 'pencil', 'walrus']),
+    choice('mustache', 'Mustache', ['with beard', 'none', 'chevron', 'handlebar', 'pencil', 'walrus']),
     slider('stubble', 'Stubble', { min: 0, max: 1, value: 0.5 }),
   ] },
   { group: 'Accessories', slots: [
@@ -286,7 +286,7 @@ export function checkFeatures(change, sex = null) {
     if (sex && FIGURE_OF[key] && FIGURE_OF[key] !== sex && value !== s.default) throw new Error(`human: ${key} is for the ${FIGURE_OF[key]} figure only`);
     if (s.type === 'choice' && !s.options.includes(value)) throw new Error(`human: ${key} is one of ${s.options.join(', ')}, not ${value}`);
     if (s.type === 'range' && !(typeof value === 'number' && value >= s.min && value <= s.max)) throw new Error(`human: ${key} runs ${s.min} to ${s.max}, not ${value}`);
-    if (s.type === 'color' && !/^#[0-9a-f]{6}$/i.test(value)) throw new Error(`human: ${key} is a #rrggbb colour, not ${value}`);
+    if (s.type === 'color' && !/^#[0-9a-f]{6}$/i.test(value)) throw new Error(`human: ${key} is a #rrggbb color, not ${value}`);
   }
   return change;
 }

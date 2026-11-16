@@ -241,7 +241,7 @@ function catalog(kind, name, places, about) {
 
 const ABOUT = {
   characters: 'The people, creatures and monsters. Most are sculpted definitions (the default export) for `createModel`; `humanoid`, `quadruped`, `person` and `wardrobe` are the bodies and clothes they are built from; `slime`, `egg` and `boulder` are built from their own geometry.',
-  props: 'What lies about to be picked up: sculpted, still, for `createStatic`, and the colourable roleplaying dice (`DICE`) in `props/dice`.',
+  props: 'What lies about to be picked up: sculpted, still, for `createStatic`, and the colorable roleplaying dice (`DICE`) in `props/dice`.',
   heroes: 'The balls the games are played as, each with what it is made of.',
   scenery: 'The world round the ball: the town\'s street furniture and vehicles (`bakeData` in models/legacy-bake), the dungeon\'s walls, torches and exit, and the light show that lights a venue (`lightshow`: createLightshow(GFX, venue)).',
   textures: 'Painted on canvases at startup. `painters` is the toolkit and the floors and walls; `venue` the rock clubs\' floors, walls, belts, grilles, tape, shutters, panels and glows; `town/` the town\'s; `lava` a material; `rooms/` what shiny things reflect (each `paintRoom`) and `skies/` what is round the scene (each `paintSky`).',
@@ -445,7 +445,7 @@ function contents(places, moods) {
       const which = ranked.map((v) => `\`${posix.basename(v.path, '.js')}\` (${v.games.map(title).join(', ')})`).join('<br>');
       lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${cell(blurb([...versions.values()].find((v) => v.path === place).files[0]))} |`);
     }
-    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be coloured independently. |');
+    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be colored independently. |');
     if (kind === 'props') lines.push('| `props/bowling-ball` | `createBowlingBall` (engine) | A high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs (marble, spiral, flame, split and blotch). Colors and designs are changeable at runtime. |');
     lines.push('');
   }

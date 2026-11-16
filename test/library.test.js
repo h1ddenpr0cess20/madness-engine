@@ -74,7 +74,7 @@ const bakes = (name, def) => {
   }
 };
 
-test('the catalogues list every sculpted character and prop by name, and they bake', async () => {
+test('the catalogs list every sculpted character and prop by name, and they bake', async () => {
   const { CHARACTERS } = await import('../src/characters/index.js');
   const { PROPS } = await import('../src/props/index.js');
   assert.ok(Object.keys(CHARACTERS).length > 150);

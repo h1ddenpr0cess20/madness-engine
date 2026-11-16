@@ -29,7 +29,7 @@ test('a spruce is a trunk and whorls of needle cards', () => {
   assert.ok(p.needleCard.count / 3 > 200 && p.bark.count > 0);
 });
 
-test('the foliage atlas is leaves on a clear ground, coloured right to its edge', () => {
+test('the foliage atlas is leaves on a clear ground, colored right to its edge', () => {
   for (const kind of ['broad', 'needle']) {
     const a = paintFoliage({ kind, size: 256 });
     const c = coverOf(a);

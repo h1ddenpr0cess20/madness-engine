@@ -21,8 +21,8 @@ export const cached = (key, make) => {
 const BILL = {
   bands: ['IRON GOSPEL', 'BLACK COUNTRY', 'NIGHT MARE', 'DIRGE', 'SLAUGHTER BAY', 'CORPSE GRINDER', 'WALL OF DEATH', 'FROSTBITE', 'GRAVEYARD', 'LAST STAND', 'HELL YEAH', 'LOUDER'],
   headline: 'LIVE · LOUD',
-  colours: ['#c8302a', '#2a4a8a', '#e8a020'],
-  billColours: ['#1a1a20', '#3a5a3a', '#6a2a6a'],
+  colors: ['#c8302a', '#2a4a8a', '#e8a020'],
+  billColors: ['#1a1a20', '#3a5a3a', '#6a2a6a'],
   billInk: '#f0d070',
   badge: 'SOLD OUT',
   shutter: ['CLOSED', 'SET'],
@@ -92,8 +92,8 @@ function brick(GFX, { posters = false } = {}) {
       ctx.fillRect(w / 2 - 13, -h / 2 - 3, 18, 8);
       ctx.restore();
     };
-    flyer(10, 18, 104, 138, pick(BILL.colours), '#ffffff', BILL.headline ?? pick(BILL.bands), 'sun', -0.05);
-    flyer(134, 96, 112, 142, pick(BILL.billColours), BILL.billInk, pick(BILL.bands.filter((b) => b !== BILL.headline)), 'bolt', 0.04);
+    flyer(10, 18, 104, 138, pick(BILL.colors), '#ffffff', BILL.headline ?? pick(BILL.bands), 'sun', -0.05);
+    flyer(134, 96, 112, 142, pick(BILL.billColors), BILL.billInk, pick(BILL.bands.filter((b) => b !== BILL.headline)), 'bolt', 0.04);
     flyer(150, 8, 80, 78, '#f5f0e6', '#d9232f', BILL.badge, 'rings', 0.06);
   };
   return {

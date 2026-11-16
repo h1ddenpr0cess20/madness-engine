@@ -117,27 +117,27 @@ function tooth(part, { kind, w, d, height }, c, T, N, up, edgeY, weights, shade,
 
 /** The gum of one jaw along the whole arch: a band over the teeth's necks from the lip side to the tongue side, arching over each tooth and down between them. */
 function gum(part, arch, teeth, up, lineY, weights, shade, [STEPS, ACROSS]) {
-  const centres = [];
+  const centers = [];
   let at = 0;
-  for (const t of teeth) { centres.push([at + t.w / 2, t]); at += t.w; }
+  for (const t of teeth) { centers.push([at + t.w / 2, t]); at += t.w; }
   // The teeth's depth and height, eased from one tooth's middle to the next.
   const eased = (d, key) => {
-    if (d <= centres[0][0]) return centres[0][1][key];
-    for (let i = 1; i < centres.length; i++) {
-      if (d <= centres[i][0]) {
-        const f = smooth(centres[i - 1][0], centres[i][0], d);
-        return centres[i - 1][1][key] * (1 - f) + centres[i][1][key] * f;
+    if (d <= centers[0][0]) return centers[0][1][key];
+    for (let i = 1; i < centers.length; i++) {
+      if (d <= centers[i][0]) {
+        const f = smooth(centers[i - 1][0], centers[i][0], d);
+        return centers[i - 1][1][key] * (1 - f) + centers[i][1][key] * f;
       }
     }
-    return centres[centres.length - 1][1][key];
+    return centers[centers.length - 1][1][key];
   };
   part.grid(STEPS, ACROSS, (i, j) => {
     const sd = -at + (2 * at * i) / STEPS;
     const m = sd < 0 ? -1 : 1, d = Math.abs(sd);
     const depth = eased(d, 'd'), height = eased(d, 'height');
     const { p, N } = arch(d, m, depth);
-    let near = centres[0];
-    for (const c of centres) if (Math.abs(c[0] - d) < Math.abs(near[0] - d)) near = c;
+    let near = centers[0];
+    for (const c of centers) if (Math.abs(c[0] - d) < Math.abs(near[0] - d)) near = c;
     // 0 over a tooth's middle, 1 where two meet: there the gum comes down between them.
     const off = Math.min(1, Math.abs(near[0] - d) / (near[1].w / 2));
     const margin = lineY - up * height * (0.8 - (up > 0 ? 0.06 : 0.12) * off ** 2.5);

@@ -8,14 +8,14 @@ The granite kitchen asset is built from three reusable pieces: a counter, a sepa
 
 Creates a cabinet run beneath a polished granite top.
 
-The granite option uses the exact API key `'grey'` (not `'gray'`).
+The granite option uses the exact API key `'gray'` (not `'gray'`).
 
 | Option | Default | Notes |
 |---|---|---|
 | `length` | `2.8` | Run length in meters; supported range is 1.2–4.8 m. |
 | `depth` | `0.72` | Counter depth in meters; supported range is 0.55–1.1 m. |
 | `height` | `0.92` | Counter height in meters; supported range is 0.7–1.2 m. |
-| `granite` | `'grey'` | Key in the granite library. |
+| `granite` | `'gray'` | Key in the granite library. |
 | `wood` | `'walnut'` | Key in `WOOD_SPECIES`. |
 | `hardwareMetal` | `'brass'` | Finish for cabinet pulls and hinges. |
 | `environment` | `null` | Optional reflection environment for metal hardware. |

@@ -103,7 +103,7 @@ const slab = (s, a, b, r, o) => s.box([0, 1, 2].map((i) => (a[i] + b[i]) / 2), [
  * disc with its hand holes, a big hub, a ring of nuts). From behind: the
  * tire's other sidewall and the back of the rim, its barrel and hub.
  */
-function tyre(s, c, r, w, side, { steel = false } = {}) {
+function tire(s, c, r, w, side, { steel = false } = {}) {
   const [cx, cy, cz] = c, face = cx + side * w / 2, hw = w / 2;
   const turn = { rot: [0, 0, Math.PI / 2] };
   const bead = r * (steel ? 0.66 : 0.68);
@@ -184,14 +184,14 @@ function tyre(s, c, r, w, side, { steel = false } = {}) {
 /** The wheels where `wheels` says, in their own part. */
 function fitWheels(s, wheels, steel) {
   s.part('wheels', () => {
-    for (const { at, r, width, side: face } of wheels) tyre(s, at, r, width, face, { steel });
+    for (const { at, r, width, side: face } of wheels) tire(s, at, r, width, face, { steel });
   });
 }
 
 /** A wheel by itself, its hub at the origin, its face to +x: for `mountWheels`. */
 const wheelDef = (name, r, width, steel) => ({
   name, r, width, bones: [['root', null, [0, 0, 0]]], cell: 0.0068, cells: { 'body-rim': 0.0055 }, refine: 0.3, materials: MATERIALS,
-  sculpt: (s) => tyre(s, [0, 0, 0], r, width, 1, { steel }),
+  sculpt: (s) => tire(s, [0, 0, 0], r, width, 1, { steel }),
 });
 export const wheel = wheelDef('wheel', 0.17, 0.085, false);
 export const truckwheel = wheelDef('truckwheel', 0.21, 0.1, true);

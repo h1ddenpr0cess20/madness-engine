@@ -109,4 +109,3 @@ npm run verify -- --games <path-to-games>
 
 The path should point to the directory containing the game projects.
 
-A snapshot of the British spellings still left in the code, with the file and line of each, is in [docs/development/british-spellings.md](docs/development/british-spellings.md). Convert them deliberately: identifiers and string values can be part of the API.

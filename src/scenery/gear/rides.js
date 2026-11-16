@@ -10,23 +10,23 @@ import { glowMat, heading, hull, mat, shadow } from './common.js';
  */
 
 /** Wheels under a deck: a pair of axles, `r` across, `inset` in from the ends. */
-function wheelsUnder(GFX, group, { L, S, top, r = 0.2, colour = '#16161a', hub = '#c8ccd4', inset = 0.22 }) {
-  const tyre = mat(GFX, colour, { roughness: 0.85 });
+function wheelsUnder(GFX, group, { L, S, top, r = 0.2, color = '#16161a', hub = '#c8ccd4', inset = 0.22 }) {
+  const tire = mat(GFX, color, { roughness: 0.85 });
   const cap = mat(GFX, hub, { metalness: 1, roughness: 0.3 });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const wheel = new GFX.Mesh(new GFX.CylinderGeometry(r, r, 0.14, 16), tyre);
+    const wheel = new GFX.Mesh(new GFX.CylinderGeometry(r, r, 0.14, 16), tire);
     wheel.rotation.x = Math.PI / 2;
     wheel.position.set(sx * (L / 2 - inset - r), -top - r * 0.5, sz * (S / 2 - 0.02));
-    const centre = new GFX.Mesh(new GFX.CylinderGeometry(r * 0.5, r * 0.5, 0.15, 10), cap);
-    centre.rotation.x = Math.PI / 2;
-    centre.position.copy(wheel.position);
-    group.add(shadow(wheel), centre);
+    const center = new GFX.Mesh(new GFX.CylinderGeometry(r * 0.5, r * 0.5, 0.15, 10), cap);
+    center.rotation.x = Math.PI / 2;
+    center.position.copy(wheel.position);
+    group.add(shadow(wheel), center);
   }
 }
 
 /** A row of lit windows down a flank, `n` of them, `y` up from the deck top. */
-function windows(GFX, holder, { L, S, top, n, y = -0.18, h = 0.14, colour = '#ffd890' }) {
-  const lit = glowMat(GFX, colour);
+function windows(GFX, holder, { L, S, top, n, y = -0.18, h = 0.14, color = '#ffd890' }) {
+  const lit = glowMat(GFX, color);
   for (const e of [-1, 1]) {
     for (let i = 0; i < n; i++) {
       const pane = new GFX.Mesh(new GFX.BoxGeometry((L * 0.8) / n - 0.08, h, 0.02), lit);
@@ -124,7 +124,7 @@ function hearse(GFX, { w, d, thickness, lift }) {
     lamp.position.set(sx * (L / 2 - 0.1), top + 0.58, sz * (S / 2 - 0.1));
     holder.add(post, lamp);
   }
-  wheelsUnder(GFX, holder, { L, S, top: top + 0.14, r: 0.3, colour: '#2a1a10', hub: '#d8b050', inset: 0.1 });
+  wheelsUnder(GFX, holder, { L, S, top: top + 0.14, r: 0.3, color: '#2a1a10', hub: '#d8b050', inset: 0.1 });
   return { group, live(time) { holder.rotation.x = Math.sin(time * 1.2) * 0.015; } };
 }
 
@@ -143,7 +143,7 @@ function subway(GFX, { w, d, thickness, lift }) {
   const stripe = new GFX.Mesh(new GFX.BoxGeometry(L * 1.062, 0.07, S * 0.99), mat(GFX, '#e8202a', { roughness: 0.5 }));
   stripe.position.y = top - 0.5;
   holder.add(stripe);
-  windows(GFX, holder, { L, S: S * 0.98, top, n: 5, y: -0.24, h: 0.2, colour: '#e8f0ff' });
+  windows(GFX, holder, { L, S: S * 0.98, top, n: 5, y: -0.24, h: 0.2, color: '#e8f0ff' });
   const lamp = new GFX.Mesh(new GFX.SphereGeometry(0.09, 8, 6), glowMat(GFX, '#fff4d0'));
   lamp.position.set(L * 0.54, top - 0.3, 0);
   holder.add(lamp);
@@ -257,7 +257,7 @@ function flatcar(GFX, { w, d, thickness, lift }) {
     b.position.set(e * (L / 2 + 0.1), 0, z * S);
     holder.add(b);
   }
-  wheelsUnder(GFX, holder, { L, S, top: top + 0.05, r: 0.17, colour: '#26282e', hub: '#8a8e98', inset: 0.2 });
+  wheelsUnder(GFX, holder, { L, S, top: top + 0.05, r: 0.17, color: '#26282e', hub: '#8a8e98', inset: 0.2 });
   return { group, live(time) { holder.position.y = Math.sin(time * 9) * 0.004; } };
 }
 
@@ -306,7 +306,7 @@ function van(GFX, { w, d, thickness, lift }) {
     s.rotation.z = (i % 3 - 1) * 0.15;
     holder.add(s);
   }
-  windows(GFX, holder, { L, S: S * 0.98, top, n: 3, y: -0.1, h: 0.12, colour: '#202838' });
+  windows(GFX, holder, { L, S: S * 0.98, top, n: 3, y: -0.1, h: 0.12, color: '#202838' });
   // The rack's rail round the edge, and a strapped-down amp cabinet.
   const rail = mat(GFX, '#8a8e98', { metalness: 1, roughness: 0.35 });
   for (const e of [-1, 1]) {
@@ -342,7 +342,7 @@ function trailer(GFX, { w, d, thickness, lift }) {
   const bar = new GFX.Mesh(new GFX.BoxGeometry(0.9, 0.06, 0.06), mat(GFX, '#3a3a40', { metalness: 0.8 }));
   bar.position.set(L / 2 + 0.4, -0.05, 0);
   holder.add(bar);
-  wheelsUnder(GFX, holder, { L, S, top: top + 0.04, r: 0.3, colour: '#2a2218', hub: '#8a8e98', inset: 0.05 });
+  wheelsUnder(GFX, holder, { L, S, top: top + 0.04, r: 0.3, color: '#2a2218', hub: '#8a8e98', inset: 0.05 });
   return { group, live(time) { holder.rotation.z = Math.sin(time * 2.1) * 0.015; holder.position.y = Math.sin(time * 5) * 0.01; } };
 }
 

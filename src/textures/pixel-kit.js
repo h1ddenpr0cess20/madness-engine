@@ -175,10 +175,10 @@ const lazy = new WeakMap();
 export function onCanvas(GFX, pixels) {
   const [color, cctx] = canvas(pixels.size);
   cctx.putImageData(new ImageData(pixels.color, pixels.size, pixels.size), 0, 0);
-  const grey = new Uint8ClampedArray(pixels.size * pixels.size * 4);
-  for (let i = 0; i < pixels.height.length; i++) { grey[i * 4] = grey[i * 4 + 1] = grey[i * 4 + 2] = pixels.height[i]; grey[i * 4 + 3] = 255; }
+  const gray = new Uint8ClampedArray(pixels.size * pixels.size * 4);
+  for (let i = 0; i < pixels.height.length; i++) { gray[i * 4] = gray[i * 4 + 1] = gray[i * 4 + 2] = pixels.height[i]; gray[i * 4 + 3] = 255; }
   const [height, hctx] = canvas(pixels.size);
-  hctx.putImageData(new ImageData(grey, pixels.size, pixels.size), 0, 0);
+  hctx.putImageData(new ImageData(gray, pixels.size, pixels.size), 0, 0);
   return { map: texture(GFX, color, { wrap: true }), bump: texture(GFX, height, { srgb: false, wrap: true }) };
 }
 

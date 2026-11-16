@@ -269,7 +269,7 @@ export function suitFront(s, { shirt = '#f2f0ec', tie = '#101014', bow = false, 
  * how far (above 1.25 a handlebar, its ends curled up), `pencil` for a thin
  * line, `droop` for one that hangs down at the ends (a walrus).
  */
-export function moustache(s, { color = '#2a1a10', wide = 1, pencil = false, droop = 0 } = {}) {
+export function mustache(s, { color = '#2a1a10', wide = 1, pencil = false, droop = 0 } = {}) {
   const W = 0.032 * Math.min(wide, 1.25) + (pencil ? -0.006 : 0), H = pencil ? 0.0022 : 0.0072;
   const mid = (x) => 0.6245 - x * x * (6 + droop * 18);
   const half = (x) => H * Math.max(0, 1 - (Math.abs(x) / W) ** 2) ** 0.55 + 0.0012;

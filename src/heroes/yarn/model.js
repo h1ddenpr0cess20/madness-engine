@@ -50,8 +50,8 @@ export function plyTexels(width = 512, height = 256) {
       const c = 2 * (phase - Math.floor(phase)) - 1;
       const bulge = Math.sqrt(Math.max(1 - c * c, 0));
       // Eleven fibers to a ply, and six runs of them to a tile along the strand.
-      const fibre = hash(Math.floor(phase * 11), Math.floor(u * 6));
-      const shade = (0.66 + 0.34 * bulge) * (0.82 + 0.3 * fibre);
+      const fiber = hash(Math.floor(phase * 11), Math.floor(u * 6));
+      const shade = (0.66 + 0.34 * bulge) * (0.82 + 0.3 * fiber);
       const i = (y * width + x) * 4;
       out[i] = out[i + 1] = out[i + 2] = Math.round(clamp(shade, 0, 1) * 255);
       out[i + 3] = 255;
@@ -70,8 +70,8 @@ export function plyHeights(width = 512, height = 256) {
       const phase = v * PLY + u * TILE;
       const c = 2 * (phase - Math.floor(phase)) - 1;
       const bulge = Math.sqrt(Math.max(1 - c * c, 0));
-      const fibre = hash(Math.floor(phase * 11), Math.floor(u * 6));
-      const h = 0.85 * bulge + 0.15 * fibre;
+      const fiber = hash(Math.floor(phase * 11), Math.floor(u * 6));
+      const h = 0.85 * bulge + 0.15 * fiber;
       const i = (y * width + x) * 4;
       out[i] = out[i + 1] = out[i + 2] = Math.round(clamp(h, 0, 1) * 255);
       out[i + 3] = 255;

@@ -1,4 +1,4 @@
-import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
+import { buildWeapon, WEAPON_WORLD_UNITS_PER_METER } from './common.js';
 import { HANDS } from './categories.js';
 
 export const BROADSWORD_DIMENSIONS = Object.freeze({
@@ -19,7 +19,7 @@ export const BROADSWORD_SPEC = Object.freeze({
   ...BROADSWORD_DIMENSIONS,
 });
 
-export const WORLD_UNITS_PER_METRE = WEAPON_WORLD_UNITS_PER_METRE;
+export const WORLD_UNITS_PER_METER = WEAPON_WORLD_UNITS_PER_METER;
 
 /**
  * A one-handed, double-edged medieval broadsword with a broad lenticular blade,

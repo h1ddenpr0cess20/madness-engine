@@ -10,7 +10,7 @@ const HEROES = {
   'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'createMoltenSlimeOrb', 'createLavaSlimeOrb', 'METALS'],
   'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'createWoodEgg', 'createChocolateEgg', 'createEggBlot', 'EGG_APPEARANCES', 'EGG_VARIETIES', 'METALS', 'WOOD_SPECIES', 'WOOD_FINISHES', 'CHOCOLATES', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
-  'yarn/ball': ['createBall', 'TILE_METRES'],
+  'yarn/ball': ['createBall', 'TILE_METERS'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
   mace: ['createMace', 'createMetalMace', 'createPlayer', 'createMetalPlayer', 'RADIUS'],
   morningstar: ['createMorningStar', 'createMetalMorningStar', 'METALS'],
@@ -73,7 +73,7 @@ test('metal Morningstar keeps the original shape and snapping with the coin meta
   assert.throws(() => metal.setMetal('unobtainium'), /no metal/);
 });
 
-test('the metal player shares the original mace scale, roll transform, and damage behaviour', async () => {
+test('the metal player shares the original mace scale, roll transform, and damage behavior', async () => {
   const { createMace, createMetalMace, RADIUS } = await import('../src/heroes/mace.js');
   const original = createMace(GFX, { radius: RADIUS });
   const metal = createMetalMace(GFX, { radius: RADIUS, metal: 'silver' });
@@ -202,7 +202,7 @@ test('Slimey deformation keeps the duplicated longitude seam position and normal
 });
 
 
-test('metal and clear-glass Egg keep Marc geometry and behaviour with optional white-yellow mist', async () => {
+test('metal and clear-glass Egg keep Marc geometry and behavior with optional white-yellow mist', async () => {
   const { createEgg, createMetalEgg, createGlassEgg, METALS, ROLL_REACH } = await import('../src/heroes/debater-egg/index.js');
   const original = createEgg({ GFX });
   const metal = createMetalEgg({ GFX, metal: 'silver' });
@@ -236,12 +236,12 @@ test('metal and clear-glass Egg keep Marc geometry and behaviour with optional w
   assert.equal(misty.mist.visible, true);
   assert.equal(misty.mist.material.uniforms.uDuo.value, 1);
   const white = misty.mist.material.uniforms.uDuoB.value;
-  const centre = misty.mist.material.uniforms.uDuoC.value;
+  const center = misty.mist.material.uniforms.uDuoC.value;
   const uniforms = misty.mist.material.uniforms;
   assert.ok(white.x > 0.95 && white.y > 0.95 && white.z > 0.9);
-  assert.ok(Math.abs(centre.x - white.x) < 1e-7 && Math.abs(centre.y - white.y) < 1e-7 && Math.abs(centre.z - white.z) < 1e-7,
-    'the mist colour is white away from its radial centre, with no yellow side band');
-  assert.equal(uniforms.uCore.value, 0.9, 'the yellow accent comes from the radial centre glow');
+  assert.ok(Math.abs(center.x - white.x) < 1e-7 && Math.abs(center.y - white.y) < 1e-7 && Math.abs(center.z - white.z) < 1e-7,
+    'the mist color is white away from its radial center, with no yellow side band');
+  assert.equal(uniforms.uCore.value, 0.9, 'the yellow accent comes from the radial center glow');
   assert.ok(uniforms.uHue.value > 0.3 && uniforms.uHue.value < 0.5, 'the radial core hue is warm yellow');
   assert.equal(misty.mist.renderOrder, 1);
   const inner = misty.mist.geometry.attributes.position;

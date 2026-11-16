@@ -1,5 +1,5 @@
 import { cloth, hold, person, shell, strap } from './person.js';
-import { moustache, sunHat } from './wardrobe.js';
+import { mustache, sunHat } from './wardrobe.js';
 
 /**
  * The Yodeler: from the hut at the top of the lift, in leather lederhosen
@@ -40,7 +40,7 @@ export default person({
     },
   },
   extras(s) {
-    moustache(s, { color: '#a8804a', wide: 1.5 });
+    mustache(s, { color: '#a8804a', wide: 1.5 });
     // The lederhosen's braces over the check shirt, the carved bar across between them.
     for (const m of [1, -1]) {
       strap(s, [[m * 0.05, 0.345, 0.09], [m * 0.052, 0.45, 0.085], [m * 0.055, 0.53, 0.05], [m * 0.055, 0.554, 0.0], [m * 0.045, 0.53, -0.055], [m * 0.02, 0.45, -0.075], [m * 0.01, 0.35, -0.08]], { width: 0.016, thick: 0.004, color: LEATHER, over: ['top', 'bottoms'], keep: TRUNK });

@@ -210,7 +210,7 @@ export class Plan {
   }
 
   /** The middle of cell (i, j), in tiles. */
-  cellCentre(i, j) {
+  cellCenter(i, j) {
     const [x, z] = this.cellOrigin(i, j);
     return [x + this.corridor / 2, z + this.corridor / 2];
   }

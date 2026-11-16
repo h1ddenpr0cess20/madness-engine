@@ -1,4 +1,4 @@
-export default `// MeshBasicMaterial and LineBasicMaterial: the colour, times the map and vertex colours.
+export default `// MeshBasicMaterial and LineBasicMaterial: the color, times the map and vertex colors.
 
 #include <common>
 #include <output>

@@ -143,7 +143,7 @@ export function createFreighter(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x3
   add('bumper', bumperGeo, M.trim);
 
   // The light bar: a wide strip across the middle and segments at the corners turning up the pillars.
-  add('led_bar_centre', box(1.82, 0.13, 0.10), M.led, [0, 1.86, -6.18]);
+  add('led_bar_center', box(1.82, 0.13, 0.10), M.led, [0, 1.86, -6.18]);
   [-1, 1].forEach((s, i) => {
     add(`led_bar_wing_${i ? 'r' : 'l'}`, box(0.30, 0.13, 0.09), M.led, [s * 1.04, 1.90, -6.10], [0, s * 0.40, s * 0.18]);
     add(`headlamp_${i ? 'r' : 'l'}`, box(0.36, 0.10, 0.08), M.led, [s * 0.84, 1.64, -6.14]);

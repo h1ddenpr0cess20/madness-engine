@@ -45,14 +45,14 @@ function desk(GFX, { w = 3, d = 1, rise = 0.82 }) {
       meters.push({ led, c, k });
     }
   }
-  const colours = [[0.2, 1, 0.45], [0.2, 1, 0.45], [1, 0.8, 0.2], [1, 0.2, 0.2]];
+  const colors = [[0.2, 1, 0.45], [0.2, 1, 0.45], [1, 0.8, 0.2], [1, 0.2, 0.2]];
   return {
     group,
     update(time, beat) {
       for (const m of meters) {
         const level = 0.5 + 0.5 * Math.sin(time * (2.3 + m.c * 0.37) + m.c) * Math.sin(beat * Math.PI + m.c * 1.3);
         const on = level * 3.6 > m.k;
-        const [r, g, b] = colours[m.k];
+        const [r, g, b] = colors[m.k];
         m.led.material.color.setRGB(on ? r : r * 0.08, on ? g : g * 0.08, on ? b : b * 0.08);
       }
     },
@@ -310,9 +310,9 @@ function racking(GFX, { w = 1, d = 1, rise = 1.3 }) {
 /** A camping tent: a dome of nylon in a color of its own, a darker door at the front (+z), guy lines out to pegs. */
 function dome(GFX, { w = 2, d = 2, rise = 0.9, seed = 0 }) {
   const group = new GFX.Group();
-  const colours = ['#e0384a', '#2a8ad8', '#f0b02a', '#3aa858', '#8a4ad0', '#f06a2a'];
-  const colour = colours[Math.abs(Math.round(seed * 7)) % colours.length];
-  const nylon = std(GFX, colour, { roughness: 0.55 });
+  const colors = ['#e0384a', '#2a8ad8', '#f0b02a', '#3aa858', '#8a4ad0', '#f06a2a'];
+  const color = colors[Math.abs(Math.round(seed * 7)) % colors.length];
+  const nylon = std(GFX, color, { roughness: 0.55 });
   const shell = shadowed(new GFX.Mesh(new GFX.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), nylon));
   shell.scale.set(w * 0.46, rise * 1.1, d * 0.46);
   const door = new GFX.Mesh(new GFX.SphereGeometry(1, 10, 6, Math.PI / 2 - 0.45, 0.9, Math.PI * 0.18, Math.PI * 0.32), std(GFX, '#1a1a20', { roughness: 0.8 }));

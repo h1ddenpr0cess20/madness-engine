@@ -26,7 +26,7 @@ export const whitepumpkin = {
   cells: { stalk: 0.0055 },
   bones: one,
   materials: PUMPKIN_MATS,
-  sculpt(s) { sculptPumpkin(s, { r: 0.22, h: 0.28, colour: cream }); },
+  sculpt(s) { sculptPumpkin(s, { r: 0.22, h: 0.28, color: cream }); },
 };
 
 export const gourd = {
@@ -37,7 +37,7 @@ export const gourd = {
   materials: { ...PUMPKIN_MATS, candle: { roughness: 0.5, emissive: '#ffa53a', emissiveIntensity: 2.2 } },
   sculpt(s) {
     const r = 0.22, h = 0.28;
-    sculptPumpkin(s, { r, h, colour: cream });
+    sculptPumpkin(s, { r, h, color: cream });
     s.ellipsoid([0, h / 2 + 0.005, 0], [r * 0.82, h * 0.4, r * 0.82], { op: 'sub', k: 0.02 });
     // Holes punched right round it, in two rings and a ring of smaller ones above.
     for (const [y, n, rad, off] of [[0.1, 12, 0.026, 0], [0.18, 12, 0.022, 0.26], [0.235, 8, 0.016, 0]]) {
@@ -52,7 +52,7 @@ export const gourd = {
   },
 };
 
-const stalkColour = (p) => mix(rgb('#b08a3a'), rgb('#ead27a'), noise(p[0] * 40, p[1] * 6, p[2] * 40));
+const stalkColor = (p) => mix(rgb('#b08a3a'), rgb('#ead27a'), noise(p[0] * 40, p[1] * 6, p[2] * 40));
 
 export const cornshock = {
   name: 'cornshock',
@@ -67,8 +67,8 @@ export const cornshock = {
       const foot = [Math.sin(a) * r0, 0, Math.cos(a) * r0];
       const waist = [Math.sin(a) * 0.07, 0.55, Math.cos(a) * 0.07];
       const top = [Math.sin(a + 0.4) * (0.16 + (i % 4) * 0.03), 1.05 + (i % 3) * 0.1, Math.cos(a + 0.4) * (0.16 + (i % 4) * 0.03)];
-      s.chain([foot, waist, top], [0.022, 0.02, 0.01], { color: stalkColour, mat: 'stalk', k: 0.03 });
-      if (i % 2) s.flake(waist, [Math.sin(a) * 0.3, 0.35 + (i % 3) * 0.12, Math.cos(a) * 0.3], [0, 1, 0], 0.02, 0.04, 0.4, { color: stalkColour, mat: 'stalk', k: 0.01 });
+      s.chain([foot, waist, top], [0.022, 0.02, 0.01], { color: stalkColor, mat: 'stalk', k: 0.03 });
+      if (i % 2) s.flake(waist, [Math.sin(a) * 0.3, 0.35 + (i % 3) * 0.12, Math.cos(a) * 0.3], [0, 1, 0], 0.02, 0.04, 0.4, { color: stalkColor, mat: 'stalk', k: 0.01 });
     }
     s.torus([0, 0.55, 0], 0.085, 0.018, { color: '#7a5a3a', mat: 'twine', k: 0.01 });
   },

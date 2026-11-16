@@ -797,7 +797,7 @@ function toeCap(part, loop, m, detail) {
     du += Math.hypot(part.uv[a * 2] - part.uv[b * 2], part.uv[a * 2 + 1] - part.uv[b * 2 + 1]);
     dp += len(sub(P(a), P(b)));
   }
-  const perMetre = du / (dp || 1);
+  const perMeter = du / (dp || 1);
   const along = new Array(ring.length + 1).fill(0), prev = [];
   part.grid(J, ring.length, (j, k) => {
     const kk = k % ring.length, q = ring[kk];
@@ -817,7 +817,7 @@ function toeCap(part, loop, m, detail) {
     // (Rows are made in turn, so each column's last point is the row before's.)
     if (j > 0) along[k] += len(sub(p, prev[k]));
     prev[k] = p;
-    const uv = [part.uv[loop[kk] * 2], part.uv[loop[kk] * 2 + 1] + along[k] * perMetre];
+    const uv = [part.uv[loop[kk] * 2], part.uv[loop[kk] * 2 + 1] + along[k] * perMeter];
     return { p, uv, w, tint: part.tint[loop[kk]], zone: { zone: 'foot', y: p[1], d: p[2] - ankle[2], x: Math.abs(p[0]), sx: p[0], z: p[2] } };
   });
 }

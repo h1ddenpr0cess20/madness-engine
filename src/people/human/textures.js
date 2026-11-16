@@ -224,8 +224,8 @@ function fingerCreases(L, x, y, z, n) {
  * hair's own color, so no skin shows between its cards), paler palms and
  * soles, the nails.
  */
-function skinColour(tone, L, groom = {}) {
-  const grown = groom.hairColour ? hex(groom.hairColour) : null;
+function skinColor(tone, L, groom = {}) {
+  const grown = groom.hairColor ? hex(groom.hairColor) : null;
   const base = tone;
   const red = [tone[0] * 1.0, tone[1] * 0.8, tone[2] * 0.8];
   // A woman's lips a little rosier and more distinct; her face has no beard's shadow.
@@ -376,7 +376,7 @@ function skinColour(tone, L, groom = {}) {
 
 /** The skin's map, on the base mesh's own UVs, `size` square: RGBA bytes. */
 export function skinPixels(size, tone, groom = {}) {
-  return bodyPixels(size, skinColour(hex(tone), landmarks(), groom), [180, 130, 110]);
+  return bodyPixels(size, skinColor(hex(tone), landmarks(), groom), [180, 130, 110]);
 }
 
 /**
@@ -481,7 +481,7 @@ export function skinDetailPixels(size) {
 }
 
 /** Paints the body's UV layout texel by texel: `color(p, n, zone)` → [r, g, b] for each texel's place on the body. */
-function bodyPixels(size, colour, empty = [128, 128, 128]) {
+function bodyPixels(size, color, empty = [128, 128, 128]) {
   const { P, N, Z, ZONES } = positionMap(size);
   const rgba = new Uint8ClampedArray(size * size * 4);
   const filled = new Uint8Array(size * size);
@@ -491,7 +491,7 @@ function bodyPixels(size, colour, empty = [128, 128, 128]) {
     for (let k = 0; k < 3; k++) { p[k] = P[o * 3 + k]; n[k] = N[o * 3 + k]; }
     const l = Math.hypot(n[0], n[1], n[2]) || 1;
     n[0] /= l; n[1] /= l; n[2] /= l;
-    const c = colour(p, n, ZONES[Z[o]]);
+    const c = color(p, n, ZONES[Z[o]]);
     rgba[o * 4] = c[0]; rgba[o * 4 + 1] = c[1]; rgba[o * 4 + 2] = c[2]; rgba[o * 4 + 3] = 255;
     filled[o] = 1;
   }
@@ -883,12 +883,12 @@ const cache = new WeakMap();
  * skin map, made once and kept. Returns null where there is no document to
  * paint on.
  */
-export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColour = null, style = null, beard = null, sex = 'male' } = {}) {
+export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColor = null, style = null, beard = null, sex = 'male' } = {}) {
   if (typeof document === 'undefined') return null;
   let byGFX = cache.get(GFX);
   if (!byGFX) cache.set(GFX, (byGFX = new Map()));
-  const groom = { ...(style || beard ? { hairColour, style, beard } : {}), female: sex === 'female' };
-  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}|${sex}`;
+  const groom = { ...(style || beard ? { hairColor, style, beard } : {}), female: sex === 'female' };
+  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColor : ''}|${sex}`;
   if (byGFX.has(key)) return byGFX.get(key);
   const garments = byGFX.get('garments') ?? (() => {
     const fabrics = fabricTiles(), suit = woolMap();

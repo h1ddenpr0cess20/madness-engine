@@ -16,7 +16,7 @@ test('every facade is painted, is its own, and the same seed paints the same one
   assert.ok(TILE > 0);
 });
 
-test('the colours are what the photographs show', () => {
+test('the colors are what the photographs show', () => {
   const [cr, cg, cb] = rgbMean(paintFacade({ size: SIZE, kind: 'curtain' }));
   assert.ok(cb > cr * 1.15, `curtain glass is blue: ${cr} ${cg} ${cb}`);
   const [pr, pg, pb] = rgbMean(paintFacade({ size: SIZE, kind: 'precast' }));

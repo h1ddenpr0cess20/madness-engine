@@ -28,7 +28,7 @@ test('a snow shovel is built at real size, standing on the butt of its D-handle 
   assert.ok(handle.max.x - handle.min.x >= 0.16, 'the crossbar of the D-handle is a hand and a half wide');
 });
 
-test('the scoop is hollow: a floor with rolled walls that run out towards the lip, and a lip bent forward', () => {
+test('the scoop is hollow: a floor with rolled walls that run out toward the lip, and a lip bent forward', () => {
   const shovel = createSnowShovel(GFX);
   const floor = shovel.scoopAt(0.5, 0), back = shovel.scoopAt(0.02, 0), lip = shovel.scoopAt(1, 0);
   assert.ok(floor.normal[2] > 0.5, 'the hollow faces +z');
@@ -93,7 +93,7 @@ test('the metals, the leather and the turn are each changed on their own', () =>
   assert.equal(shovel.tool.rotation.y, Math.PI / 2);
   assert.throws(() => createSnowShovel(GFX, { bladeMetal: 'unobtainium' }), /no metal called unobtainium/);
   assert.throws(() => shovel.setWearMetal('mud'), /no metal called mud/);
-  assert.throws(() => createSnowShovel(GFX, { gripColor: 'red' }), /six-digit hex colour/);
+  assert.throws(() => createSnowShovel(GFX, { gripColor: 'red' }), /six-digit hex color/);
   assert.throws(() => createSnowShovel({}), /requires the Madness Engine GFX module/);
 });
 

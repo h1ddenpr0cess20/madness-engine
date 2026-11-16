@@ -1,5 +1,5 @@
 import { axisRot, cloth, person } from './person.js';
-import { glasses, moustache, satchel } from './wardrobe.js';
+import { glasses, mustache, satchel } from './wardrobe.js';
 import { beanie } from './metalwear.js';
 
 /**
@@ -34,7 +34,7 @@ export default person({
     s.part('kit', () => s.sphere([0, 0.808, -0.006], 0.021, { color: '#ff7a1a', mat: 'cloth', bone: 'head', k: 0.008, bump: [0.002, 140] }));
     // Round glasses, thick black frames; the mustache waxed into curls.
     glasses(s, { rim: '#101014', round: true, size: 0.026 });
-    moustache(s, { color: '#5a3a1e', wide: 1.4 });
+    mustache(s, { color: '#5a3a1e', wide: 1.4 });
     // The tote bag on the right shoulder, its strap across to the left hip, a record sticking out of it.
     const tote = satchel(s, { side: -1, color: '#e8e0c8', strap: '#e0d8c0', size: [0.05, 0.058, 0.012], width: 0.016, flap: false });
     s.part('kit', () => s.cylinder(tote.c.map((v, i) => v + tote.up[i] * 0.06), 0.05, 0.0025, { color: '#16161a', mat: 'plastic', bone: 'hips', k: 0.001, rot: axisRot(tote.n) }));

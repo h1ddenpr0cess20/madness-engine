@@ -1,6 +1,6 @@
 import { bands } from '../models/skins.js';
 import { cloth, cord, hold, person, plate } from './person.js';
-import { bowler, moustache, suitFront } from './wardrobe.js';
+import { bowler, mustache, suitFront } from './wardrobe.js';
 
 /**
  * The City Gent: up from the Bank on his way to the club, in a charcoal
@@ -43,7 +43,7 @@ export default person({
   },
   extras(s, J, { pose }) {
     bowler(s);
-    moustache(s, { color: '#6a6a6a', wide: 1.15, droop: 0.4 });
+    mustache(s, { color: '#6a6a6a', wide: 1.15, droop: 0.4 });
     suitFront(s, { tie: bands(1, 0.02, '#1a2a5a', '#8a1a2a', 0.5, 0.2), lapel: cloth('#22222a', '#141418'), low: 0.405 });
     // The brolly: the straight of its crook in the fist, the crook curled over the thumb, the shaft and the furled
     // canopy down to the ferrule on the pavement.

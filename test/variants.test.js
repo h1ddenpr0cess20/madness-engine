@@ -11,7 +11,7 @@ const { cop, punk, viking } = CHARACTERS;
 const near = (set, hex, tol = 6) => [...set].every((c) => [1, 3, 5].every((i) => Math.abs(parseInt(c.slice(i, i + 2), 16) - parseInt(hex.slice(i, i + 2), 16)) <= tol));
 
 /** The colors (as hex) each part/material is made in, read off a sculpt. */
-function coloursOf(def) {
+function colorsOf(def) {
   const s = new Sculpt();
   def.sculpt(s);
   const out = {};
@@ -23,7 +23,7 @@ function coloursOf(def) {
   return out;
 }
 
-test('a character reports what can be recoloured, and what colour it is now', () => {
+test('a character reports what can be recolored, and what color it is now', () => {
   const p = cop.palette();
   assert.equal(p.eyes, '#3a5a8a');
   assert.match(p.skin, /^#[0-9a-f]{6}$/);
@@ -57,15 +57,15 @@ test('what a variant cannot change is left alone: parts the character does not h
   assert.equal(v.palette().skin, viking.palette().skin);
 });
 
-test('three-digit hex colours mean what they say', () => {
+test('three-digit hex colors mean what they say', () => {
   assert.equal(punk.variant({ look: { boot: '#fff' } }).palette().look.boot, '#ffffff');
   assert.equal(swatch('#abc'), '#aabbcc');
 });
 
-test('a coat recoloured brings its skirts with it, a hat is recoloured by its colour, and the rest is as it was', () => {
-  const was = coloursOf(cop);
+test('a coat recolored brings its skirts with it, a hat is recolored by its color, and the rest is as it was', () => {
+  const was = colorsOf(cop);
   const red = '#7a1020';
-  const now = coloursOf(cop.variant({
+  const now = colorsOf(cop.variant({
     skin: '#533018', eyes: '#2a1a10', hair: '#e0c070',
     look: { torso: red, sleeve: red, cuff: red, legs: red }, colors: { '#1e2a4e': '#102a6a' },
   }));
@@ -75,19 +75,19 @@ test('a coat recoloured brings its skirts with it, a hat is recoloured by its co
   assert.ok(near(now['top/cloth'], red) && near(now['bottoms/cloth'], red));
   assert.ok(near(now['irises/eye'], '#2a1a10'));
   assert.ok(near(now['head/skin'], '#533018'));
-  assert.ok(!same('brows/hair'), 'the moustache and brows');
+  assert.ok(!same('brows/hair'), 'the mustache and brows');
   // The belt, the boots and everything else are as they were.
   for (const part of ['shoes/leather', 'belt/leather', 'eyes/eye', 'pupils/eye']) assert.ok(same(part), part);
 });
 
-test('a hair colour reaches the hair, the beard and the crest; fur worn over the shoulders is not hair', () => {
-  const was = coloursOf(viking), now = coloursOf(viking.variant({ hair: '#b0502a' }));
+test('a hair color reaches the hair, the beard and the crest; fur worn over the shoulders is not hair', () => {
+  const was = colorsOf(viking), now = colorsOf(viking.variant({ hair: '#b0502a' }));
   for (const part of ['hair/hair', 'fine/hair', 'brows/hair']) assert.notDeepEqual([...now[part]], [...was[part]], part);
   assert.deepEqual([...now['outer/hair']], [...was['outer/hair']]);
 });
 
-test('a skin tone reaches bare arms drawn in a colour of their own', () => {
-  const now = coloursOf(viking.variant({ skin: '#6f4120' }));
+test('a skin tone reaches bare arms drawn in a color of their own', () => {
+  const now = colorsOf(viking.variant({ skin: '#6f4120' }));
   assert.ok(near(now['head/skin'], '#6f4120'));
   assert.ok(near(now['hands/skin'], '#6f4120'), [...now['hands/skin']].join());
 });

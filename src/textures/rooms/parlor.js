@@ -22,10 +22,10 @@ export function paintRoom(width = 512, { sky = null, random } = {}) {
 
 /** The lamps and the cloth's glow, over whatever night is already on `ctx`. */
 export function lamps(ctx, width, height) {
-  const glow = (x, y, r, colour, alpha) => {
+  const glow = (x, y, r, color, alpha) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(${colour}, ${alpha})`);
-    g.addColorStop(1, `rgba(${colour}, 0)`);
+    g.addColorStop(0, `rgba(${color}, ${alpha})`);
+    g.addColorStop(1, `rgba(${color}, 0)`);
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   };

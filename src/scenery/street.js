@@ -157,8 +157,8 @@ export const rock = {
 };
 
 /** A stack of old tires. */
-export const tyres = {
-  name: 'tyres', cell: 0.03,
+export const tires = {
+  name: 'tires', cell: 0.03,
   materials: { rubber: { roughness: 0.9 } },
   colliders: [{ cyl: [0, 0, 0.38, 0, 1.0] }],
   sculpt(s) {
@@ -205,4 +205,4 @@ export const statue = {
   },
 };
 
-export const STREET = { statue, streetlamp, hydrant, mailbox, bench, bin, cone, tree, pine, shrub, rock, tyres, dumpster };
+export const STREET = { statue, streetlamp, hydrant, mailbox, bench, bin, cone, tree, pine, shrub, rock, tires, dumpster };

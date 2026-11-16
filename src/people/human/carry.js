@@ -30,8 +30,8 @@ export function handFrame(joints, fingers, m) {
   // The palm faces across the knuckles from the back of the hand: toward the thigh at rest (−x for the left).
   let palm = norm(cross(along, sub(root('index'), root('pinky'))));
   if (palm[0] * m > 0) palm = palm.map((v) => -v);
-  const centre = [0, 1, 2].map((a) => wrist[a] * 0.45 + knuckle[a] * 0.55 + palm[a] * 0.012);
-  return { centre, palm, along, indexTip: mirror(fingers.index.joints[3], m), thumbTip: mirror(fingers.thumb.joints[3], m) };
+  const center = [0, 1, 2].map((a) => wrist[a] * 0.45 + knuckle[a] * 0.55 + palm[a] * 0.012);
+  return { center, palm, along, indexTip: mirror(fingers.index.joints[3], m), thumbTip: mirror(fingers.thumb.joints[3], m) };
 }
 
 /** One bone's local matrix (3×4 rows), as Skeleton.compute makes it with no move or squash: T(p)·R·T(−p). */

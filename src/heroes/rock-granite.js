@@ -20,7 +20,7 @@ export const GRANITE_DETAIL = 64;
  * and how dark the mica flecks go into the ground.
  */
 export const GRANITES = {
-  grey: { ground: [0.54, 0.51, 0.47], feldspar: [0.84, 0.8, 0.74], quartz: [0.92, 0.92, 0.9], mica: 0.8 },
+  gray: { ground: [0.54, 0.51, 0.47], feldspar: [0.84, 0.8, 0.74], quartz: [0.92, 0.92, 0.9], mica: 0.8 },
   pink: { ground: [0.68, 0.48, 0.45], feldspar: [0.88, 0.68, 0.64], quartz: [0.84, 0.82, 0.8], mica: 0.85 },
   black: { ground: [0.17, 0.17, 0.18], feldspar: [0.34, 0.34, 0.36], quartz: [0.42, 0.42, 0.44], mica: 0.4 },
   white: { ground: [0.8, 0.78, 0.74], feldspar: [0.95, 0.94, 0.9], quartz: [0.97, 0.97, 0.96], mica: 0.9 },
@@ -146,11 +146,11 @@ export function createGraniteStone(GFX, { detail = GRANITE_DETAIL } = {}) {
 }
 
 /** The granite stone alone: `heroes/rock`'s shape, finely sampled, with its own surface in the color asked for. */
-export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, colour = 'grey' } = {}) {
-  if (!(colour in GRANITES)) throw new Error(`rock-granite: no granite called ${colour}; there is ${GRANITE_CHOICES.join(', ')}`);
+export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, color = 'gray' } = {}) {
+  if (!(color in GRANITES)) throw new Error(`rock-granite: no granite called ${color}; there is ${GRANITE_CHOICES.join(', ')}`);
   const geometry = createGraniteStone(GFX, { detail });
 
-  const { map, bump } = granite(GFX, colour);
+  const { map, bump } = granite(GFX, color);
   const material = new GFX.MeshStandardMaterial({
     name: 'granite',
     vertexColors: true,
@@ -169,6 +169,6 @@ export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, colour = 'g
 }
 
 /** Rock in granite: `createRock`, with the granite stone in the color asked for (`gray` by default). */
-export function createGraniteRock(GFX, { colour = 'grey', ...opts } = {}) {
-  return createRock(GFX, { ...opts, boulder: (G) => createGraniteBoulder(G, { colour }) });
+export function createGraniteRock(GFX, { color = 'gray', ...opts } = {}) {
+  return createRock(GFX, { ...opts, boulder: (G) => createGraniteBoulder(G, { color }) });
 }

@@ -8,7 +8,7 @@ import standardWGSL from '../src/gfx/shaders/wgsl/standard.wgsl.js';
 import frameWGSL from '../src/gfx/shaders/wgsl/chunks/frame.wgsl.js';
 import standardFrag from '../src/gfx/shaders/glsl/standard.frag.glsl.js';
 
-test('a scene has no fog until it is given one, and a fog is a colour and a density', () => {
+test('a scene has no fog until it is given one, and a fog is a color and a density', () => {
   const scene = new GFX.Scene();
   assert.equal(scene.fog, null);
   const fog = new GFX.FogExp2('#c8d6e8', 0.05);

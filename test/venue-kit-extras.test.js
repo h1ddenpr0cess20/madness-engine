@@ -6,7 +6,7 @@ import { BOARD_DETAIL, createFoeMeshes, FLIGHT, KNOCKED_OUT, STRIKE } from '../s
 
 const foes = { walker: { move: 'walk', radius: 0.4 }, flyer: { move: 'fly', radius: 0.3 } };
 
-test('a foe with no model yet is a stand-in coloured by how it gets about, and animating it is safe', () => {
+test('a foe with no model yet is a stand-in colored by how it gets about, and animating it is safe', () => {
   const { createFoeMesh } = createFoeMeshes({ foes, cast: {}, isBaked: () => false, ready: () => new Promise(() => {}) });
   const walker = createFoeMesh(GFX, 'walker');
   assert.equal(walker.group.name, 'walker');

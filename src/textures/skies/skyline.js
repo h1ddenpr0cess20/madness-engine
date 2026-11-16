@@ -21,7 +21,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
   if (!ctx) return null;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const g = ctx.createLinearGradient(0, 0, 0, height);
-  sky.forEach((colour, i) => g.addColorStop(i / (sky.length - 1), colour));
+  sky.forEach((color, i) => g.addColorStop(i / (sky.length - 1), color));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, width, height);
   const base = height * 0.5;
@@ -30,8 +30,8 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
   if (!skyline) return done();
   const rnd = seeded(7);
   const far = (k) => mix(skyline, sky[Math.max(0, sky.length - 2)], k);
-  const ridge = (f, colour) => {
-    ctx.fillStyle = colour;
+  const ridge = (f, color) => {
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(0, height);
     for (let x = 0; x <= width; x += 1) ctx.lineTo(x, f(x));

@@ -78,7 +78,7 @@ function figure(species) {
       late,
       sap: ramp(0.6, 0.85, width(u * 0.6, v * 0.5)),
       // The fibers follow the rings' bend and break up along the board: long, irregular, not scanlines.
-      fibre: fine(u * 0.06, v + warp * 0.15) * 0.7 + finer(u * 0.04, v + warp * 0.1) * 0.3,
+      fiber: fine(u * 0.06, v + warp * 0.15) * 0.7 + finer(u * 0.04, v + warp * 0.1) * 0.3,
       pore: pores(u * 0.012, v),
     };
   };
@@ -91,16 +91,16 @@ function figure(species) {
  * luminance, stretched about its mean, so the grain stands where it is dark.
  */
 function photoMaps(GFX, data) {
-  const colour = document.createElement('canvas');
-  colour.width = colour.height = DETAIL;
+  const color = document.createElement('canvas');
+  color.width = color.height = DETAIL;
   const relief = document.createElement('canvas');
   relief.width = relief.height = DETAIL;
-  const map = texture(GFX, colour, { wrap: true });
+  const map = texture(GFX, color, { wrap: true });
   const bump = texture(GFX, relief, { srgb: false, wrap: true });
   const image = new Image();
   image.src = `data:image/jpeg;base64,${data}`;
   image.decode().then(() => {
-    const ctx = colour.getContext('2d', { willReadFrequently: true });
+    const ctx = color.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(image, 0, 0, DETAIL, DETAIL);
     const pixelsOf = ctx.getImageData(0, 0, DETAIL, DETAIL);
     const d = pixelsOf.data;
@@ -130,27 +130,27 @@ function paint(GFX, species, finish) {
   const field = figure(species);
   const sanded = finish !== 'raw';
   const porosity = p.pores * (sanded ? 0.35 : 1);
-  const fibreDepth = sanded ? 0.45 : 1;
+  const fiberDepth = sanded ? 0.45 : 1;
 
-  const colour = (u, v) => {
+  const color = (u, v) => {
     const f = field(u, v);
     // Heartwood to the typical board color, the latewood darker, and the sapwood's pale flush in the figure.
     let c = mix(p.heart, p.base, 0.7 + 0.3 * (1 - f.late));
     c = mix(c, p.sap, f.sap * 0.3);
     c = c.map((x) => x * (1 - f.late * 0.08));
-    const streak = (f.fibre - 0.5) * 16 * fibreDepth;
+    const streak = (f.fiber - 0.5) * 16 * fiberDepth;
     const pore = ramp(0.72, 0.82, f.pore) * 22 * porosity;
     const tone = c.map((x) => x + streak - pore);
     return tone.map(clamp255);
   };
   const relief = (u, v) => {
     const f = field(u, v);
-    const h = 0.5 + f.late * 0.1 + (f.fibre - 0.5) * 0.25 * fibreDepth - ramp(0.72, 0.82, f.pore) * 0.2 * porosity;
+    const h = 0.5 + f.late * 0.1 + (f.fiber - 0.5) * 0.25 * fiberDepth - ramp(0.72, 0.82, f.pore) * 0.2 * porosity;
     const x = clamp255(128 + (h - 0.5) * 255);
     return [x, x, x];
   };
   return {
-    map: texture(GFX, pixels(DETAIL, colour)),
+    map: texture(GFX, pixels(DETAIL, color)),
     bump: texture(GFX, pixels(DETAIL, relief), { srgb: false, wrap: true }),
   };
 }

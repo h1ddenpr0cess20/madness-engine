@@ -10,7 +10,7 @@ import { quadruped } from './quadruped.js';
  * either. About 0.4 tiles to the shoulder, and it keeps up.
  */
 
-const GREY = rgb('#686a70'), SILVER = rgb('#a4a4a2'), CREAM = rgb('#ece6da'), BLACK = rgb('#26262a'), TAWNY = rgb('#a08060');
+const GRAY = rgb('#686a70'), SILVER = rgb('#a4a4a2'), CREAM = rgb('#ece6da'), BLACK = rgb('#26262a'), TAWNY = rgb('#a08060');
 
 /**
  * The wolf's coat, as a wolf's is: agouti gray, each hair banded, so it
@@ -23,11 +23,11 @@ const GREY = rgb('#686a70'), SILVER = rgb('#a4a4a2'), CREAM = rgb('#ece6da'), BL
 const COAT = (p, n) => {
   // Agouti: a soft variation of gray and silver over the coat, and a fine fleck too small to be more than a grain.
   const tone = fbm(p[0] * 24, p[1] * 24, p[2] * 24, 3), fleck = noise(p[0] * 300, p[1] * 300, p[2] * 80);
-  let c = mix(GREY, SILVER, smooth(0.3, 0.75, tone)).map((v) => v * (0.94 + 0.12 * fleck));
+  let c = mix(GRAY, SILVER, smooth(0.3, 0.75, tone)).map((v) => v * (0.94 + 0.12 * fleck));
   // The saddle: over the top of the back and the withers.
   const back = smooth(0.15, 0.6, n[1]) * smooth(0.12, 0.18, p[1]) * smooth(0.16, 0.06, p[2]) * smooth(-0.2, -0.1, p[2]);
   const saddle = back * (0.7 + 0.5 * (fbm(p[0] * 20, p[1] * 20, p[2] * 20, 2) - 0.5));
-  c = mix(c, mix(BLACK, GREY, 0.3), Math.min(1, saddle * 1.25));
+  c = mix(c, mix(BLACK, GRAY, 0.3), Math.min(1, saddle * 1.25));
   // Tawny down the outsides of the legs.
   if (p[1] < 0.12 && p[1] > 0.02) c = mix(c, TAWNY, 0.3 * smooth(0.2, 0.8, Math.abs(n[0])));
   // Cream on the cheeks and the muzzle's sides and underneath it.
@@ -36,7 +36,7 @@ const COAT = (p, n) => {
     c = mix(c, CREAM, Math.min(1, cheek));
     // The mask: dark between the eyes and down the bridge.
     const bridge = smooth(0.012, 0.004, Math.abs(p[0])) * smooth(0.0, 0.6, n[1]);
-    c = mix(c, mix(GREY, BLACK, 0.55), bridge * 0.8);
+    c = mix(c, mix(GRAY, BLACK, 0.55), bridge * 0.8);
   }
   // A dark line down the front of each foreleg.
   if (p[2] > 0.08 && p[2] < 0.16 && p[1] < 0.1) c = mix(c, BLACK, smooth(0.6, 0.95, n[2]) * 0.7);
@@ -44,11 +44,11 @@ const COAT = (p, n) => {
 };
 /** The brush: gray, dark along the top, the tip black. */
 const TAIL = (p, n) => {
-  let c = mix(GREY, SILVER, smooth(0.3, 0.75, fbm(p[0] * 24, p[1] * 24, p[2] * 24, 3)));
+  let c = mix(GRAY, SILVER, smooth(0.3, 0.75, fbm(p[0] * 24, p[1] * 24, p[2] * 24, 3)));
   c = mix(c, BLACK, smooth(0.0, 0.7, n[1]) * 0.6);
   return mix(c, BLACK, smooth(-0.29, -0.33, p[2] + p[1] * 0.3));
 };
-const EARS = (p, n) => mix(mix(GREY, TAWNY, 0.45), BLACK, smooth(0.0, -0.8, n[2]) * 0.35);
+const EARS = (p, n) => mix(mix(GRAY, TAWNY, 0.45), BLACK, smooth(0.0, -0.8, n[2]) * 0.35);
 
 export default quadruped({
   name: 'wolf',

@@ -33,7 +33,7 @@ const PLINTH = 0.08;
  * The granite top's grain, in repeats a meter: twice the boulder's grain (one
  * repeat per 0.95 m rather than per 1.9 m), so the counter's pattern reads finer.
  */
-export const COUNTER_GRANITE_REPEATS_PER_METRE = 2 / GRANITE_TILE_SIZE;
+export const COUNTER_GRANITE_REPEATS_PER_METER = 2 / GRANITE_TILE_SIZE;
 /** How far below the top the carcass is open beneath a sink. */
 const BOWL_DEPTH = 0.2;
 
@@ -283,7 +283,7 @@ export function createGraniteCounter(GFX, {
   length = 2.8,
   depth = 0.72,
   height = 0.92,
-  granite = 'grey',
+  granite = 'gray',
   wood = 'walnut',
   hardwareMetal = 'brass',
   environment = null,
@@ -313,7 +313,7 @@ export function createGraniteCounter(GFX, {
   const hardware = makeMetalMaterial(GFX, hardwareMetal, environment);
 
   // The granite: the boulder's own color and bump maps, at the boulder's grain scale.
-  const source = createGraniteBoulder(GFX, { colour: granite, detail: 2 });
+  const source = createGraniteBoulder(GFX, { color: granite, detail: 2 });
   const graniteMat = new GFX.MeshPhysicalMaterial({
     name: 'polished granite countertop',
     color: source.material.color,
@@ -325,7 +325,7 @@ export function createGraniteCounter(GFX, {
     clearcoat: 0.75,
     clearcoatRoughness: 0.12,
   });
-  graniteMat.userData.uvScale = COUNTER_GRANITE_REPEATS_PER_METRE;
+  graniteMat.userData.uvScale = COUNTER_GRANITE_REPEATS_PER_METER;
   source.geometry.dispose();
   source.material.dispose();
 
@@ -374,7 +374,7 @@ export function createGraniteCounter(GFX, {
     const x = x0 + bayW * (i + 0.5);
     const doorH = cabinetTop - PLINTH - 0.035;
     box(GFX, counter, `finished hardwood cabinet door ${i + 1}`, [doorW, doorH, DOOR], [x, (cabinetTop + PLINTH) / 2, frontZ], finishedMat);
-    box(GFX, counter, `raised cabinet centre panel ${i + 1}`, [bayW - 0.13, cabinetTop - PLINTH - 0.14, 0.012], [x, (cabinetTop + PLINTH) / 2, frontZ + 0.024], finishedMat);
+    box(GFX, counter, `raised cabinet center panel ${i + 1}`, [bayW - 0.13, cabinetTop - PLINTH - 0.14, 0.012], [x, (cabinetTop + PLINTH) / 2, frontZ + 0.024], finishedMat);
     const pull = new GFX.Mesh(new GFX.BoxGeometry(Math.min(0.18, bayW * 0.38), 0.018, 0.022), hardware);
     pull.name = `brass cabinet pull ${i + 1}`;
     pull.position.set(x, cabinetTop - 0.14, frontZ + 0.037);   // 4 mm into the panel face
@@ -475,7 +475,7 @@ export function createKitchenSink(GFX, {
  * usual. Returns the counter and sink groups, and the group with both in it.
  */
 export function createGraniteKitchen(GFX, {
-  granite = 'grey',
+  granite = 'gray',
   wood = 'walnut',
   basinMetal = 'copper',
   fixtureMetal = 'brass',

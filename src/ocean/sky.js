@@ -111,7 +111,7 @@ const mix3 = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a
  * `skyColor` in the shaders has it, with the clouds as an even veil of
  * `cover` rather than the shaders' drifting ones.
  */
-export function skyColour(light, d) {
+export function skyColor(light, d) {
   const h = Math.max(d[1], 0);
   const mu = Math.max(0, d[0] * light.sun[0] + d[1] * light.sun[1] + d[2] * light.sun[2]);
   const glow = 0.18 * mu ** 6 + 0.5 * mu ** 64;
@@ -149,8 +149,8 @@ export function paintRoom(sky, width = 256) {
       // As stage.domeU lays directions round the map.
       const a = ((x + 0.5) / width) * Math.PI * 2;
       const d = [-Math.cos(a) * ring, dy, Math.sin(a) * ring];
-      let col = skyColour(light, d);
-      if (dy < 0) col = mix3(skyColour(light, [d[0], 0, d[2]]), water, Math.min(1, -dy * 4));
+      let col = skyColor(light, d);
+      if (dy < 0) col = mix3(skyColor(light, [d[0], 0, d[2]]), water, Math.min(1, -dy * 4));
       else {
         const mu = d[0] * light.sun[0] + d[1] * light.sun[1] + d[2] * light.sun[2];
         if (mu > 0.9985) col = col.map((v, i) => v + light.sunColor[i] * 4 * (1 - light.cover * 0.9));

@@ -1,6 +1,6 @@
 import { coat } from '../models/skins.js';
 import { cloth, hold, person, skirt, strap, trunk } from './person.js';
-import { beard, beret, moustache } from './wardrobe.js';
+import { beard, beret, mustache } from './wardrobe.js';
 
 /**
  * The Pavement Artist: up from Montmartre with an easel's worth of
@@ -47,7 +47,7 @@ export default person({
   },
   extras(s, J, { pose }) {
     beret(s, { color: '#14141a' });
-    moustache(s, { color: '#2a1a10', wide: 1.5 });
+    mustache(s, { color: '#2a1a10', wide: 1.5 });
     beard(s, { color: '#2a1a10', full: 0 });
     // The smock, hanging loose over the hips to the thigh.
     skirt(s, trunk(0.98, 0), { top: 0.37, hem: 0.24, flare: 1.08, color: SMOCK, part: 'outer', b: 0.98 });

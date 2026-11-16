@@ -164,7 +164,7 @@ const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone ==
  */
 export function battleVest(s, { color = '#34445e', patches = 10, seed = 1, studs = true, big = '#e8e4d8', open = 0.022, back = true } = {}) {
   const rnd = seeded(seed);
-  const colours = ['#d81c2a', '#f0c040', '#e8e4d8', '#2a2a30', '#3ae88a', '#8a4be8', '#ff7a1a', '#2ad0ff'];
+  const colors = ['#d81c2a', '#f0c040', '#e8e4d8', '#2a2a30', '#3ae88a', '#8a4be8', '#ff7a1a', '#2ad0ff'];
   // From the hips to the shoulders, open down the front, the arms out through armholes.
   const region = (p) => {
     const front = Math.min(open + (p[1] - 0.35) * 0.18 - Math.abs(p[0]), p[2] - 0.02);
@@ -178,7 +178,7 @@ export function battleVest(s, { color = '#34445e', patches = 10, seed = 1, studs
   const list = [];
   for (let i = 0; i < patches; i++) {
     const x = (rnd() - 0.5) * 0.15, y = 0.4 + rnd() * 0.12;
-    list.push([x, y, 0.014 + rnd() * 0.016, 0.012 + rnd() * 0.016, colours[Math.floor(rnd() * colours.length)]]);
+    list.push([x, y, 0.014 + rnd() * 0.016, 0.012 + rnd() * 0.016, colors[Math.floor(rnd() * colors.length)]]);
   }
   for (const [x, y, w2, h, col] of list) s.paint((p) => { const r = Math.max(Math.abs(p[0] - x) - w2, Math.abs(p[1] - y) - h, 0.05 + p[2]); return r > 0.003 ? r : Math.max(r, onVest(p)); }, col, 0.002);
   // The big one, centered: a banner across the back with a dark stripe through it.

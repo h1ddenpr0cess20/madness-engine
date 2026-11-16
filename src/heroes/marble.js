@@ -71,7 +71,7 @@ export function createSparkGeometry(GFX, reach, { rays = sparkRays() } = {}) {
   const q = new GFX.Quaternion();
   const m = new GFX.Matrix4();
   const deep = new GFX.Color(SPARK.deep), mid = new GFX.Color(SPARK.color), bright = new GFX.Color(SPARK.tip);
-  const positions = [], normals = [], colours = [];
+  const positions = [], normals = [], colors = [];
   const add = (geometry, shade) => {
     const flat = geometry.toNonIndexed();
     const p = flat.attributes.position.array, n = flat.attributes.normal.array;
@@ -79,7 +79,7 @@ export function createSparkGeometry(GFX, reach, { rays = sparkRays() } = {}) {
       positions.push(p[i], p[i + 1], p[i + 2]);
       normals.push(n[i], n[i + 1], n[i + 2]);
       const c = shade(Math.hypot(p[i], p[i + 1], p[i + 2]) / reach);
-      colours.push(c.r, c.g, c.b);
+      colors.push(c.r, c.g, c.b);
     }
   };
   const c = new GFX.Color();
@@ -97,7 +97,7 @@ export function createSparkGeometry(GFX, reach, { rays = sparkRays() } = {}) {
   const out = new GFX.BufferGeometry();
   out.setAttribute('position', new GFX.BufferAttribute(new Float32Array(positions), 3));
   out.setAttribute('normal', new GFX.BufferAttribute(new Float32Array(normals), 3));
-  out.setAttribute('color', new GFX.BufferAttribute(new Float32Array(colours), 3));
+  out.setAttribute('color', new GFX.BufferAttribute(new Float32Array(colors), 3));
   return out;
 }
 

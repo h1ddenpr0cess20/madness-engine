@@ -10,7 +10,7 @@ import { glasses, suitFront } from './wardrobe.js';
  * floor throws you back. The last boss: about 2.8 tiles tall.
  */
 
-const grey = cloth('#4a4a54', '#26262e');
+const gray = cloth('#4a4a54', '#26262e');
 const GOLD = { color: '#f0c040', mat: 'metal' };
 const GOLD_K = { ...GOLD, k: 0.004 };
 
@@ -22,7 +22,7 @@ export default person({
   skin: '#e8b494',
   shape: { legs: 0.84, torso: 1.06, head: 1.14, girth: 1.42, hips: 1.25 },
   belly: 2.4,
-  look: { torso: grey, sleeve: grey, cuff: grey, legs: grey, boot: '#0c0806', sole: '#020202' },
+  look: { torso: gray, sleeve: gray, cuff: gray, legs: gray, boot: '#0c0806', sole: '#020202' },
   mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'cloth', legs: 'cloth', boot: 'leather' },
   face: { eyeColor: '#2a3a4a', brow: '#b8b0a8', mood: 1, jaw: 1.3, blush: 0.6 },
   style: {

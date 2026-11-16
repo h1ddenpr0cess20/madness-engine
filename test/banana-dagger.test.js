@@ -232,7 +232,7 @@ test('one blade metal changes every part that shares it; the brass follows the h
   }
 
   assert.doesNotThrow(() => banana.setGripColor('#ff0000'),
-    'a grip colour is accepted by the shared API but has no leather to dye');
+    'a grip color is accepted by the shared API but has no leather to dye');
   assert.throws(() => banana.setBladeMetal('unobtainium'), /no metal called/);
 });
 

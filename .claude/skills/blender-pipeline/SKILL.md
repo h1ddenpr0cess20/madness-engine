@@ -183,8 +183,8 @@ about 10%, change the piece count or add a plain filler.
 **Placement generator (to build in `src/city/buildings.js`).**
 1. For each wall edge in the loop, take its length `L` and outward normal `n`
    (already computed there as `[-dz/L, 0, dx/L]`).
-2. Story count: `rows = max(1, round(height / storey))`, with the same
-   `FACADE[kind].storey` values the file already uses.
+2. Story count: `rows = max(1, round(height / story))`, with the same
+   `FACADE[kind].story` values the file already uses.
 3. Per story row, pick a piece: `ground_shop` for row 0 with a shop base,
    `cornice` for the top row when `h >= 7`, otherwise `bay_window` or `bay_plain`.
 4. Place `n` bays along the edge as `instancePlace` entries, scaled by `L / (n * 3)`.

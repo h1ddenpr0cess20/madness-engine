@@ -1,5 +1,5 @@
 import { cloth, hold, person, plate, shell } from './person.js';
-import { cap, moustache } from './wardrobe.js';
+import { cap, mustache } from './wardrobe.js';
 
 /**
  * The Foreman: a flat cap, a brown warehouse coat down to the knee, a
@@ -33,7 +33,7 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    moustache(s, { color: '#5a5a5a', wide: 1.2, droop: 0.4 });
+    mustache(s, { color: '#5a5a5a', wide: 1.2, droop: 0.4 });
     // The flat cap.
     cap(s, { color: '#4a4034', peak: '#3a3228', flat: true });
     // Big patch pockets on the coat, each with its flap.

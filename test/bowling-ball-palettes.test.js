@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { BOWLING_BALL_PALETTES, randomBowlingBallPalette } from '../examples/asset-viewer/src/bowling-ball-palettes.js';
 
-test('the randomizer returns a complete coordinated four-colour palette', () => {
+test('the randomizer returns a complete coordinated four-color palette', () => {
   assert.ok(BOWLING_BALL_PALETTES.length >= 6);
   for (const palette of BOWLING_BALL_PALETTES) {
     assert.deepEqual(Object.keys(palette).sort(), ['accent', 'base', 'holes', 'swirl']);

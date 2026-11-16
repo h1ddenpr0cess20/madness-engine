@@ -1,4 +1,4 @@
-import { FLOORS, fractal, grey, pair, pixels, smoothstep, stone, ashlar, rubble, stucco, clapboard, timber, hedge, cliff, tiled } from 'madness-engine/textures/painters';
+import { FLOORS, fractal, gray, pair, pixels, smoothstep, stone, ashlar, rubble, stucco, clapboard, timber, hedge, cliff, tiled } from 'madness-engine/textures/painters';
 
 /**
  * Everything the town is drawn with. The engine's buildings are drawn from
@@ -19,7 +19,7 @@ function roofTiles(GFX) {
     const lip = smoothstep(0.7, 1, fv);
     const side = Math.min(fu, 1 - fu) < 0.06;
     const k = relief ? 0.2 + fv * 0.7 - (side ? 0.2 : 0) : (0.72 + n(u, v) * 0.28) * (1 - lip * 0.35) * (side ? 0.7 : 1) * (fv < 0.06 ? 0.55 : 1);
-    return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
+    return gray(Math.round(255 * Math.max(0, Math.min(1, k))));
   });
   return pair(GFX, 256, paint(false), paint(true));
 }
@@ -33,7 +33,7 @@ function slates(GFX) {
     const joint = Math.min(fu, 1 - fu) < 0.04 || fv < 0.07;
     const tone = 0.66 + 0.3 * ((Math.sin(r * 12.9 + Math.floor((u + (r % 2 ? 0.1 : 0)) * cols) * 78.2) * 43758.5) % 1 + 1) % 1;
     const k = relief ? (joint ? 0.1 : 0.55 + fv * 0.3) : joint ? 0.3 : tone * (0.82 + n(u, v) * 0.2);
-    return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
+    return gray(Math.round(255 * Math.max(0, Math.min(1, k))));
   });
   return pair(GFX, 256, paint(false), paint(true));
 }
@@ -44,7 +44,7 @@ function thatch(GFX) {
   const paint = (relief) => (size) => pixels(size, (u, v) => {
     const straw = m(u * 1.0, v * 0.12), mat = n(u, v);
     const k = relief ? 0.25 + straw * 0.55 + mat * 0.2 : (0.62 + straw * 0.3) * (0.8 + mat * 0.25) * (v < 0.04 ? 0.7 : 1);
-    return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
+    return gray(Math.round(255 * Math.max(0, Math.min(1, k))));
   });
   return pair(GFX, 256, paint(false), paint(true));
 }
@@ -55,7 +55,7 @@ function bark(GFX) {
   const paint = (relief) => (size) => pixels(size, (u, v) => {
     const ridge = m(u * 1.0, v * 0.2), lump = n(u, v);
     const k = relief ? 0.15 + ridge * 0.7 + lump * 0.15 : (0.5 + ridge * 0.4) * (0.75 + lump * 0.3);
-    return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
+    return gray(Math.round(255 * Math.max(0, Math.min(1, k))));
   });
   return pair(GFX, 256, paint(false), paint(true));
 }

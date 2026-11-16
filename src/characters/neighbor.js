@@ -1,6 +1,6 @@
 import { coat } from '../models/skins.js';
 import { cloth, person, strap } from './person.js';
-import { moustache, suitFront } from './wardrobe.js';
+import { mustache, suitFront } from './wardrobe.js';
 
 /**
  * The Angry Neighbor: a pink-faced man in a terry-cloth bathrobe and
@@ -24,7 +24,7 @@ const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone ==
 
 
 export default person({
-  name: 'neighbour',
+  name: 'neighbor',
   scale: 1.4,
   b: 1.12,
   shape: { legs: 0.9, girth: 1.12, head: 0.98 },
@@ -59,7 +59,7 @@ export default person({
       const top = 0.7 - Math.max(0, p[2]) * 0.6 + Math.max(0, -p[2]) * 0.25;
       return Math.max(p[1] - top, 0.632 - p[1], p[2] - 0.035, Math.abs(p[0]) - 0.1);
     }, hairy, 0.012);
-    moustache(s, { color: '#8a8a8a', wide: 1.4 });
+    mustache(s, { color: '#8a8a8a', wide: 1.4 });
     // The broom, upright in his fist: the long wooden handle, the straw fanned out at the floor, sewn in two bands.
     const G = pose.grip('R'), al = G.along;
     pose.hold(s, 'handR', () => {

@@ -216,10 +216,10 @@ export function createEffects(GFX, scene, { gravity = 18, ground = null } = {}) 
     },
 
     /** A ring going out across the floor at (x, y, z): `reach` tiles in `life` seconds, fading as it goes. */
-    ring(x, y, z, { colour = '#ffffff', reach = 2, life = 0.5 } = {}) {
+    ring(x, y, z, { color = '#ffffff', reach = 2, life = 0.5 } = {}) {
       const mesh = new GFX.Mesh(
         new GFX.TorusGeometry(1, 0.035, 6, 44),
-        new GFX.MeshBasicMaterial({ name: 'ring', color: new GFX.Color(colour), transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false, blending: GFX.AdditiveBlending }),
+        new GFX.MeshBasicMaterial({ name: 'ring', color: new GFX.Color(color), transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false, blending: GFX.AdditiveBlending }),
       );
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(x, (height(x, z) ?? y) + 0.05, z);

@@ -84,8 +84,8 @@ export function sunAt(angle, edge = 0.001) {
   };
 }
 
-const STAR_COLOURS = ['#ffffff', '#ffffff', '#dfe9ff', '#c4d6ff', '#fff2dc', '#ffd9b0'];
-const LAMP_COLOURS = ['#ffc47a', '#ffd9a3', '#ffb062', '#ffe6c2'];
+const STAR_COLORS = ['#ffffff', '#ffffff', '#dfe9ff', '#c4d6ff', '#fff2dc', '#ffd9b0'];
+const LAMP_COLORS = ['#ffc47a', '#ffd9a3', '#ffb062', '#ffe6c2'];
 
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 const rgba = ([r, g, b], a) => `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${Math.max(0, Math.min(1, a)).toFixed(3)})`;
@@ -106,7 +106,7 @@ const RAMP = [
 ].map(([lat, hex]) => [lat, rgb(hex)]);
 
 /** The color of the plain sky at a latitude, as 0–255 RGB, eased from one stop of the ramp to the next. */
-export function skyColour(lat) {
+export function skyColor(lat) {
   for (let i = 1; i < RAMP.length; i++) {
     const [to, low] = RAMP[i];
     if (lat < to && i < RAMP.length - 1) continue;
@@ -391,8 +391,8 @@ export function paintCloudSea(ctx, width, height, { random = Math.random, layer 
   }
 
   /** A point of light, `rx` by `ry` texels, drawn twice where it crosses the seam. */
-  function speck(x, y, rx, ry, colour, alpha) {
-    ctx.fillStyle = rgba(colour, alpha);
+  function speck(x, y, rx, ry, color, alpha) {
+    ctx.fillStyle = rgba(color, alpha);
     for (const at of x - rx < 0 ? [x, x + width] : x + rx > width ? [x, x - width] : [x]) {
       if (rx < 1.1 && ry < 1.1) {
         ctx.fillRect(at - rx, y - ry, rx * 2, ry * 2);
@@ -407,13 +407,13 @@ export function paintCloudSea(ctx, width, height, { random = Math.random, layer 
   // The plain sky, a row at a time: the ramp from the zenith through the glow
   // at the horizon to the dark the clouds float over.
   for (let y = 0; y < height; y++) {
-    ctx.fillStyle = rgba(skyColour(Math.PI / 2 - (y + 0.5) / k), 1);
+    ctx.fillStyle = rgba(skyColor(Math.PI / 2 - (y + 0.5) / k), 1);
     ctx.fillRect(0, y, width, 1);
   }
 
   // Towns, far below the clouds: seen only through the gaps. Laid out on a
   // jittered grid, so there are some near as well as far.
-  const lamps = LAMP_COLOURS.map(rgb);
+  const lamps = LAMP_COLORS.map(rgb);
   const spacing = 8;
   for (let gx = -12; gx < 12; gx++) {
     for (let gz = -12; gz < 12; gz++) {
@@ -444,19 +444,19 @@ export function paintCloudSea(ctx, width, height, { random = Math.random, layer 
 
   // The stars, thinning and dimming toward the horizon as the air thickens,
   // and crowding along the band.
-  const stars = STAR_COLOURS.map(rgb);
+  const stars = STAR_COLORS.map(rgb);
   const star = (lat, lon) => {
     const clear = smoothstep(HORIZON, HORIZON + 0.3, lat);
     if (lat < HORIZON || random() > 0.2 + 0.8 * clear) return;
     const m = Math.pow(random(), 4);
     const r = 0.4 + m * 1.3;
-    const colour = stars[Math.floor(random() * stars.length)];
+    const color = stars[Math.floor(random() * stars.length)];
     const alpha = (0.2 + 0.8 * m) * (0.3 + 0.7 * clear);
     const x = xAt(lon);
     const y = yAt(lat);
     const stretch = 1 / Math.max(0.05, Math.cos(lat));
-    if (m > 0.45) speck(x, y, r * 2.6 * stretch, r * 2.6, colour, alpha * 0.12);
-    speck(x, y, r * stretch, r, colour, alpha);
+    if (m > 0.45) speck(x, y, r * 2.6 * stretch, r * 2.6, color, alpha * 0.12);
+    speck(x, y, r * stretch, r, color, alpha);
   };
   const lowest = Math.sin(HORIZON);
   for (let i = 0; i < 6000; i++) star(Math.asin(lowest + (1 - lowest) * random()), random() * Math.PI * 2);

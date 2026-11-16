@@ -31,7 +31,7 @@ export const SNOW_SHOVEL_DIMENSIONS = Object.freeze({
 export const SNOW_SHOVEL_SPEC = Object.freeze({ name: 'snow shovel', hands: HANDS.TWO, ...SNOW_SHOVEL_DIMENSIONS });
 
 const HEX = /^#[0-9a-f]{6}$/i;
-const hex = (value, label) => { if (!HEX.test(value)) throw new TypeError(`${label} must be a six-digit hex colour`); return value; };
+const hex = (value, label) => { if (!HEX.test(value)) throw new TypeError(`${label} must be a six-digit hex color`); return value; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -240,11 +240,11 @@ function loft(GFX, rings, segs = 40) {
   }
   // Closed at both ends.
   for (const [ring, down] of [[0, true], [rings.length - 1, false]]) {
-    const centre = pos.length / 3;
+    const center = pos.length / 3;
     pos.push(0, rings[ring].y, rings[ring].cz ?? 0);
     for (let s = 0; s < segs; s++) {
       const a = ring * segs + s, b = ring * segs + (s + 1) % segs;
-      idx.push(...(down ? [centre, a, b] : [centre, b, a]));
+      idx.push(...(down ? [center, a, b] : [center, b, a]));
     }
   }
   const g = new GFX.BufferGeometry();
@@ -449,7 +449,7 @@ export function createSnowShovel(GFX, options = {}) {
       'Scoop': `${(D.bladeWidth * 1000).toFixed(0)} mm wide, ${(D.bladeLength * 1000).toFixed(0)} mm long, ${(D.thickness * 1000).toFixed(1)} mm plate`,
       'Shaft': `${(D.shaftDiameter * 1000).toFixed(0)} mm tube`,
       'Grip length': `${(gripLength * 1000).toFixed(0)} mm`,
-      'Scale': '1 world unit = 1 metre',
+      'Scale': '1 world unit = 1 meter',
     },
     get bladeMetal() { return bladeMetal; },
     get shaftMetal() { return shaftMetal; },

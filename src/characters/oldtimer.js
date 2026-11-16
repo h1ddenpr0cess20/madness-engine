@@ -1,5 +1,5 @@
 import { bodyField, cloth, hold, person, plate } from './person.js';
-import { cap, glasses, moustache } from './wardrobe.js';
+import { cap, glasses, mustache } from './wardrobe.js';
 
 /**
  * The Old-Timer: been going to the same corner shop since it sold
@@ -45,7 +45,7 @@ export default person({
   extras(s, J, { pose }) {
     cap(s, { color: TWEED, peak: '#5a4a36', flat: true });
     glasses(s, { rim: '#8a7a5a', round: true, size: 0.024 });
-    moustache(s, { color: '#e8e8e4', wide: 1.1, droop: 0.3 });
+    mustache(s, { color: '#e8e8e4', wide: 1.1, droop: 0.3 });
     // The cardigan's buttons down the front, each set on the cardigan where it is (it stands out over the belly).
     s.part('kit', () => {
       // Straight in from in front of him onto the cardigan at each button's height, so they keep their spacing.

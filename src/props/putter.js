@@ -53,7 +53,7 @@ export const PUTTER_HEAD_NAMES = Object.freeze(Object.keys(PUTTER_HEADS));
 export const PUTTER_SIGHTS = Object.freeze(['line', 'tee', 'none']);
 
 const HEX = /^#[0-9a-f]{6}$/i;
-const hex = (value, label) => { if (!HEX.test(value)) throw new TypeError(`${label} must be a six-digit hex colour`); return value; };
+const hex = (value, label) => { if (!HEX.test(value)) throw new TypeError(`${label} must be a six-digit hex color`); return value; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /** The outline of a head seen from above: x across (toe + to heel −), y back from the face. */
@@ -348,7 +348,7 @@ export function createPutter(GFX, options = {}) {
         'Lie angle': `${lie}°`,
         'Grip length': `${(PUTTER_SPEC.gripLength * 1000).toFixed(0)} mm`,
         'Shaft length': `${(shaft.userData.length * 1000).toFixed(0)} mm`,
-        'Scale': '1 world unit = 1 metre',
+        'Scale': '1 world unit = 1 meter',
         'Butt': 'Plain metal cap',
       };
     },
@@ -358,7 +358,7 @@ export function createPutter(GFX, options = {}) {
       layout();
       return api;
     },
-    setLength(metres) { length = clamp(metres, PUTTER_LENGTHS.min, PUTTER_LENGTHS.max); layout(); return api; },
+    setLength(meters) { length = clamp(meters, PUTTER_LENGTHS.min, PUTTER_LENGTHS.max); layout(); return api; },
     setLie(degrees) { lie = clamp(degrees, PUTTER_LIES.min, PUTTER_LIES.max); layout(); return api; },
     setSight(name) {
       if (!PUTTER_SIGHTS.includes(name)) throw new Error(`no sight called ${name}; choose ${PUTTER_SIGHTS.join(', ')}`);

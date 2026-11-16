@@ -9,7 +9,7 @@ test('Jupiter is 11.0 of the Earth across', () => {
   assert.ok(Math.abs(SIZE_VS_EARTH - 10.97) < 0.01);
 });
 
-test('the clouds are a 2:1 colour JPEG, as large as the layout says', async () => {
+test('the clouds are a 2:1 color JPEG, as large as the layout says', async () => {
   const bytes = Buffer.from(JUPITER_JPEG, 'base64');
   assert.deepEqual([...bytes.slice(0, 3)], [0xff, 0xd8, 0xff]);
   // Find the frame header (SOF0/SOF2): height, width and three components.

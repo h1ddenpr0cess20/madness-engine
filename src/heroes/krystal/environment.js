@@ -1,5 +1,5 @@
 import { reflect } from '../reflect.js';
-import { lamps } from '../../textures/rooms/parlour.js';
+import { lamps } from '../../textures/rooms/parlor.js';
 
 /**
  * What the glass and the brass reflect: the parlor (`textures/rooms/parlor.js`)

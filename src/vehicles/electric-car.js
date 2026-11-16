@@ -177,7 +177,7 @@ export function createElectricCar(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   add('bumper', chin, M.trim);
 
   // The light bar: a wide strip across the top of the face and segments at the corners turning up toward the glass.
-  add('led_bar_centre', box(1.14, 0.08, 0.055), M.led, [0, 0.715, 3.35]);
+  add('led_bar_center', box(1.14, 0.08, 0.055), M.led, [0, 0.715, 3.35]);
   [-1, 1].forEach((s, i) => {
     add(`led_bar_wing_${i ? 'r' : 'l'}`, box(0.26, 0.08, 0.055), M.led, [s * 0.66, 0.74, 3.30], [0, s * 0.42, s * 0.2]);
     add(`headlamp_${i ? 'r' : 'l'}`, box(0.28, 0.06, 0.04), M.led, [s * 0.52, 0.52, 3.375]);

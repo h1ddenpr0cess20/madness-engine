@@ -26,7 +26,7 @@ import { tag } from './human/clothes.js';
 /** The resin colors on offer, by name (any #rrggbb works too). */
 export const RESIN_COLORS = Object.freeze({
   red: '#b3202a', blue: '#1f3f9e', white: '#e9e9ec', black: '#1a1a1d', yellow: '#e2b21c', orange: '#e0621a',
-  green: '#1f7a3c', teal: '#14898a', purple: '#5a2a8a', pink: '#d8507a', grey: '#7d8087', gold: '#b8923a',
+  green: '#1f7a3c', teal: '#14898a', purple: '#5a2a8a', pink: '#d8507a', gray: '#7d8087', gold: '#b8923a',
 });
 
 /** What the outer shell can be made of. */

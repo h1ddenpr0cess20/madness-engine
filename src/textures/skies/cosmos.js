@@ -32,7 +32,7 @@ function mix(a, b, t) {
 }
 
 /** The plain ramp, by elevation in radians — also what a canvasless backdrop is colored with. */
-export function cosmosColour(elevation) {
+export function cosmosColor(elevation) {
   const up = Math.sin(elevation);
   if (up >= 0) return mix(COSMOS.horizon, COSMOS.zenith, Math.pow(up, 0.6));
   return mix(COSMOS.horizon, COSMOS.nadir, Math.pow(-up, 0.5));
@@ -123,7 +123,7 @@ export function paintCosmos(ctx, width, height, { random = Math.random } = {}) {
 
   for (let y = 0; y < h; y++) {
     const elevation = (0.5 - (y + 0.5) / h) * Math.PI;
-    const sky = cosmosColour(elevation);
+    const sky = cosmosColor(elevation);
     /** The drifts gather in a band a little above the horizon, like a galaxy seen edge on. */
     const band = Math.exp(-Math.pow((elevation - 0.25) / 0.55, 2));
     for (let x = -1; x <= w; x++) {
@@ -133,12 +133,12 @@ export function paintCosmos(ctx, width, height, { random = Math.random } = {}) {
       /** Round the colors continuously, so two drifts never meet at a seam. */
       const along = tint(u * 0.5 + 11, v * 0.5) * NEBULA.length * 1.5;
       const k = Math.floor(along);
-      const colour = mix(NEBULA[k % NEBULA.length], NEBULA[(k + 1) % NEBULA.length], along - k);
+      const color = mix(NEBULA[k % NEBULA.length], NEBULA[(k + 1) % NEBULA.length], along - k);
       const amount = Math.min(1, cloud * cloud * (0.25 + band * 0.9));
       const i = (y * (w + 2) + x + 1) * 4;
-      img.data[i] = lerp(sky[0], colour[0], amount * 0.75);
-      img.data[i + 1] = lerp(sky[1], colour[1], amount * 0.75);
-      img.data[i + 2] = lerp(sky[2], colour[2], amount * 0.75);
+      img.data[i] = lerp(sky[0], color[0], amount * 0.75);
+      img.data[i + 1] = lerp(sky[1], color[1], amount * 0.75);
+      img.data[i + 2] = lerp(sky[2], color[2], amount * 0.75);
       img.data[i + 3] = 255;
     }
   }
@@ -161,8 +161,8 @@ export function paintCosmos(ctx, width, height, { random = Math.random } = {}) {
     const size = 0.35 + bright * 1.1;
     const alpha = 0.2 + bright * 0.8;
     const hue = random();
-    const colour = hue < 0.08 ? '255, 214, 170' : hue < 0.16 ? '190, 210, 255' : hue < 0.2 ? '255, 190, 240' : '255, 250, 245';
-    ctx.fillStyle = `rgba(${colour}, ${alpha})`;
+    const color = hue < 0.08 ? '255, 214, 170' : hue < 0.16 ? '190, 210, 255' : hue < 0.2 ? '255, 190, 240' : '255, 250, 245';
+    ctx.fillStyle = `rgba(${color}, ${alpha})`;
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
     /** One that hangs over an edge of the map is the rest of the way round, too. */

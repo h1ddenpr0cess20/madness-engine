@@ -1,5 +1,5 @@
 import { cloth, hold, person, shell, skirt, trunk } from './person.js';
-import { beard, moustache } from './wardrobe.js';
+import { beard, mustache } from './wardrobe.js';
 
 /**
  * Father Christmas, cut from the Flatfoot's cloth: the same broad build and the
@@ -98,7 +98,7 @@ export default person({
     shell(s, (p) => Math.max(Math.abs(p[1] - 0.536) - 0.014, -p[2] - 0.045), { ...fur, over: ['top', 'head'], bone: 'neck' });
     // The beard to the belt, its edge low on the cheeks so they show rosy, and a bushy mustache over the mouth.
     beard(s, { color: '#f6f6f8', long: 1.7, thick: 0.01, high: 0.64 });
-    moustache(s, { color: '#f6f6f8', wide: 1.2, droop: 0.5 });
+    mustache(s, { color: '#f6f6f8', wide: 1.2, droop: 0.5 });
     // The cap: red, fitted over the head and the hair down to under its band, the point falling back over his
     // shoulder with a bobble on the end. The fur band is laid over the foot of the cap, higher at the brows than at
     // the nape, as a cap sits.

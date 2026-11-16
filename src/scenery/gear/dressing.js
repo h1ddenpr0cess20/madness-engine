@@ -550,10 +550,10 @@ function sedan(GFX, { w = 2, d = 3, venue, ...spec }) {
   group.add(car);
   const k = kit(GFX, car);
   const L = Math.max(w, d) * 0.92, W = Math.min(Math.min(w, d) * 0.86, 1.3);
-  const colours = PAINT[venue?.look?.genre] ?? PAINT[venue?.look?.country] ?? PAINT.default;
-  const paint = gloss(GFX, colours[Math.abs(Math.round((spec.x ?? 0) * 7 + (spec.z ?? 0) * 3)) % colours.length]);
+  const colors = PAINT[venue?.look?.genre] ?? PAINT[venue?.look?.country] ?? PAINT.default;
+  const paint = gloss(GFX, colors[Math.abs(Math.round((spec.x ?? 0) * 7 + (spec.z ?? 0) * 3)) % colors.length]);
   const chrome = metal(GFX, '#e0e4ec', 0.15);
-  const tyre = std(GFX, '#121214', { roughness: 0.85 });
+  const tire = std(GFX, '#121214', { roughness: 0.85 });
   const dark = glass(GFX, '#1a2430', 0.85);
   k.box([W, 0.34, L * 0.96], paint, [0, 0.38, 0]);
   const hood = k.ball(0.5, paint, [0, 0.52, L * 0.26]);
@@ -566,7 +566,7 @@ function sedan(GFX, { w = 2, d = 3, venue, ...spec }) {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const fender = k.ball(0.5, paint, [sx * (W / 2 - 0.06), 0.36, sz * L * 0.31]);
     fender.scale.set(0.26, 0.42, Math.min(0.72, L * 0.28));
-    k.cyl(0.17, 0.17, 0.14, tyre, [sx * (W / 2 - 0.02), 0.17, sz * L * 0.31], { rot: X });
+    k.cyl(0.17, 0.17, 0.14, tire, [sx * (W / 2 - 0.02), 0.17, sz * L * 0.31], { rot: X });
     k.cyl(0.09, 0.09, 0.15, std(GFX, '#f4f2ee', { roughness: 0.5 }), [sx * (W / 2 - 0.02), 0.17, sz * L * 0.31], { rot: X });
     k.cyl(0.05, 0.05, 0.16, chrome, [sx * (W / 2 - 0.02), 0.17, sz * L * 0.31], { rot: X });
   }
@@ -726,11 +726,11 @@ function rail(GFX, { rise = 1.1, venue, ...spec }) {
   k.cyl(0.016, 0.016, 0.92, chrome, [0, bar, 0], { rot: [0, 0, Math.PI / 2] });
   // A premiere's, or New York's: coats on it.
   const coats = venue?.look?.genre === 'Premiere' || venue?.look?.country === 'USA';
-  const colours = coats ? ['#16161a', '#3a3036', '#2a2a3a', '#4a3a2a', '#1a1a1e'] : ['#c81c34', '#e8c060', '#2a5ad8', '#16161a', '#3a8a4a', '#d860a8', '#f4f0e8'];
+  const colors = coats ? ['#16161a', '#3a3036', '#2a2a3a', '#4a3a2a', '#1a1a1e'] : ['#c81c34', '#e8c060', '#2a5ad8', '#16161a', '#3a8a4a', '#d860a8', '#f4f0e8'];
   for (let i = 0; i < 7; i++) {
     const x = -0.36 + i * 0.12;
     const len = coats ? 0.75 + rnd() * 0.15 : 0.45 + rnd() * 0.4;
-    const mat = std(GFX, colours[Math.floor(rnd() * colours.length)], { roughness: coats ? 0.85 : 0.5 + rnd() * 0.3, metalness: !coats && rnd() < 0.25 ? 0.5 : 0 });
+    const mat = std(GFX, colors[Math.floor(rnd() * colors.length)], { roughness: coats ? 0.85 : 0.5 + rnd() * 0.3, metalness: !coats && rnd() < 0.25 ? 0.5 : 0 });
     k.ring(0.035, 0.005, chrome, [x, bar - 0.02, 0], { rot: [0, Math.PI / 2, 0], seg: 10, arc: Math.PI });
     const shoulders = k.ball(0.5, mat, [x, bar - 0.1, 0]);
     shoulders.scale.set(0.07, 0.08, 0.4);

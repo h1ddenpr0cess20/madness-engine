@@ -13,12 +13,12 @@ const ARRAYS = ['position', 'normal', 'color', 'skinIndex', 'skinWeight', 'index
 // As the catalog has it: a still prop with no skeleton gets one bone, the root.
 const rooted = (def) => (def.bones ? def : { ...def, bones: [['root', null, [0, 0, 0]]] });
 
-self.onmessage = async ({ data: { id, path, key, sub, detail, colours } }) => {
+self.onmessage = async ({ data: { id, path, key, sub, detail, colors } }) => {
   try {
     const mod = await sculpted[path]();
     const base = rooted(sub ? mod[key][sub] : mod[key]);
     // A person in other colors, as the page has them (characters/person.js `variant`).
-    const def = colours && Object.keys(colours).length && typeof base.variant === 'function' ? base.variant(colours) : base;
+    const def = colors && Object.keys(colors).length && typeof base.variant === 'function' ? base.variant(colors) : base;
     const data = { ...bake(def, { detail }) };
     const moved = [];
     for (const k of ARRAYS) if (data[k]) { data[k] = data[k].slice(); moved.push(data[k].buffer); }

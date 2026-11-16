@@ -64,14 +64,14 @@ function saddleSeat(GFX, width, depth, top, thick, dish = 0.014) {
     if (n[0] * hint[0] + n[1] * hint[1] + n[2] * hint[2] >= 0) idx.push(a, b, c); else idx.push(a, c, b);
   };
   // The dished top: a center and NR rings out to the rim.
-  const centre = push(0, top - dish, 0);
+  const center = push(0, top - dish, 0);
   const ring = [];
   for (let r = 1; r <= NR; r++) {
     const rho = r / NR, row = [];
     for (let k = 0; k < NA; k++) { const [x, z] = edge(2 * Math.PI * k / NA); row.push(push(x * rho, top - dish * (1 - rho * rho), z * rho)); }
     ring.push(row);
   }
-  for (let k = 0; k < NA; k++) tri(centre, ring[0][k], ring[0][(k + 1) % NA], [0, 1, 0]);
+  for (let k = 0; k < NA; k++) tri(center, ring[0][k], ring[0][(k + 1) % NA], [0, 1, 0]);
   for (let r = 0; r < NR - 1; r++) for (let k = 0; k < NA; k++) {
     const a = ring[r][k], b = ring[r][(k + 1) % NA], c = ring[r + 1][(k + 1) % NA], d = ring[r + 1][k];
     tri(a, b, c, [0, 1, 0]); tri(a, c, d, [0, 1, 0]);
@@ -102,10 +102,10 @@ export function createWoodChair(GFX, options = {}) {
   if (!SEATS.includes(o.seat)) throw new Error(`wood chair: unknown seat "${o.seat}"`);
   if (!LEGS.includes(o.legs)) throw new Error(`wood chair: unknown legs "${o.legs}"`);
   if (!BACKS.includes(o.back)) throw new Error(`wood chair: unknown back "${o.back}"`);
-  if (!(Number.isFinite(o.curve) && o.curve >= 0 && o.curve <= MAX_CURVE)) throw new Error(`wood chair: curve must be 0 to ${MAX_CURVE} metres`);
-  if (!(Number.isFinite(o.arch) && o.arch >= 0 && o.arch <= MAX_ARCH)) throw new Error(`wood chair: arch must be 0 to ${MAX_ARCH} metres`);
+  if (!(Number.isFinite(o.curve) && o.curve >= 0 && o.curve <= MAX_CURVE)) throw new Error(`wood chair: curve must be 0 to ${MAX_CURVE} meters`);
+  if (!(Number.isFinite(o.arch) && o.arch >= 0 && o.arch <= MAX_ARCH)) throw new Error(`wood chair: arch must be 0 to ${MAX_ARCH} meters`);
   if (!(Number.isFinite(o.splay) && o.splay >= 0 && o.splay <= 15)) throw new Error('wood chair: splay must be 0 to 15 degrees');
-  if (!(Number.isFinite(o.rake) && o.rake >= 0 && o.rake <= 0.15)) throw new Error('wood chair: rake must be 0 to 0.15 metres');
+  if (!(Number.isFinite(o.rake) && o.rake >= 0 && o.rake <= 0.15)) throw new Error('wood chair: rake must be 0 to 0.15 meters');
   if (!(Number.isInteger(o.spindles) && o.spindles >= 3 && o.spindles <= 9)) throw new Error('wood chair: spindles must be 3 to 9');
   if (o.back === 'bow' && o.arms) throw new Error('wood chair: a bow back cannot have arms');
   if (!(o.width >= 0.25 && o.width <= 0.9 && o.depth >= 0.25 && o.depth <= 0.8 && o.height >= 0.3 && o.height <= 0.9 && o.backHeight >= 0 && o.backHeight <= 0.9)) throw new Error('wood chair: dimensions outside supported ranges');

@@ -1,5 +1,5 @@
 import { createIrisTexture, RINGS } from './iris.js';
-import { createSkyTexture, skyColour } from '../../textures/skies/cloudsea.js';
+import { createSkyTexture, skyColor } from '../../textures/skies/cloudsea.js';
 
 /** The eye, in meters of nothing in particular: the stage frames whatever size it is. */
 export const RADIUS = 0.8;
@@ -103,7 +103,7 @@ export function createBackdrop(GFX, { random, width = 4096 } = {}) {
     const c = new GFX.Color();
     for (let i = 0; i < position.count; i++) {
       const up = Math.max(-1, Math.min(1, position.getY(i) / BACKDROP_RADIUS));
-      const [r, g, b] = skyColour(Math.asin(up)).map(Math.round);
+      const [r, g, b] = skyColor(Math.asin(up)).map(Math.round);
       c.setHex((r << 16) | (g << 8) | b);
       colors.set([c.r, c.g, c.b], i * 3);
     }

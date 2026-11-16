@@ -1,5 +1,5 @@
 import { createVisionMaterial } from '../heroes/krystal/vision.js';
-import { bladeCentreline } from './blade-curve.js';
+import { bladeCenterline } from './blade-curve.js';
 
 const PALETTES = ['krystal', 'egg'];
 
@@ -122,7 +122,7 @@ export function createCurvedBladeMist(GFX, parent, {
   }
   checkSize('blade mist', { rootY, length, width, bend, segments });
 
-  const line = bladeCentreline({ length, bend, hook, talon });
+  const line = bladeCenterline({ length, bend, hook, talon });
   const group = new GFX.Group();
   group.name = 'Magic Banana blade mist';
   group.visible = Boolean(visible);

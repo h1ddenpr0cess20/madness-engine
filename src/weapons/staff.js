@@ -181,7 +181,7 @@ export function createStaff(GFX, {
   if (!Number.isFinite(seed)) throw new TypeError('seed must be a number');
   if (!Number.isFinite(detail) || detail <= 0) throw new RangeError('detail must be a positive number');
   for (const [name, c] of [['gripColor', gripColor], ['threadColor', threadColor]]) {
-    if (!/^#[0-9a-f]{6}$/i.test(c)) throw new TypeError(`${name} must be a six-digit hex colour`);
+    if (!/^#[0-9a-f]{6}$/i.test(c)) throw new TypeError(`${name} must be a six-digit hex color`);
   }
 
   let wrapOn = Boolean(wrap);
@@ -271,7 +271,7 @@ export function createStaff(GFX, {
   head.add(topperHolder);
   const headParts = [];
   let currentTopper = null;
-  let headCentre = 0;
+  let headCenter = 0;
   const toppers = {};
 
   const topperSpec = (kind) => (kind === 'egg'
@@ -385,7 +385,7 @@ export function createStaff(GFX, {
       mark(add(head, sweepTube(GFX, pts, radii, 7), wood, `shaft root ${i + 1}`));
     }
 
-    headCentre = cy;
+    headCenter = cy;
     return { cy };
   }
 
@@ -401,7 +401,7 @@ export function createStaff(GFX, {
       } else if (JEWEL_CHOICES.includes(kind)) {
         // A jewel is the granite's own shape, cut to the orb's size, with its mist inside.
         const scale = STAFF_DIMENSIONS.orbRadius / 0.9;
-        const asset = createJewelBoulder(GFX, { colour: kind, mist: true, size: scale });
+        const asset = createJewelBoulder(GFX, { jewel: kind, mist: true, size: scale });
         asset.mesh.scale.setScalar(scale);
         toppers[kind] = { asset, object: asset.mesh };
       } else if (GLASS_PLANET_NAMES.includes(kind)) {
@@ -435,7 +435,7 @@ export function createStaff(GFX, {
   mountTopper(topperKind);
 
   // The top of the staff: the topper's center and its half-height.
-  const dims = () => HEAD_Y + headCentre + topperSpec(topperKind === 'none' ? 'orb' : topperKind).b;
+  const dims = () => HEAD_Y + headCenter + topperSpec(topperKind === 'none' ? 'orb' : topperKind).b;
 
   // The wooden parts, all at once: the current finish, wood or metal.
   const paintWood = () => {
@@ -476,7 +476,7 @@ export function createStaff(GFX, {
         ...(metalName ? { Metal: metalName } : { Wood: `${woodSpecies} (${woodFinish})` }),
         Topper: TOPPER_LABELS[topperKind],
         Tendrils: String(tendrils),
-        Scale: '1 world unit = 1 metre',
+        Scale: '1 world unit = 1 meter',
       };
     },
     /** Makes the wooden parts wood again: `setWood()` with no arguments keeps the wood it had. */
@@ -504,12 +504,12 @@ export function createStaff(GFX, {
       return api;
     },
     setGripColor(color) {
-      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex colour');
+      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('gripColor must be a six-digit hex color');
       leather.color.set(color);
       return api;
     },
     setThreadColor(color) {
-      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('threadColor must be a six-digit hex colour');
+      if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError('threadColor must be a six-digit hex color');
       thread.color.set(color);
       return api;
     },

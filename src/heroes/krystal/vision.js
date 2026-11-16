@@ -260,7 +260,7 @@ export function createVisionMaterial(GFX) {
  * The same palette on the CPU, for what the visions light outside the glass:
  * the stand, the aura. Returns 0..1 RGB.
  */
-export function paletteColour(t) {
+export function paletteColor(t) {
   const a = [0.56, 0.40, 0.62];
   const b = [0.44, 0.38, 0.38];
   const d = [0.0, 0.30, 0.62];

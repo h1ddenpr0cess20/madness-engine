@@ -406,9 +406,9 @@ void main() {
 
   float core = smoothstep(0.565, 0.67, magma + detailHeat * 0.055);
   float temperature = clamp(0.24 + core * 0.48 + pools * 0.28 + bubbles * 0.16 + detailHeat * 0.13, 0.0, 1.0);
-  vec3 colour = heat(temperature);
+  vec3 color = heat(temperature);
   float coolingRim = smoothstep(0.47, 0.57, magma) * (1.0 - smoothstep(0.57, 0.65, magma));
-  colour = mix(colour * 0.58, colour, coolingRim * 0.65);
+  color = mix(color * 0.58, color, coolingRim * 0.65);
   // Gloss: the melt is wet and glassy, so sharp highlights slide over it as
   // it moves, while the basalt crust (the shell) stays dull.
   vec3 jitter = vec3(
@@ -419,8 +419,8 @@ void main() {
   vec3 nrm = normalize(normalize(vNormalView) + jitter * 0.55);
   vec3 hv = normalize(normalize(vec3(-0.45, 0.65, 0.6)) + vec3(0.0, 0.0, 1.0));
   float spec = pow(max(dot(nrm, hv), 0.0), 46.0);
-  colour += vec3(1.0, 0.82, 0.55) * spec * 1.7 * smoothstep(0.1, 0.5, mask);
-  gl_FragColor = vec4(colour * 1.12, mask);
+  color += vec3(1.0, 0.82, 0.55) * spec * 1.7 * smoothstep(0.1, 0.5, mask);
+  gl_FragColor = vec4(color * 1.12, mask);
 }
 `;
 
@@ -518,9 +518,9 @@ fn fs(in: Varyings) -> @location(0) vec4f {
   if (mask < 0.006) { discard; }
   let core = smoothstep(0.565, 0.67, magma + detailHeat * 0.055);
   let temperature = clamp(0.24 + core * 0.48 + pools * 0.28 + bubbles * 0.16 + detailHeat * 0.13, 0.0, 1.0);
-  var colour = heat(temperature);
+  var color = heat(temperature);
   let coolingRim = smoothstep(0.47, 0.57, magma) * (1.0 - smoothstep(0.57, 0.65, magma));
-  colour = mix(colour * 0.58, colour, coolingRim * 0.65);
+  color = mix(color * 0.58, color, coolingRim * 0.65);
   let jitter = vec3f(
     noise3(p * 5.0 + vec3f(1.3, t * 0.05, 0.0)),
     noise3(p * 5.0 + vec3f(7.1, 2.2, t * 0.04)),
@@ -529,8 +529,8 @@ fn fs(in: Varyings) -> @location(0) vec4f {
   let nrm = normalize(normalize(in.normalView) + jitter * 0.55);
   let hv = normalize(normalize(vec3f(-0.45, 0.65, 0.6)) + vec3f(0.0, 0.0, 1.0));
   let spec = pow(max(dot(nrm, hv), 0.0), 46.0);
-  colour += vec3f(1.0, 0.82, 0.55) * spec * 1.7 * smoothstep(0.1, 0.5, mask);
-  return vec4f(colour * 1.12, mask);
+  color += vec3f(1.0, 0.82, 0.55) * spec * 1.7 * smoothstep(0.1, 0.5, mask);
+  return vec4f(color * 1.12, mask);
 }
 `;
 
@@ -597,9 +597,9 @@ function textureSet(GFX, mapping, scale) {
     }
   }
 
-  const make = (data, colourSpace, wrapT) => {
+  const make = (data, colorSpace, wrapT) => {
     const tex = new GFX.DataTexture(data, width, height, 'rgba8unorm');
-    tex.colorSpace = colourSpace;
+    tex.colorSpace = colorSpace;
     tex.wrapS = GFX.RepeatWrapping;
     tex.wrapT = wrapT;
     tex.anisotropy = 8;

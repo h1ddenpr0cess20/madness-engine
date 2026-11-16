@@ -61,7 +61,7 @@ function seat(s, h, e, r) {
 }
 `;
 
-const QUADRUPED_INNER = `  // Inside the ears: their own colour, gone pink.
+const QUADRUPED_INNER = `  // Inside the ears: their own color, gone pink.
   if (!C.inner) {
     const ear = typeof C.ears === 'string' ? rgb(C.ears) : C.ears, pink = rgb('#d89a8c');
     C.inner = (p, n) => mix(typeof ear === 'function' ? ear(p, n) : ear, pink, 0.5);
@@ -492,7 +492,7 @@ const BARE_FEET = `    // Bare feet: a foot, melted into the leg, with its toes;
 `;
 
 /** What the soles and the bare feet are made with, before the skin. */
-const HUMANOID_FEET = `/** A colour (or a colour function) darkened, for a sole that wasn't given one. */
+const HUMANOID_FEET = `/** A color (or a color function) darkened, for a sole that wasn't given one. */
 const darker = (color) => (typeof color === 'function' ? (p, n) => color(p, n).map((v) => v * 0.42) : rgb(color).map((v) => v * 0.42));
 
 /** A slab of sole: flat top and bottom, straight sides round an oval of radii \`r\`[0] by \`r\`[2], \`r\`[1] either side of \`c\` up and down, its edges rounded. */
@@ -1169,11 +1169,11 @@ import { body, bones, build, cover, fit, grip, head, hair, joints, moveHumanoid,
   denim: { roughness: 0.9, sheen: 0.22, sheenColor: '#8c98ac', sheenRoughness: 0.55 },
   leather: { roughness: 0.48, clearcoat: 0.25, clearcoatRoughness: 0.5 },
 `],
-  [`/** Cloth: a colour that is lighter on top and darker beneath, with a little mottling. */
+  [`/** Cloth: a color that is lighter on top and darker beneath, with a little mottling. */
 export const cloth = (over, under, o = {}) => coat({ over, under: under ?? shade(over, 0.7), vary: 0.1, freq: 14, grain: 0.05, ...o });
 
 `,
-    `/** Cloth: a colour that is lighter on top and darker beneath, with a little mottling. */
+    `/** Cloth: a color that is lighter on top and darker beneath, with a little mottling. */
 export const cloth = (over, under, o = {}) => coat({ over, under: under ?? shade(over, 0.8), vary: 0.04, freq: 14, grain: 0.03, ...o });
 
 `],
@@ -1362,12 +1362,12 @@ export function band(s, y, tilt, r, o) {
   });
 `],
   ],
-  'neighbour.js': [
-    [`      // A comb-over, and a moustache like a pair of wings.
+  'neighbor.js': [
+    [`      // A comb-over, and a mustache like a pair of wings.
       s.limb([-0.05, 0.768, -0.01], [0.05, 0.76, 0.03], 0.016, 0.012, { color: hairy, mat: 'hair', bone: 'head', k: 0.008 });
       for (const m of [1, -1]) {
 `,
-      `      // A comb-over, and a moustache like a pair of wings.
+      `      // A comb-over, and a mustache like a pair of wings.
       // Three thin strands combed across the bald top, lying on it.
       for (const [dz, arc] of [[-0.028, 0.62], [0.002, 0.66], [0.032, 0.52]]) s.torus([0, 0.668, dz], 0.104, 0.0062, { color: hairy, mat: 'hair', bone: 'head', k: 0.003, arc, rot: [-Math.PI / 2, 0, 0.12] });
       for (const m of [1, -1]) {
@@ -1386,12 +1386,12 @@ export function band(s, y, tilt, r, o) {
     });
 `],
   ],
-  'neighbour.rocknroller.js': [
-    [`      // A comb-over, and a moustache like a pair of wings.
+  'neighbor.rocknroller.js': [
+    [`      // A comb-over, and a mustache like a pair of wings.
       s.limb([-0.05, 0.768, -0.01], [0.05, 0.76, 0.03], 0.016, 0.012, { color: hairy, mat: 'hair', bone: 'head', k: 0.008 });
       for (const m of [1, -1]) {
 `,
-      `      // A comb-over, and a moustache like a pair of wings.
+      `      // A comb-over, and a mustache like a pair of wings.
       // Three thin strands combed across the bald top, lying on it.
       for (const [dz, arc] of [[-0.028, 0.62], [0.002, 0.66], [0.032, 0.52]]) s.torus([0, 0.668, dz], 0.104, 0.0062, { color: hairy, mat: 'hair', bone: 'head', k: 0.003, arc, rot: [-Math.PI / 2, 0, 0.12] });
       for (const m of [1, -1]) {
@@ -1754,7 +1754,7 @@ export const EDITS = [
   },
   {
     at: /^characters\/quadruped\.js$/,
-    why: 'The animals\' faces: their eyes sank into heads swollen by smooth unions and were plain beads; the nose was too small for the grid and came out ragged, and so did the tips of the ears. Each eye is set half out of where the head actually is, with a pupil, a catch-light and a lid; the nose and the ears are meshes of their own on grids as fine as the head is small, the nose with nostrils and the pricked ears cupped and coloured inside; there is a mouth, and the paws have toes.',
+    why: 'The animals\' faces: their eyes sank into heads swollen by smooth unions and were plain beads; the nose was too small for the grid and came out ragged, and so did the tips of the ears. Each eye is set half out of where the head actually is, with a pupil, a catch-light and a lid; the nose and the ears are meshes of their own on grids as fine as the head is small, the nose with nostrils and the pricked ears cupped and colored inside; there is a mouth, and the paws have toes.',
     edit(text, where) {
       // The kit is where the game keeps it: beside the cast, or in its sculpt folder.
       text = text.replace(/^import \{ coat \} from '(.*)skins\.js';$/m, "import { rgb } from '$1sdf.js';\nimport { coat, mix } from '$1skins.js';");
@@ -1914,7 +1914,7 @@ export const EDITS = [
     },
   },
   {
-    at: /^characters\/(dame|dancer|hippie|metalwear|neighbour|ninja|raver|salaryman|stuntman|superfan|usher|wardrobe|wizard)\.js$/,
+    at: /^characters\/(dame|dancer|hippie|metalwear|neighbor|ninja|raver|salaryman|stuntman|superfan|usher|wardrobe|wizard)\.js$/,
     why: 'The hats, and what else people wear on their heads, were made for heads they no longer fitted, or made crudely: brims that were cones standing up off the head, hats floating over the head or sunk into it with the hair and the head coming through them, a peak not joined to its cap, a hoop round the forehead for a wizard\'s brim, rings for headbands, a top hat on stilts. Each is made again to sit on the head: a bucket hat\'s and a cowboy hat\'s brims, a fedora\'s, a flat cap\'s, a beret\'s and a top hat\'s crowns, bands that lie on the head and hair all the way round (`band`), the wizard\'s soft brim and floppy crown, the stuntman\'s helmet, the dame\'s sheer veil, the usher\'s pillbox perched on the hair; and the hair under a hat as wide as the head is cut away under it (`cover`, humanoid.js).',
     edit(text, where) {
       for (const [was, now] of HATS[where.split('/').pop()] ?? []) text = swap(text, was, now, where);

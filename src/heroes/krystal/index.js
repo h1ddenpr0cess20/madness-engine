@@ -2,7 +2,7 @@ import { buildEnvironment, candlelight } from './environment.js';
 import { createBackdrop, createBall, createTable, FOOT, RADIUS } from './model.js';
 import { ENERGY_GAIN, MOODS } from './moods.js';
 import { approach } from './motion.js';
-import { paletteColour } from './vision.js';
+import { paletteColor } from './vision.js';
 
 /**
  * How far the view may be zoomed. In, to this many radii from the middle of
@@ -143,7 +143,7 @@ export function createKrystal({ stage, GFX, random = Math.random, sky = 4096 }) 
     if (!uniforms.uLocal?.value) uniforms.uShape.value.setFromMatrixScale(vision.matrixWorld);
 
     // What the visions throw on the brass and the cloth: the color at the heart of them.
-    const [r, g, b] = paletteColour(hue + 0.5);
+    const [r, g, b] = paletteColor(hue + 0.5);
     if (lamp) {
       lamp.color.setRGB(r, g, b);
       lamp.intensity = LAMP * (0.35 + glow * 0.6 + core * 0.5);

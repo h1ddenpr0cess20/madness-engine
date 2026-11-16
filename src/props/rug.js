@@ -355,16 +355,16 @@ export function createPersianRug(GFX, options = {}) {
     throw new RangeError(`rug palette must be one of ${RUG_PALETTE_NAMES.join(', ')}.`);
   }
   if (!(Number.isFinite(o.width) && o.width >= 1 && o.width <= 8)) {
-    throw new RangeError('rug width must be between 1 and 8 metres.');
+    throw new RangeError('rug width must be between 1 and 8 meters.');
   }
   if (!(Number.isFinite(o.depth) && o.depth >= 1 && o.depth <= 8)) {
-    throw new RangeError('rug depth must be between 1 and 8 metres.');
+    throw new RangeError('rug depth must be between 1 and 8 meters.');
   }
   if (!(Number.isFinite(o.thickness) && o.thickness >= 0.004 && o.thickness <= 0.06)) {
-    throw new RangeError('rug thickness must be between 0.004 and 0.06 metres.');
+    throw new RangeError('rug thickness must be between 0.004 and 0.06 meters.');
   }
   if (!(Number.isFinite(o.fringeLength) && o.fringeLength >= 0.015 && o.fringeLength <= 0.2)) {
-    throw new RangeError('rug fringeLength must be between 0.015 and 0.2 metres.');
+    throw new RangeError('rug fringeLength must be between 0.015 and 0.2 meters.');
   }
 
   const group = new GFX.Group();

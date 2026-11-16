@@ -1,4 +1,4 @@
-import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
+import { buildWeapon, WEAPON_WORLD_UNITS_PER_METER } from './common.js';
 import { HANDS } from './categories.js';
 
 /**
@@ -25,7 +25,7 @@ export const DAGGER_SPEC = Object.freeze({
   gripWrapDivisions: 9,
 });
 
-export const WORLD_UNITS_PER_METRE = WEAPON_WORLD_UNITS_PER_METRE;
+export const WORLD_UNITS_PER_METER = WEAPON_WORLD_UNITS_PER_METER;
 
 export function createDagger(GFX, options = {}) {
   return buildWeapon(GFX, DAGGER_SPEC, options);
