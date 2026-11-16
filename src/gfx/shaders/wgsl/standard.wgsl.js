@@ -427,6 +427,8 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #ifdef USE_TRANSMISSION
   diffuseColor.a *= material.transmissionAlpha;
   #endif
+  // Fog: into the haze with distance (nothing where the scene has none).
+  outgoingLight = mix(outgoingLight, u_frame.fogColor, 1.0 - exp(-u_frame.fogDensity * length(in.viewPosition)));
   return linearToOutputTexel(vec4f(outgoingLight, diffuseColor.a));
 }
 `;
