@@ -29,6 +29,7 @@ The guides explain how the systems fit together. The reference pages describe th
 
 - [Adding the engine to an existing game](dropping-in.md) — migration approach, current game status, and compatibility verification.
 - [Asset ideas backlog](development/asset-backlog.md) — an internal planning list, not a catalog of assets already in the engine.
+- [British spellings in the code](development/british-spellings.md) — a snapshot of the British spellings still left in the code, by file and line.
 
 ## Keeping the documentation accurate
 
