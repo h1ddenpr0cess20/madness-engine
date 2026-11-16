@@ -32,7 +32,7 @@ export const MATERIALS = {
   fur: { roughness: 0.85, sheen: 0.4, sheenColor: '#aaa' },
 };
 
-/** Cloth: a colour that is lighter on top and darker beneath, with a little mottling. */
+/** Cloth: a color that is lighter on top and darker beneath, with a little mottling. */
 export const cloth = (over, under, o = {}) => coat({ over, under: under ?? shade(over, 0.8), vary: 0.04, freq: 14, grain: 0.03, ...o });
 
 /** `hex` darkened (or lightened, above 1) by `k`. */
@@ -50,7 +50,7 @@ export function hold(k, name, x = 0, y = 0, z = 0) {
   r[0] = x; r[1] = y; r[2] = z;
 }
 
-// ——————————————————————————————————————————————— colours
+// ——————————————————————————————————————————————— colors
 
 /** '#abc' or '#aabbcc' as lower case '#aabbcc'; anything else (a function, an array, 'skin') as it is. */
 const hexKey = (c) => {
@@ -67,7 +67,7 @@ export function toHex(c) {
   }).join('')}`;
 }
 
-/** A colour (hex, linear rgb, or a colour function) as linear rgb: a function is read on a surface facing up, near the crown. */
+/** A color (hex, linear rgb, or a color function) as linear rgb: a function is read on a surface facing up, near the crown. */
 function linear(c) {
   try {
     const v = typeof c === 'function' ? c([0, 0.7, 0], [0, 1, 0]) : typeof c === 'string' ? rgb(hexKey(c)) : c;
@@ -75,12 +75,12 @@ function linear(c) {
   } catch { return [0.5, 0.5, 0.5]; }
 }
 
-/** What colour to show for `c` in a picker: '#rrggbb'. */
+/** What color to show for `c` in a picker: '#rrggbb'. */
 export const swatch = (c) => (typeof c === 'function' && c.swatch ? c.swatch : typeof c === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c) ? hexKey(c) : toHex(linear(c)));
 
 /**
- * Colour for a `look` slot that was `was` and is to be `now`. A hex colour for a slot that was cloth (a function,
- * mottled and lighter on top) is made into cloth of that colour, so a recoloured jacket is not flatter than the
+ * Color for a `look` slot that was `was` and is to be `now`. A hex color for a slot that was cloth (a function,
+ * mottled and lighter on top) is made into cloth of that color, so a recolored jacket is not flatter than the
  * one it replaces; anything else is used as given.
  */
 const dyed = (was, now) => {
@@ -91,8 +91,8 @@ const dyed = (was, now) => {
 };
 
 /**
- * Skin tones, hair and eye colours to draw from for variety (`variant`, `diverse`): common ones, a little beyond.
- * Hex colours; hair is the colour in the light.
+ * Skin tones, hair and eye colors to draw from for variety (`variant`, `diverse`): common ones, a little beyond.
+ * Hex colors; hair is the color in the light.
  */
 export const SKIN_TONES = ['#f6dcc8', '#f0d0c0', '#e9b48f', '#e0a97c', '#d19a6a', '#c68642', '#a9703f', '#8d5524', '#6f4120', '#533018', '#3b2314'];
 export const HAIR_COLORS = ['#0e0a08', '#241810', '#3a2414', '#5a3a1e', '#7a5230', '#a07840', '#c8a45a', '#e0c070', '#8a3a1e', '#b0502a', '#9a9a9a', '#e8e6e0'];
@@ -118,14 +118,14 @@ export function diverse(seed = 0) {
   return { skin: pick(SKIN_TONES), hair, eyes: pick(light ? EYE_COLORS.slice(4) : EYE_COLORS) };
 }
 
-/** The parts of a `look` that are a colour (the rest of it says how: `boots` how high, `shorts`, `flare`, `skirt`). */
+/** The parts of a `look` that are a color (the rest of it says how: `boots` how high, `shorts`, `flare`, `skirt`). */
 const COLOR_SLOTS = ['torso', 'sleeve', 'cuff', 'hand', 'legs', 'boot', 'belt', 'buckle', 'sole', 'shin', 'sandals'];
 const wearable = (look, mats, slot) => COLOR_SLOTS.includes(slot) && look?.[slot] !== undefined && look[slot] !== 'skin' && mats?.[slot] !== 'skin';
 
 /**
  * `person`'s options with `changes` made to them (see `variant`): the options of a new person, who is the same one
- * dressed in other colours. `recolor` is what is to be changed in what the person's `extras` and hair make, which is
- * made by code of its own: { hair, swaps }, `swaps` a Map from a colour (a normalised hex, or the very function or
+ * dressed in other colors. `recolor` is what is to be changed in what the person's `extras` and hair make, which is
+ * made by code of its own: { hair, swaps }, `swaps` a Map from a color (a normalized hex, or the very function or
  * array the code uses) to what to use in its place.
  */
 function varied(opts, changes) {
@@ -145,12 +145,12 @@ function varied(opts, changes) {
   const look = { ...opts.look };
   const now = new Map();
   for (const [slot, value] of Object.entries(looks)) {
-    // Only what they wear: skin is `skin`, and a part that is bare skin has no colour of its own.
+    // Only what they wear: skin is `skin`, and a part that is bare skin has no color of its own.
     if (value === undefined || !wearable(opts.look, opts.mats, slot)) continue;
     look[slot] = dyed(opts.look[slot], norm(value));
     now.set(slot, look[slot]);
   }
-  // Bare arms and legs drawn in a colour of their own (the skin's, as a hex) go with the skin.
+  // Bare arms and legs drawn in a color of their own (the skin's, as a hex) go with the skin.
   const skinned = new Set(opts.recolor?.skinned ?? []);
   if (skin !== undefined) {
     for (const [slot, v] of Object.entries(opts.look ?? {})) {
@@ -158,7 +158,7 @@ function varied(opts, changes) {
     }
   }
   out.look = look;
-  // What `extras` makes in the very colour of a garment is dyed with it, if everything of that colour is: a coat's
+  // What `extras` makes in the very color of a garment is dyed with it, if everything of that color is: a coat's
   // skirts with its body, a hat band that is the trousers' black. (Part of it dyed and part not, they stay as they are.)
   const held = new Map();
   for (const slot of COLOR_SLOTS) {
@@ -169,7 +169,7 @@ function varied(opts, changes) {
   for (const [key, slots] of held) {
     if (!slots.every((s) => now.has(s))) continue;
     const to = now.get(slots[0]);
-    // What was drawn in the colour this one replaced (itself a swap's) follows to the new one.
+    // What was drawn in the color this one replaced (itself a swap's) follows to the new one.
     for (const [from, via] of swaps) if (hexKey(via) === key) swaps.set(from, to);
     swaps.set(key, to);
   }
@@ -183,7 +183,7 @@ function varied(opts, changes) {
 /** The parts that are worn rather than grown. */
 const WORN = ['top', 'sleeves', 'cuffs', 'bottoms', 'hose', 'belt', 'shoes', 'soles', 'outer', 'outer2', 'straps'];
 
-/** The colour a `recolor` gives a shape of colour `color` and material `mat`: its swap, or hair's new colour if it is hair. */
+/** The color a `recolor` gives a shape of color `color` and material `mat`: its swap, or hair's new color if it is hair. */
 function tinter({ hair, swaps }) {
   const dyedHair = hair === null || hair === undefined ? null : typeof hair === 'string' ? cloth(hair) : hair;
   return (color, mat, part) => {
@@ -197,7 +197,7 @@ function tinter({ hair, swaps }) {
 
 /**
  * `look` has `skin`, `torso`, `sleeve`, `cuff`, `hand`, `legs`, `boot` (each a
- * colour or a colour function), and `boots` or `shin` for the calf (see
+ * color or a color function), and `boots` or `shin` for the calf (see
  * humanoid.js `body`); `mats` the material of each (default cloth,
  * skin for skin and hands); `face` is for `head()` (skin, brow, eyeColor,
  * ears, jaw, mood, blush) and `hair` for `hair()`; `b` the breadth. `shape`
@@ -214,7 +214,7 @@ export function person(opts) {
   const full = { skin: tone, hand: tone, ...look };
   // 'skin' for a bare calf, under shorts or a skirt.
   if (look.shin === 'skin') full.shin = tone;
-  // A variant's new skin on the bare parts that had a colour of their own.
+  // A variant's new skin on the bare parts that had a color of their own.
   for (const slot of recolor?.skinned ?? []) full[slot] = tone;
   const warp = build(shape);
   const skeleton = bones(b, warp);
@@ -258,7 +258,7 @@ export function person(opts) {
       s.setWarp(warp);
       const J = body(s, { b, look: full, mats, k, belly });
       head(s, { skin: tone, ...face });
-      // A variant's recolouring: what the hair and `extras` make in a colour that is to change comes out in its new one.
+      // A variant's recoloring: what the hair and `extras` make in a color that is to change comes out in its new one.
       if (recolor) s.tint = tinter(recolor);
       if (hairOpts) hair(s, hairOpts);
       extras?.(s, J, { b, skin: tone, pose: posed(skeleton, warp, J, style, settle, { aim, reach, step }) });
@@ -280,24 +280,24 @@ export function person(opts) {
     settle,
     measure,
     /**
-     * The same person in other colours, as a definition of its own to hand to `createModel` (and baked on its own);
-     * nothing about them but colour changes, and nothing is changed that is not given. Asked twice for the same
-     * colours it is the same definition.
-     * - `skin`: their skin, a hex colour.
-     * - `hair`: their hair, and whatever else of theirs is hair (beard, moustache, a mohican); their brows follow,
+     * The same person in other colors, as a definition of its own to hand to `createModel` (and baked on its own);
+     * nothing about them but color changes, and nothing is changed that is not given. Asked twice for the same
+     * colors it is the same definition.
+     * - `skin`: their skin, a hex color.
+     * - `hair`: their hair, and whatever else of theirs is hair (beard, mustache, a mohican); their brows follow,
      *   a little darker, unless `brow` is given.
-     * - `eyes`, `brow`: the colour of their irises, and of their brows.
+     * - `eyes`, `brow`: the color of their irises, and of their brows.
      * - `look`: what they wear, by part: `torso`, `sleeve`, `cuff`, `hand` (gloves), `legs`, `boot`, `belt`,
      *   `buckle`, `sole`, `shin`; as many of them as they have (see `palette().look`). If every part that is one
-     *   colour is given a new one, whatever else of theirs is that colour (a coat's skirts) goes with them.
-     * - `colors`: any other colour, such as a hat's, `{ '#1e2a4e': '#7a1020' }`: every shape the person is made of
-     *   in the colour on the left is drawn in the one on the right (a Map also takes a colour function or array
+     *   color is given a new one, whatever else of theirs is that color (a coat's skirts) goes with them.
+     * - `colors`: any other color, such as a hat's, `{ '#1e2a4e': '#7a1020' }`: every shape the person is made of
+     *   in the color on the left is drawn in the one on the right (a Map also takes a color function or array
      *   that the person's own file draws in).
      * - `name`.
      * Chains: `punk.variant({ skin }).variant({ hair })` has both.
      */
     variant(changes = {}) {
-      // Asked twice for the same colours, the same definition (so it is baked once); not if a colour is a function.
+      // Asked twice for the same colors, the same definition (so it is baked once); not if a color is a function.
       const plain = Object.values(changes).every((v) => typeof v !== 'function') && Object.values(changes.look ?? {}).every((v) => typeof v !== 'function') && !(changes.colors instanceof Map);
       const key = plain ? JSON.stringify(changes) : null;
       if (key !== null && variants.has(key)) return variants.get(key);
@@ -306,9 +306,9 @@ export function person(opts) {
       return made;
     },
     /**
-     * What can be changed in them, and what it is now (hex colours): `skin`, `eyes`, `brow`, `hair` (null if they
+     * What can be changed in them, and what it is now (hex colors): `skin`, `eyes`, `brow`, `hair` (null if they
      * have none of their own, though a beard or a crest of theirs is still dyed by a `hair`), and `look`, each part they wear. `groups` are the parts that are one
-     * colour, which are best changed together.
+     * color, which are best changed together.
      */
     palette() {
       const slots = COLOR_SLOTS.filter((slot) => wearable(look, mats, slot)).map((slot) => [slot, look[slot]]);

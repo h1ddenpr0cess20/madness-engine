@@ -62,7 +62,7 @@ function paint(GFX, geometry, radius, palette, attribute, design) {
     let ribbon, vein, accentPower = 20;
 
     if (design === 'solid') {
-      // One colour of resin, only a faint cloud in it.
+      // One color of resin, only a faint cloud in it.
       ribbon = 0.04 * fbm(x * 2.2, y * 2.2, z * 2.2);
       vein = 0;
       accentPower = 1;

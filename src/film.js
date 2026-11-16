@@ -14,7 +14,7 @@
  * The stage has one (`stage.film`), and `stage.setMood` sets it.
  */
 
-/** The grain: fractal noise, grey, on a tile 180 pixels square. */
+/** The grain: fractal noise, gray, on a tile 180 pixels square. */
 export const GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`;
 
 /** How the grain dances: from place to place (in % of its size), in `steps` jumps between each, round in `duration` ms. */

@@ -14,11 +14,11 @@ function canvas2d(width, height) {
 }
 
 export function createShellSkin(GFX, { width = WIDTH, height = HEIGHT, random = Math.random } = {}) {
-  const colour = canvas2d(width, height);
+  const color = canvas2d(width, height);
   const bump = canvas2d(width, height);
-  if (!colour || !bump) return INERT;
+  if (!color || !bump) return INERT;
 
-  const g = colour.ctx;
+  const g = color.ctx;
   g.fillStyle = '#f0e3cd';
   g.fillRect(0, 0, width, height);
 
@@ -44,7 +44,7 @@ export function createShellSkin(GFX, { width = WIDTH, height = HEIGHT, random = 
     b.fill();
   }
 
-  const map = new GFX.CanvasTexture(colour.el);
+  const map = new GFX.CanvasTexture(color.el);
   map.colorSpace = GFX.SRGBColorSpace;
   map.anisotropy = 4;
   const bumpMap = new GFX.CanvasTexture(bump.el);

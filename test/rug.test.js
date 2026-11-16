@@ -27,7 +27,7 @@ const GFX = {
   BufferGeometry: Geometry, Float32BufferAttribute: Attribute, DoubleSide: 2,
 };
 
-test('the rug keeps its default size and the wool colourway', () => {
+test('the rug keeps its default size and the wool colorway', () => {
   assert.deepEqual({ ...RUG_DEFAULTS }, { width: 3.8, depth: 3.15, thickness: 0.018, fringeLength: 0.075, palette: 'wool' });
   const rug = createPersianRug(GFX);
   assert.equal(rug.group.name, 'ornate Persian rug');
@@ -39,28 +39,28 @@ test('the rug keeps its default size and the wool colourway', () => {
   assert.equal(rug.group.children.at(-1).name, 'hand-knotted ivory fringe');
 });
 
-test('each colourway is a full palette with the same keys', () => {
+test('each colorway is a full palette with the same keys', () => {
   assert.deepEqual(RUG_PALETTE_NAMES, ['wool', 'rose', 'sage', 'indigo']);
   const keys = Object.keys(RUG_PALETTES.wool).sort();
   for (const name of RUG_PALETTE_NAMES) {
-    assert.deepEqual(Object.keys(RUG_PALETTES[name]).sort(), keys, `${name} has every colour`);
+    assert.deepEqual(Object.keys(RUG_PALETTES[name]).sort(), keys, `${name} has every color`);
     for (const value of Object.values(RUG_PALETTES[name])) assert.match(value, /^#[0-9a-f]{6}$/);
   }
   const fields = RUG_PALETTE_NAMES.map((name) => RUG_PALETTES[name].field);
-  assert.equal(new Set(fields).size, fields.length, 'each colourway has its own field colour');
+  assert.equal(new Set(fields).size, fields.length, 'each colorway has its own field color');
 });
 
-test('a rug takes its colourway, size and fringe, and records them', () => {
+test('a rug takes its colorway, size and fringe, and records them', () => {
   const rug = createPersianRug(GFX, { palette: 'rose', width: 2.6, depth: 2.1, fringeLength: 0.05 });
   assert.deepEqual(rug.dimensions, { width: 2.6, depth: 2.1, thickness: 0.018, fringeLength: 0.05, palette: 'rose' });
   assert.equal(rug.group.userData.dimensions.palette, 'rose');
 });
 
-test('an unknown colourway is refused before anything is built', () => {
+test('an unknown colorway is refused before anything is built', () => {
   assert.throws(() => createPersianRug(GFX, { palette: 'neon' }), /rug palette must be one of wool, rose, sage, indigo/);
 });
 
-test('the asset viewer registers the rug with its colourways and sizes as options', () => {
+test('the asset viewer registers the rug with its colorways and sizes as options', () => {
   assert.equal(assetViewer.id, 'persian-rug');
   assert.equal(assetViewer.category, 'Props');
   assert.deepEqual(assetViewer.options.palette, RUG_PALETTE_NAMES);

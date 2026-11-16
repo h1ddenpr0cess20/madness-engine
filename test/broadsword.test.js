@@ -6,19 +6,19 @@ import { METALS } from '../src/props/metalglobe.js';
 import {
   BROADSWORD_DIMENSIONS,
   BROADSWORD_SPEC,
-  WORLD_UNITS_PER_METRE,
+  WORLD_UNITS_PER_METER,
   createBroadsword,
 } from '../src/weapons/broadsword.js';
 import { MARBLE_POMMEL_RADIUS } from '../src/weapons/common.js';
 
-test('broadsword is modelled at real-world scale with the spark marble as its pommel', () => {
+test('broadsword is modeled at real-world scale with the spark marble as its pommel', () => {
   const sword = createBroadsword(GFX);
-  assert.equal(WORLD_UNITS_PER_METRE, 1);
+  assert.equal(WORLD_UNITS_PER_METER, 1);
   assert.equal(BROADSWORD_DIMENSIONS.bladeLength, 0.786);
   assert.equal(BROADSWORD_SPEC.bladeLength, 0.786);
   assert.equal(BROADSWORD_SPEC.overallLength, 0.99);
   assert.equal(sword.dimensions.unit, 'm');
-  assert.ok(Math.abs(sword.dimensions.overallLength - 0.99) < 0.015, 'overall length is close to one metre');
+  assert.ok(Math.abs(sword.dimensions.overallLength - 0.99) < 0.015, 'overall length is close to one meter');
   assert.equal(sword.dimensions.bladeLength, 0.786);
   assert.equal(sword.dimensions.gripLength, 0.14);
   assert.ok(sword.dimensions.guardSpan > sword.dimensions.bladeWidth * 4);
@@ -85,7 +85,7 @@ test('blade and hilt finishes switch independently using the shared twelve-metal
   assert.throws(() => sword.setHiltMetal('unobtainium'), /no metal/);
 });
 
-test('leather grip colour is independent and validated', () => {
+test('leather grip color is independent and validated', () => {
   const sword = createBroadsword(GFX, { gripColor: '#78452e' });
   assert.equal(sword.gripColor, '#78452e');
   const leather = sword.hilt.children.find((part) => part.name === 'leather grip');
@@ -97,7 +97,7 @@ test('leather grip colour is independent and validated', () => {
   assert.throws(() => sword.setGripColor('red'), /six-digit hex/);
 });
 
-test('rejects unknown metals and invalid grip colours at construction', () => {
+test('rejects unknown metals and invalid grip colors at construction', () => {
   assert.throws(() => createBroadsword(GFX, { bladeMetal: 'unobtainium' }), /no metal/);
   assert.throws(() => createBroadsword(GFX, { hiltMetal: 'unobtainium' }), /no metal/);
   assert.throws(() => createBroadsword(GFX, { gripColor: '#123' }), /six-digit hex/);

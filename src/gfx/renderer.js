@@ -182,7 +182,7 @@ export class Renderer {
       const size = [this.domElement.width, this.domElement.height];
       const frame = this._frame_(context, 'linear', null);
       // Cleared to white at half alpha, premultiplied by the context: where nothing opaque
-      // is behind a transmissive surface, that grey is what it refracts.
+      // is behind a transmissive surface, that gray is what it refracts.
       this.backend.beginPass({ target: 'transmission', clear: [0.5, 0.5, 0.5, 0.5], frame });
       this._renderItems(lists.opaque, context, frame);
       this.backend.endPass();
@@ -266,7 +266,7 @@ export class Renderer {
     else lists.opaque.push(item);
   }
 
-  /** Intensities folded into colours; view-space directions are done per pass. */
+  /** Intensities folded into colors; view-space directions are done per pass. */
   _setupLights(lights, shadowsOn) {
     const ambient = [0, 0, 0];
     const directional = [], point = [], hemi = [];
@@ -494,11 +494,11 @@ function describe(object, geometry, material, side, context, frame) {
       // Hair: highlights across the strands, which run along the map's v.
       strands: material.strands === true && !!material.map,
       // Ground and walls tiled over a big area: each lookup blends two copies of the tile shifted by a slow noise, so
-      // the repeat does not show as a grid, and the colour drifts a little across the whole.
+      // the repeat does not show as a grid, and the color drifts a little across the whole.
       antiTile: material.antiTile === true && !!material.map,
-      // Skin and the like: a detail map over the colour map's layout (it needs both the map and the bump), and light scattered under the surface.
+      // Skin and the like: a detail map over the color map's layout (it needs both the map and the bump), and light scattered under the surface.
       detailMap: !!material.detailMap && !!material.map && !!material.bumpMap,
-      // Where it glows, over the colour map's layout (lit windows on a facade, the letters of a sign).
+      // Where it glows, over the color map's layout (lit windows on a facade, the letters of a sign).
       emissiveMap: !!material.emissiveMap && !!material.map,
       // Which of the map's repeats glow: a share, each repeat (a window) by its own chance.
       emissiveScatter: material.emissiveScatter > 0 && !!material.map ? Math.min(1, material.emissiveScatter) : 0,

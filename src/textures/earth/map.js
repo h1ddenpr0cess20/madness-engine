@@ -100,7 +100,7 @@ export function tracePath(ctx, width, height) {
 /**
  * Etches the land onto a canvas as frosted glass would carry it: a milky
  * fill over the land and a finer, brighter line along every coast, on a clear
- * (transparent) sea. The alpha is what matters; the colour is the frost.
+ * (transparent) sea. The alpha is what matters; the color is the frost.
  * Returns the canvas, or null where there is no document to make one in.
  */
 export function createEtchCanvas({ width = 4096, fill = 'rgba(236,244,255,0.5)', coast = 'rgba(255,255,255,0.95)', line = 1.6, graticule = null } = {}) {

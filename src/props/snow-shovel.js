@@ -3,12 +3,9 @@ import { diagonalWrapGeometry, leatherMaps, metalMaterial, shadeHex } from '../w
 import { HANDS, handlingInfo, handlingOf, reachOf } from '../weapons/categories.js';
 
 /**
- * A metal snow shovel, built the way the swords are: at real size in metres (one engine unit is one metre), standing on
- * its butt at the origin with the scoop at the far end (+y), the same wrapped leather grip with a metal ferrule at each
- * end, and the shared twelve `METALS` finishes, each part chosen on its own. It is the weapons' parts reshaped for a
- * tool: the swept crossguard became the D-handle's crossbar and its two arms, the lenticular blade a pressed plate (a
- * flat floor, a rolled bend, turned-up side walls that run out towards the lip, and stiffening ribs), the pommel's
- * bezel the ferrules on the grip, and the guard boss the socket the shaft is riveted into.
+ * A metal snow shovel at real size, in meters (one engine unit is one meter): 1.5 m from butt to lip. It stands on
+ * its butt at the origin with the scoop at the far end (+y). The grip is wrapped leather with a metal ferrule at each
+ * end, and each part takes one of the shared twelve `METALS` finishes.
  *
  *     const shovel = createSnowShovel(GFX, { bladeMetal: 'silver', wearMetal: 'iron' });
  *     scene.add(shovel.group);
@@ -34,14 +31,14 @@ export const SNOW_SHOVEL_DIMENSIONS = Object.freeze({
 export const SNOW_SHOVEL_SPEC = Object.freeze({ name: 'snow shovel', hands: HANDS.TWO, ...SNOW_SHOVEL_DIMENSIONS });
 
 const HEX = /^#[0-9a-f]{6}$/i;
-const hex = (value, label) => { if (!HEX.test(value)) throw new TypeError(`${label} must be a six-digit hex colour`); return value; };
+const hex = (value, label) => { if (!HEX.test(value)) throw new TypeError(`${label} must be a six-digit hex color`); return value; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const norm = (a) => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 
-// Where things are along the shovel, in metres from the butt.
+// Where things are along the shovel, in meters from the butt.
 const Y = Object.freeze({
   crossbar: 0.0225, fork: 0.222, gripBottom: 0.38, gripTop: 0.68, shaftTop: 0.2, shaftBottom: 1.1,
   socketTop: 1.045, plate: 1.16,
@@ -59,7 +56,7 @@ const wallAt = (v, high) => high * Math.pow(1 - v, 1.35) + 0.014;
 /** The angle the plate has turned forward by `v` along it: flat at the socket, the lip bent up like a scoop. */
 const turnAt = (v, bend) => bend * Math.pow(v, 1.7);
 
-/** The plate's centreline in (y, z), integrated from its start, at each of `ROWS + 1` rows. */
+/** The plate's centerline in (y, z), integrated from its start, at each of `ROWS + 1` rows. */
 function spine(length, bend) {
   const out = [];
   let y = Y.plate, z = 0;
@@ -229,7 +226,7 @@ function tube(GFX, points, radii, sides = 14) {
   return g;
 }
 
-/** Rings of ellipses (`rx` across, `rz` front to back, centred `cz` off the axis) at heights `y`, skinned into one smooth form. */
+/** Rings of ellipses (`rx` across, `rz` front to back, centerd `cz` off the axis) at heights `y`, skinned into one smooth form. */
 function loft(GFX, rings, segs = 40) {
   const pos = [], idx = [];
   for (const { y, rx, rz, cz = 0 } of rings) {
@@ -243,11 +240,11 @@ function loft(GFX, rings, segs = 40) {
   }
   // Closed at both ends.
   for (const [ring, down] of [[0, true], [rings.length - 1, false]]) {
-    const centre = pos.length / 3;
+    const center = pos.length / 3;
     pos.push(0, rings[ring].y, rings[ring].cz ?? 0);
     for (let s = 0; s < segs; s++) {
       const a = ring * segs + s, b = ring * segs + (s + 1) % segs;
-      idx.push(...(down ? [centre, a, b] : [centre, b, a]));
+      idx.push(...(down ? [center, a, b] : [center, b, a]));
     }
   }
   const g = new GFX.BufferGeometry();
@@ -452,7 +449,7 @@ export function createSnowShovel(GFX, options = {}) {
       'Scoop': `${(D.bladeWidth * 1000).toFixed(0)} mm wide, ${(D.bladeLength * 1000).toFixed(0)} mm long, ${(D.thickness * 1000).toFixed(1)} mm plate`,
       'Shaft': `${(D.shaftDiameter * 1000).toFixed(0)} mm tube`,
       'Grip length': `${(gripLength * 1000).toFixed(0)} mm`,
-      'Scale': '1 world unit = 1 metre',
+      'Scale': '1 world unit = 1 meter',
     },
     get bladeMetal() { return bladeMetal; },
     get shaftMetal() { return shaftMetal; },

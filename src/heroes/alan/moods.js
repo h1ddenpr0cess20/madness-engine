@@ -14,5 +14,5 @@ export const MOODS = {
 /** How far a loud moment pushes past the mood: a brighter iris, a wider pupil, a harder bob. */
 export const ENERGY_GAIN = { glow: 0.35, pupil: 0.1, bob: 0.05 };
 
-/** The brightest the iris gets: past this the painted fibres wash out to a flat blue. */
+/** The brightest the iris gets: past this the painted fibers wash out to a flat blue. */
 export const GLOW_MAX = 0.5;

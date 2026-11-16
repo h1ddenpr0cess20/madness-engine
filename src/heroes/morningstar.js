@@ -6,7 +6,7 @@ export { METALS };
  * The head of a morning star: a ball of dark forged steel with square spikes
  * set into it, the kind on the end of a chain in a museum. Chrome where the
  * light catches it (it takes its reflections from the stop's room, so it
- * picks up every colour of the rig), gunmetal where it doesn't, the spikes
+ * picks up every color of the rig), gunmetal where it doesn't, the spikes
  * brightest at the tip and darkest where they go into the ball.
  *
  * The spikes can snap: `snap(n)` breaks the first n of them off short,
@@ -133,7 +133,7 @@ export function createMorningStar(GFX, { spikes = SPIKES, detail = 1, metal = nu
   const position = new Float32Array(spikes * TRIS.length * 9);
   const color = new Float32Array(position.length);
   const root = new GFX.Color(metallic ? '#777777' : '#8a909c');
-  const tipColour = new GFX.Color('#ffffff');
+  const tipColor = new GFX.Color('#ffffff');
   const corner = (f, k, kept) => {
     // 0 to 3 round the foot, 4 to 7 round the top.
     const top = k >= 4;
@@ -156,7 +156,7 @@ export function createMorningStar(GFX, { spikes = SPIKES, detail = 1, metal = nu
         position.set(cs[k], o + vi * 3);
         // Dark where it goes into the ball, bright toward the tip.
         const height = k < 4 ? 0 : kept[i] < 1 ? 0.35 : 1;
-        c.copy(root).lerp(tipColour, height);
+        c.copy(root).lerp(tipColor, height);
         color.set([c.r, c.g, c.b], o + vi * 3);
       });
     });

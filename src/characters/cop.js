@@ -1,5 +1,5 @@
 import { buttons, cloth, person, skirt, trunk } from './person.js';
-import { cap, moustache } from './wardrobe.js';
+import { cap, mustache } from './wardrobe.js';
 
 /**
  * The Flatfoot: a beat cop of the old school on Broadway, in a
@@ -36,7 +36,7 @@ export default person({
   },
   extras(s, J, { pose }) {
     cap(s, { color: '#1e2a4e', peak: '#0c0c0e', badge: '#d8b850' });
-    moustache(s, { color: '#6a3a1a', wide: 1.15, droop: 0.4 });
+    mustache(s, { color: '#6a3a1a', wide: 1.15, droop: 0.4 });
     // The coat's skirt, from the belt to the thigh.
     skirt(s, trunk(1.18, 1.0), { top: 0.33, hem: 0.235, flare: 1.04, color: blue, part: 'outer', b: 1.18 });
     // Two rows of brass buttons down the coat, and the star on the chest.

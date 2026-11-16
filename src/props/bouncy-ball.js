@@ -1,7 +1,7 @@
 /**
- * A rubber bouncy ball: a smooth sphere in a rubber ball's colours (plain, swirled, marbled, tie-dyed, banded, flecked,
+ * A rubber bouncy ball: a smooth sphere in a rubber ball's colors (plain, swirled, marbled, tie-dyed, banded, flecked,
  * a beach ball's panels),
- * in a soft rubber finish (matte with a faint sheen and the mould's seam round its middle), and a squash and stretch
+ * in a soft rubber finish (matte with a faint sheen and the mold's seam round its middle), and a squash and stretch
  * when it lands. Pair it with the physics' `RUBBER` (or `SUPERBALL`) bounce:
  *
  *     import { createBouncyBall } from 'madness-engine/props/bouncy-ball';
@@ -35,11 +35,11 @@ function paletteOf(GFX, o) {
 }
 
 /**
- * A rubber ball's patterns: plain; a swirl of two colours folded through each other (soft-edged, broad, as rubber
+ * A rubber ball's patterns: plain; a swirl of two colors folded through each other (soft-edged, broad, as rubber
  * poured together runs); a marble of three in bands; a tie-dye spiral from one pole to the other; a band round the
  * middle; flecks (a superball's); the panels of a beach ball.
  */
-/** The flecks of a superball: points spread evenly over the sphere (a Fibonacci spiral), each a size and a colour. */
+/** The flecks of a superball: points spread evenly over the sphere (a Fibonacci spiral), each a size and a color. */
 const FLECKS = (() => {
   const out = [], n = 220, gold = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < n; i++) {
@@ -69,20 +69,20 @@ function paintRubber(GFX, geometry, radius, palette, attribute, design) {
       return Math.sin((a * 1.1 + b * 0.8 + c * 0.9) * f);
     };
     if (design === 'solid') {
-      // One colour, the rubber a shade uneven.
+      // One color, the rubber a shade uneven.
       color.multiplyScalar(0.96 + 0.08 * ballNoise(x * 3, y * 3, z * 3));
     } else if (design === 'swirl') {
-      // Two colours folded through each other in broad soft swirls, a fine streak of the third where they meet.
+      // Two colors folded through each other in broad soft swirls, a fine streak of the third where they meet.
       const t = fold(5, 0.5, 1.2, 2.6);
       color.lerp(palette.swirl, smooth(-0.22, 0.22, t));
       color.lerp(palette.accent, 0.7 * Math.exp(-((t / 0.09) ** 2)));
     } else if (design === 'marble') {
-      // Three colours in many thin folded bands, as rubber scraps pressed together.
+      // Three colors in many thin folded bands, as rubber scraps pressed together.
       const t = (fold(5, 0.65, 1.4, 1.8) + 1) * 2.2, f = t - Math.floor(t), band = ((Math.floor(t) % 3) + 3) % 3;
       const cols = [palette.base, palette.swirl, palette.accent];
       color.copy(cols[band]).lerp(cols[(band + 1) % 3], smooth(0.74, 1, f));
     } else if (design === 'tiedye') {
-      // A spiral wound from pole to pole, its arms wavering, in three colours.
+      // A spiral wound from pole to pole, its arms wavering, in three colors.
       const lon = Math.atan2(z, x), lat = Math.acos(clamp(y, -1, 1));
       const phase = lon / (2 * Math.PI) * 3 + lat * 2.2 + 0.35 * Math.sin(lat * 7 + lon * 2) + 0.4 * (ballNoise(x * 2, y * 2, z * 2) - 0.5);
       const f = phase - Math.floor(phase), k = ((Math.floor(phase) % 3) + 3) % 3;
@@ -94,7 +94,7 @@ function paintRubber(GFX, geometry, radius, palette, attribute, design) {
       const edge = Math.exp(-(((Math.abs(y) - 0.3) / 0.018) ** 2));
       color.lerp(palette.swirl, band).lerp(palette.accent, edge * 0.9);
     } else if (design === 'confetti') {
-      // Round flecks of two colours scattered evenly over it, as a superball has.
+      // Round flecks of two colors scattered evenly over it, as a superball has.
       for (const [fx, fy, fz, size, second] of FLECKS) {
         const d = 1 - (x * fx + y * fy + z * fz);
         if (d < size) { color.copy(second ? palette.accent : palette.swirl).lerp(palette.base, smooth(size * 0.7, size, d)); break; }
@@ -112,7 +112,7 @@ function paintRubber(GFX, geometry, radius, palette, attribute, design) {
 
 function paint(GFX, geometry, radius, palette, attribute, design) {
   paintRubber(GFX, geometry, radius, palette, attribute, design);
-  // The mould's seam: a fine darker line round the middle.
+  // The mold's seam: a fine darker line round the middle.
   const p = geometry.getAttribute('position');
   for (let i = 0; i < p.count; i++) {
     const y = p.getY(i) / radius, k = 1 - 0.28 * Math.exp(-((y / 0.012) ** 2));

@@ -2,7 +2,7 @@ import { METALS, studioEnvironment } from './metalglobe.js';
 import { diagonalWrapGeometry, leatherMaps, metalMaterial, shadeHex } from '../weapons/common.js';
 
 /**
- * A putter, built the way the swords are: at real size in metres (one engine unit is one metre), standing on its butt at
+ * A putter, built the way the swords are: at real size in meters (one engine unit is one meter), standing on its butt at
  * the origin with the head at the far end (+y), the same wrapped leather grip and boss cap, a plain metal cap on the butt (no
  * pommel), and the same twelve `METALS` finishes, each part chosen on its own.
  *
@@ -30,13 +30,13 @@ export const PUTTER_DIMENSIONS = Object.freeze({
 
 export const PUTTER_SPEC = Object.freeze({ name: 'putter', ...PUTTER_DIMENSIONS, gripWrapDivisions: 22 });
 
-/** What the overall length may be set to: a short putter to a long one, in metres. */
+/** What the overall length may be set to: a short putter to a long one, in meters. */
 export const PUTTER_LENGTHS = Object.freeze({ min: 0.76, max: 0.95 });
 /** The lie angles allowed, in degrees from the ground to the shaft. */
 export const PUTTER_LIES = Object.freeze({ min: 60, max: 75 });
 
 /**
- * The head shapes. Each is the top view in metres (`length` toe to heel, `depth` face to back, `height` sole to top),
+ * The head shapes. Each is the top view in meters (`length` toe to heel, `depth` face to back, `height` sole to top),
  * where the shaft enters (`hosel`: x and depth from the face) and how it is cut.
  */
 export const PUTTER_HEADS = Object.freeze({
@@ -53,7 +53,7 @@ export const PUTTER_HEAD_NAMES = Object.freeze(Object.keys(PUTTER_HEADS));
 export const PUTTER_SIGHTS = Object.freeze(['line', 'tee', 'none']);
 
 const HEX = /^#[0-9a-f]{6}$/i;
-const hex = (value, label) => { if (!HEX.test(value)) throw new TypeError(`${label} must be a six-digit hex colour`); return value; };
+const hex = (value, label) => { if (!HEX.test(value)) throw new TypeError(`${label} must be a six-digit hex color`); return value; };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /** The outline of a head seen from above: x across (toe + to heel −), y back from the face. */
@@ -348,7 +348,7 @@ export function createPutter(GFX, options = {}) {
         'Lie angle': `${lie}°`,
         'Grip length': `${(PUTTER_SPEC.gripLength * 1000).toFixed(0)} mm`,
         'Shaft length': `${(shaft.userData.length * 1000).toFixed(0)} mm`,
-        'Scale': '1 world unit = 1 metre',
+        'Scale': '1 world unit = 1 meter',
         'Butt': 'Plain metal cap',
       };
     },
@@ -358,7 +358,7 @@ export function createPutter(GFX, options = {}) {
       layout();
       return api;
     },
-    setLength(metres) { length = clamp(metres, PUTTER_LENGTHS.min, PUTTER_LENGTHS.max); layout(); return api; },
+    setLength(meters) { length = clamp(meters, PUTTER_LENGTHS.min, PUTTER_LENGTHS.max); layout(); return api; },
     setLie(degrees) { lie = clamp(degrees, PUTTER_LIES.min, PUTTER_LIES.max); layout(); return api; },
     setSight(name) {
       if (!PUTTER_SIGHTS.includes(name)) throw new Error(`no sight called ${name}; choose ${PUTTER_SIGHTS.join(', ')}`);
@@ -405,7 +405,7 @@ export function createPutter(GFX, options = {}) {
       return api;
     },
     setFaceColor(color) { hex(color, 'faceColor'); faceMaterial.color.set(color); faceColor = color; return api; },
-    /** The sight line's colour; it glows in this colour when `glow` is up. */
+    /** The sight line's color; it glows in this color when `glow` is up. */
     setAccentColor(color) {
       hex(color, 'accentColor');
       accentMaterial.color.set(color);
@@ -413,7 +413,7 @@ export function createPutter(GFX, options = {}) {
       accentColor = color;
       return api;
     },
-    /** How brightly the sight line (and, when the grip thread is its colour, the thread) shines: 0 to 1. */
+    /** How brightly the sight line (and, when the grip thread is its color, the thread) shines: 0 to 1. */
     setGlow(value) {
       if (!(value >= 0 && value <= 1)) throw new RangeError('glow is from 0 (none) to 1 (full)');
       glow = value;

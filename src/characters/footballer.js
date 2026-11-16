@@ -55,10 +55,10 @@ const base = person({
     strap(s, [[0, 0.556, -0.04], [0.036, 0.553, -0.03], [0.05, 0.535, 0.03], [0, 0.522, 0.06], [-0.05, 0.535, 0.03], [-0.036, 0.553, -0.03]], { closed: true, width: 0.012, thick: 0.004, color: '#1a8a3a', mat: 'cloth', over: ['top', 'head'] });
     // The ball, at his feet as sculpted; it goes where he puts it: white, its twelve black pentagons and the seams between the panels.
     const c = [0, 0.055, 0.12], R = 0.055, t = (1 + Math.sqrt(5)) / 2;
-    const centres = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]].map((v) => v.map((x) => x / Math.hypot(...v)));
+    const centers = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]].map((v) => v.map((x) => x / Math.hypot(...v)));
     const panels = (p) => {
       const d = [p[0] - c[0], p[1] - c[1], p[2] - c[2]], l = Math.hypot(...d) || 1, u = d.map((x) => x / l);
-      const near = Math.max(...centres.map((q) => q[0] * u[0] + q[1] * u[1] + q[2] * u[2]));
+      const near = Math.max(...centers.map((q) => q[0] * u[0] + q[1] * u[1] + q[2] * u[2]));
       return near > 0.93 ? [0.02, 0.02, 0.024] : near > 0.925 || (near > 0.79 && near < 0.795) ? [0.25, 0.25, 0.27] : [0.92, 0.92, 0.9];
     };
     s.part('rigid:ball', () => s.sphere(c, R, { color: panels, mat: 'plastic', bone: 'ball', k: 0.003 }));

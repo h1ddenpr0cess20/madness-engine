@@ -1,8 +1,8 @@
 import { reflect } from '../reflect.js';
-import { lamps } from '../../textures/rooms/parlour.js';
+import { lamps } from '../../textures/rooms/parlor.js';
 
 /**
- * What the glass and the brass reflect: the parlour (`textures/rooms/parlour.js`)
+ * What the glass and the brass reflect: the parlor (`textures/rooms/parlor.js`)
  * round the very night the backdrop shows, its lamps low in the dark, turned
  * over to put everything where the backdrop has it.
  */
@@ -14,7 +14,7 @@ export function buildEnvironment({ stage, GFX, sky }) {
  * Light it like a fortune teller's table: one warm lamp high in front, the
  * stage's back fill put out, and the soft wash turned down and toward violet
  * so the visions are the brightest thing there. The light from the glass
- * itself is `index.js`'s — it changes colour with the mist.
+ * itself is `index.js`'s — it changes color with the mist.
  */
 export function candlelight(stage) {
   if (stage._key) {

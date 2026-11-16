@@ -2,7 +2,7 @@
  * What each conversational state does to the visions. `speed` is how fast the
  * mist moves, `swirl` how hard the vortex twists, `churn` how much the wisps
  * curl and split, `glow` how bright it all is, `core` the light at the heart
- * of the ball, and `hue` where on the palette the colours sit — 0 rose, 0.15
+ * of the ball, and `hue` where on the palette the colors sit — 0 rose, 0.15
  * gold, 0.45 teal, 0.6 blue, 0.75 violet, 0.9 magenta.
  */
 export const MOODS = {

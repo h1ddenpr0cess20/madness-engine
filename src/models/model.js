@@ -12,8 +12,8 @@ import { Skeleton, skin } from './rig.js';
  *   materials  { name: { roughness, metalness, sheen, sheenColor, sheenRoughness,
  *                clearcoat, clearcoatRoughness, emissive, emissiveIntensity,
  *                transmission, thickness, ior, attenuationColor,
- *                attenuationDistance, opacity, side } } — vertex colours
- *              give the colour
+ *                attenuationDistance, opacity, side } } — vertex colors
+ *              give the color
  *   cell       the grid step it is meshed at, in tiles
  *   cells      { part: step } for parts that need a finer grid (eyes, teeth)
  *   refine     how many more vertices the mesher may spend on fine detail, as a fraction of the grid's (0.3; 0 for none)

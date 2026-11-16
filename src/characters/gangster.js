@@ -1,10 +1,10 @@
 import { bands } from '../models/skins.js';
 import { cloth, person, shell } from './person.js';
-import { fedora, moustache, suitFront } from './wardrobe.js';
+import { fedora, mustache, suitFront } from './wardrobe.js';
 
 /**
  * The Hood: a pinstripe suit with shoulders out to here, a black shirt and
- * a white tie, a fedora pulled down, spats, a pencil moustache, and a
+ * a white tie, a fedora pulled down, spats, a pencil mustache, and a
  * violin case under his arm. He does not play. About 0.95 tiles tall.
  */
 
@@ -43,7 +43,7 @@ export default person({
   },
   extras(s, J, { pose }) {
     fedora(s, { color: '#3a3a44', band: '#101014', tilt: 0.14 });
-    moustache(s, { color: '#14100c', pencil: true });
+    mustache(s, { color: '#14100c', pencil: true });
     suitFront(s, { shirt: '#16161c', tie: '#f0ece0', lapel: cloth('#22222a', '#141418'), b: 1.12, low: 0.4 });
     // A white pocket square in the breast pocket.
     shell(s, (p) => Math.max(Math.abs(p[0] - 0.066) - 0.014, Math.abs(p[1] - 0.488) - 0.006, 0.02 - p[2]), { color: '#f0ece0', mat: 'cloth', part: 'outer2', thick: 0.004, lift: 0.0005, over: ['top'], bone: 'chest' });

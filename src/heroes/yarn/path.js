@@ -2,7 +2,7 @@
  * Where the ball rolls: a gentle S on the diagonal, from the back of the room
  * on the left toward the front on the right of the camera's usual seat — she
  * comes forward to talk, and goes back when it is over — and the tail behind its start that always lies there, curling as
- * it nears its end. Positions are in the floor plane (x, z), in metres.
+ * it nears its end. Positions are in the floor plane (x, z), in meters.
  */
 
 /** The tail that always lies on the floor, however far the ball has rolled back. */
@@ -19,7 +19,7 @@ const SIDE = norm([TOWARD[0] - RIGHT[0], TOWARD[1] - RIGHT[1]]);
 /** The route's knots, as (along, side) pairs: a diagonal with a gentle sway. */
 const KNOTS = [[-0.5, -0.08], [-0.24, 0.05], [0, 0.07], [0.24, 0.0], [0.46, -0.07]];
 
-/** Floor samples every this many metres along the route; positions between are interpolated. */
+/** Floor samples every this many meters along the route; positions between are interpolated. */
 const SPACING = 0.002;
 
 function norm([x, z]) {
@@ -69,7 +69,7 @@ export function catmullRom(points) {
 
 /**
  * The route, sampled evenly by arc length, and the tail behind its start.
- * `floorAt(x)` is the floor position `x` metres along it — negative `x` is
+ * `floorAt(x)` is the floor position `x` meters along it — negative `x` is
  * the tail — with the unit direction it runs in there.
  */
 export function buildRoute() {

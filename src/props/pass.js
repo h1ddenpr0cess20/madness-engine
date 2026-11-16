@@ -60,7 +60,7 @@ export default {
     plate(s, '#f6f3ec', { at: back(0, -0.07), right: R, size: [0.0535, 0.0145], depth: 0.004, round: 0.0025 });
 
     s.part('holo', () => {
-      // The hologram: a square of foil on the front, its colours running with the angle.
+      // The hologram: a square of foil on the front, its colors running with the angle.
       s.box([0.048, C[1] - 0.078, T], [0.014, 0.014, 0.0008], 0.002, {
         color: (p, n) => {
           const t = (p[0] * 60 + p[1] * 40 + n[0] * 2 + n[1] * 3) % 1;

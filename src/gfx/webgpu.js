@@ -675,7 +675,7 @@ export class WebGPUBackend {
           );
         } catch (err) {
           // The browser could not copy the picture (out of memory on the card, a canvas it lost): the frame goes on
-          // with a plain grey texel in its place, rather than the whole loop stopping on one texture.
+          // with a plain gray texel in its place, rather than the whole loop stopping on one texture.
           if (!this._copyWarned) { console.warn(`gfx: a texture could not be uploaded (${err.message}); drawn plain instead.`); this._copyWarned = true; }
           entry.texture.destroy();
           entry.texture = this.device.createTexture({ size: [1, 1], format, usage: T.TEXTURE_BINDING | T.COPY_DST });

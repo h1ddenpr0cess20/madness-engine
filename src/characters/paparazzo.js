@@ -3,7 +3,7 @@ import { battleVest } from './metalwear.js';
 import { cap } from './wardrobe.js';
 
 /**
- * The Paparazzo: a photographer's vest of pockets over a grey hoodie, a
+ * The Paparazzo: a photographer's vest of pockets over a gray hoodie, a
  * cap, stubble, and a big camera with a long lens and a flash gun on top,
  * held up and going off in Rock's face. Got your good side. About 0.9
  * tiles tall.

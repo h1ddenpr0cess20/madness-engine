@@ -101,7 +101,7 @@ export function quadruped({
     ...paint,
   };
   for (const part of ['head', 'snout', 'legs', 'tail', 'ears']) C[part] ??= C.body;
-  // Inside the ears: their own colour, gone pink.
+  // Inside the ears: their own color, gone pink.
   if (!C.inner) {
     const ear = typeof C.ears === 'string' ? rgb(C.ears) : C.ears, pink = rgb('#d89a8c');
     C.inner = (p, n) => mix(typeof ear === 'function' ? ear(p, n) : ear, pink, 0.5);
@@ -109,7 +109,7 @@ export function quadruped({
   const M = { body: 'fur', head: 'fur', snout: 'fur', legs: 'fur', feet: feet === 'hoof' ? 'hoof' : 'fur', tail: 'fur', ears: 'fur', ...mats };
   // Every coat finished as the cat's is: paler underneath — the belly, the throat, the insides of the legs, under the
   // jaw — by `countershade`, toward `paint.under`; a fine grain along the way the hair lies; and soft variation over
-  // it, so no colour is flat.
+  // it, so no color is flat.
   const shadeK = paint.shade ?? 0.1, grainK = paint.grain ?? 0.1, cs = paint.countershade ?? 0.55;
   const underCol = paint.under ? (typeof paint.under === 'string' ? rgb(paint.under) : paint.under) : null;
   const pale = (p, n) => {
@@ -247,7 +247,7 @@ function earShapes(s, P, Hd, kind, size, o, inner) {
     if (kind === 'prick') {
       const tip = add(base, [m * r * 0.35, r * 1.1, -r * 0.1]);
       s.flake(base, tip, [0, 0, 1], r * 0.42, r * 0.05, 0.3, { ...o, bone: 'head', k: 0.008 });
-      // The hollow inside, toward the front, and the colour in it.
+      // The hollow inside, toward the front, and the color in it.
       const front = [0, r * 0.06, r * 0.075];
       s.flake(add(base, front), add(tip, [0, -r * 0.16, r * 0.04]), [0, 0, 1], r * 0.3, r * 0.03, 0.22, { op: 'sub', k: r * 0.02 });
       // Painted only on the front of the ear: the far side of the plane through its base and tip is its back.
@@ -355,7 +355,7 @@ function eyesOn(s, P, Hd, { color, lid, rim = null, look = [0.5, 0.12, 0.86], si
   }
 }
 
-/** An eye's colour: dark at the rim, the iris lighter toward a pupil that is round or a sideways bar. */
+/** An eye's color: dark at the rim, the iris lighter toward a pupil that is round or a sideways bar. */
 function eyeColor(c, d, iris, pupil) {
   const I = typeof iris === 'string' ? rgb(iris) : iris, deep = I.map((v) => v * 0.35), bright = I.map((v) => Math.min(1, v * 1.5 + 0.02));
   const black = rgb('#050404'), up = unit([0, 1, 0].map((v, i) => v - d[i] * d[1]));
@@ -377,7 +377,7 @@ const unit = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] 
  * A collar that fits: a flat strap round the neck `at` that far from its
  * root to the head, lying on the fur all the way round (found by feeling
  * for it), with a ring and a tag hanging at the front, and `studs` if it
- * has them. Its own mesh, its own colour.
+ * has them. Its own mesh, its own color.
  */
 export function collar(s, P, { at = 0.3, ...o } = {}) {
   const c = [0, 1, 2].map((i) => P.N0[i] + (P.N1[i] - P.N0[i]) * at);

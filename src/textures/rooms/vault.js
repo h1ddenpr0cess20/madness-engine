@@ -1,6 +1,6 @@
 /**
  * The vault, as an equirectangular canvas: dark stone all round, a little
- * warm light low down from torches somewhere, a cold grey shaft from above.
+ * warm light low down from torches somewhere, a cold gray shaft from above.
  * Only ever seen in reflections.
  */
 export function paintRoom(width = 1024) {
@@ -17,9 +17,9 @@ export function paintRoom(width = 1024) {
   ctx.fillStyle = wall;
   ctx.fillRect(0, 0, width, height);
   ctx.globalCompositeOperation = 'lighter';
-  const glow = (x, y, r, colour) => {
+  const glow = (x, y, r, color) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, colour);
+    g.addColorStop(0, color);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);

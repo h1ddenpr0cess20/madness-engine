@@ -33,15 +33,15 @@ const ticker = () => {
   };
 };
 
-/** A Mesher's finished parts, one mesh each, coloured by material name. */
-export function meshesOf(parts, colours = {}) {
+/** A Mesher's finished parts, one mesh each, colored by material name. */
+export function meshesOf(parts, colors = {}) {
   const group = new GFX.Group();
   for (const [name, p] of Object.entries(parts)) {
     const g = new GFX.BufferGeometry();
     g.setAttribute('position', new GFX.BufferAttribute(p.pos, 3));
     g.setAttribute('normal', new GFX.BufferAttribute(p.nor, 3));
     g.setAttribute('color', new GFX.BufferAttribute(p.col, 3));
-    const m = new GFX.Mesh(g, new GFX.MeshStandardMaterial({ name, vertexColors: true, color: new GFX.Color(colours[name] ?? '#ffffff'), roughness: 0.85, side: GFX.DoubleSide }));
+    const m = new GFX.Mesh(g, new GFX.MeshStandardMaterial({ name, vertexColors: true, color: new GFX.Color(colors[name] ?? '#ffffff'), roughness: 0.85, side: GFX.DoubleSide }));
     m.castShadow = m.receiveShadow = true;
     group.add(m);
   }
@@ -152,7 +152,7 @@ const effectItems = () => [
     const glass = new GFX.MeshStandardMaterial({ color: '#9ad0ff', roughness: 0.1, metalness: 0.2, flatShading: true });
     return (dt, now) => { if (now) fx.burst({ at: [0, 0.4, 0], count: 30, mesh: () => new GFX.Mesh(geometry, glass), speed: 4, up: 5, life: 1.5 }); };
   }),
-  effectItem('ring', 'Shock ring', (fx) => (dt, now) => { if (now) fx.ring(0, 0.05, 0, { colour: '#ffffff', reach: 3, life: 0.8 }); }),
+  effectItem('ring', 'Shock ring', (fx) => (dt, now) => { if (now) fx.ring(0, 0.05, 0, { color: '#ffffff', reach: 3, life: 0.8 }); }),
 ];
 
 // ———————————————————————————————————————————————— a stretch of dungeon

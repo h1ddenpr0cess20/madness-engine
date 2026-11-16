@@ -8,9 +8,9 @@ import { HEM, JACKET, jeansHeight, legAngle, neckline, SHIRT_Z, SLEEVE_RANGE, SO
 /**
  * The human's textures, painted when he is first built (in a browser; with
  * no `document`, as under test, there are none and the materials carry
- * their colours alone). Each painter works the way a texture artist's
+ * their colors alone). Each painter works the way a texture artist's
  * projection does: every texel is taken back to the place on the body it
- * covers, and the colour there (a cheek's flush, an eyebrow's hair, a
+ * covers, and the color there (a cheek's flush, an eyebrow's hair, a
  * jeans' seam) is worked out from that place. The skin is painted onto the
  * base mesh's own UV layout through a map of where on the body each texel
  * is, so the paint runs on unbroken across its seams.
@@ -20,7 +20,7 @@ const G = (t) => Math.exp(-t * t);
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const mixc = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-/** A `w` × `h` canvas, every texel coloured by `fn(u, v)` → [r, g, b] (0–255); u across, v up. */
+/** A `w` × `h` canvas, every texel colored by `fn(u, v)` → [r, g, b] (0–255); u across, v up. */
 function paint(w, h, fn) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -169,7 +169,7 @@ function landmarks() {
   return { E, M, nose, nails, creases, R: EYE.radius };
 }
 
-/** How much of a lip `(x, y, z)` is on (0 to 1), and how far above the slit between them it is (metres). */
+/** How much of a lip `(x, y, z)` is on (0 to 1), and how far above the slit between them it is (meters). */
 function lipsAt(M, x, y, z) {
   const s = Math.abs(x), lc = FACE.lipCorner[0] + 0.001;
   const t = clamp(s / lc);
@@ -217,15 +217,15 @@ function fingerCreases(L, x, y, z, n) {
 }
 
 /**
- * The skin's colour at a place `p` (rest, metres) with normal `n` in `zone`:
+ * The skin's color at a place `p` (rest, meters) with normal `n` in `zone`:
  * the tone, mottled; flushed at the cheeks, nose, ears, knuckles, elbows
  * and knees; the lips, the brows' hair, the lash line, a shaved man's
  * shadow on the jaw and scalp (or, where his hair or beard grows, the
- * hair's own colour, so no skin shows between its cards), paler palms and
+ * hair's own color, so no skin shows between its cards), paler palms and
  * soles, the nails.
  */
-function skinColour(tone, L, groom = {}) {
-  const grown = groom.hairColour ? hex(groom.hairColour) : null;
+function skinColor(tone, L, groom = {}) {
+  const grown = groom.hairColor ? hex(groom.hairColor) : null;
   const base = tone;
   const red = [tone[0] * 1.0, tone[1] * 0.8, tone[2] * 0.8];
   // A woman's lips a little rosier and more distinct; her face has no beard's shadow.
@@ -234,7 +234,7 @@ function skinColour(tone, L, groom = {}) {
   const hair = [72, 56, 46];
   const shadow = [tone[0] * 0.8, tone[1] * 0.82, tone[2] * 0.88];
   const pale = [Math.min(255, tone[0] * 1.08), Math.min(255, tone[1] * 1.02), Math.min(255, tone[2] * 1.0)];
-  // What colours skin: blood (red), melanin (brown), and, where a vein lies under it, the blue of its depth.
+  // What colors skin: blood (red), melanin (brown), and, where a vein lies under it, the blue of its depth.
   const brown = [tone[0] * 0.84, tone[1] * 0.76, tone[2] * 0.66];
   const mole = [tone[0] * 0.62, tone[1] * 0.48, tone[2] * 0.4];
   const vein = [tone[0] * 0.84, tone[1] * 0.9, tone[2] * 0.95];
@@ -242,8 +242,8 @@ function skinColour(tone, L, groom = {}) {
   return (p, n, zone) => {
     const x = p[0], y = p[1], z = p[2], s = Math.abs(x);
     let c = base;
-    // Mottling, at every size skin has it: broad flushes of blood, blotches a centimetre across, the
-    // millimetre speckle of the capillaries, and melanin's own unevenness over them.
+    // Mottling, at every size skin has it: broad flushes of blood, blotches a centimeter across, the
+    // millimeter speckle of the capillaries, and melanin's own unevenness over them.
     const broad = fbm(x * 9, y * 9, z * 9, 3), blotch = fbm(x * 85 + 3, y * 85, z * 85, 2);
     const fine = noise3(x * 420, y * 420, z * 420), speck = noise3(x * 1050 + 9, y * 1050, z * 1050);
     c = mixc(c, red, clamp(0.07 + 0.09 * broad + 0.07 * blotch + 0.05 * fine));
@@ -268,7 +268,7 @@ function skinColour(tone, L, groom = {}) {
       const scalp = smooth(E[1] + 0.06, E[1] + 0.085, y + (0.06 - Math.min(0.06, z)) * 0.35) * smooth(E[1] - 0.04, E[1] - 0.01, y) * (1 - front * smooth(E[1] + 0.09, E[1] + 0.06, y));
       const dots = 0.6 + 0.4 * noise3(x * 900, y * 900, z * 900);
       c = mixc(c, shadow, clamp((female ? 0 : beard * 0.55) + scalp * 0.22) * dots);
-      // Where hair grows, its colour, streaked as the hair is.
+      // Where hair grows, its color, streaked as the hair is.
       if (grown) {
         const { cover, shade } = hairPaint(groom.style, groom.beard, p, n);
         // Stippled, as short hair is, and thinning toward the hairline at the neck, as a taper does.
@@ -302,7 +302,7 @@ function skinColour(tone, L, groom = {}) {
         // (Hers plucked: the same hairs, with a cleaner edge.)
         const fill = smooth(1, female ? 0.45 : 0.2, Math.abs(across)) * (0.4 + 0.6 * hairs);
         const b = fill * ends * smooth(E[2] - 0.03, E[2] - 0.01, z);
-        // (Under the brows' own hairs, when he has them: in his hair's colour, softer; hers a shade darker, as her brows are.)
+        // (Under the brows' own hairs, when he has them: in his hair's color, softer; hers a shade darker, as her brows are.)
         const browC = grown ? grown.map((v) => v * (female ? 0.45 : 0.7)) : hair;
         c = mixc(c, browC, clamp(b) * (grown ? 0.4 : 0.55));
       }
@@ -376,7 +376,7 @@ function skinColour(tone, L, groom = {}) {
 
 /** The skin's map, on the base mesh's own UVs, `size` square: RGBA bytes. */
 export function skinPixels(size, tone, groom = {}) {
-  return bodyPixels(size, skinColour(hex(tone), landmarks(), groom), [180, 130, 110]);
+  return bodyPixels(size, skinColor(hex(tone), landmarks(), groom), [180, 130, 110]);
 }
 
 /**
@@ -395,7 +395,7 @@ function skinDetail(L) {
   const lines = (a, b, c, sharp = 4) => Math.max(0, 1 - Math.abs(noise3(a, b, c)) * sharp);
   return (p, n, zone) => {
     const x = p[0], y = p[1], z = p[2], s = Math.abs(x);
-    // Everywhere: the skin's unevenness, a few millimetres across.
+    // Everywhere: the skin's unevenness, a few millimeters across.
     let h = 0.16 * fbm(x * 260, y * 260, z * 260, 2), rough = 1.06 + 0.1 * noise3(x * 150, y * 150, z * 150), pores = 0.75;
     if (zone === 'head' || zone === 'neck') {
       const front = smooth(-0.2, 0.4, n[2]);
@@ -480,8 +480,8 @@ export function skinDetailPixels(size) {
   return bodyPixels(size, skinDetail(landmarks()), [128, 136, 190]);
 }
 
-/** Paints the body's UV layout texel by texel: `colour(p, n, zone)` → [r, g, b] for each texel's place on the body. */
-function bodyPixels(size, colour, empty = [128, 128, 128]) {
+/** Paints the body's UV layout texel by texel: `color(p, n, zone)` → [r, g, b] for each texel's place on the body. */
+function bodyPixels(size, color, empty = [128, 128, 128]) {
   const { P, N, Z, ZONES } = positionMap(size);
   const rgba = new Uint8ClampedArray(size * size * 4);
   const filled = new Uint8Array(size * size);
@@ -491,7 +491,7 @@ function bodyPixels(size, colour, empty = [128, 128, 128]) {
     for (let k = 0; k < 3; k++) { p[k] = P[o * 3 + k]; n[k] = N[o * 3 + k]; }
     const l = Math.hypot(n[0], n[1], n[2]) || 1;
     n[0] /= l; n[1] /= l; n[2] /= l;
-    const c = colour(p, n, ZONES[Z[o]]);
+    const c = color(p, n, ZONES[Z[o]]);
     rgba[o * 4] = c[0]; rgba[o * 4 + 1] = c[1]; rgba[o * 4 + 2] = c[2]; rgba[o * 4 + 3] = 255;
     filled[o] = 1;
   }
@@ -513,7 +513,7 @@ function canvasOf(rgba, size) {
 
 /**
  * The skin's own fine relief, as a repeating tile for its bump: the net of
- * furrows that divides it into little plates a third of a millimetre across,
+ * furrows that divides it into little plates a third of a millimeter across,
  * a pore sunk where some of them meet, and hardly anything else. (Cells
  * about scattered points, their borders the furrows; the tile repeats.)
  */
@@ -544,12 +544,12 @@ function poreTile(size = 512, cells = 56) {
 }
 
 /**
- * The eye. The iris as an iris is made: fibres running out from the pupil,
+ * The eye. The iris as an iris is made: fibers running out from the pupil,
  * finer ones between them, the crinkled collarette a third of the way out
  * (paler, a little golden), dark crypts beyond it, the furrows that ring it
  * near its edge, and the limbal ring fading into the white. It is shadowed
  * above, where the lid and lashes stand over it, and lit below, where the
- * light through the cornea gathers. The white is not white: ivory, greyer
+ * light through the cornea gathers. The white is not white: ivory, grayer
  * and pinker toward the corners, with its fine vessels branching in from
  * them.
  */
@@ -571,13 +571,13 @@ function eyeMap(iris, size = 1024) {
     c = mixc(c, hex('#b8504c'), 0.4 * vessels);
     if (a < 0.44) {
       const t = (a - 0.115) / 0.265;
-      // Fibres: coarse ones bent by noise, fine ones between; brighter strands over a darker ground.
+      // Fibers: coarse ones bent by noise, fine ones between; brighter strands over a darker ground.
       const warp = noise3(ca * 3, sa * 3, t * 2.5) * 2.2;
       const coarse = 0.5 + 0.5 * Math.sin(ang * 46 + warp * 3);
       const thin = 0.5 + 0.5 * noise3(ca * 60 + warp, sa * 60, t * 4);
       const strands = clamp(0.55 * coarse ** 2 + 0.6 * thin);
       let k = mixc(deep, bright, clamp(0.18 + 0.62 * strands * (1 - 0.35 * t)));
-      // The collarette: a crinkled ring, paler and golden, the fibres inside it finer and brighter.
+      // The collarette: a crinkled ring, paler and golden, the fibers inside it finer and brighter.
       const ring = 0.3 + 0.05 * noise3(ca * 9, sa * 9, 2) + 0.025 * Math.sin(ang * 23);
       k = mixc(k, gold, 0.5 * G((t - ring) / 0.07) + 0.28 * smooth(ring, 0, t));
       // Crypts: little dark pits beyond it. The furrows that ring it toward the edge.
@@ -772,14 +772,14 @@ function sockMaps() {
 // ———————————————————————————————————————————————— the leather jacket
 
 /**
- * The jacket's hide: tinted by its colour, mottled as leather is, paler where
+ * The jacket's hide: tinted by its color, mottled as leather is, paler where
  * it wears (over the shoulders, the elbows, its edges), every panel's seam a
  * groove with a row of stitching beside it.
  */
 function leatherMaps() {
   const size = 1024;
   const dash = (p, k) => 0.5 + 0.5 * Math.sign(Math.sin((p[0] * 0.7 + p[1] + p[2] * 0.8) * k));
-  // A seam `d` away: the groove, and the stitching a few millimetres to one side.
+  // A seam `d` away: the groove, and the stitching a few millimeters to one side.
   const seam = (d, p) => ({ groove: G(d / 0.0011), stitch: G((Math.abs(d) - 0.0042) / 0.0006) * dash(p, 700) });
   const map = canvasOf(bodyPixels(size, (p, n, zone) => {
     let c = 220 + 14 * fbm(p[0] * 60, p[1] * 60, p[2] * 60, 3) + 6 * noise3(p[0] * 500, p[1] * 500, p[2] * 500);
@@ -867,7 +867,7 @@ function shoeMaps() {
       const groove = Math.max(0, Math.sin(v * 140)) ** 8;
       return [c - 70 - 40 * groove, c - 72 - 40 * groove, c - 76 - 40 * groove];
     }
-    // Round the wall, one coloured stripe and a fine rib either side.
+    // Round the wall, one colored stripe and a fine rib either side.
     const stripe = G((u - 0.53) / 0.02);
     const rib = 0.5 * (G((u - 0.42) / 0.006) + G((u - 0.66) / 0.006));
     c -= 30 * rib;
@@ -883,12 +883,12 @@ const cache = new WeakMap();
  * skin map, made once and kept. Returns null where there is no document to
  * paint on.
  */
-export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColour = null, style = null, beard = null, sex = 'male' } = {}) {
+export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 2048, hair: hairColor = null, style = null, beard = null, sex = 'male' } = {}) {
   if (typeof document === 'undefined') return null;
   let byGFX = cache.get(GFX);
   if (!byGFX) cache.set(GFX, (byGFX = new Map()));
-  const groom = { ...(style || beard ? { hairColour, style, beard } : {}), female: sex === 'female' };
-  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColour : ''}|${sex}`;
+  const groom = { ...(style || beard ? { hairColor, style, beard } : {}), female: sex === 'female' };
+  const key = `${skin}|${iris}|${size}|${style}|${beard}|${style || beard ? hairColor : ''}|${sex}`;
   if (byGFX.has(key)) return byGFX.get(key);
   const garments = byGFX.get('garments') ?? (() => {
     const fabrics = fabricTiles(), suit = woolMap();
@@ -912,7 +912,7 @@ export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 
     byGFX.set('garments', g);
     return g;
   })();
-  // The skin's detail is the same whatever his colouring: one for each size of map.
+  // The skin's detail is the same whatever his coloring: one for each size of map.
   const detail = byGFX.get(`detail|${size}`) ?? texture(GFX, canvasOf(skinDetailPixels(size), size), { color: false });
   byGFX.set(`detail|${size}`, detail);
   const made = {

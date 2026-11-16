@@ -1,5 +1,5 @@
 import { createVisionMaterial } from '../heroes/krystal/vision.js';
-import { bladeCentreline } from './blade-curve.js';
+import { bladeCenterline } from './blade-curve.js';
 
 const PALETTES = ['krystal', 'egg'];
 
@@ -42,7 +42,7 @@ function mistMaterial(GFX, palette) {
   return material;
 }
 
-/** One ray-marched ellipsoid of mist, centred at `position`, drawn after the blade. */
+/** One ray-marched ellipsoid of mist, centered at `position`, drawn after the blade. */
 function mistMesh(GFX, parent, material, { name, position, axes, visible }) {
   const uniforms = material.uniforms;
   uniforms.uRadius.value = 1;
@@ -81,7 +81,7 @@ function mistMesh(GFX, parent, material, { name, position, axes, visible }) {
  * but ray-marches in ellipsoid space so the same curled wisps follow both a
  * full-length sword and a compact dagger without reading as a spherical cloud.
  *
- * Dimensions are local weapon-space metres. The sheath starts visible and
+ * Dimensions are local weapon-space meters. The sheath starts visible and
  * can be toggled independently of the mist that remains inside the orb.
  */
 export function createBladeMist(GFX, parent, {
@@ -122,7 +122,7 @@ export function createCurvedBladeMist(GFX, parent, {
   }
   checkSize('blade mist', { rootY, length, width, bend, segments });
 
-  const line = bladeCentreline({ length, bend, hook, talon });
+  const line = bladeCenterline({ length, bend, hook, talon });
   const group = new GFX.Group();
   group.name = 'Magic Banana blade mist';
   group.visible = Boolean(visible);

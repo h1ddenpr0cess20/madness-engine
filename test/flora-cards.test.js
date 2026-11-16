@@ -29,12 +29,12 @@ test('a spruce is a trunk and whorls of needle cards', () => {
   assert.ok(p.needleCard.count / 3 > 200 && p.bark.count > 0);
 });
 
-test('the foliage atlas is leaves on a clear ground, coloured right to its edge', () => {
+test('the foliage atlas is leaves on a clear ground, colored right to its edge', () => {
   for (const kind of ['broad', 'needle']) {
     const a = paintFoliage({ kind, size: 256 });
     const c = coverOf(a);
     assert.ok(c > 0.2 && c < 0.75, `${kind}: ${c}`);
-    // No clear pixel is black: the mips keep the leaves' colour.
+    // No clear pixel is black: the mips keep the leaves' color.
     for (let i = 0; i < a.data.length; i += 4) if (!a.data[i + 3]) assert.ok(a.data[i] + a.data[i + 1] + a.data[i + 2] > 60);
   }
 });

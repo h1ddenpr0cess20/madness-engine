@@ -7,7 +7,7 @@
  * starts; `frame` the metal (bronze, black, white); `outside` false leaves the glass clear, for a real view beyond;
  * `mat` false leaves out the mat.
  *
- * Coordinates are metres: the middle of the opening on the floor, facing +z (into the room). Set it flush with the
+ * Coordinates are meters: the middle of the opening on the floor, facing +z (into the room). Set it flush with the
  * inside of a wall. `doorway` says where someone walks through: its middle on the floor and its width.
  *
  *   const entry = createGlassEntry(GFX, { width: 4.4 });

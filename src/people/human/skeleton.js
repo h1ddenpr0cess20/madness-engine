@@ -2,7 +2,7 @@ import { FACE as BAKED_FACE, FINGERS as BAKED_FINGERS, JOINTS as BAKED_JOINTS } 
 import * as WOMAN from './data/female.js';
 
 /**
- * The human's skeleton, at real size: an adult man 1.76 m tall, in metres,
+ * The human's skeleton, at real size: an adult man 1.76 m tall, in meters,
  * standing on y = 0, facing +z, his left toward +x, arms 12° out from his
  * sides with the palms toward the thighs. Its joints are where the real
  * anatomy he is built on (data/base.js) bends. The bone names are the
@@ -20,7 +20,7 @@ export const HEIGHT = 1.76;
 /** The body's joints (left side). */
 export const JOINTS = Object.freeze(Object.fromEntries(Object.entries(BAKED_JOINTS).map(([k, v]) => [k, Object.freeze(v)])));
 
-/** The face's moving parts (left side): where each turns, the eye (centre, radius), the mouth's middle. */
+/** The face's moving parts (left side): where each turns, the eye (center, radius), the mouth's middle. */
 export const FACE = Object.freeze(BAKED_FACE);
 export const EYE = Object.freeze(BAKED_FACE.eye);
 

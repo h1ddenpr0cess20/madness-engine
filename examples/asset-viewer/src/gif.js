@@ -1,16 +1,16 @@
 /**
  * A small GIF89a encoder with no dependencies, for the viewer's animated captures.
  *
- * Frames are added as RGBA pixels; `finish()` picks one 255-colour palette for the whole animation
+ * Frames are added as RGBA pixels; `finish()` picks one 255-color palette for the whole animation
  * (median cut over everything that was shot), maps each frame onto it with a fixed ordered dither (the
  * same pattern every frame, so a still part of the picture does not shimmer), and writes each frame as
  * only what changed from the one before: the pixels that did not are left transparent (the 256th
- * colour), so a still background costs nothing. The animation loops forever by default.
+ * color), so a still background costs nothing. The animation loops forever by default.
  */
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
-/** A palette of up to `size` colours for `frames` (RGBA), by median cut over a 5-bit-a-channel histogram: { palette: [[r, g, b]], lut: Uint8Array(32768) }. */
+/** A palette of up to `size` colors for `frames` (RGBA), by median cut over a 5-bit-a-channel histogram: { palette: [[r, g, b]], lut: Uint8Array(32768) }. */
 export function paletteFor(frames, size = 255) {
   const count = new Float64Array(32768), sum = new Float64Array(32768 * 3);
   for (const px of frames) {
@@ -50,7 +50,7 @@ export function paletteFor(frames, size = 255) {
     for (const bin of list) { n += count[bin]; r += sum[bin * 3]; g += sum[bin * 3 + 1]; b += sum[bin * 3 + 2]; }
     return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
   });
-  // Each of the 32768 colours, to its nearest in the palette.
+  // Each of the 32768 colors, to its nearest in the palette.
   const lut = new Uint8Array(32768);
   for (let b = 0; b < 32768; b++) {
     const r = ((b >> 10) << 3) | 4, g = (((b >> 5) & 31) << 3) | 4, bl = ((b & 31) << 3) | 4;
@@ -138,7 +138,7 @@ export class GifEncoder {
     const { palette, lut } = paletteFor(this.frames);
     out.push(...[...'GIF89a'].map((c) => c.charCodeAt(0)));
     word(width); word(height);
-    // A global table of 256 colours; the last is the transparent one.
+    // A global table of 256 colors; the last is the transparent one.
     out.push(0xf7, 0, 0);
     for (let i = 0; i < 256; i++) out.push(...(palette[i] ?? [0, 0, 0]));
     // Looping forever (or `loop` times).
@@ -158,7 +158,7 @@ export class GifEncoder {
         w = x1 - x0 + 1; h = y1 - y0 + 1; part = new Uint8Array(w * h);
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) part[y * w + x] = draw[(y0 + y) * width + x0 + x];
       } else { x0 = y0 = 0; }
-      // Graphic control: leave what is there, a transparent colour, the frame's delay (in hundredths).
+      // Graphic control: leave what is there, a transparent color, the frame's delay (in hundredths).
       out.push(0x21, 0xf9, 4, before ? 0x05 : 0x04);
       word(Math.max(2, Math.round(this.delays[f] / 10)));
       out.push(255, 0);

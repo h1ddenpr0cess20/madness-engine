@@ -4,9 +4,9 @@ import { bird, plumed } from './bird.js';
 
 /**
  * The Animatronic Parrot: the parrot for the pirate picture, an Amazon,
- * feathers glued over a fibreglass shell. Green all over with every
+ * feathers glued over a fiberglass shell. Green all over with every
  * feather edged in black, a blue forehead and a yellow face, a bold white
- * ring round each orange glass eye, a grey hooked beak that opens and
+ * ring round each orange glass eye, a gray hooked beak that opens and
  * shuts on a servo, red at the bend of the wing and a red flash in it,
  * blue-black wing tips, and a square tail tipped yellow. The screws show
  * at the shoulders and a seam runs round its neck. It squawks its lines,

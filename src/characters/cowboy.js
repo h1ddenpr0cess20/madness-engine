@@ -1,6 +1,6 @@
 import { bands } from '../models/skins.js';
 import { bag, cloth, onBody, person, shell, strap } from './person.js';
-import { moustache, stetson } from './wardrobe.js';
+import { mustache, stetson } from './wardrobe.js';
 
 /**
  * The Cowboy: a stetson, a red-checked shirt under a leather vest, a
@@ -43,7 +43,7 @@ export default person({
   },
   extras(s, J) {
     stetson(s, { color: '#a87a4a', band: '#4a2a14' });
-    moustache(s, { color: '#6a4422', wide: 1.15, droop: 0.6 });
+    mustache(s, { color: '#6a4422', wide: 1.15, droop: 0.6 });
     const trunk = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
     // An open leather vest over the shirt, and a costume star pinned on it.
     shell(s, (p) => Math.max(0.33 - p[1], p[1] - 0.548, Math.min(0.03 + (p[1] - 0.33) * 0.16 - Math.abs(p[0]), p[2] - 0.02), -Math.hypot(Math.abs(p[0]) - 0.115, (p[1] - 0.49) * 0.8) + 0.04), {

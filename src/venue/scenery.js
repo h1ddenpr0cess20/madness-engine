@@ -135,7 +135,7 @@ export function createVenueMeshes(GFX, built, venue) {
   };
 }
 
-/** A target on the floor to roll onto: rings and chevrons pointing in, in a spotlight's colour. */
+/** A target on the floor to roll onto: rings and chevrons pointing in, in a spotlight's color. */
 function targetTexture(GFX) {
   return cached('target', () => {
     const size = 512, mid = size / 2;
@@ -174,14 +174,14 @@ function targetTexture(GFX) {
 }
 
 /** The sign over the exit: an arrow and a word, in lit letters on a black board. */
-function doorSign(GFX, width, word, colour) {
+function doorSign(GFX, width, word, color) {
   if (typeof document === 'undefined') return null;
   const h = 128, w = Math.round((h * (width + 0.5)) / 0.5);
   const [c, ctx] = canvas(w, h);
   ctx.fillStyle = '#0c0c10';
   ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = colour;
-  ctx.shadowColor = colour;
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
   ctx.shadowBlur = 18;
   ctx.font = `${Math.round(h * 0.7)}px "Anton", Impact, "Arial Narrow", sans-serif`;
   ctx.textAlign = 'center';
@@ -211,18 +211,18 @@ export function createExit(GFX, venue, { last = false, signs = {} } = {}) {
 
   const group = new GFX.Group();
   group.name = 'exit';
-  const colour = venue.palette.exit ?? '#ff3fa4';
+  const color = venue.palette.exit ?? '#ff3fa4';
 
   const map = targetTexture(GFX).map;
   const ring = new GFX.Mesh(
     new GFX.PlaneGeometry(1, 1),
-    new GFX.MeshBasicMaterial({ name: 'target', map, color: new GFX.Color(map ? '#ffffff' : colour), transparent: true, depthWrite: false, toneMapped: false, blending: GFX.AdditiveBlending }),
+    new GFX.MeshBasicMaterial({ name: 'target', map, color: new GFX.Color(map ? '#ffffff' : color), transparent: true, depthWrite: false, toneMapped: false, blending: GFX.AdditiveBlending }),
   );
   const size = Math.min(x1 - x0, z1 - z0) * 0.95;
   ring.scale.set(size, size, 1);
   ring.rotation.x = -Math.PI / 2;
   ring.position.set((x0 + x1) / 2, y + 0.02, (z0 + z1) / 2);
-  ring.material.color.set(colour);
+  ring.material.color.set(color);
   group.add(ring);
 
   // Which side the venue comes in from: the one with the most floor next to it.
@@ -241,8 +241,8 @@ export function createExit(GFX, venue, { last = false, signs = {} } = {}) {
   const width = to - from;
   const height = 2.4;
   const frame = new GFX.MeshStandardMaterial({ name: 'frame', color: new GFX.Color('#1a1a20'), roughness: 0.45, metalness: 0.8 });
-  const glow = new GFX.MeshStandardMaterial({ name: 'door-lamp', color: new GFX.Color(colour), emissive: new GFX.Color(colour), emissiveIntensity: 2.2 });
-  const sign = doorSign(GFX, width, last ? (signs.last ?? 'END') : (venue.look.exitSign ?? signs.exit ?? 'EXIT'), colour);
+  const glow = new GFX.MeshStandardMaterial({ name: 'door-lamp', color: new GFX.Color(color), emissive: new GFX.Color(color), emissiveIntensity: 2.2 });
+  const sign = doorSign(GFX, width, last ? (signs.last ?? 'END') : (venue.look.exitSign ?? signs.exit ?? 'EXIT'), color);
   // Lit by itself, as it is painted: the renderer has no emissive maps, and a plain emissive glow turns the whole board white.
   const face = new GFX.MeshBasicMaterial({ name: 'door-sign', color: new GFX.Color('#ffffff'), map: sign, toneMapped: false });
   const place = (mesh, a, up) => {

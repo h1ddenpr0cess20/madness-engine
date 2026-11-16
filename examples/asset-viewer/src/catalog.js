@@ -126,16 +126,16 @@ function bakeElsewhere(job) {
  * key, sub }), for the worker to bake it; if it can't, it is baked here.
  */
 function sculptedItem(def, category, group, name, source, job = null) {
-  // A person can be shown in other colours (characters/person.js `variant`): `palette` says which, and `colours` is the
+  // A person can be shown in other colors (characters/person.js `variant`): `palette` says which, and `colors` is the
   // viewer's choice of them, { skin, hair, eyes, brow, look: { torso, ... }, colors }.
   const people = typeof def.variant === 'function' && typeof def.palette === 'function';
   return {
     id: source, category, group, name, source, kind: 'object',
     palette: people ? def.palette() : null,
-    async build({ detail = 1, colours = null }) {
-      const shown = people && colours && Object.keys(colours).length ? def.variant(colours) : def;
+    async build({ detail = 1, colors = null }) {
+      const shown = people && colors && Object.keys(colors).length ? def.variant(colors) : def;
       if (job && !hasBake(shown, detail)) {
-        try { adopt(shown, detail, await bakeElsewhere({ ...job, detail, colours })); } catch (err) { console.warn(`${source}: baked here instead (${err.message})`); }
+        try { adopt(shown, detail, await bakeElsewhere({ ...job, detail, colors })); } catch (err) { console.warn(`${source}: baked here instead (${err.message})`); }
       }
       const data = bake(shown, { detail });
       const info = {
@@ -230,8 +230,8 @@ const HEROES = [
     { environment: m.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null) },
   )), null, { metal: METAL_CHOICES }],
   ['rock', () => import('../../../src/heroes/rock.js').then((m) => m.createRock(GFX))],
-  ['rock (granite)', ({ colour = 'grey' } = {}) => import('../../../src/heroes/rock-granite.js').then((m) => m.createGraniteRock(GFX, { colour })), null, { colour: GRANITE_CHOICES }],
-  ['rock (jewel)', ({ colour = 'sapphire', mist = 'on' } = {}) => import('../../../src/heroes/rock-jewel.js').then((m) => m.createJewelRock(GFX, { colour, mist: mist === 'on' })), null, { colour: JEWEL_CHOICES, mist: ['on', 'off'] }],
+  ['rock (granite)', ({ color = 'gray' } = {}) => import('../../../src/heroes/rock-granite.js').then((m) => m.createGraniteRock(GFX, { color })), null, { color: GRANITE_CHOICES }],
+  ['rock (jewel)', ({ jewel = 'sapphire', mist = 'on' } = {}) => import('../../../src/heroes/rock-jewel.js').then((m) => m.createJewelRock(GFX, { jewel, mist: mist === 'on' })), null, { jewel: JEWEL_CHOICES, mist: ['on', 'off'] }],
   ['die (nat d20)', () => import('../../../src/heroes/nat/geometry.js').then((m) => m.createDie(GFX))],
   ['yarn ball', () => import('../../../src/heroes/yarn/model.js').then((m) => m.createYarn(GFX))],
   ['tater (debater)', () => import('../../../src/heroes/tater/index.js').then((m) => m.createPotato({ GFX }))],
@@ -389,8 +389,8 @@ function movingItem([name, category, group, make, from = null, options = null]) 
 function heroItem([name, make, palette = null, options = null]) {
   return {
     id: `heroes/${name}`, category: 'Heroes', group: 'heroes', name, source: 'heroes', kind: 'object', palette, options,
-    async build({ colours = {}, ...buildOptions } = {}) {
-      const made = await make({ ...colours, ...buildOptions });
+    async build({ colors = {}, ...buildOptions } = {}) {
+      const made = await make({ ...colors, ...buildOptions });
       // Those that are posed by how far they have come (the yarn ball, its strand laid out behind it) are shown a little way along.
       made?.pose?.(1.2);
       const object = objectOf(made);
@@ -527,8 +527,8 @@ function diceItems() {
       markingColor: '#e7e0f7',
       ...(id === 'd20' ? { highlightColor: '#ffd479' } : {}),
     },
-    build({ colours = {} } = {}) {
-      const made = createDieProp(GFX, id, colours);
+    build({ colors = {} } = {}) {
+      const made = createDieProp(GFX, id, colors);
       return {
         object: made.group,
         info: { Source: 'props/dice', Shape: label, Faces: faceCount, Values: range, Material: 'resin' },
@@ -554,8 +554,8 @@ function bowlingBallItems() {
       accent: '#f2ba64',
       holes: '#090d18',
     },
-    build({ colours = {} } = {}) {
-      const made = createBowlingBall(GFX, { colors: colours, design: colours.design ?? 'marble' });
+    build({ colors = {} } = {}) {
+      const made = createBowlingBall(GFX, { colors: colors, design: colors.design ?? 'marble' });
       return {
         object: made.group,
         info: { Source: 'props/bowling-ball', Design: made.design, ...countOf(made.group) },
@@ -634,8 +634,8 @@ function bouncyBallItems() {
     source: 'props/bouncy-ball',
     kind: 'object',
     palette: { kind: 'bouncy-ball', design: 'swirl', base: '#e8343f', swirl: '#ffd23f', accent: '#2f6fe0' },
-    build({ colours = {} } = {}) {
-      const made = createBouncyBall(GFX, { colors: colours, design: colours.design ?? 'swirl' });
+    build({ colors = {} } = {}) {
+      const made = createBouncyBall(GFX, { colors: colors, design: colors.design ?? 'swirl' });
       const anim = bouncyClips(made);
       anim.still();
       // Framed for the whole hop: from the floor to the top of the drop, and across the hop along.
@@ -665,8 +665,8 @@ function bowlingPinItems() {
       accent: '#fffdf6',
       stripe: '#c51d2c',
     },
-    build({ colours = {} } = {}) {
-      const made = createBowlingPin(GFX, { colors: colours, design: colours.design ?? 'classic' });
+    build({ colors = {} } = {}) {
+      const made = createBowlingPin(GFX, { colors: colors, design: colors.design ?? 'classic' });
       return {
         object: made.group,
         info: { Source: 'props/bowling-pin', Design: made.design, ...countOf(made.group) },
@@ -702,21 +702,21 @@ function weaponItems() {
       bladeMetal = bladeMetalDefault ?? 'steel',
       hiltMetal = hiltMetalDefault ?? 'steel',
       metal = metalDefault ?? 'steel',
-      colours = {},
+      colors = {},
     } = {}) {
       const [weapons, metals] = await Promise.all([
         import('../../../src/weapons/variants.js'),
         import('../../../src/props/metalglobe.js'),
       ]);
       const made = paletteKind === 'granite-weapon'
-        ? weapons[factory](GFX, { gripColor: colours.gripColor ?? grip ?? '#101010', graniteColour: colours.graniteColour ?? graniteDefault ?? 'grey' })
+        ? weapons[factory](GFX, { gripColor: colors.gripColor ?? grip ?? '#101010', graniteColor: colors.graniteColor ?? graniteDefault ?? 'gray' })
         : paletteKind === 'morningstar'
-        ? weapons[factory](GFX, { metal, gripColor: colours.gripColor ?? grip ?? '#633b2c' })
+        ? weapons[factory](GFX, { metal, gripColor: colors.gripColor ?? grip ?? '#633b2c' })
         : weapons[factory](GFX, {
           bladeMetal,
           hiltMetal,
-          gripColor: colours.gripColor ?? grip ?? '#633b2c',
-          ...(thread ? { threadColor: colours.threadColor ?? thread } : {}),
+          gripColor: colors.gripColor ?? grip ?? '#633b2c',
+          ...(thread ? { threadColor: colors.threadColor ?? thread } : {}),
         });
       return {
         object: made.group,
@@ -956,7 +956,7 @@ function humanItem(sex) {
         { type: 'color', label: 'Beanie', get: () => man.look.beanie, set: (c) => man.setLook({ beanie: c }) },
         { type: 'color', label: 'Felt hats', get: () => man.look.felt, set: (c) => man.setLook({ felt: c }) },
         face('jaw'), face('blink'), face('smile'), face('brows'),
-        // The character creator, slot by slot: those not built yet are shown, kept, and greyed out.
+        // The character creator, slot by slot: those not built yet are shown, kept, and grayed out.
         ...customizationFor(sex).flatMap(({ group, slots }) => [
           { type: 'heading', label: group },
           ...slots.map((s) => ({
@@ -1104,7 +1104,7 @@ function robotItem() {
  * the metal one, passed on its own: the viewer hands every item all the options, and the other kind's must not leak in.
  * A planet topper is given its maps first.
  */
-async function buildStaff(wood, { topper = 'orb', vine = 'roots', wrap = 'on', colours = {} } = {}) {
+async function buildStaff(wood, { topper = 'orb', vine = 'roots', wrap = 'on', colors = {} } = {}) {
   const [{ createStaff }, metals, planets] = await Promise.all([
     import('../../../src/weapons/staff.js'),
     import('../../../src/props/metalglobe.js'),
@@ -1114,7 +1114,7 @@ async function buildStaff(wood, { topper = 'orb', vine = 'roots', wrap = 'on', c
     ? { [topper]: await planets.loadGlassPlanetMaps(topper) }
     : {};
   const made = createStaff(GFX, { ...wood, topper, planetMaps, vine: vine === 'roots', wrap: wrap === 'on',
-    gripColor: colours.gripColor ?? '#3a2418', threadColor: colours.threadColor ?? '#e2b857' });
+    gripColor: colors.gripColor ?? '#3a2418', threadColor: colors.threadColor ?? '#e2b857' });
   return {
     object: made.group,
     environment: metals.studioEnvironment(GFX, globalThis.assetViewer?.renderer ?? null),

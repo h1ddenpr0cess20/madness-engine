@@ -1,6 +1,6 @@
 /**
  * The room the reflections come from, as an equirectangular canvas: a dark
- * ceiling, the venue's colours in a ring of lights round the walls, and a
+ * ceiling, the venue's colors in a ring of lights round the walls, and a
  * bright rig overhead. Only ever seen in reflections.
  */
 export function paintRoom({ colors = ['#ff9a3a'], ceiling = '#2a2a38', strips = false, width = 1024 } = {}) {
@@ -17,15 +17,15 @@ export function paintRoom({ colors = ['#ff9a3a'], ceiling = '#2a2a38', strips = 
   ctx.fillStyle = wall;
   ctx.fillRect(0, 0, width, height);
   ctx.globalCompositeOperation = 'lighter';
-  const glow = (x, y, r, colour) => {
+  const glow = (x, y, r, color) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, colour);
+    g.addColorStop(0, color);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   };
   glow(width * 0.25, height * 0.12, height * 0.2, 'rgba(210, 220, 255, 0.55)');
-  // With `strips`, strip lights overhead too, and the ring of colours fuller: what a stop's chrome catches (the moods').
+  // With `strips`, strip lights overhead too, and the ring of colors fuller: what a stop's chrome catches (the moods').
   if (strips) for (let k = 0; k < 6; k++) glow(width * (0.08 + k * 0.17), height * (0.2 + (k % 2) * 0.05), height * 0.13, 'rgba(235, 240, 255, 0.5)');
   for (let k = 0; k < 8; k++) glow(width * (0.06 + k * 0.125), height * (0.3 + (k % 2) * 0.1), height * (strips ? 0.1 : 0.07), withAlpha(colors[k % colors.length], strips ? 0.9 : 0.75));
   ctx.globalCompositeOperation = 'source-over';

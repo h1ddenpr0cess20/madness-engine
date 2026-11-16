@@ -3,7 +3,7 @@
  * textures/roofing) are made with: pixels to paint on with no canvas, so a
  * texture can be made (and tested) under node; a stone to lay into them, with
  * its facets, its light and the shadow it throws; a wandering crack; and the
- * step that puts finished pixels on a canvas as a colour map and a bump map.
+ * step that puts finished pixels on a canvas as a color map and a bump map.
  * Everything wraps, so what is painted tiles.
  */
 import { canvas, texture } from './painters.js';
@@ -30,7 +30,7 @@ export function hash(x, y, seed) {
   return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
 }
 
-/** The pixels being painted: colour (0 to 255, three floats), and a height (0 to 1). */
+/** The pixels being painted: color (0 to 255, three floats), and a height (0 to 1). */
 export class Pixels {
   constructor(size) {
     this.size = size;
@@ -171,14 +171,14 @@ export function pickStone(r, table) {
 
 const lazy = new WeakMap();
 
-/** Pixels on a canvas: a colour map of its own and a bump map, both wrapping. */
+/** Pixels on a canvas: a color map of its own and a bump map, both wrapping. */
 export function onCanvas(GFX, pixels) {
   const [color, cctx] = canvas(pixels.size);
   cctx.putImageData(new ImageData(pixels.color, pixels.size, pixels.size), 0, 0);
-  const grey = new Uint8ClampedArray(pixels.size * pixels.size * 4);
-  for (let i = 0; i < pixels.height.length; i++) { grey[i * 4] = grey[i * 4 + 1] = grey[i * 4 + 2] = pixels.height[i]; grey[i * 4 + 3] = 255; }
+  const gray = new Uint8ClampedArray(pixels.size * pixels.size * 4);
+  for (let i = 0; i < pixels.height.length; i++) { gray[i * 4] = gray[i * 4 + 1] = gray[i * 4 + 2] = pixels.height[i]; gray[i * 4 + 3] = 255; }
   const [height, hctx] = canvas(pixels.size);
-  hctx.putImageData(new ImageData(grey, pixels.size, pixels.size), 0, 0);
+  hctx.putImageData(new ImageData(gray, pixels.size, pixels.size), 0, 0);
   return { map: texture(GFX, color, { wrap: true }), bump: texture(GFX, height, { srgb: false, wrap: true }) };
 }
 

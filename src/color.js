@@ -1,4 +1,4 @@
-/** sRGB hex to linear RGB — vertex colours are linear. */
+/** sRGB hex to linear RGB — vertex colors are linear. */
 export function linearRGB(hex) {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {

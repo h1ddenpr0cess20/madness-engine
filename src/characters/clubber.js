@@ -4,7 +4,7 @@ import { shades } from './metalwear.js';
 /**
  * The Clubber: black, all of it: a black tee, black jeans, black boots, a
  * leather harness over the tee for no reason anybody has explained, a
- * shaved head, a shaved everything else, a face the colour of a basement
+ * shaved head, a shaved everything else, a face the color of a basement
  * and sunglasses, at night, indoors, with the lights off. Has been in this
  * queue since Thursday and does not mean to leave it. About 0.95 tiles
  * tall, and swaying to a beat only it can hear.

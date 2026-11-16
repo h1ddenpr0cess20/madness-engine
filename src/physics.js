@@ -448,7 +448,7 @@ export function stepBall(ball, world, ax, az, dt, { push = PUSH, airPush = AIR_P
           const d = Math.sqrt(d2);
           contact(dx / d, dy / d, dz / d, r - d, box);
         } else {
-          // The centre is inside: out by the side or the top, whichever is nearer.
+          // The center is inside: out by the side or the top, whichever is nearer.
           const side = box.r - h, up = box.y1 - ball.y;
           if (up < side) contact(0, 1, 0, up + r, box);
           else contact(h > 1e-9 ? dx0 / h : 1, 0, h > 1e-9 ? dz0 / h : 0, side + r, box);
@@ -471,7 +471,7 @@ export function stepBall(ball, world, ax, az, dt, { push = PUSH, airPush = AIR_P
           if (h > 1e-6) contact(dx / h, 0, dz / h, r - h, box);
         } else contact(dx / d, dy / d, dz / d, r - d, box);
       } else {
-        // The centre is inside: out by the nearest face — but never down, out of the bottom, unless the box is coming down on it
+        // The center is inside: out by the nearest face — but never down, out of the bottom, unless the box is coming down on it
         // (a car that drives into the ball shoves it aside or up, not through the road).
         const faces = [
           [ball.x - box.min[0], -1, 0, 0], [box.max[0] - ball.x, 1, 0, 0],

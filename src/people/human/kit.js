@@ -1,10 +1,10 @@
 /**
- * The modelling kit the human is built with: small vector helpers, a quad
+ * The modeling kit the human is built with: small vector helpers, a quad
  * grid builder that every surface (lofts, ray-cast shells, caps) is made of,
  * smooth normals welded across UV seams and poles, and the assembly of all
  * the parts into one skinned geometry with a draw group per material.
  *
- * Everything is in metres, y up, the figure facing +z, its left toward +x.
+ * Everything is in meters, y up, the figure facing +z, its left toward +x.
  */
 
 export const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
@@ -65,7 +65,7 @@ export function spline(pts, n) {
 }
 
 /**
- * Rotation-minimising frames along a polyline: for each point its tangent
+ * Rotation-minimizing frames along a polyline: for each point its tangent
  * `t` and two normals `u`, `v`, starting from `ref` (made perpendicular).
  */
 export function frames(pts, ref) {
@@ -167,7 +167,7 @@ export class Part {
   }
 }
 
-/** Normalised, at most four, as [index, weight] pairs by bone name. */
+/** Normalized, at most four, as [index, weight] pairs by bone name. */
 function resolveWeights(w, boneIndex) {
   const list = Object.entries(w)
     .filter(([, v]) => v > 1e-4)
@@ -203,7 +203,7 @@ export function assemble(parts, boneNames, materialOrder) {
     uv.set(part.uv, base * 2);
     for (let v = 0; v < part.count; v++) {
       const t = part.tint[v];
-      // (A shade, or a colour of its own.)
+      // (A shade, or a color of its own.)
       if (typeof t === 'number') color[(base + v) * 3] = color[(base + v) * 3 + 1] = color[(base + v) * 3 + 2] = t;
       else color.set(t, (base + v) * 3);
       resolveWeights(part.weights[v], boneIndex).forEach(([i, w], k) => {

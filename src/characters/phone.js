@@ -2,7 +2,7 @@ import { axisRot, bag, cloth, hold, person, plate, tube } from './person.js';
 import { baseballCap, hoodDown } from './metalwear.js';
 
 /**
- * Phone Guy: a grey hoodie, jeans, a cap on backwards, and one arm straight
+ * Phone Guy: a gray hoodie, jeans, a cap on backwards, and one arm straight
  * up in the air with a phone on the end of it, filming the whole thing. The
  * screen glows. He will not watch it later. About 0.9 tiles tall, and his
  * arm makes it more.

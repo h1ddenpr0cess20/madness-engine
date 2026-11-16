@@ -320,8 +320,8 @@ export class Scene extends Object3D {
 Scene.prototype.isScene = true;
 
 /**
- * Exponential fog: what is `d` metres from the camera is `1 - exp(-density * d)` of the way to `color`. A density of 0.02 is a
- * haze that hides the far hills, 0.1 a fog that closes in at about thirty metres. Lit (standard and physical) materials take it;
+ * Exponential fog: what is `d` meters from the camera is `1 - exp(-density * d)` of the way to `color`. A density of 0.02 is a
+ * haze that hides the far hills, 0.1 a fog that closes in at about thirty meters. Lit (standard and physical) materials take it;
  * a hand-written shader (`ShaderMaterial`) does its own.
  */
 export class FogExp2 {
@@ -661,7 +661,7 @@ Mesh.prototype.isMesh = true;
  * One geometry drawn many times in a single call: a forest of the same tree,
  * a pool of smoke puffs. Each copy is placed as the mesher's `Batch.stamp`
  * places one — moved to (x, y, z), turned `yaw` about y, made `scale` times
- * the size, its colour multiplied by `tint` — but the vertices stay on the
+ * the size, its color multiplied by `tint` — but the vertices stay on the
  * graphics card once, and only eight numbers a copy go up beside them.
  *
  *     const wood = new GFX.InstancedMesh(oak, bark, 500);
@@ -733,7 +733,7 @@ export class InstancedMesh extends Mesh {
     if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
     if (this.boundingSphere === null) this.boundingSphere = new Sphere();
     const sphere = this.boundingSphere, gs = geometry.boundingSphere;
-    // The geometry's own sphere, set off from its origin, turns with each copy: as far as its centre is out, plus its radius.
+    // The geometry's own sphere, set off from its origin, turns with each copy: as far as its center is out, plus its radius.
     const reach = Math.hypot(gs.center.x, gs.center.y, gs.center.z) + gs.radius;
     const p = this.instancePlace.array, l = this.instanceLook.array;
     if (this.count === 0) { sphere.center.set(0, 0, 0); sphere.radius = 0; return; }
@@ -1143,7 +1143,7 @@ export class MeshStandardMaterial extends Material {
     this.map = null;
     this.emissive = new Color(0x000000);
     this.emissiveIntensity = 1.0;
-    // Where it glows: the emissive colour times this texture, laid as the colour map is (it needs the map): lit windows, a sign's letters.
+    // Where it glows: the emissive color times this texture, laid as the color map is (it needs the map): lit windows, a sign's letters.
     this.emissiveMap = null;
     // The share (0 to 1) of the map's repeats that glow, each by its own chance (and a little brighter or dimmer):
     // a facade whose texture is one window lights some windows and not others. 0 for every repeat alike.
@@ -1176,7 +1176,7 @@ export class MeshPhysicalMaterial extends MeshStandardMaterial {
     this.iridescence = 0;
     this.iridescenceIOR = 1.3;
     this.iridescenceThicknessRange = [100, 400];
-    // Light scattered under the surface (skin, wax): how much, and how far each colour is carried round the form.
+    // Light scattered under the surface (skin, wax): how much, and how far each color is carried round the form.
     this.subsurface = 0;
     this.subsurfaceColor = new Color(0x000000);
     this.sheen = 0;
@@ -1248,7 +1248,7 @@ SpriteMaterial.prototype.isSpriteMaterial = true;
  * `textureSampleLevel(dataTex, dataSamp, uv, 0.0)`. Rows run as they do for any
  * texture here (v = 1 is the top of the image).
  *
- * Whatever comes out is written as it is: no colour-space conversion, as
+ * Whatever comes out is written as it is: no color-space conversion, as
  * with any hand-written shader. The fragment stage is told what the target
  * stores, as a constant `OUTPUT_SRGB` (a `bool`): true for the canvas, false
  * for a target that is read back linear (what glass refracts).

@@ -4,7 +4,7 @@ A test world for the human (`madness-engine/people/human`).
 
 - The town is Gravemoor, from the rpg-test-world game (`src/world/`, with its colliders in `src/collide.js`), shot at night in the engine's horror mood.
 - You are the human, with the banana broadsword.
-- The crowd is the same man in random colours of skin, eyes, shirt, jeans, shoes, soles and briefs. Each carries one of the engine's other weapons, with the swing that suits it: daggers thrust, greatswords chop with both hands, morningstars smite, and swords slash.
+- The crowd is the same man in random colors of skin, eyes, shirt, jeans, shoes, soles and briefs. Each carries one of the engine's other weapons, with the swing that suits it: daggers thrust, greatswords chop with both hands, morningstars smite, and swords slash.
 - They wander until they see you, then run at you shouting and swing when in reach.
 - Three hits put one down, and he gets up again a few seconds later somewhere else. Twelve put you down.
 

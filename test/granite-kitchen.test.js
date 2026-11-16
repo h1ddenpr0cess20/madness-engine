@@ -19,7 +19,7 @@ test('hardwood texture exposes raw and finished variants over the same species p
 });
 
 test('the kitchen reuses the engine granite and metal palettes, and is a counter with a sink in it', () => {
-  assert.deepEqual(Object.keys(GRANITES), ['grey', 'pink', 'black', 'white', 'green']);
+  assert.deepEqual(Object.keys(GRANITES), ['gray', 'pink', 'black', 'white', 'green']);
   assert.equal(METALS.copper.color, '#f08a68');
   assert.equal(METALS.brass.color, '#e0b84e');
   const kitchen = createGraniteKitchen(GFX);

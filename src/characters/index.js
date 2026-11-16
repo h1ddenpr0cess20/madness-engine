@@ -89,7 +89,7 @@ import mourner from './mourner.js';
 import mouse from './mouse.js';
 import mrbig from './mrbig.js';
 import mummy from './mummy.js';
-import neighbour from './neighbour.js';
+import neighbor from './neighbor.js';
 import newsie from './newsie.js';
 import ninja from './ninja.js';
 import nonna from './nonna.js';
@@ -203,7 +203,7 @@ export const CHARACTERS = {
   gent, goblin, gondolier, goon, goth, guardsman, hawker, headbanger, headliner, hippie, hipster,
   horse, hotdog, hxckid, ibex, influencer, kangaroo, knight, lifeguard, limodriver, macaw, maestro,
   makeup, mascot, matador, medic, merch, merchguy, metalhead, mime, mogul, mosher, mourner, mouse,
-  mrbig, mummy, neighbour, newsie, ninja, nonna, nuguy, orc, pa, pallbearer, paparazzo, parrot,
+  mrbig, mummy, neighbor, newsie, ninja, nonna, nuguy, orc, pa, pallbearer, paparazzo, parrot,
   pauser, phone, pigeon, pirate, pizzaiolo, poet, poodle, poolball, poser, promoter, punk, purist,
   rat, raver, reveler, roadie, robot, tinbot, barista, crossingguard, mailcarrier, oldtimer, shopper, hand, snowman, turkey, runner, salaryman, sambista, santa, scalper, scarab, scenekid,
   screamer, security, shredder, skater, skeleton, skier, snowboarder, soundguy, stbernard, stoner,

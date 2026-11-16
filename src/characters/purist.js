@@ -5,7 +5,7 @@ import { battleVest, bulletBelt, longHair, spikedCuffs } from './metalwear.js';
  * The Purist: a battle jacket with fifty patches, every one of them a band
  * from before you were born; a bullet belt, a spiked wristband on each
  * arm and a scowl that was fitted at the factory. Arms folded. Will tell
- * you which of your favourites are not metal, which is all of them, and
+ * you which of your favorites are not metal, which is all of them, and
  * why it ended in 1986. Has not enjoyed a record since. About 1.0 tiles
  * tall, and unmoved.
  */

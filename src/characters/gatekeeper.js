@@ -4,7 +4,7 @@ import { bandana, beard } from './wardrobe.js';
 import { chestPrint } from './metalwear.js';
 
 /**
- * The Gatekeeper: a battle vest so covered in patches the denim is a rumour,
+ * The Gatekeeper: a battle vest so covered in patches the denim is a rumor,
  * a band shirt from a tour before you were born, a beard that has been
  * disappointed in everything since 1983, bandana, spiked cuffs, arms folded.
  * Will tell you that it is not real metal. About 1.1 tiles tall, and wide.

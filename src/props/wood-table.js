@@ -7,7 +7,7 @@
  * `shape` (rectangle, round, oval), the `legs` (square, tapered, turned, trestle), the `apron`, a lower `shelf`
  * and a `drawer` can be given to change it. `surface` says where the top is, so that models can be set on it.
  *
- * Coordinates are metres: the middle of the footprint on the floor, the long side along x, the front facing +z.
+ * Coordinates are meters: the middle of the footprint on the floor, the long side along x, the front facing +z.
  *
  *   const table = createWoodTable(GFX, { kind: 'dining', species: 'oak', legs: 'turned' });
  *   table.place(someModel, { x: 0.2 });          // stood on the top
@@ -20,7 +20,7 @@ export const KINDS = Object.freeze(['dining', 'coffee', 'side', 'console', 'desk
 export const SHAPES = Object.freeze(['rectangle', 'round', 'oval']);
 export const LEGS = Object.freeze(['square', 'tapered', 'turned', 'trestle']);
 
-/** The starting measures of each kind of table: outside, in metres. */
+/** The starting measures of each kind of table: outside, in meters. */
 export const KIND_DEFAULTS = Object.freeze({
   dining: { shape: 'rectangle', legs: 'turned', width: 1.8, depth: 0.9, height: 0.77, apron: true, shelf: false, drawer: false },
   coffee: { shape: 'oval', legs: 'tapered', width: 1.1, depth: 0.6, height: 0.42, apron: false, shelf: true, drawer: false },
@@ -191,7 +191,7 @@ export function createWoodTable(GFX, options = {}) {
   return api;
 }
 
-/** One of each kind, in a row along x, `gap` metres apart, for a showroom. Gives { group, tables }. */
+/** One of each kind, in a row along x, `gap` meters apart, for a showroom. Gives { group, tables }. */
 export function createTableSet(GFX, options = {}) {
   const { gap = 0.4, kinds = KINDS, ...shared } = options;
   const group = new GFX.Group();

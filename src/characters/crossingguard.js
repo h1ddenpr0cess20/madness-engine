@@ -60,7 +60,7 @@ export default person({
     // reflective stripe runs down the middle of each, the way the real ones have it.
     const trunk = (sh) => !/^(arm|fore|hand|head|neck|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
     const BELT_Y = 0.352;
-    // Colours are asked for as built; the stripes are drawn where they were sculpted, as the bands are.
+    // Colors are asked for as built; the stripes are drawn where they were sculpted, as the bands are.
     const w = s.warp, sculpted = (p) => (w ? w.from(p) : p);
     shell(s, (p) => Math.abs(p[1] - BELT_Y) - 0.016, {
       color: (p) => (Math.abs(sculpted(p)[1] - BELT_Y) < 0.0045 ? SILVER : HIVIS), mat: 'plastic', thick: 0.004, lift: 0.0015, part: 'outer', keep: trunk, bone: 'hips',

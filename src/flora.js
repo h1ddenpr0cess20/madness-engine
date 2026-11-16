@@ -211,7 +211,7 @@ function limb(m, mat, a, b, r0, r1, sides, col) {
 /**
  * A leaf card: a square of the foliage atlas (textures/foliage.js) at `p`, `size` across, turned to face `face`
  * with its twig toward `up`; drawn both ways round, each side shaded as the crown is at that point (`normal`), and
- * coloured `col` (darker inside the crown and under it).
+ * colored `col` (darker inside the crown and under it).
  */
 function card(m, mat, p, face, up, size, normal, col, square) {
   const f = v3.norm(face);

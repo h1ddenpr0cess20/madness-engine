@@ -22,17 +22,17 @@ import { mix, smooth } from '../models/skins.js';
  *   body     { r: [half width, half height, half length] }
  *   head     { r, at: its middle }
  *   beak     { len, depth, width, tilt, curve, power, upper, lower, low: {len, depth, curve}, cere, nostrils }
- *   eye      { r, iris, pupil (0–1 of the iris), ring: colour of the bare ring round it, ringW, look: [x, y, z] }
+ *   eye      { r, iris, pupil (0–1 of the iris), ring: color of the bare ring round it, ringW, look: [x, y, z] }
  *   wing     { arm (how far out the hand reaches), chord (the secondaries' length), primary (the longest
  *              primary), nP, nS, fingers (0 tight, 1 spread at the tips), round (0 pointed, 1 round),
- *              dihedral, pattern (colour, p, n, [out, back], t) over every feather of it, colors: { leading, lesser, median, greater, tertials, secondaries, coverts
+ *              dihedral, pattern (color, p, n, [out, back], t) over every feather of it, colors: { leading, lesser, median, greater, tertials, secondaries, coverts
  *              (over the primaries), primaries } }
  *   tail     { len, width, count, spread, shape (fn of −1…1 across: its length, as a share), color }
  *   feet     { color, claw, zygo (two toes forward and two back, as a parrot's) }
- *   plumage  (p, n) the colour of the body, neck and head
+ *   plumage  (p, n) the color of the body, neck and head
  *   style    { rate, amp, fold, after(k, state, T) }
  *
- * A colour anywhere may be '#rrggbb', (p, n), or for a feather (p, n, t)
+ * A color anywhere may be '#rrggbb', (p, n), or for a feather (p, n, t)
  * with t from its root (0) to its tip (1).
  */
 
@@ -45,7 +45,7 @@ const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
 const C = (c) => (typeof c === 'string' ? rgb(c) : c);
 const side = (m) => (m > 0 ? 'L' : 'R');
 
-/** A colour, whatever it was given as, at p (n its normal, t along a feather). */
+/** A color, whatever it was given as, at p (n its normal, t along a feather). */
 export function hue(c, p, n, t = 0, w = null) {
   return typeof c === 'function' ? c(p, n, t, w) : C(c);
 }
@@ -107,7 +107,7 @@ function featherOf(s, a, b, w, thick, color, { up = [0, 1, 0], root = 0.62, tip 
   s.flake(a, b, up, w * root, w * tip, thick / (2 * w * Math.max(root, tip)), { color: col, mat, bone, k });
 }
 
-/** An eye's colour: the pupil in the middle of the iris, the iris brighter toward it and dark at its rim. */
+/** An eye's color: the pupil in the middle of the iris, the iris brighter toward it and dark at its rim. */
 function eyeColor(c, d, { iris, pupil = 0.42, size = 0.9 }) {
   const I = C(iris), deep = I.map((v) => v * 0.35), bright = I.map((v) => Math.min(1, v * 1.5 + 0.03)), black = C('#040304'), rim = C('#100c0c');
   return (p) => {
@@ -236,7 +236,7 @@ export function bird({
         // The nostrils, near the base on top.
         if (Bk.nostrils !== false) s.mirror((m) => s.ellipsoid(add(up.pts[2], [m * Bk.width * 0.28, Bk.depth * 0.78, 0]), [Bk.width * 0.07, Bk.depth * 0.07, Bk.len * 0.06], { op: 'sub', k: 0.0008 }));
       });
-      // The cere: bare skin over the base of the beak (a pigeon's white blob, a parrot's grey band).
+      // The cere: bare skin over the base of the beak (a pigeon's white blob, a parrot's gray band).
       if (Bk.cere) {
         const { color, size = 1 } = Bk.cere;
         s.part('beak', () => s.ellipsoid(add(up.pts[Bk.cere.at ?? 3], [0, Bk.depth * 0.8, 0]), [Bk.width * 0.5 * size, Bk.depth * 0.3 * size, Bk.len * 0.16 * size], { color, mat: 'skin', bone: 'head', k: 0.002 }));

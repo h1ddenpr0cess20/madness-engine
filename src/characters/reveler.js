@@ -63,7 +63,7 @@ export default person({
         s.torus([m * 0.031, 0.668, 0.101], 0.0165, 0.0026, { ...GOLD, k: 0.001, rot: [Math.PI / 2 + 0.25, m * 0.25, m * -0.15] });
       }
     });
-    // White all over the mask: none of the face's colour under it shows through.
+    // White all over the mask: none of the face's color under it shows through.
     s.paint((p) => Math.max(0.072 - p[2], Math.hypot(p[0] / 0.075, (p[1] - 0.645) / 0.1) - 1), MASK, 0.002);
     s.paint((p) => Math.max(Math.abs(p[1] - 0.688 + Math.abs(p[0]) * 0.15) - 0.0025, 0.08 - p[2], Math.abs(p[0]) - 0.06), '#e0b44a', 0.0015);
   },

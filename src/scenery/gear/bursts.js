@@ -1,10 +1,10 @@
 /**
  * What bursts out of the floor (`look.pyro`) beyond flame and steam: its
- * colours, and whether it billows (as steam does) rather than licks up.
+ * colors, and whether it billows (as steam does) rather than licks up.
  *
  *   fog       a fog machine's white cloud (Whitby)
  *   sludge    a green gas off the swamp (Tampa)
- *   smoke     a dense black-grey haze (New Orleans)
+ *   smoke     a dense black-gray haze (New Orleans)
  *   sparks    a spray of welder's sparks (Berlin)
  *   frost     a blast of ice crystals off the snow (Norway)
  *   fireworks pink and gold (the Strip's finale, and the world tour's)

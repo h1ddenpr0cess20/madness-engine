@@ -24,7 +24,7 @@ const rawStar = (t) => {
   return (r1 * r2 * Math.sin(t2 - t1)) / (r1 * Math.sin(a - t1) + r2 * Math.sin(t2 - a));
 };
 
-/** The blurred profile, sampled once and normalised so the tips reach 1. */
+/** The blurred profile, sampled once and normalized so the tips reach 1. */
 const LUT = (() => {
   const lut = new Float32Array(LUTN);
   const raw = new Float32Array(LUTN);

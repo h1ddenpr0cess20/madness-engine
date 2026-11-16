@@ -34,7 +34,7 @@ export default person({
   },
   extras(s, J, { pose }) {
     const trunk = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
-    // A rock printed on the shirt: a grey lump with a crack in it.
+    // A rock printed on the shirt: a gray lump with a crack in it.
     s.paint((p) => Math.max(Math.hypot((p[0]) / 1.3, p[1] - 0.45) - 0.028, 0.05 - p[2]), '#7a7470', 0.002);
     // The backpack, on the back, its two straps over the shoulders and under the arms to its bottom corners.
     const pack = bag(s, [0, 0.44, -0.09], { size: [0.055, 0.065, 0.028], color: '#d8302a', flap: '#b82020', over: ['top'], keep: trunk, bone: 'chest' });

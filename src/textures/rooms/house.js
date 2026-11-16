@@ -21,9 +21,9 @@ export function paintRoom(width = 1024) {
   ctx.fillStyle = '#1a2440';
   ctx.fillRect(width * 0.62, height * 0.18, width * 0.14, height * 0.24);
   ctx.globalCompositeOperation = 'lighter';
-  const glow = (x, y, r, colour) => {
+  const glow = (x, y, r, color) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, colour);
+    g.addColorStop(0, color);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);

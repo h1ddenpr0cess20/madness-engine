@@ -49,7 +49,7 @@ function periodic(x, y, period, seed = 0) {
 }
 
 /**
- * Honed Calacatta: warm white, soft grey clouding, and the long grey veins
+ * Honed Calacatta: warm white, soft gray clouding, and the long gray veins
  * with a gold bloom either side that the stone is named for. Still lighter
  * than anything on it, so the iron and the board read against it. It tiles,
  * so it can be laid down as many times as the counter is long.
@@ -146,7 +146,7 @@ export function greenTileTexture(GFX, { width = 1024, height = 512, seed = 3 } =
       ctx.beginPath();
       ctx.roundRect(x + 3, y + 3, tw - 6, th - 6, 6);
       ctx.fill();
-      /** The glaze is never quite even: a few soft pools of deeper colour on every tile. */
+      /** The glaze is never quite even: a few soft pools of deeper color on every tile. */
       for (let k = 0; k < 5; k++) {
         const px = x + 8 + random() * (tw - 16), py = y + 8 + random() * (th - 16), pr = 8 + random() * 22;
         const pool = ctx.createRadialGradient(px, py, 0, px, py, pr);

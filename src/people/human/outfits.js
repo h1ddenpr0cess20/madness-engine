@@ -100,7 +100,7 @@ function skirtBody() {
 
 /**
  * A skirt, hung from the hips at `top` to its hem at `hem`: bridging the legs, never inside the body, flaring
- * `flare` out for each metre below the hips. Its cloth rides on the thighs more and more toward the hem (each
+ * `flare` out for each meter below the hips. Its cloth rides on the thighs more and more toward the hem (each
  * on its own side, the middle between them held still), so a stride or a kick lifts the skirt with the leg
  * instead of going through it. `pleats` folds round it.
  */

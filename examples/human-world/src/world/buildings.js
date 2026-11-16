@@ -10,7 +10,7 @@ import { drawCrypt } from './scenery.js';
  * `SCALE` times larger to let a person walk through the door. The models do
  * not say where their doors are, so each model is run once with a spy on its
  * `quad` calls to find the door planks (a `wood` quad in one of the door
- * colours, the height of a door) and keep where it is and which way it faces.
+ * colors, the height of a door) and keep where it is and which way it faces.
  */
 
 export const SCALE = 2.2;
@@ -88,7 +88,7 @@ const turn = (x, z, yaw) => [x * Math.cos(yaw) + z * Math.sin(yaw), -x * Math.si
  *   type, variant   which model
  *   door: [x, z]    where the door is, in the world
  *   yaw             which way it faces (0 is toward +z)
- *   tint            multiplies the model's colours: the town is drained and darkened with it
+ *   tint            multiplies the model's colors: the town is drained and darkened with it
  *   lit             whether the windows glow
  */
 export function raise(materials, { type, variant = 0, door, yaw = 0, tint = [0.6, 0.64, 0.66], lit = true, shadow = true, skip = [] }) {

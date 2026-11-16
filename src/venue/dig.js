@@ -173,14 +173,14 @@ export function digger(venue, { x, z, h, heading = '+x' }) {
       const [hx, hz] = HEADINGS[heading];
       const [lx, lz] = [-hz, hx];
       const lo = -Math.floor((width - 1) / 2);
-      const centre = (start, sign) => (sign > 0 ? start - lo : start + lo + width - 1);
+      const center = (start, sign) => (sign > 0 ? start - lo : start + lo + width - 1);
       cur.heading = heading;
       if (hx) {
         cur.x = hx > 0 ? p.x + p.w : p.x - 1;
-        cur.z = centre(p.z, lz);
+        cur.z = center(p.z, lz);
       } else {
         cur.z = hz > 0 ? p.z + p.d : p.z - 1;
-        cur.x = centre(p.x, lx);
+        cur.x = center(p.x, lx);
       }
       return p;
     },

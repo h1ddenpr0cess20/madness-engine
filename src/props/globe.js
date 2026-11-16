@@ -4,7 +4,7 @@ import { letters, plate } from '../models/lettering.js';
 
 /**
  * A snow globe: a souvenir, three hide at every stop. A turned base of dark
- * polished wood, moulded top and bottom, with a gold band and a little
+ * polished wood, molded top and bottom, with a gold band and a little
  * brass plate on the front that says ON TOUR; on it a dome of water-clear
  * glass (the marble's glass), and inside a snowy hill with a stone tower
  * on it — battlements, a window lit, a red roof and a flag — two small

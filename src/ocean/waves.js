@@ -28,7 +28,7 @@ const TAU = Math.PI * 2;
 
 /**
  * Sea states: how the wind has made the sea.
- *   - `wind`: the way it blows, in radians round y from +x towards +z
+ *   - `wind`: the way it blows, in radians round y from +x toward +z
  *   - `longest`, `shortest`: the waves' lengths, in tiles
  *   - `height`: how high the longest wave stands above the mean, in tiles
  *   - `growth`: how much smaller the shorter waves are (A goes as λ^growth)

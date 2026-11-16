@@ -2,8 +2,8 @@
  * (From Blubber.)
  *
  * Every surface's texture, painted on a canvas at startup, as Dungeon
- * Roller's stone is: a colour map near white (the tile's colour comes from
- * the vertex colours under it) and a bump map that raises what stands out.
+ * Roller's stone is: a color map near white (the tile's color comes from
+ * the vertex colors under it) and a bump map that raises what stands out.
  * Each is painted from a seed, so it comes out the same every time, and the
  * ones laid across whole floors (`world`) wrap at their edges so no seam
  * shows. Under node (the tests) there is no canvas and nothing is painted.

@@ -9,13 +9,13 @@
  * three tabs to a strip with the slots cut between them, every tab a shade of
  * its own, the surface a fine scatter of ceramic granules of three tones, and
  * with age, streaks of dirt, a lighter weathered top and moss in the shade.
- * `TILE.shingles` metres across, `u` along the eave and `v` up the slope.
+ * `TILE.shingles` meters across, `u` along the eave and `v` up the slope.
  *
- * A membrane is a single-ply flat roof: sheets of white, grey, black or tan
+ * A membrane is a single-ply flat roof: sheets of white, gray, black or tan
  * membrane welded along their seams, a screw plate every so often along each,
  * the ripples of the sheet over the deck under it, dirt streaked down from the
  * outlets and gathered in the shallow ponds that stand on it. `TILE.membrane`
- * metres across.
+ * meters across.
  *
  * `paintShingles` and `paintMembrane` give raw pixels with no canvas, so they
  * run under node; the `*Texture` functions make the maps (`{ map: null, bump:
@@ -24,19 +24,19 @@
 import { fractal } from './painters.js';
 import { Pixels, grain, hash, lerp, made, pickStone, prng, ramp } from './pixel-kit.js';
 
-/** How many metres one tile of each spans. */
+/** How many meters one tile of each spans. */
 export const TILE = Object.freeze({ shingles: 1.6, membrane: 3 });
 
 const SHINGLES = {
   charcoal: [[0.4, [58, 58, 62]], [0.3, [70, 68, 70]], [0.18, [48, 48, 52]], [0.12, [82, 78, 74]]],
   brown: [[0.4, [92, 66, 50]], [0.3, [108, 78, 58]], [0.18, [74, 54, 44]], [0.12, [126, 96, 70]]],
-  grey: [[0.4, [112, 112, 114]], [0.3, [96, 98, 100]], [0.18, [128, 126, 124]], [0.12, [82, 84, 88]]],
+  gray: [[0.4, [112, 112, 114]], [0.3, [96, 98, 100]], [0.18, [128, 126, 124]], [0.12, [82, 84, 88]]],
   green: [[0.4, [72, 88, 72]], [0.3, [84, 100, 80]], [0.18, [60, 74, 62]], [0.12, [98, 110, 88]]],
 };
 
 /**
  * Asphalt shingles, as pixels.
- * @param options `size` (2048); `color`: 'charcoal', 'brown', 'grey' or 'green'; `age` (0 new, 1 old and streaked, 0.4); `seed`
+ * @param options `size` (2048); `color`: 'charcoal', 'brown', 'gray' or 'green'; `age` (0 new, 1 old and streaked, 0.4); `seed`
  *   A tile is 12 courses of 133 mm (the exposure) and 5 tabs of 320 mm across.
  */
 export function paintShingles({ size = 2048, color = 'charcoal', age = 0.4, seed = 1 } = {}) {
@@ -46,7 +46,7 @@ export function paintShingles({ size = 2048, color = 'charcoal', age = 0.4, seed
   const ch = size / courses, tw = size / tabs, slot = Math.max(3, size * 0.0035);
   const table = (SHINGLES[color] ?? SHINGLES.charcoal).map(([w, rgb]) => ({ w, rgb }));
   const streak = fractal(seed * 29 + 601, 3, 3), moss = fractal(seed * 29 + 603, 7, 4), fine = fractal(seed * 29 + 607, 60, 1);
-  // One colour for each tab of each course.
+  // One color for each tab of each course.
   const tone = [];
   for (let c = 0; c < courses; c++) for (let t = 0; t <= tabs; t++) { const rgb = pickStone(rnd(), table); const b = 0.88 + rnd() * 0.24; tone.push([rgb[0] * b, rgb[1] * b, rgb[2] * b]); }
   for (let y = 0; y < size; y++) {
@@ -81,12 +81,12 @@ export function paintShingles({ size = 2048, color = 'charcoal', age = 0.4, seed
 }
 
 const MEMBRANES = {
-  white: [212, 212, 208], grey: [150, 152, 154], black: [46, 46, 48], tan: [186, 168, 138],
+  white: [212, 212, 208], gray: [150, 152, 154], black: [46, 46, 48], tan: [186, 168, 138],
 };
 
 /**
  * A single-ply membrane roof, as pixels.
- * @param options `size` (2048); `tone`: 'white', 'grey', 'black' or 'tan'; `age` (0 new, 1 dirty and stained, 0.45); `seed`
+ * @param options `size` (2048); `tone`: 'white', 'gray', 'black' or 'tan'; `age` (0 new, 1 dirty and stained, 0.45); `seed`
  *   A tile is two sheets, so two welded seams cross it, a screw plate every 300 mm along each.
  */
 export function paintMembrane({ size = 2048, tone = 'white', age = 0.45, seed = 1 } = {}) {

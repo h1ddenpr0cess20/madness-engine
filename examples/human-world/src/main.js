@@ -1,8 +1,8 @@
 /**
  * A test world for the human (`madness-engine/people/human`): Gravemoor's
  * town at night (from the rpg-test-world game), you in it with the banana
- * broadsword, and a crowd of the same man in every colour of skin, eyes,
- * shirt, jeans and shoes, each with a weapon from the engine's armoury and
+ * broadsword, and a crowd of the same man in every color of skin, eyes,
+ * shirt, jeans and shoes, each with a weapon from the engine's armory and
  * the swing that goes with it. They wander, spot you, run at you shouting
  * and swing; you swing back. Three hits put one down; he gets up later.
  *
@@ -53,7 +53,7 @@ const BRIEFS = ['#2a2b30', '#2c5aa8', '#b8342c', '#e8e4da', '#3f7a3a'];
 const HAIRS = ['#1c1410', '#2e2018', '#3b2a1f', '#5a3c26', '#7a5434', '#a8783e', '#c8a060', '#8a3a1c', '#6a6a6a', '#c8c4bc'];
 
 /** Every weapon there is but the player's own, and the swing each is used with. */
-const ARMOURY = Object.keys(WEAPONS)
+const ARMORY = Object.keys(WEAPONS)
   .filter((k) => /^create/.test(k) && !/Handle|Pommel|BananaBroadsword/.test(k))
   .map((factory) => ({
     factory,
@@ -80,7 +80,7 @@ const town = buildTown();
 stage.scene.add(town.group);
 const colliders = createColliders(town.colliders);
 
-// A little more light than the mood's own, so the colours can be told apart at night.
+// A little more light than the mood's own, so the colors can be told apart at night.
 stage.hemi.color.set('#b8d0c8');
 stage.hemi.groundColor.set('#2a2028');
 stage.hemi.intensity = 1.9;
@@ -197,7 +197,7 @@ const MOBS = clamp(Number(params.get('mobs') ?? 14), 0, 60);
 const mobDetail = Number(params.get('detail') ?? 1);
 const mobs = [];
 for (let i = 0; i < MOBS; i++) {
-  const arm = ARMOURY[i % ARMOURY.length];
+  const arm = ARMORY[i % ARMORY.length];
   const look = { skin: pick(SKINS), iris: pick(IRISES), shirt: pick(SHIRTS), denim: pick(DENIMS), shoe: pick(SHOES), sole: pick(SOLES), briefs: pick(BRIEFS), hair: pick(HAIRS) };
   const m = person({ look, weapon: WEAPONS[arm.factory](GFX), swing: arm.swing, detail: mobDetail, beard: rand() < 0.5 ? 'full' : null });
   const [x, z] = clearSpot(player.x, player.z, 12);

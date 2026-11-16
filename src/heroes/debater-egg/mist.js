@@ -4,7 +4,7 @@ import { shapeEgg, smoothEggSeams } from './shell.js';
 /**
  * A white, slow-moving vision inside the clear egg. The existing glass-object
  * ray-marched material is reused; its two white tones keep the mist pearly,
- * while a restrained warm-yellow third tone sits through its centre.
+ * while a restrained warm-yellow third tone sits through its center.
  */
 export function createEggMist(GFX, { visible = false } = {}) {
   const material = createVisionMaterial(GFX);
@@ -14,7 +14,7 @@ export function createEggMist(GFX, { visible = false } = {}) {
   u.uGlow.value = 0.72;
   // The white palette is uniform through the mist. The warm tint comes from
   // the shader's radial core term (exp(-distance² * 7)), so it sits in the
-  // centre of the egg rather than forming a yellow equatorial band.
+  // center of the egg rather than forming a yellow equatorial band.
   u.uHue.value = 0.4;
   u.uSpread.value = 0;
   u.uTint.value.set(1, 1, 1);

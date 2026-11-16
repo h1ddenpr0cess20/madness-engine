@@ -1,12 +1,12 @@
 /**
  * How the engine's drivable vehicles drive, once: a vehicle brings its numbers (`drive`, as `FREIGHTER_DRIVE` is)
- * and its wheels, and gets `update(dt, input)`, `reset()` and its state. Everything is worked out in metres, seconds
- * and radians, and put in the game's units (`scale` to the metre) on the way out.
+ * and its wheels, and gets `update(dt, input)`, `reset()` and its state. Everything is worked out in meters, seconds
+ * and radians, and put in the game's units (`scale` to the meter) on the way out.
  *
  * The numbers: speeds are m/s; `accel`, `brake`, `coast` and `handbrake` m/s² (the brake is also reverse);
  * `steerLock` is the angle the front wheels turn to at a standstill, `steerFade` the speed at which that lock has
  * shrunk by `steerFadeMax` of itself at most, `steerRate` how quickly the wheels follow the stick (per second),
- * `wheelbase` what it turns about (front to back wheels, in metres), and `maxStep` the longest step it takes at once.
+ * `wheelbase` what it turns about (front to back wheels, in meters), and `maxStep` the longest step it takes at once.
  */
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -20,7 +20,7 @@ export function attachDriving(api, { group, wheels, steeredWheels, radius, drive
   const state = { speed: 0, steer: 0, heading: 0 };
 
   Object.defineProperties(api, {
-    /** Metres a second, forward positive. */
+    /** Meters a second, forward positive. */
     speed: { get: () => state.speed, enumerable: true },
     kmh: { get: () => Math.abs(state.speed) * 3.6, enumerable: true },
     /** The turn about y, in radians; positive is to the left. */
@@ -32,7 +32,7 @@ export function attachDriving(api, { group, wheels, steeredWheels, radius, drive
   /**
    * Drives for `dt` seconds. `input` is `{ throttle, brake, steer, handbrake }`: `throttle` and `brake` 0 to 1 (the
    * brake backs it up once it is stopped), `steer` −1 to 1 with + to the left, and `handbrake`. Moves and turns
-   * `group` and rolls the wheels. Returns `speed` in metres a second.
+   * `group` and rolls the wheels. Returns `speed` in meters a second.
    */
   api.update = (dt, { throttle = 0, brake = 0, steer: want = 0, handbrake = false } = {}) => {
     dt = Math.min(Math.max(dt, 0), D.maxStep);

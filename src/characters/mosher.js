@@ -2,7 +2,7 @@ import { cloth, cuffBand, hold, person } from './person.js';
 import { battleVest, bulletBelt, chestPrint, longHair } from './metalwear.js';
 
 /**
- * The Mosher: a mane, a band shirt gone grey with washing, a denim vest with
+ * The Mosher: a mane, a band shirt gone gray with washing, a denim vest with
  * patches, a bullet belt, ripped black jeans and white high-tops with the
  * laces undone. Has been in the pit since 1984. Windmills. About 0.95 tiles tall.
  */

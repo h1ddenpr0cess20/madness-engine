@@ -277,7 +277,7 @@ export function bustOf(sex) {
 /**
  * Hangs the front of a garment on the trunk (`data`, already on her) as
  * cloth hangs over a bust: from the fullest of it, down at `down` (how far it
- * comes in for each metre it falls; small, so it falls nearly straight), in
+ * comes in for each meter it falls; small, so it falls nearly straight), in
  * toward the middle at `across` (bridging between the breasts), and back up
  * toward the collar at `up`. Out toward the sides it follows the body, as it
  * did. Only ever outward: each point is moved forward by as much as the cloth

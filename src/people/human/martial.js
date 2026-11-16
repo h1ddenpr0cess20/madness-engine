@@ -8,7 +8,7 @@
  * Every pose here is absolute, in the bones' own turns [x, y, z] (see models/rig.js): the arm's and
  * thigh's x swings it forward (−) or back (+), the shin's x bends the knee (+), y turns a limb about
  * the vertical (+ to his left) and z swings it out from his side (+ for the left limb, − for the
- * right). Keys named `@hips` and `@root` are a move, in metres. Poses are written for one lead
+ * right). Keys named `@hips` and `@root` are a move, in meters. Poses are written for one lead
  * (the foot, and for a blade the hand, forward) and mirrored for the other.
  *
  * However he stands or strikes, the feet are kept on the floor (`plant`): the hips are lowered or
@@ -51,7 +51,7 @@ const stand = (hips, L, R, rest) => ({ hips: [...hips, 0], ...leg('L', hips, L),
 
 /**
  * The held stances, each `{ lead, bounce, hands, pose }`: `lead` is the side (of the foot, or of the
- * blade hand when `armed`) it is written for, `bounce` how much (metres) and how fast (rad/s) he bobs on
+ * blade hand when `armed`) it is written for, `bounce` how much (meters) and how fast (rad/s) he bobs on
  * his feet in it, `armed` whether it needs a weapon in the hand ('R' as written), `both` whether the left
  * hand is on the grip too, and `hands` the shape each hand makes if not holding anything.
  */
@@ -182,7 +182,7 @@ export const STANCE_DATA = {
     }),
   },
   // Wing Chun's stance (yi ji kim yeung ma): upright, the knees bent and turned in, the toes in, one hand
-  // palm up before the chest (tan sao) and the other guarding it at the centre line.
+  // palm up before the chest (tan sao) and the other guarding it at the center line.
   wingchun: {
     lead: 'L', hands: 'open',
     pose: stand([0.02, -0.25], { c: 0.45, out: 0.04, knee: 0.85, toe: -0.35 }, { c: 0.3, out: 0.04, knee: 0.75, toe: -0.35 }, {
@@ -358,7 +358,7 @@ const at = (t, pose) => [t, pose];
  * the stance it is made from (and the others it can be made from, `from`: they have the same hands and
  * feet), the hand shape, and `keys`, [[t, pose], ...] laid over the stance, ending where it began. A pose
  * names bones by their own turn, or with a `+` by a turn added to the stance's; `@root` and `@hips` are
- * moves in metres. The names with a `blade` need a weapon in the hand (the right as written).
+ * moves in meters. The names with a `blade` need a weapon in the hand (the right as written).
  */
 export const MOVE_DATA = {
   // The lead hand shot straight out from the guard, the shoulder behind it.
@@ -473,7 +473,7 @@ export const MOVE_DATA = {
       at(0.78, { '@spin': [-4.7, 0, 0], '+spine': [0.15, 0, 0] }),
       at(1, { '@spin': [-2 * Math.PI, 0, 0] })],
   },
-  // Wing Chun's chain punch: three quick punches up the centre line, right, left, right, each from the elbow, the body still.
+  // Wing Chun's chain punch: three quick punches up the center line, right, left, right, each from the elbow, the body still.
   'chain-punch': {
     stance: 'wingchun', from: ['wingchun', 'boxing', 'karate'], hands: 'fist',
     keys: [at(0, {}),

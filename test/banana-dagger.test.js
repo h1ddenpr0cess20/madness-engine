@@ -64,7 +64,7 @@ test('the blade leaves the grip tangent to it, on the same side and in the same 
   for (let i = 0; i < tip.count; i++) if (tip.getY(i) > tipY) { tipY = tip.getY(i); tipX = tip.getX(i); }
   assert.ok(gripMin < -0.03 && tipX < -0.05, 'grip and blade lean the same way');
 
-  // The grip and blade are in one plane: the blade is as thin as the dagger's, centred on z = 0.
+  // The grip and blade are in one plane: the blade is as thin as the dagger's, centered on z = 0.
   let zMax = 0;
   for (let i = 0; i < blade.count; i++) zMax = Math.max(zMax, Math.abs(blade.getZ(i)));
   assert.ok(zMax <= 0.0033, 'the blade stays in the plane of the grip curve');
@@ -195,7 +195,7 @@ test('the peel is the grip\'s own skin: no collar, the grip runs up into a neck 
   const neck = banana.bossSeat.geometry.parameters.radiusTop;
   assert.ok(Math.abs(neck - top) < 0.0006, 'the neck is as wide as the top of the grip, so there is no ledge');
 
-  // Where the peel leaves the neck it sits within a millimetre of it, not out on a flange.
+  // Where the peel leaves the neck it sits within a millimeter of it, not out on a flange.
   const brass = banana.guard.children[1].geometry.attributes.position;
   let widest = 0;
   for (let i = 0; i < brass.count; i++) {
@@ -232,7 +232,7 @@ test('one blade metal changes every part that shares it; the brass follows the h
   }
 
   assert.doesNotThrow(() => banana.setGripColor('#ff0000'),
-    'a grip colour is accepted by the shared API but has no leather to dye');
+    'a grip color is accepted by the shared API but has no leather to dye');
   assert.throws(() => banana.setBladeMetal('unobtainium'), /no metal called/);
 });
 

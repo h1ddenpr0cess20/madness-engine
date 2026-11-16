@@ -133,13 +133,13 @@ test('head, shaft and fittings each take one of the twelve metals on their own',
   assert.throws(() => createPutter(GFX, { hiltMetal: 'lead' }), /no metal called lead/);
 });
 
-test('the grip, thread, face insert and glowing sight line are colours set live', () => {
+test('the grip, thread, face insert and glowing sight line are colors set live', () => {
   const putter = createPutter(GFX, { gripColor: '#ff3fa4', accentColor: '#39ff88', faceColor: '#202020', glow: 1 });
   assert.equal(putter.leatherMaterial.color.getHexString(), 'ff3fa4');
   assert.equal(putter.threadColor, shadeHex('#ff3fa4', 0.68), 'the thread is the grip in a darker shade until it is chosen');
   assert.equal(putter.faceMaterial.color.getHexString(), '202020');
   assert.equal(putter.accentMaterial.color.getHexString(), '39ff88');
-  assert.equal(putter.accentMaterial.emissive.getHexString(), '39ff88', 'the sight line shines in its own colour');
+  assert.equal(putter.accentMaterial.emissive.getHexString(), '39ff88', 'the sight line shines in its own color');
   assert.ok(putter.accentMaterial.emissiveIntensity > 1);
   putter.setGripColor('#2b6cff');
   assert.equal(putter.gripColor, '#2b6cff');

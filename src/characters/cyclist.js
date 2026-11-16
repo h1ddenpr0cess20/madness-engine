@@ -59,7 +59,7 @@ const base = person({
   extras(s, J, { pose }) {
     beret(s, { color: '#14141a' });
     // Two wheels, each a rigid mesh of its own on its own bone (or the frame and the feet beside it would drag at
-    // it as it turns): a black tyre round a silver rim, a hub, and spokes from the hub to the rim.
+    // it as it turns): a black tire round a silver rim, a hub, and spokes from the hub to the rim.
     for (const [c, bone] of [[FRONT, 'wheelF'], [BACK, 'wheelB']]) {
       s.part(`rigid:${bone}`, () => {
         const W = { bone, k: 0.0015 };

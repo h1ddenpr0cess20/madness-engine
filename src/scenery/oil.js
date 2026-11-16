@@ -55,28 +55,28 @@ export const pumpframe = {
   name: 'pumpframe', cell: 0.055, cells: { fine: 0.03 },
   materials: { steel: STEEL, paint: PAINT, concrete: { roughness: 0.9 } },
   sculpt(s) {
-    const yellow = grainy('#e8b020', 0.18, 12), grey = grainy('#5a6068', 0.2, 12);
+    const yellow = grainy('#e8b020', 0.18, 12), gray = grainy('#5a6068', 0.2, 12);
     // The skid and its concrete pad.
     s.box([-1.6, 0.08, 0.5], [3.2, 0.08, 0.95], 0.03, { color: grainy('#8a867e', 0.2, 6), mat: 'concrete', k: 0.02 });
-    s.mirror((m) => s.box([-1.6, 0.22, 0.5 + m * 0.42], [3.0, 0.07, 0.07], 0.02, { color: grey, mat: 'steel', k: 0.01 }));
+    s.mirror((m) => s.box([-1.6, 0.22, 0.5 + m * 0.42], [3.0, 0.07, 0.07], 0.02, { color: gray, mat: 'steel', k: 0.01 }));
     // The Samson post: four legs up to the bearing under the beam.
     for (const dx of [-0.55, 0.55]) for (const dz of [-0.42, 0.42]) s.limb([-1.8 + dx, 0.25, 0.5 + dz], [-1.8, 2.25, 0.5 + dz * 0.25], 0.06, 0.05, { color: yellow, mat: 'paint', k: 0.03 });
-    s.box([-1.8, 2.28, 0.5], [0.16, 0.08, 0.22], 0.03, { color: grey, mat: 'steel', k: 0.02 });
+    s.box([-1.8, 2.28, 0.5], [0.16, 0.08, 0.22], 0.03, { color: gray, mat: 'steel', k: 0.02 });
     // The gearbox, the motor, the belt guard.
     s.box([-3.5, 0.85, 0.5], [0.4, 0.55, 0.32], 0.08, { color: yellow, mat: 'paint', k: 0.03 });
-    s.box([-4.3, 0.55, 0.5], [0.3, 0.25, 0.25], 0.06, { color: grey, mat: 'steel', k: 0.02 });
+    s.box([-4.3, 0.55, 0.5], [0.3, 0.25, 0.25], 0.06, { color: gray, mat: 'steel', k: 0.02 });
     s.box([-3.95, 0.7, 0.85], [0.42, 0.3, 0.05], 0.06, { color: yellow, mat: 'paint', k: 0.02 });
     // The cranks and counterweights, either side of the gearbox.
     s.mirror((m) => {
-      s.box([-3.5, 0.95, 0.5 + m * 0.42], [0.15, 0.55, 0.05], 0.05, { color: grey, mat: 'steel', k: 0.02, rot: [0, 0, 0.5] });
+      s.box([-3.5, 0.95, 0.5 + m * 0.42], [0.15, 0.55, 0.05], 0.05, { color: gray, mat: 'steel', k: 0.02, rot: [0, 0, 0.5] });
       s.box([-3.25, 0.5, 0.5 + m * 0.44], [0.35, 0.28, 0.07], 0.1, { color: '#c8382c', mat: 'paint', k: 0.03, rot: [0, 0, 0.5] });
     });
     // The wellhead under the horsehead: a stack of flanges and a valve wheel.
     s.part('fine', () => {
-      s.cylinder([0.5, 0.25, 0.5], 0.16, 0.25, { color: grey, mat: 'steel', k: 0.02, round: 0.02 });
-      for (const y of [0.12, 0.3, 0.48]) s.cylinder([0.5, y, 0.5], 0.21, 0.025, { color: grey, mat: 'steel', k: 0.01, round: 0.01 });
+      s.cylinder([0.5, 0.25, 0.5], 0.16, 0.25, { color: gray, mat: 'steel', k: 0.02, round: 0.02 });
+      for (const y of [0.12, 0.3, 0.48]) s.cylinder([0.5, y, 0.5], 0.21, 0.025, { color: gray, mat: 'steel', k: 0.01, round: 0.01 });
       s.torus([0.5, 0.36, 0.8], 0.09, 0.014, { color: '#c8382c', mat: 'paint', k: 0.005, rot: [Math.PI / 2, 0, 0] });
-      s.limb([0.5, 0.36, 0.5], [0.5, 0.36, 0.8], 0.02, 0.02, { color: grey, mat: 'steel', k: 0.005 });
+      s.limb([0.5, 0.36, 0.5], [0.5, 0.36, 0.8], 0.02, 0.02, { color: gray, mat: 'steel', k: 0.005 });
     });
   },
 };
@@ -110,7 +110,7 @@ export const pumpbeam = {
   },
 };
 
-/** An oil drum: ribbed, its lid rimmed, a band of colour. */
+/** An oil drum: ribbed, its lid rimmed, a band of color. */
 export const drum = {
   name: 'drum', cell: 0.032,
   materials: { paint: { roughness: 0.4, metalness: 0.4, clearcoat: 0.6 }, steel: STEEL },
@@ -143,7 +143,7 @@ function sunflower(s, k, body, mat, stripe) {
   s.paint((p) => Math.abs(Math.abs(p[0]) - 0.02 * k) - 0.006 * k, stripe, 0.004 * k);
 }
 
-/** A sunflower seed: grey-black with cream stripes from end to end. */
+/** A sunflower seed: gray-black with cream stripes from end to end. */
 export const seed = {
   name: 'seed', cell: 0.009,
   materials: { husk: { roughness: 0.45, clearcoat: 0.5 } },

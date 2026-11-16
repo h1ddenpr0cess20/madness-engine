@@ -4,7 +4,7 @@ import { finishSky, grain, land, snapshot } from '../skyfinish.js';
 /**
  * The sky round each track, painted on a canvas: a gradient from `sky`,
  * stars if it is night, and along the horizon (`horizon`, in `skyline`'s
- * colour, with a `glow` of its own colour where the place has one):
+ * color, with a `glow` of its own color where the place has one):
  *
  *   hills       rolling hills with a town's lights on them
  *   city        towers, spires and lit windows
@@ -32,7 +32,7 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
   if (!ctx) return null;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const g = ctx.createLinearGradient(0, 0, 0, height);
-  sky.forEach((colour, i) => g.addColorStop(i / (sky.length - 1), colour));
+  sky.forEach((color, i) => g.addColorStop(i / (sky.length - 1), color));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, width, height);
   let s = 7;
@@ -44,8 +44,8 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
   let onLand = null;
   if (!skyline) return done();
   const base = height * 0.5;
-  const ridge = (f, colour) => {
-    ctx.fillStyle = colour;
+  const ridge = (f, color) => {
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(0, height);
     for (let x = 0; x <= width; x += 1) ctx.lineTo(x, f(x));
@@ -67,28 +67,28 @@ export function paintSky({ sky = ['#000000', '#050407', '#0d0708', '#1c0b07', '#
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
   };
-  const glowAt = (x, y, r, a = 0.5, colour = glow) => {
+  const glowAt = (x, y, r, a = 0.5, color = glow) => {
     const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
-    rg.addColorStop(0, rgba(colour, a));
-    rg.addColorStop(1, rgba(colour, 0));
+    rg.addColorStop(0, rgba(color, a));
+    rg.addColorStop(1, rgba(color, 0));
     ctx.fillStyle = rg;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   };
   /** A band of mist across the horizon, thicker at the foot. */
-  const mist = (colour, a = 0.35, rise = 40) => {
+  const mist = (color, a = 0.35, rise = 40) => {
     const mg = ctx.createLinearGradient(0, base - rise, 0, base + 14);
-    mg.addColorStop(0, rgba(colour, 0));
-    mg.addColorStop(1, rgba(colour, a));
+    mg.addColorStop(0, rgba(color, 0));
+    mg.addColorStop(1, rgba(color, a));
     ctx.fillStyle = mg;
     ctx.fillRect(0, base - rise, width, rise + 14);
   };
   /** A plume of smoke or steam: soft puffs drifting up and over. */
-  const plume = (x, y, colour, a = 0.25, puffs = 9, drift = 14) => {
+  const plume = (x, y, color, a = 0.25, puffs = 9, drift = 14) => {
     for (let i = 0; i < puffs; i++) {
       const r = 8 + i * 4.5, px = x + i * drift + (rnd() - 0.5) * 6, py = y - i * 14;
       const pg = ctx.createRadialGradient(px, py, 0, px, py, r);
-      pg.addColorStop(0, rgba(colour, a * (1 - i / (puffs + 2))));
-      pg.addColorStop(1, rgba(colour, 0));
+      pg.addColorStop(0, rgba(color, a * (1 - i / (puffs + 2))));
+      pg.addColorStop(1, rgba(color, 0));
       ctx.fillStyle = pg;
       ctx.fillRect(px - r, py - r, r * 2, r * 2);
     }

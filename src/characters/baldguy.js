@@ -1,5 +1,5 @@
 import { cloth, person } from './person.js';
-import { beard, moustache } from './wardrobe.js';
+import { beard, mustache } from './wardrobe.js';
 
 /**
  * The Bald Guy: no hair on top and plenty on his chin, a charcoal T-shirt,
@@ -25,6 +25,6 @@ export default person({
   extras(s) {
     const HAIR = '#2e2016';
     beard(s, { color: HAIR, thick: 0.01 });
-    moustache(s, { color: HAIR, wide: 1.1 });
+    mustache(s, { color: HAIR, wide: 1.1 });
   },
 });

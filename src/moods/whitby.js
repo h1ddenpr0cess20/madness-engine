@@ -4,7 +4,7 @@ import { paintSky } from '../textures/skies/horizons.js';
 /**
  * Track 4: Whitby, 1988. Goth: a clifftop abbey in ruins, a churchyard full
  * of the dead and of people dressed for it, a hundred and ninety-nine steps
- * down, a harbour, and a pavilion at the bottom with a band in it. It is
+ * down, a harbor, and a pavilion at the bottom with a band in it. It is
  * foggy. It is always foggy. Bats go over; a black cat goes across; the
  * coffins in the crypt stairs are hung on chains and come down on the beat,
  * to a clean guitar and a theremin. The way into the pavilion is a gate that

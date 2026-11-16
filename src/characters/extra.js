@@ -33,7 +33,7 @@ export default person({
     shell(s, (p) => Math.max(Math.abs(p[0]) - 0.04, Math.abs(p[1] - 0.44) - 0.03, 0.03 - p[2]), {
       color: (p) => (Math.abs(p[1] - 0.44) < 0.012 && Math.abs(p[0]) < 0.026 && Math.sin(p[0] * 520) > -0.2 ? [0.02, 0.02, 0.024] : [0.9, 0.89, 0.86]), mat: 'paper', part: 'outer', thick: 0.0025, lift: 0.0006, over: ['top'], bone: 'chest',
     });
-    // The headshot, held up by the face by its edge: an eight-by-ten, a face in grey on it.
+    // The headshot, held up by the face by its edge: an eight-by-ten, a face in gray on it.
     const L = pose.grip('L'), across = [1, 0, 0], up = [0, 1, 0];
     const photo = L.at(0, 0, 0).map((v, i) => v + [0.035, 0.05, 0.012][i]);
     pose.hold(s, 'handL', () => s.part('kit', () => {

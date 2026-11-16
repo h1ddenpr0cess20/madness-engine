@@ -35,7 +35,7 @@ test('a rubber ball dropped on the floor bounces again and again, each hop lower
   assert.ok(plain.length <= 2 && (plain[0] ?? 0) < 0.4, `plain ball: ${plain.map((p) => p.toFixed(2))}`);
 });
 
-test('every bouncy-ball design paints its own colours, without finger holes', () => {
+test('every bouncy-ball design paints its own colors, without finger holes', () => {
   for (const design of BOUNCY_BALL_DESIGNS) {
     const ball = createBouncyBall(GFX, { design, colors: { base: '#e8343f', swirl: '#ffd23f', accent: '#2f6fe0' } });
     assert.equal(ball.shell.geometry.parameters.radius, BOUNCY_BALL_RADIUS);

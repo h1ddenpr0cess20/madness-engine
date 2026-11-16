@@ -68,7 +68,7 @@ export function cottage(m, v) {
   return { smoke: [top] };
 }
 
-/** A house: timber-framed, two storeys, the upper one leaning out over the street; clay tiles. */
+/** A house: timber-framed, two stories, the upper one leaning out over the street; clay tiles. */
 export function house(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, PALETTE.plaster);
@@ -85,7 +85,7 @@ export function house(m, v) {
   const J = 0.09;
   const u = faces(x0 - 0.03, z0 - 0.02, x1 + 0.03, z1 + J, 0.62, 1.08);
   // Beams under the overhang.
-  // The bressummer stands a centimetre past the storey above it, which would otherwise share its front and its ends.
+  // The bressummer stands a centimeter past the story above it, which would otherwise share its front and its ends.
   m.box('timber', x0 - 0.042, 0.58, z1, x1 + 0.042, 0.64, z1 + J + 0.012, PALETTE.timber, { skip: ['bottom'] });
   m.box('plaster', x0 - 0.03, 0.62, z0 - 0.02, x1 + 0.03, 1.08, z1 + J, wall, { skip: ['bottom', 'top'] });
   for (const n of ['front', 'back']) halfTimber(m, u[n], { cols: 4, rails: [0, 0.46], rnd });
@@ -111,7 +111,7 @@ export function house(m, v) {
   return { smoke: top2 ? [top, top2] : [top] };
 }
 
-/** A townhouse: three storeys narrow to the street, each leaning over the one below, under a steep tiled gable. */
+/** A townhouse: three stories narrow to the street, each leaning over the one below, under a steep tiled gable. */
 export function townhouse(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, PALETTE.plaster);
@@ -126,7 +126,7 @@ export function townhouse(m, v) {
   windowOn(m, G.front, 1.66 * 0.74, 0.18, 0.32, 0.26, { shutters: shut });
   windowOn(m, G.right, 1.0, 0.18, 0.22, 0.26, { shutters: shut });
   windowOn(m, G.left, 1.1, 0.18, 0.22, 0.26, { shutters: shut });
-  // Two timbered storeys, each a little further out in front.
+  // Two timbered stories, each a little further out in front.
   let zf = z1;
   let y = 0.62;
   for (let s = 0; s < 2; s++) {
@@ -193,7 +193,7 @@ export function stall(m, v) {
   return {};
 }
 
-/** A shop: one low storey and an attic, a shuttered counter window, an awning and a sign. */
+/** A shop: one low story and an attic, a shuttered counter window, an awning and a sign. */
 export function shop(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, PALETTE.plaster);

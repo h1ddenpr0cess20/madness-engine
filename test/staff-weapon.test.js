@@ -9,7 +9,7 @@ import { JEWEL_CHOICES, JEWELS } from '../src/heroes/rock-jewel.js';
 const visibleToppers = (staff) => staff.head.children
   .find((c) => c.name === 'staff topper').children.filter((c) => c.visible);
 
-test('the staff is an all-wood, metre-scale weapon with the Krystal orb on top by default', () => {
+test('the staff is an all-wood, meter-scale weapon with the Krystal orb on top by default', () => {
   const staff = createStaff(GFX);
   assert.equal(staff.topper, 'orb');
   assert.equal(staff.species, 'walnut');
@@ -24,7 +24,7 @@ test('the orb sits in a cradle of root tendrils, and a seed gives another staff'
   const tendrils = staff.head.children.filter((c) => c.name.startsWith('root tendril'));
   assert.equal(tendrils.length, 12);
   const orb = staff.head.children.find((c) => c.name === 'staff topper').children[0];
-  assert.ok(orb.position.y > staff.dimensions.cradleDepth, 'the orb centre is above the cradle lip');
+  assert.ok(orb.position.y > staff.dimensions.cradleDepth, 'the orb center is above the cradle lip');
   const first = (s) => s.head.children.find((c) => c.name === 'root tendril 1').geometry.attributes.position.array;
   assert.deepEqual([...first(createStaff(GFX))], [...first(createStaff(GFX))], 'the same seed gives the same staff');
   assert.notDeepEqual([...first(createStaff(GFX))], [...first(createStaff(GFX, { seed: 99 }))]);
@@ -49,7 +49,7 @@ test('the glass egg is an optional topper, point up, and can be swapped with the
   assert.ok(staff.dimensions.overallLength > 1.6);
 });
 
-test('wood and grip colours are customizable at creation and afterwards', () => {
+test('wood and grip colors are customizable at creation and afterwards', () => {
   const staff = createStaff(GFX, { species: 'oak', finish: 'raw', gripColor: '#112233', threadColor: '#ffeeaa' });
   assert.equal(staff.species, 'oak');
   assert.equal(staff.gripColor, '#112233');
@@ -185,7 +185,7 @@ test('each gem is a topper: the jewel stone in its color, with its mist, cradled
   for (const gem of ['sapphire', 'ruby', 'emerald', 'amber']) {
     const staff = createStaff(GFX, { topper: gem });
     assert.equal(staff.topper, gem);
-    assert.equal(staff.topperAsset.colour, JEWELS[gem]);
+    assert.equal(staff.topperAsset.color, JEWELS[gem]);
     assert.ok(staff.topperAsset.mist, `${gem}: the mist is built`);
     assert.equal(visibleToppers(staff)[0], staff.topperAsset.mesh);
     assert.ok(staff.info.Topper.toLowerCase().startsWith(gem));

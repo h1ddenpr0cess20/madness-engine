@@ -8,7 +8,7 @@ import standardWGSL from '../src/gfx/shaders/wgsl/standard.wgsl.js';
 import frameWGSL from '../src/gfx/shaders/wgsl/chunks/frame.wgsl.js';
 import standardFrag from '../src/gfx/shaders/glsl/standard.frag.glsl.js';
 
-test('a scene has no fog until it is given one, and a fog is a colour and a density', () => {
+test('a scene has no fog until it is given one, and a fog is a color and a density', () => {
   const scene = new GFX.Scene();
   assert.equal(scene.fog, null);
   const fog = new GFX.FogExp2('#c8d6e8', 0.05);
@@ -27,7 +27,7 @@ test('the renderer hands the fog to the backends with the rest of the frame, and
   scene.fog = new GFX.FogExp2('#ff8000', 0.07);
   const frame = Renderer.prototype._frame_.call({}, context, 'srgb', null);
   assert.ok(Math.abs(frame.fog.density - 0.07) < 1e-9);
-  // (As every colour is held here: in linear light.)
+  // (As every color is held here: in linear light.)
   assert.deepEqual(frame.fog.color, [scene.fog.color.r, scene.fog.color.g, scene.fog.color.b]);
   assert.ok(frame.fog.color[0] > frame.fog.color[1] && frame.fog.color[2] === 0);
 });

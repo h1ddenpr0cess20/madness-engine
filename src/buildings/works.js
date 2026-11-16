@@ -5,7 +5,7 @@ import { cart, gabled, wheel } from './parts.js';
  * The works: quarry, iron mine, storehouse, smithy and weaver.
  */
 
-const GREYS = ['#8f8a80', '#a29c90', '#7c776e', '#b0aa9c', '#96907f'];
+const GRAYS = ['#8f8a80', '#a29c90', '#7c776e', '#b0aa9c', '#96907f'];
 /** Freshly cut stone is paler than the weathered rock round it. */
 const FRESH = ['#cfc6b2', '#c4baa4', '#d6ceba', '#bdb39c'];
 const ORE = ['#7a4a32', '#8a4a30', '#5a3a2e', '#6a3e2a', '#94583a'];
@@ -18,7 +18,7 @@ function block(m, rnd, x, y, z, s, yaw = 0) {
 }
 
 /** A heap of broken stone: rough lumps, the bigger ones at the foot. */
-function heap(m, rnd, cx, cz, r, n = 8, cols = GREYS, { seed = 0, size = 1 } = {}) {
+function heap(m, rnd, cx, cz, r, n = 8, cols = GRAYS, { seed = 0, size = 1 } = {}) {
   for (let i = 0; i < n; i++) {
     const a = rnd() * 6.28, d = Math.sqrt(rnd()) * r;
     const s = (0.05 + rnd() * 0.06) * size * (1.3 - d / r * 0.5);
@@ -151,7 +151,7 @@ export function quarry(m, v) {
   m.slab('slate', [lx0 - 0.06, 0.43, lz1 + 0.08], [lx1 + 0.06, 0.43, lz1 + 0.08], [lx1 + 0.06, 0.57, lz0 - 0.05], [lx0 - 0.06, 0.57, lz0 - 0.05], '#6a5a46', 0.035, [0, 1, 2, 3]);
   banker(m, rnd, 1.05, 0.85, 0);
   heap(m, rnd, 0.25, 0.85, 0.22, 7, FRESH, { seed: 5, size: 0.6 });
-  heap(m, rnd, 1.15, -0.4, 0.3, 9, GREYS, { seed: 17 });
+  heap(m, rnd, 1.15, -0.4, 0.3, 9, GRAYS, { seed: 17 });
   m.at(-0.05, 0, 0.35, () => {
     for (const sx of [-0.1, 0.1]) m.box('wood', sx - 0.02, 0, -0.22, sx + 0.02, 0.04, 0.22, '#5a4430', { skip: ['bottom'] });
     m.box('wood', -0.14, 0.04, -0.18, 0.14, 0.065, 0.18, PALETTE.wood[0], { skip: ['bottom'] });

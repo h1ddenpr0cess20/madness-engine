@@ -1,7 +1,7 @@
 import { paintSky } from '../skies/cosmos.js';
 
 /**
- * The fortune teller's parlour, as Krystal's brass and glass see it: the
+ * The fortune teller's parlor, as Krystal's brass and glass see it: the
  * night (`skies/cosmos.js`) with a couple of warm lamps low in the dark and a
  * violet glow off the cloth below. Only ever seen in reflections: without the
  * lamps, polished brass under a night sky reflects night, and comes out black.
@@ -22,10 +22,10 @@ export function paintRoom(width = 512, { sky = null, random } = {}) {
 
 /** The lamps and the cloth's glow, over whatever night is already on `ctx`. */
 export function lamps(ctx, width, height) {
-  const glow = (x, y, r, colour, alpha) => {
+  const glow = (x, y, r, color, alpha) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(${colour}, ${alpha})`);
-    g.addColorStop(1, `rgba(${colour}, 0)`);
+    g.addColorStop(0, `rgba(${color}, ${alpha})`);
+    g.addColorStop(1, `rgba(${color}, 0)`);
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   };

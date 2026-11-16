@@ -217,7 +217,7 @@ export const beans = {
       const a = around(p, [0, 0]);
       if (between(y, 0.02, 0.12)) {
         if (y > 0.1 || y < 0.04) return hsv(p, C('#1c2a22'), 0.03, 120);
-        // The bowl, front and centre: a cream bowl heaped with black beans.
+        // The bowl, front and center: a cream bowl heaped with black beans.
         const bx = p[0] / 0.034, by = (y - 0.066) / 0.016;
         if (bx * bx + by * by < 1 && Math.abs(a) < 0.7) {
           const speck = noise(p[0] * 260, p[1] * 260, p[2] * 260);
