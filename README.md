@@ -111,11 +111,11 @@ import { createRobot } from 'madness-engine/people/robot';
 
 const shovel = createSnowShovel(GFX, { bladeMetal: 'silver', wearMetal: 'iron', gripColor: '#26272b' });
 const robot = createRobot(GFX, { color: 'orange' });
-robot.hold(shovel, { grip: 0.62 });   // the lead hand on the leather, the rear hand on the D-handle
-shovel.setTurn(-Math.PI / 2);         // the scoop's floor faces up when the shaft lies at the shallow angle of digging
+robot.hold(shovel, { hand: 'L', grip: 0.62 });   // the left hand leads on the leather; the right takes the D-handle
+shovel.setTurn(-Math.PI / 2);                    // the scoop's floor faces up when the shaft lies at the shallow angle of digging
 ```
 
-`hold` takes a tool's `secondGrip` for the hand that is not on `gripBounds`: a number (how far below the first hand) or `{ at, axis }` (a point of the tool and the way the fist closes about it), which is how the rear hand takes the middle of the crossbar. The scoop's hollow faces +z; `shovel.scoopAt(v, x)` gives a point on it and the way it faces.
+`hold` takes a tool's `secondGrip` for the hand that is not on `gripBounds`: a number (how far below the first hand) or `{ at, axis }` (a point of the tool and the way the fist closes about it), which is how the other hand takes the middle of the crossbar. Either hand may lead; the arm that is not holding is solved onto the second grip, with its elbow kept from bending backwards and its twist within what an arm gives. The scoop's hollow faces +z; `shovel.scoopAt(v, x)` gives a point on it and the way it faces.
 
 ## The engine
 

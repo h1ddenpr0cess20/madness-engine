@@ -97,13 +97,13 @@ test('the metals, the leather and the turn are each changed on their own', () =>
   assert.throws(() => createSnowShovel({}), /requires the Madness Engine GFX module/);
 });
 
-test('a robot holds it right: one hand on the D-handle, the other on the shaft, the scoop flat on the ground', () => {
+test('a robot holds it right: the right hand on the D-handle at the top, the left on the shaft, the scoop flat on the ground', () => {
   const bot = createRobot(GFX, { detail: 0.3 });
   const shovel = createSnowShovel(GFX);
-  bot.hold(shovel, { grip: 0.62 });
+  bot.hold(shovel, { hand: 'L', grip: 0.62 });
   shovel.setTurn(-Math.PI / 2);
   const set = (k, name, x, y = 0, z = 0) => { const r = k.bone(name).rot; r[0] = x; r[1] = y; r[2] = z; };
-  const dig = { lean: 0.8, knee: 0.8, arm: -1.2, fore: 0, wrist: 0.95 };
+  const dig = { lean: 0.8, knee: 0.9, arm: -1.4, az: -0.45, twist: -0.3, fore: 0, wrist: 0.9 };
   bot.setStyle({
     attack: 'chop',
     after(k) {
@@ -111,9 +111,9 @@ test('a robot holds it right: one hand on the D-handle, the other on the shaft, 
       k.move('hips', 0, -0.89 * (1 - Math.cos(dig.knee)), 0);
       set(k, 'thighL', -dig.knee, 0, 0.06); set(k, 'thighR', -dig.knee, 0, -0.06);
       set(k, 'shinL', dig.knee * 1.6); set(k, 'shinR', dig.knee * 1.6);
-      set(k, 'spine', dig.lean * 0.55); set(k, 'chest', dig.lean * 0.45);
+      set(k, 'chest', dig.lean * 0.45);
       set(k, 'neck', -dig.lean * 0.3); set(k, 'head', -dig.lean * 0.3);
-      set(k, 'armR', dig.arm, 0, -0.05); set(k, 'armL', dig.arm, 0, 0.05);
+      set(k, 'armR', dig.arm, 0, -0.05); set(k, 'armL', dig.arm, 0, dig.az); set(k, 'spine', dig.lean * 0.55, dig.twist);
       set(k, 'foreR', dig.fore, -0.1); set(k, 'foreL', dig.fore, 0.1);
       set(k, 'handR', dig.wrist); set(k, 'handL', dig.wrist);
     },
@@ -135,12 +135,18 @@ test('a robot holds it right: one hand on the D-handle, the other on the shaft, 
   const base = world([0, 0, 0]), axis = world([0, 1, 0]).sub(base).normalize();
   const along = (point) => point.clone().sub(base).dot(axis);
   const off = (point) => point.clone().sub(base).addScaledVector(axis, -along(point)).length();
-  const right = new GFX.Vector3(...bot.point('handR', [-0.283, 0.79, 0.04]));
-  const left = new GFX.Vector3(...bot.point('handL', [0.283, 0.79, 0.04]));
-  assert.ok(off(right) < 0.05, `the lead hand is on the shaft (${off(right).toFixed(3)} m off it)`);
-  assert.ok(along(right) > shovel.gripBounds.bottom - 0.03 && along(right) < shovel.gripBounds.top + 0.03, `on the leather (at ${along(right).toFixed(2)} m)`);
-  assert.ok(left.distanceTo(world([0, 0.0225, 0])) < 0.06, `the rear hand is on the D-handle (${left.distanceTo(world([0, 0.0225, 0])).toFixed(3)} m from the bar)`);
-  assert.ok(along(right) - along(left) > 0.45, `the hands are well apart, not bunched (${(along(right) - along(left)).toFixed(2)} m)`);
+  const lead = new GFX.Vector3(...bot.point('handL', [0.283, 0.79, 0.04]));
+  const rear = new GFX.Vector3(...bot.point('handR', [-0.283, 0.79, 0.04]));
+  assert.ok(off(lead) < 0.05, `the left hand is on the shaft (${off(lead).toFixed(3)} m off it)`);
+  assert.ok(along(lead) > shovel.gripBounds.bottom - 0.03 && along(lead) < shovel.gripBounds.top + 0.03, `on the leather (at ${along(lead).toFixed(2)} m)`);
+  assert.ok(rear.distanceTo(world([0, 0.0225, 0])) < 0.07, `the right hand is on the D-handle (${rear.distanceTo(world([0, 0.0225, 0])).toFixed(3)} m from the bar)`);
+  assert.ok(along(lead) - along(rear) > 0.45, `the hands are well apart, not bunched (${(along(lead) - along(rear)).toFixed(2)} m)`);
+  // And it is held in front of him, down the middle: the scoop, and both hands, are near the line he faces along, not off to one side.
+  const middle = (point) => Math.abs(point.x);
+  assert.ok(middle(world(shovel.scoopAt(0.5, 0).point)) < 0.2, 'the scoop is in front of him, not to a side');
+  assert.ok(middle(lead) < 0.2 && middle(rear) < 0.2, `the hands are on the middle line (${lead.x.toFixed(2)}, ${rear.x.toFixed(2)})`);
+  // Neither elbow bends the wrong way.
+  for (const side of ['L', 'R']) assert.ok(bot.skeleton.bone(`fore${side}`).rot[0] < 0.1, `the ${side} elbow bends forward`);
 });
 
 test('it is in the props library and the asset viewer, and can be disposed', () => {
