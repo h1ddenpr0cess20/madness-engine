@@ -250,10 +250,6 @@ const ABOUT = {
 };
 
 /**
- * Americanizes generated Markdown prose without changing inline code or code fences.
- * Source comments are kept as written; this is a presentation-only pass for the catalog.
- */
-/**
  * Americanizes generated Markdown prose without changing inline code or fenced examples.
  * Source comments remain untouched; only the human-readable catalog presentation is converted.
  */

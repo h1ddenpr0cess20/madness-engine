@@ -28,11 +28,11 @@ import { buildGlasses, SUNGLASSES } from './human/glasses.js';
  *     const man = createHuman(GFX);                 // briefs, t-shirt, jeans, sneakers
  *     scene.add(man.group);
  *     man.hold(createKrystalSword(GFX));            // in his right hand
- *     let elapsed = 0;
-     stage.run((dt) => {
-       elapsed += dt;
-       man.pose({ clip: 'walk', t: elapsed, time: elapsed });
-     });
+ *     let elapsed = 0;                              // stage.run passes only dt
+ *     stage.run((dt) => {
+ *       elapsed += dt;
+ *       man.pose({ clip: 'walk', t: elapsed, time: elapsed });
+ *     });
  *
  * The base body is a mesh of its own; every garment is another, worn over
  * it. A garment hides what it covers (skin, and the garments under it), so
