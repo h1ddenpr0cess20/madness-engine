@@ -1,7 +1,6 @@
 /**
- * The electric bus: the freighter's long chassis reshaped as an intercity coach, with a swept windshield,
- * long passenger windows, luggage-bay panels, and the original four-axle electric running gear. It is built from plain shapes at real size, in metres, as the putter and the swords are,
- * and it drives: `update(dt, input)` is the model it was made with.
+ * The electric bus: an intercity coach with a raked windshield, long passenger windows, luggage-bay panels and four
+ * axles, built from plain shapes at real size in meters. It drives: `update(dt, input)` steers and moves it.
  *
  *     const bus = createElectricBus(GFX);
  *     scene.add(bus.group);
@@ -9,19 +8,18 @@
  *       bus.update(dt, { throttle: keys.up, brake: keys.down, steer: keys.left - keys.right, handbrake: keys.space });
  *     });
  *
- * It faces +z with its wheels on the ground at y = 0, as the town's vehicles (`scenery/vehicles`) do, and its origin is
- * on the ground at the back wheels, which is what it turns about. Heading 0 drives toward +z; a positive heading, and
- * a positive `steer`, turn it to the left.
+ * It faces +z with its wheels on the ground at y = 0. Its origin is on the ground at the back wheels, which is what it
+ * turns about. Heading 0 drives toward +z; a positive heading or `steer` turns it to the left.
  *
- * `scale` sets how big a metre is in the game's units (the traffic is about 0.4 of a tile to the metre, so a freighter
- * there is `scale: 0.41`). The driving is worked out in metres and seconds and put in the game's units on the way out:
- * its speed, its turning circle and its look are the same at any scale.
+ * `scale` sets the game units per meter (the traffic is about 0.4 of a tile to the meter, so a freighter there is
+ * `scale: 0.41`). Driving is worked out in meters and seconds and converted to game units on the way out, so speed,
+ * turning circle and look match at any scale.
  */
 
 import { arc, across as acrossOf, wheelKit } from './parts.js';
 import { attachDriving } from './driving.js';
 
-/** The bus's measures, in metres. */
+/** The bus's measures, in meters. */
 export const ELECTRIC_BUS = Object.freeze({
   name: 'electric-bus',
   /** Overall, from the rear doors' back to the bumper's front, across the mirrors, and to the top of the canopy. */
@@ -40,7 +38,7 @@ export const ELECTRIC_BUS = Object.freeze({
 });
 
 /**
- * How it drives, in metres, seconds and radians. Speeds are m/s (22 is 79 km/h); `accel`, `brake`, `coast` and
+ * How it drives, in meters, seconds and radians. Speeds are m/s (22 is 79 km/h); `accel`, `brake`, `coast` and
  * `handbrake` are m/s² (the brake is also reverse); `steerLock` is the angle the wheels turn to at a standstill and
  * `steerFade` the speed at which the lock has shrunk by `steerFadeMax` of itself at most; `steerRate` is how quickly the
  * wheels follow the stick, per second.
@@ -64,10 +62,10 @@ export const ELECTRIC_BUS_DRIVE = Object.freeze({
 /**
  * @param {object} GFX The engine's graphics API.
  * @param {object} [options]
- * @param {number} [options.scale] Game units to the metre (default 1).
+ * @param {number} [options.scale] Game units to the meter (default 1).
  * @param {number|string} [options.paint] The body's color (default near white).
  * @param {number|string} [options.accent] The green of the leaves and the bolt.
- * @param {'treaded'|'classic'} [options.wheels] The tires: rounded and treaded (default), or the plain square-edged ones it was first drawn with. The rim is the same either way.
+ * @param {'treaded'|'classic'} [options.wheels] The tires: rounded and treaded (default), or the plain square-edged ones. The rim is the same either way.
  * @param {number|string} [options.light] The glow of the light bar and the lamps.
  * @returns the freighter: `group` to add to the scene; `update(dt, input)`; `reset()`; the state (`speed`, `kmh`,
  *   `heading`, `steerAngle`); `wheels`, `steeredWheels` and the rest of the parts by name; `materials` and `dimensions`.
@@ -83,7 +81,7 @@ export function createElectricBus(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
     green: new GFX.MeshStandardMaterial({ name: 'accent_green', color: accent, roughness: 0.38, metalness: 0.08 }),
   };
 
-  // The truck is drawn nose to −z, as it was made; `facing` turns it to face +z.
+  // The chassis is built nose to −z; `facing` turns it to face +z.
   const truck = new GFX.Group();
   const parts = {};
   const add = (name, geo, mat, pos, rot) => {
@@ -100,7 +98,7 @@ export function createElectricBus(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   /** A longitudinal side profile pushed across the width of the vehicle (`vehicles/parts`). */
   const across = (shape, width, bevel) => acrossOf(GFX, shape, width, bevel);
 
-  // ---------- one continuous intercity-coach shell, replacing the cab and cargo box ----------
+  // ---------- coach shell ----------
   const shell = new GFX.Shape();
   shell.moveTo(-6.00, 1.12);
   shell.lineTo(-6.10, 1.34);
@@ -146,7 +144,7 @@ export function createElectricBus(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
     }
   });
 
-  // Passenger rear window and the original dark rear bumper trim.
+  // Passenger rear window and dark rear bumper trim.
   add('rear_window', box(2.16, 0.82, 0.055), M.glass, [0, 2.82, 4.045]);
   add('rear_bumper', box(2.28, 0.20, 0.25), M.trim, [0, 1.12, 4.02]);
 
@@ -156,7 +154,7 @@ export function createElectricBus(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
     add(`mirror_pod_${i ? 'r' : 'l'}`, box(0.10, 0.30, 0.15), M.trim, [s * 1.45, 3.05, -5.05]);
   });
 
-  // Retain the freighter's dark front valance, cyan LED bar and green lightning badge.
+  // Dark front valance, cyan LED bar and green lightning badge.
   const valance = new GFX.Shape();
   valance.moveTo(-6.00, 1.20);
   valance.quadraticCurveTo(-6.12, 1.48, -6.02, 1.84);
@@ -205,7 +203,7 @@ export function createElectricBus(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0
   arc(archShape, 0, 0, TIRE_R + 0.095, Math.PI * 0.07, Math.PI * 0.93, { first: true });
   arc(archShape, 0, 0, TIRE_R + 0.02, Math.PI * 0.93, Math.PI * 0.07);
 
-  // Axle positions as the truck was drawn (nose at −z), from the front.
+  // Axle positions from the front (nose at −z).
   const axles = [-5.00, -3.55, 1.75, 3.55];
   const wheels = [], steeredWheels = [];
   const DUAL_IN = 0.60, DUAL_OUT = 0.60 + TIRE_W + 0.03;
