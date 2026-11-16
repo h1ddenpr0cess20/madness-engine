@@ -7,3 +7,4 @@
  */
 export * from './freighter.js';
 export * from './electric-car.js';
+export * from './electric-bus.js';

@@ -289,8 +289,9 @@ export class Renderer {
 
   /** Everything a pass shares: the camera, the lights seen from it, the maps. */
   _frame_(context, output, transmission) {
-    const { camera, lighting, env, shadow } = context;
+    const { camera, lighting, env, shadow, scene } = context;
     const view = camera.matrixWorldInverse;
+    const fog = scene?.fog ? { color: [scene.fog.color.r, scene.fog.color.g, scene.fog.color.b], density: scene.fog.density } : null;
     const directional = lighting.directional.map((d) => {
       const direction = new Vector3().setFromMatrixPosition(d.light.matrixWorld);
       _vector3.setFromMatrixPosition(d.light.target.matrixWorld);
@@ -314,6 +315,7 @@ export class Renderer {
         isOrthographic: camera.isOrthographicCamera === true,
       },
       ambient: lighting.ambient,
+      fog,
       directional,
       point,
       hemi,

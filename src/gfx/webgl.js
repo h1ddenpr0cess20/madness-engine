@@ -127,6 +127,8 @@ export class WebGLBackend {
       u.set('viewMatrix', frame.camera.viewMatrix, 'm4');
       u.set('cameraPosition', frame.camera.position, 'v3');
       u.set('isOrthographic', frame.camera.isOrthographic ? 1 : 0, 'i');
+      u.set('fogColor', frame.fog ? frame.fog.color : [0, 0, 0], 'v3');
+      u.set('fogDensity', frame.fog ? frame.fog.density : 0, 'f');
     }
 
     // Uploads bind whatever unit is active, so every texture is made resident

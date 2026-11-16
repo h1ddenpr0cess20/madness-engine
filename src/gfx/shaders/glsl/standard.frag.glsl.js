@@ -133,6 +133,8 @@ in vec3 vViewPosition;
 
 uniform sampler2D dfgLUT;
 uniform vec3 ambientLightColor;
+uniform vec3 fogColor;
+uniform float fogDensity;
 #if NUM_DIR_LIGHTS > 0
   uniform vec3 directionalLightDirection[ NUM_DIR_LIGHTS ];
   uniform vec3 directionalLightColor[ NUM_DIR_LIGHTS ];
@@ -445,6 +447,8 @@ void main() {
   #ifdef USE_TRANSMISSION
     diffuseColor.a *= material.transmissionAlpha;
   #endif
+  // Fog: into the haze with distance (nothing where the scene has none).
+  outgoingLight = mix( outgoingLight, fogColor, 1.0 - exp( - fogDensity * length( vViewPosition ) ) );
   pc_fragColor = linearToOutputTexel( vec4( outgoingLight, diffuseColor.a ) );
 }
 `;

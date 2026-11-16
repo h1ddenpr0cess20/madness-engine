@@ -22,5 +22,7 @@ struct Frame {
   hemiLightDirection: array<vec4f, MAX_HEMI_LIGHTS>,
   hemiLightSkyColor: array<vec4f, MAX_HEMI_LIGHTS>,
   hemiLightGroundColor: array<vec4f, MAX_HEMI_LIGHTS>,
+  fogColor: vec3f,
+  fogDensity: f32,
 };
 `;

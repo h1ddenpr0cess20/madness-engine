@@ -22,7 +22,7 @@ import { pmremLayout, pmremPlanes, pmremSchedule } from './pmrem.js';
 
 const SAMPLES = 4;
 const DEPTH_FORMAT = 'depth24plus';
-const FRAME_SIZE = 1040;
+const FRAME_SIZE = 1056;
 const DRAW_SIZE = 480;
 const OBJECT_SIZE = 320;
 const ARENA_SIZE = 16 << 20;
@@ -375,6 +375,7 @@ export class WebGPUBackend {
       f.set(l.skyColor, 228 + i * 4);
       f.set(l.groundColor, 244 + i * 4);
     });
+    if (frame.fog) { f.set(frame.fog.color, 260); f[263] = frame.fog.density; }
     return f;
   }
 

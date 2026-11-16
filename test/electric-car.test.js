@@ -127,3 +127,23 @@ test('the lights and badges stand proud of the body they are mounted on, not bur
     assert.ok(x > ELECTRIC_CAR.bodyWidth / 2, `the door lines show on the ${side} side`);
   }
 });
+
+test('no part of the body runs through a tire', () => {
+  const car = createElectricCar(GFX);
+  car.group.updateMatrixWorld(true);
+  const wheelParts = new Set();
+  for (const w of car.wheels) w.traverse((o) => wheelParts.add(o));
+  const v = new GFX.Vector3(), at = new GFX.Vector3();
+  for (const w of car.wheels) {
+    w.getWorldPosition(at);
+    for (const [name, o] of Object.entries(car.parts)) {
+      const pos = o.geometry?.attributes.position;
+      if (!pos || wheelParts.has(o)) continue;
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+        const inside = Math.abs(v.x - at.x) < ELECTRIC_CAR.tireWidth / 2 && Math.hypot(v.y - at.y, v.z - at.z) < ELECTRIC_CAR.tireRadius - 0.005;
+        assert.ok(!inside, `${name} runs through ${w.name}`);
+      }
+    }
+  }
+});
