@@ -101,6 +101,22 @@ putter.setLength(0.89); // metres, 0.76 to 0.95
 
 It is built standing on its butt with the head at the far end, as the swords are. `putter.playRotation` is the turn about z that lays the head on the floor, sole level, and `putter.sole` is the point of the sole under the shaft.
 
+## Snow shovel
+
+A metal snow shovel, built like the swords and the putter: real size in metres (1.5 m, butt to lip), a leather-wrapped grip with a metal ferrule at each end, and the shared twelve metals chosen separately for the scoop, the shaft, the fittings and the wear strip. The scoop is a pressed plate (a floor with two stiffening ribs, a rolled bend, turned-up side walls that run out towards the lip, a bead along each wall, and a steel wear strip riveted along the lip) joined to a flattened socket; the swept crossguard became the D-handle, and the pommel's bezel the ferrules on the grip.
+
+```js
+import { createSnowShovel } from 'madness-engine/props/snow-shovel';
+import { createRobot } from 'madness-engine/people/robot';
+
+const shovel = createSnowShovel(GFX, { bladeMetal: 'silver', wearMetal: 'iron', gripColor: '#26272b' });
+const robot = createRobot(GFX, { color: 'orange' });
+robot.hold(shovel, { grip: 0.62 });   // the lead hand on the leather, the rear hand on the D-handle
+shovel.setTurn(-Math.PI / 2);         // the scoop's floor faces up when the shaft lies at the shallow angle of digging
+```
+
+`hold` takes a tool's `secondGrip` for the hand that is not on `gripBounds`: a number (how far below the first hand) or `{ at, axis }` (a point of the tool and the way the fist closes about it), which is how the rear hand takes the middle of the crossbar. The scoop's hollow faces +z; `shovel.scoopAt(v, x)` gives a point on it and the way it faces.
+
 ## The engine
 
 | Import | What it is |

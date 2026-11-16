@@ -962,8 +962,8 @@ export function createHuman(GFX, options = {}) {
     const o = skeleton.index.get('handR') * 12, B = skeleton.matrices;
     M4.set(B[o], B[o + 1], B[o + 2], B[o + 3], B[o + 4], B[o + 5], B[o + 6], B[o + 7], B[o + 8], B[o + 9], B[o + 10], B[o + 11], 0, 0, 0, 1);
     const world = new GFX.Matrix4().multiplyMatrices(M4, shape ? restOf(h, 'R') : h.rest);
-    const target = new GFX.Vector3(0, h.second, 0).applyMatrix4(world);
-    const axis = new GFX.Vector3(0, 1, 0).transformDirection(world);
+    const target = new GFX.Vector3(...(h.frame ? h.frame.at : [0, h.second, 0])).applyMatrix4(world);
+    const axis = new GFX.Vector3(...(h.frame ? h.frame.axis : [0, 1, 0])).transformDirection(world);
     // The right hand's back (rest −x for the right hand): the left's (rest +x) goes the same way.
     const back = new GFX.Vector3(B[o] * -1, B[o + 4] * -1, B[o + 8] * -1).normalize();
     const grip = mirror(gripOf(sex), 1).map((v, a) => v + handShift('L')[a]), along = [0, GRIP_TILT, 1];
@@ -977,7 +977,7 @@ export function createHuman(GFX, options = {}) {
       skeleton.compute();
       const p = skeleton.point('handL', grip);
       const dp = (p[0] - target.x) ** 2 + (p[1] - target.y) ** 2 + (p[2] - target.z) ** 2;
-      const da = 1 - dirOf('handL', along).dot(axis), db = 1 - dirOf('handL', [1, 0, 0]).dot(back);
+      const da = 1 - (h.frame ? Math.abs(dirOf('handL', along).dot(axis)) : dirOf('handL', along).dot(axis)), db = 1 - dirOf('handL', [1, 0, 0]).dot(back);
       // And the arm kept out of the body (and what he wears) on the way there: the elbow goes out, not in.
       return dp + 0.004 * da + 0.0015 * db + (clear ? clear * armDepth(skeleton, clearance).L ** 2 : 0);
     };
@@ -1349,13 +1349,18 @@ export function createHuman(GFX, options = {}) {
     object.matrixAutoUpdate = false;
     group.add(object);
     // Where a second hand takes it, below the first (toward the pommel), as far down the grip as there is.
-    const second = bounds ? Math.max(bounds.bottom + 0.03, y - 0.085) : y - 0.085;
+    // (A tool says where its second hand goes as its `secondGrip`: a number, how far down the grip, or `{ at, axis }`, the point
+    // and the way the fist closes about it, in the tool's own frame: a shovel's is the crossbar of its D-handle.)
+    const sg = thing.secondGrip;
+    const frame = sg && typeof sg === 'object' ? { at: sg.at, axis: sg.axis ?? [0, 1, 0] } : null;
+    const gap = typeof sg === 'number' ? sg : 0.085;
+    const second = frame ? frame.at[1] : bounds ? Math.max(bounds.bottom + 0.03, y - gap) : y - gap;
     // How many hands it is made for (a weapon's `handling`); anything else is taken as one-handed.
     const hands = thing.handling?.hands ?? 'one-handed';
     // Two weapons are wielded only if neither is made for two hands: one that is takes both, and the other is put down.
     const other = S === 'L' ? 'R' : 'L';
     if (held[other]?.how === 'grip' && (hands === 'two-handed' || held[other].hands === 'two-handed')) release(other);
-    held[S] = { thing, object, rest, second, hands, how: 'grip' };
+    held[S] = { thing, object, rest, second, frame, hands, how: 'grip' };
     if (last) pose(last);
     return api;
   }
