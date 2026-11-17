@@ -49,7 +49,9 @@ fn applyIorToRoughness(roughness: f32, ior: f32) -> f32 {
 }
 
 fn getTransmissionSample(fragCoord: vec2f, roughness: f32, ior: f32) -> vec4f {
-  let lod = log2(u_frame.transmissionSamplerSize.x) * applyIorToRoughness(roughness, ior);
+  var lod = log2(u_frame.transmissionSamplerSize.x) * applyIorToRoughness(roughness, ior);
+  // Where the map was drawn only round the glass, no blurrier than it was drawn wide enough for.
+  if (u_frame.transmissionBounds.z > u_frame.transmissionBounds.x) { lod = min(lod, u_frame.transmissionMaxLod); }
   return textureBicubic(fragCoord, lod);
 }
 
@@ -70,6 +72,10 @@ fn getIBLVolumeRefraction(n: vec3f, v: vec3f, roughness: f32, diffuseColor: vec3
   var refractionCoords = ndcPos.xy / ndcPos.w;
   refractionCoords += 1.0;
   refractionCoords /= 2.0;
+  // A ray from the very edge of a silhouette (its position reckoned past the surface) can land far off: where the
+  // map was drawn only round the glass (renderer.js _transmissionRect), it reads the nearest of what was drawn.
+  let bounds = u_frame.transmissionBounds;
+  if (bounds.z > bounds.x) { refractionCoords = clamp(refractionCoords, bounds.xy, bounds.zw); }
   let transmittedLight = getTransmissionSample(refractionCoords, roughness, ior);
   let transmittance = diffuseColor * volumeAttenuation(length(transmissionRay), attenuationColor, attenuationDistance);
   let attenuatedColor = transmittance * transmittedLight.rgb;

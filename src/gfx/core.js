@@ -272,8 +272,13 @@ export class Object3D extends EventDispatcher {
       this.matrixWorldNeedsUpdate = false;
       force = true;
     }
+    // A child that keeps its own world matrix (`matrixWorldAutoUpdate` false) is left, and all under it, unless
+    // something above it moved: a static part of the scene of thousands of meshes is not walked every frame.
     const children = this.children;
-    for (let i = 0, l = children.length; i < l; i++) children[i].updateMatrixWorld(force);
+    for (let i = 0, l = children.length; i < l; i++) {
+      const child = children[i];
+      if (child.matrixWorldAutoUpdate === true || force) child.updateMatrixWorld(force);
+    }
   }
 
   updateWorldMatrix(updateParents, updateChildren, force = false) {
@@ -301,6 +306,14 @@ export class Group extends Object3D {
   constructor() {
     super();
     this.type = 'Group';
+    /**
+     * A sphere in the group's own frame round everything drawn in it, or null. With one (and `frustumCulled`), the
+     * renderer leaves out the whole group, without looking at what is in it, where the sphere is out of the view (or,
+     * for the shadow map, out of the light's): a big static scene of thousands of meshes gathered into groups by
+     * place is culled a group at a time. It must hold all that is drawn in the group, and the group must hold no
+     * lights (a light in a group left out is not lit with).
+     */
+    this.boundingSphere = null;
   }
 }
 Group.prototype.isGroup = true;
