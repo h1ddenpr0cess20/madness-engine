@@ -22,7 +22,7 @@ import { pmremLayout, pmremPlanes, pmremSchedule } from './pmrem.js';
 
 const SAMPLES = 4;
 const DEPTH_FORMAT = 'depth24plus';
-const FRAME_SIZE = 1056;
+const FRAME_SIZE = 1072;
 const DRAW_SIZE = 480;
 const OBJECT_SIZE = 320;
 const ARENA_SIZE = 16 << 20;
@@ -191,7 +191,8 @@ export class WebGPUBackend {
 
   // ------------------------------------------------------------ passes
 
-  beginPass({ target, clear, frame }) {
+  /** `scissor`: for the transmission map, the pixels [x, y, width, height] (from the bottom left, as WebGL counts them) that are drawn; the rest is cleared and left. */
+  beginPass({ target, clear, frame, scissor = null }) {
     const d = this.device;
     // Every pass is drawn upside down, the canvas included: that is what
     // ANGLE does under WebGL, and it puts the multisample pattern — which
@@ -240,6 +241,8 @@ export class WebGPUBackend {
       }],
       depthStencilAttachment: { view: depthView, depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'discard' },
     });
+    // Drawn upside down, the rows of the pass are WebGL's, bottom first: its scissor is counted the same way.
+    if (scissor && target !== 'canvas') pass.setScissorRect(scissor[0], scissor[1], scissor[2], scissor[3]);
     this.arenaUsed = 0;
     this.pass = { target, frame, flipped, encoder, pass, frameGroup, format, samples: SAMPLES, depth: true };
   }
@@ -376,6 +379,8 @@ export class WebGPUBackend {
       f.set(l.groundColor, 244 + i * 4);
     });
     if (frame.fog) { f.set(frame.fog.color, 260); f[263] = frame.fog.density; }
+    if (frame.transmission?.bounds) f.set(frame.transmission.bounds, 264);
+    if (frame.transmission) f[83] = frame.transmission.maxLod ?? 0;
     return f;
   }
 

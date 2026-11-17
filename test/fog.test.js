@@ -37,9 +37,9 @@ test('WebGPU packs the fog after the lights, in the room the frame struct gives 
   camera.updateMatrixWorld();
   const frame = { camera: { viewMatrix: camera.matrixWorldInverse.elements, projectionMatrix: camera.projectionMatrix.elements, position: [0, 0, 0] }, ambient: [0, 0, 0], directional: [], point: [], hemi: [], shadow: null, transmission: null, fog: { color: [0.25, 0.5, 0.75], density: 0.04 } };
   const f = WebGPUBackend.prototype._packFrame.call({}, frame, false, 100);
-  assert.equal(f.length, 264, 'the frame is 1056 bytes');
+  assert.equal(f.length, 268, 'the frame is 1072 bytes');
   assert.deepEqual([...f.slice(260, 264)].map((v) => +v.toFixed(3)), [0.25, 0.5, 0.75, 0.04]);
-  assert.match(frameWGSL, /fogColor: vec3f,\s+fogDensity: f32,\s+};/, 'the struct ends with them');
+  assert.match(frameWGSL, /fogColor: vec3f,\s+fogDensity: f32,\s+(\/\/[^\n]*\s+)?transmissionBounds: vec4f,\s+};/, 'the struct ends with them, and the transmission\'s bounds');
   const without = WebGPUBackend.prototype._packFrame.call({}, { ...frame, fog: null }, false, 100);
   assert.equal(without[263], 0, 'no fog is a density of nothing');
 });
