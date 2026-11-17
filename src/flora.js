@@ -197,17 +197,6 @@ const v3 = {
   norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
 };
 
-/** A limb: a tapered tube from a (radius r0) to b (radius r1), `sides` round, smooth-shaded. */
-function limb(m, mat, a, b, r0, r1, sides, col) {
-  const d = v3.norm(v3.sub(b, a));
-  const u = v3.norm(v3.cross(d, Math.abs(d[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0])), w = v3.cross(d, u);
-  const ring = (c, r, k) => { const t = (k / sides) * Math.PI * 2, o = v3.add(v3.mul(u, Math.cos(t)), v3.mul(w, Math.sin(t))); return [v3.add(c, v3.mul(o, r)), o]; };
-  for (let k = 0; k < sides; k++) {
-    const [a0, n0] = ring(a, r0, k), [a1, n1] = ring(a, r0, k + 1), [b1] = ring(b, r1, k + 1), [b0] = ring(b, r1, k);
-    m.quad(mat, a0, a1, b1, b0, col, { normals: [n0, n1, n1, n0], uv: [[k / sides, 0], [(k + 1) / sides, 0], [(k + 1) / sides, 1], [k / sides, 1]] });
-  }
-}
-
 /**
  * A tube through `pts`, `radii` wide at each, `sides` round, smooth-shaded: one run of rings that every segment
  * shares, so a bend has no gap or step in it (a ring at each point stands square to the way the path goes
