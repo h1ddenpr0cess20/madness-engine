@@ -211,9 +211,10 @@ function limb(m, mat, a, b, r0, r1, sides, col) {
 /**
  * A tube through `pts`, `radii` wide at each, `sides` round, smooth-shaded: one run of rings that every segment
  * shares, so a bend has no gap or step in it (a ring at each point stands square to the way the path goes
- * through it, and carries its twist along rather than starting afresh).
+ * through it, and carries its twist along rather than starting afresh). `mark` ({ at(ring, side), col }) paints some
+ * of its faces another colour: marks on the surface itself, not anything standing off it.
  */
-function tube(m, mat, pts, radii, sides, col) {
+function tube(m, mat, pts, radii, sides, col, mark = null) {
   const n = pts.length;
   const tan = pts.map((_, i) => v3.norm(v3.sub(pts[Math.min(n - 1, i + 1)], pts[Math.max(0, i - 1)])));
   let u = v3.norm(v3.cross(tan[0], Math.abs(tan[0][1]) < 0.95 ? [0, 1, 0] : [1, 0, 0]));
@@ -228,7 +229,7 @@ function tube(m, mat, pts, radii, sides, col) {
   for (let i = 0; i + 1 < n; i++) for (let k = 0; k < sides; k++) {
     const [a0, n0] = rings[i][k], [a1, n1] = rings[i][k + 1], [b1, n2] = rings[i + 1][k + 1], [b0, n3] = rings[i + 1][k];
     const v0 = i / (n - 1), v1 = (i + 1) / (n - 1);
-    m.quad(mat, a0, a1, b1, b0, col, { normals: [n0, n1, n2, n3], uv: [[k / sides, v0], [(k + 1) / sides, v0], [(k + 1) / sides, v1], [k / sides, v1]] });
+    m.quad(mat, a0, a1, b1, b0, mark?.at(i, k) ? mark.col : col, { normals: [n0, n1, n2, n3], uv: [[k / sides, v0], [(k + 1) / sides, v0], [(k + 1) / sides, v1], [k / sides, v1]] });
   }
 }
 
@@ -289,28 +290,35 @@ export function leafy(m, { hi = true, seed = 0, form = 'oak', leaf = 'leafCard',
   // leader carries on up it through the crown, ending inside the crown in leaves of its own (not a bare pole out of the top).
   const top = [center[0] * 0.6, F.trunk, center[2] * 0.6];
   const r = F.r * (0.9 + 0.2 * rnd());
-  const path = [[0, -0.06, 0], [0, 0.05, 0]], radii = [r * 1.7, r * 1.15];
+  const path = [[0, -0.06, 0], [0, 0.05, 0]], radii = [r * 1.55, r * 1.1];
+  // Where the limbs part the trunk is as thick as they are; a birch's, which goes on up as the leader, hardly tapers.
+  const taper = F.leader ? 0.22 : 0.38;
   const segs = hi ? 3 : 1;
   for (let k = 1; k <= segs; k++) {
     const t = k / segs;
     path.push([top[0] * t + (k < segs ? (rnd() - 0.5) * 0.02 : 0), 0.05 + (top[1] - 0.05) * t, top[2] * t + (k < segs ? (rnd() - 0.5) * 0.02 : 0)]);
-    radii.push(r * (1 - 0.38 * t));
+    radii.push(r * (1 - taper * t));
   }
   let tip = null;
   if (F.leader) {
     tip = v3.add(center, [0, Ry * 0.6, 0]);
     path.push(v3.lerp(top, tip, 0.5), tip);
-    radii.push(r * 0.45, r * 0.2);
+    radii.push(r * (1 - taper) * 0.7, r * 0.2);
     leaves.push(tip, v3.lerp(top, tip, 0.75), v3.lerp(top, tip, 0.5));
   }
-  tube(m, bark, path, radii, sides, bark0);
-  if (F.leader && hi) for (let k = 0; k < 9; k++) {
-    // The birch's dark marks, lying on the trunk's face.
-    const y = 0.08 + k * 0.1, a = rnd() * Math.PI * 2, rr = r * (1.02 - 0.3 * (y / F.trunk));
-    if (y > F.trunk) break;
-    const c = [Math.cos(a) * rr + top[0] * (y / F.trunk), y, Math.sin(a) * rr + top[2] * (y / F.trunk)], d = [-Math.sin(a), 0, Math.cos(a)];
-    m.quad(bark, v3.add(c, v3.mul(d, -0.012)), v3.add(c, v3.mul(d, 0.012)), v3.add(c, [d[0] * 0.012, 0.012, d[2] * 0.012]), v3.add(c, [-d[0] * 0.012, 0.012, -d[2] * 0.012]), F.bark[1], { normals: Array(4).fill([Math.cos(a), 0, Math.sin(a)]) });
+  let mark = null;
+  if (F.leader) {
+    // A birch's trunk is cut into short lengths so its dark marks can be painted across the bark, a few faces wide.
+    const fine = [], fr = [];
+    for (let i = 0; i + 1 < path.length; i++) {
+      const steps = Math.max(1, Math.round((path[i + 1][1] - path[i][1]) / 0.09));
+      for (let j = 0; j < steps; j++) { fine.push(v3.lerp(path[i], path[i + 1], j / steps)); fr.push(radii[i] + (radii[i + 1] - radii[i]) * (j / steps)); }
+    }
+    fine.push(path[path.length - 1]); fr.push(radii[radii.length - 1]);
+    path.splice(0, path.length, ...fine); radii.splice(0, radii.length, ...fr);
+    if (hi) mark = { col: F.bark[1], at: (i, k) => path[i][1] > 0.1 && path[i][1] < F.trunk - 0.04 && hash2(i, seed, 11) < 0.5 && ((k - Math.floor(hash2(i, seed, 5) * sides) + sides) % sides) < 2 };
   }
+  tube(m, bark, path, radii, sides, bark0, mark);
 
   // The limbs: from the trunk's top (or up the leader) toward points on the crown's shell, forking as they go. Each
   // starts a little back inside what it grows from and as thick as that is where they meet, so the joint is closed.
@@ -375,14 +383,14 @@ export function leafy(m, { hi = true, seed = 0, form = 'oak', leaf = 'leafCard',
  */
 export function spruce(m, { hi = true, seed = 0, needle = 'needleCard', bark = 'bark' } = {}) {
   const rnd = rngFor(seed, 41), H = 1.55 + rnd() * 0.15, R = 0.48 + rnd() * 0.08;
-  tube(m, bark, [[0, -0.05, 0], [0, H * 0.5, 0], [0, H * 0.98, 0]], [0.05, 0.03, 0.006], hi ? 6 : 4, '#4e3a2a');
+  tube(m, bark, [[0, -0.05, 0], [0, H * 0.5, 0], [0, H * 0.98, 0]], [0.05, 0.03, 0.006], hi ? 6 : 4, '#3a2c22');
   // Whorls up the trunk, close enough that no bare pole shows between them; the boughs longest at the foot, and
   // tilted as a conifer's are: drooping low down, level in the middle, lifting toward the top.
-  const whorls = hi ? 14 : 8, y0 = 0.16, y1 = H - 0.16;
+  const whorls = hi ? 20 : 9, y0 = 0.16, y1 = H - 0.16;
   for (let w = 0; w < whorls; w++) {
     const f = w / (whorls - 1), y = y0 + (y1 - y0) * f;
     const len = Math.max(0.13, R * Math.pow(1 - f, 0.9) * (0.9 + 0.2 * rnd()));
-    const count = hi ? 6 : 4;
+    const count = hi ? 5 : 4;
     for (let k = 0; k < count; k++) {
       const a = (k / count) * Math.PI * 2 + w * 0.7 + rnd() * 0.4, out = [Math.cos(a), 0, Math.sin(a)];
       const dir = v3.norm([out[0], -0.22 + 0.62 * f + (rnd() - 0.5) * 0.12, out[2]]);
