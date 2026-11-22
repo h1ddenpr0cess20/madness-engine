@@ -769,3 +769,26 @@ test('a dress shirt is tucked in (under the trousers, which the belt goes over);
   him.wear('tshirt');
   assert.ok(him.garment('dressBelt').geometry.index.count < belt, 'the t-shirt hides the belt under it');
 });
+
+test('the t-shirt and jeans carry the folds baked in Blender, on the body layout and within their range', async () => {
+  const { foldHeights } = await import('../src/people/human/textures.js');
+  const { FOLDS, SIZE } = await import('../src/people/human/data/folds.js');
+  for (const name of ['tshirt', 'jeans']) {
+    const { x, y, w, h } = FOLDS[name];
+    assert.ok(x >= 0 && y >= 0 && x + w <= SIZE && y + h <= SIZE, `${name} lies on the layout`);
+    const H = foldHeights(name);
+    assert.equal(H.length, SIZE * SIZE);
+    let folded = 0;
+    for (const v of H) {
+      assert.ok(v >= -1.01 && v <= 1.01);
+      if (Math.abs(v) > 0.1) folded++;
+    }
+    // Real folds, not a blank or a noise: some of it stands out or sinks in, most lies as cut.
+    assert.ok(folded > 1000 && folded < w * h * 0.6, `${name}: ${folded} texels folded`);
+  }
+  assert.equal(foldHeights('sweater'), null);
+  // The jeans are denim of their own, so the denim jacket (its own layout) never takes their folds.
+  man.dress(['jeans']);
+  assert.deepEqual([man.garment('jeans').material].flat().map((m) => m.name), ['human jeans']);
+  man.dress(['briefs', 'tshirt', 'jeans', 'sneakers']);
+});

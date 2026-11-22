@@ -1422,9 +1422,10 @@ export const GARMENTS = Object.freeze({
   jeans: {
     layer: 3,
     slot: 'legs',
-    materials: ['denim'],
+    // Denim with the jeans' own folds (human.js): the shorts and anything else cut from denim go without.
+    materials: ['jeans'],
     fits: true,
-    build: (detail, { under, sex } = {}) => tag([jeans(detail, under, sex)], 'jeans'),
+    build: (detail, { under, sex } = {}) => tag([jeans(detail, under, sex, { material: 'jeans' })], 'jeans'),
     covers: ({ zone, y }) => ((zone === 'leg' || zone === 'trunk') && y > HEM_FRONT + 0.1 && y < WAIST - OPEN) || (zone === 'briefs' && y < WAIST - OPEN) || ((zone === 'sneakers' || zone === 'dressShoes' || zone === 'boots') && y > 0.12),
   },
   tshirt: {
@@ -1469,7 +1470,7 @@ export const GARMENTS_FEMALE = Object.freeze({
     ...GARMENTS.jeans,
     // Slim, they lie close on the leg itself, not stepped out over the socks' cuffs or the briefs' hems:
     // those are hidden under them instead.
-    build: (detail, { sex } = {}) => inCut(WOMENS_CUT, () => tag([jeans(detail, null, sex)], 'jeans')),
+    build: (detail, { sex } = {}) => inCut(WOMENS_CUT, () => tag([jeans(detail, null, sex, { material: 'jeans' })], 'jeans')),
     covers: (z) => GARMENTS.jeans.covers(z) || (z.zone === 'socks' && z.y > HEM_FRONT + 0.05),
   },
   jacket: bomber(true, WOMENS_CUT),

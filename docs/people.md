@@ -210,6 +210,44 @@ Colours change live: `setSkin`, `setEyeColor`, `setShirtColor`,
 `setJeansColor` (a tint over the indigo), `setShoeColor`, `setHairColor`,
 or `setLook({...})`.
 
+## Folds, from Blender
+
+The t-shirt and jeans hang in folds baked with Blender's cloth solver
+(`scripts/blender/`). Each garment, cut as the engine cuts it, is draped
+on him headless in Blender: it starts a little longer than it is cut, its
+held edges (the waistband; the shirt's collar, and its hem on the hips) are
+drawn back to where the cut puts them, and the cloth between, with more
+length than room, settles against his body and the floor under gravity.
+The jeans stack over the feet and crease at the knees. The shirt gathers
+above the hem and folds under the arms. How far the settled cloth stands
+off the cut, along its normal, with the broad sag blurred out, is the fold
+height. It is baked onto the body's UV layout (the shell garments share
+it) into `src/people/human/data/folds.js`: 512² texels, cropped to each
+garment, a byte each.
+
+At runtime the folds are only shading, so silhouettes and layering stay
+as they were. Each fold is relief in the material's detail map, and its
+valleys darken in the garment's colour. They follow every pose, since they
+sit on the garment's UVs, and carry onto her, whose garments are his,
+fitted. The jeans have a material of their own (`jeans`, denim with the
+folds), so the denim jacket, on a layout of its own, never takes them;
+`setJeansColor` tints both. Other garments have no baked folds.
+
+To bake again (Blender 4.x; in a container `apt-get install -y blender
+python3-numpy`):
+
+```sh
+node scripts/blender/export-human.mjs /tmp/folds tshirt jeans
+blender -b --factory-startup --python scripts/blender/bake_folds.py -- \
+  /tmp/folds tshirt,jeans --module src/people/human/data/folds.js --preview
+```
+
+`--preview` also renders each draped garment with Cycles
+(`<garment>-preview.png`), and each bake is written as a picture to check
+by eye (`<garment>-folds.png`). The cloth for each garment (stiffness,
+how much longer it starts, which points are held) is `CLOTH` in
+`bake_folds.py`, and `--set key=value` overrides it for a trial run.
+
 ## The later wardrobe
 
 More to wear, all from the same patterns, in `people/human/outfits.js` (`garmentsFor(sex)` lists

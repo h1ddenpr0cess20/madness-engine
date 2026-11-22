@@ -6,6 +6,7 @@ import { buildEyes, buildMouth, withLipCorners } from './human/head.js';
 import { bodyLevel } from './human/basemesh.js';
 import { zoneOf } from './human/body.js';
 import { BONES as BAKED_BONES } from './human/data/base.js';
+import { RANGE as FOLD_RANGE } from './human/data/folds.js';
 import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor, OUTFIT_HANGS, TAIL_GARMENTS } from './human/outfits.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
@@ -309,6 +310,13 @@ function leather(GFX, look, tex, more) {
   };
 }
 
+/**
+ * How deep the baked folds stand in the shading: the detail map's red spans ±RANGE (data/folds.js)
+ * of real height, 2 × RANGE to the whole of it; drawn half as deep again, since the folds are
+ * smoothed by the bake (a texel of the map is a few millimetres of cloth) and shallower than they lay.
+ */
+const FOLD_RELIEF = 2 * FOLD_RANGE * 1.5;
+
 /** The materials, by name, for a look. Textures where there is a document to paint them on. */
 function makeMaterials(GFX, look, tex) {
   const M = (name, o) => new GFX.MeshPhysicalMaterial({ name: `human ${name}`, vertexColors: true, ...o });
@@ -335,8 +343,17 @@ function makeMaterials(GFX, look, tex) {
     hairEdge: M('hair edges', hairLook(GFX, look, tex, { alphaTest: 0.04, transparent: true, depthWrite: false })),
     lash: M('lashes', { color: '#1a1412', roughness: 0.7, side: GFX.DoubleSide }),
     briefs: M('briefs', { color: look.briefs, roughness: 0.8, sheen: 0.5, sheenColor: new GFX.Color('#9aa0aa'), sheenRoughness: 0.5 }),
-    shirt: M('t-shirt', { color: look.shirt, map: tex?.shirt.map ?? null, bumpMap: tex?.shirt.bump ?? null, bumpScale: 0.0003, roughness: 0.9, sheen: 0.7, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.55, side: GFX.DoubleSide }),
+    // The t-shirt and jeans carry the folds Blender's cloth solver drapes them into (textures.js, foldHeights):
+    // their relief in the detail map, a metre of it to each whole step of the map's red, and shaded into their colour.
+    shirt: M('t-shirt', {
+      color: look.shirt, map: tex?.shirt.map ?? null, bumpMap: tex?.shirt.bump ?? null, bumpScale: 0.0003, roughness: 0.9, sheen: 0.7, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.55, side: GFX.DoubleSide,
+      detailMap: tex?.shirt.detail ?? null, detailScale: FOLD_RELIEF,
+    }),
     denim: M('denim', { color: tex ? look.denim : '#2c4a78', map: tex?.denim.map ?? null, bumpMap: tex?.denim.bump ?? null, bumpScale: 0.0004, roughness: 0.86, sheen: 0.35, sheenColor: new GFX.Color('#9db4d8'), sheenRoughness: 0.6, side: GFX.DoubleSide }),
+    jeans: M('jeans', {
+      color: tex ? look.denim : '#2c4a78', map: tex?.denim.folded ?? null, bumpMap: tex?.denim.bump ?? null, bumpScale: 0.0004, roughness: 0.86, sheen: 0.35, sheenColor: new GFX.Color('#9db4d8'), sheenRoughness: 0.6, side: GFX.DoubleSide,
+      detailMap: tex?.denim.detail ?? null, detailScale: FOLD_RELIEF,
+    }),
     shoe: M('sneakers', { color: look.shoe, map: tex?.shoe ?? null, roughness: 0.62, clearcoat: 0.04 }),
     sole: M('soles', { color: look.sole, map: tex?.sole ?? null, roughness: 0.65 }),
     sock: M('socks', { color: look.socks, map: tex?.sock.map ?? null, bumpMap: tex?.sock.bump ?? null, bumpScale: 0.0004, roughness: 0.95, sheen: 0.8, sheenColor: new GFX.Color('#ffffff'), sheenRoughness: 0.6, side: GFX.DoubleSide }),
@@ -1650,7 +1667,7 @@ export function createHuman(GFX, options = {}) {
     if (change.socks) mats.sock.color.set(change.socks);
     if (change.jacket) for (const n of ['leather', 'leatherTrim']) mats[n].color.set(change.jacket);
     if (change.rib) for (const n of ['rib', 'ribTrim']) mats[n].color.set(change.rib);
-    if (change.denim) mats.denim.color.set(change.denim);
+    if (change.denim) for (const n of ['denim', 'jeans']) mats[n].color.set(change.denim);
     for (const [n, f] of Object.entries(FABRICS)) if (change[f.of ?? n]) mats[n].color.set(change[f.of ?? n]);
     for (const n of ['beltLeather', 'dressShoe', 'boot']) if (change[n]) mats[n].color.set(change[n]);
     if (change.hair) {
