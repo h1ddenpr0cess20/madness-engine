@@ -109,7 +109,10 @@ def load(path):
         arm = [c.y for c in co if abs(c.x) > ARM]
         cuff = min(arm) + HOLD if arm and top - min(arm) < 0.75 else -1
         g = o.vertex_groups.new(name="pin")
-        g.add([i for i, c in enumerate(co) if c.y > top - HOLD or (abs(c.x) > ARM and c.y < cuff)], 1.0, 'REPLACE')
+        # Long trousers by their hems too, on the instep: else a close pair slides down and piles up there.
+        bottom = min(c.y for c in co)
+        hem = bottom + HOLD if top < 1.1 and bottom < 0.2 else -1
+        g.add([i for i, c in enumerate(co) if c.y > top - HOLD or (abs(c.x) > ARM and c.y < cuff) or c.y < hem], 1.0, 'REPLACE')
     if len(objs) > 1:
         bpy.ops.object.join()
     obj = bpy.context.view_layer.objects.active
