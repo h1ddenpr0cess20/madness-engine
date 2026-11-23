@@ -795,3 +795,26 @@ test('the garments that drape are built as Blender\'s cloth solver settles them'
   settle([probe], 'male', 'tshirt');
   assert.deepEqual(probe.pos, [0, 5, 0], 'a point nowhere near it does not');
 });
+
+test('whole outfits by name: Father Christmas, winter, smart casual and lounge, on him and on her', async () => {
+  const { OUTFITS } = await import('../src/people/index.js');
+  assert.deepEqual(Object.keys(OUTFITS).sort(), ['lounge', 'santa', 'smartCasual', 'winter']);
+  for (const g of ['santaCoat', 'santaPants', 'santaBelt', 'santaHat']) assert.ok(OUTFITS.santa.includes(g), `Santa wears his ${g}`);
+  for (const sex of ['male', 'female']) {
+    const who = createHuman(GFX, { detail: 0.5, sex, glasses: null });
+    for (const [name, list] of Object.entries(OUTFITS)) {
+      who.dress(list);
+      assert.deepEqual([...who.outfit].sort(), [...list].sort(), `${sex} ${name}: all of it on`);
+      who.pose({ clip: 'walk', t: 0.3, time: 0.3 });
+      for (const g of who.outfit) {
+        const p = who.garment(g).geometry.attributes.position.array;
+        assert.ok(p.length > 0 && p.every(Number.isFinite), `${sex} ${name} ${g} is whole`);
+      }
+    }
+  }
+  // The hat sits on the head, its pompom fallen over to his right, below its top.
+  const santa = createHuman(GFX, { detail: 0.5, outfit: OUTFITS.santa, glasses: null });
+  const hat = boundsOf(santa.garment('santaHat').geometry.attributes.position);
+  assert.ok(hat.max[1] > HUMAN_DIMENSIONS.height && hat.max[1] < HUMAN_DIMENSIONS.height + 0.2, `the hat's top ${hat.max[1]}`);
+  assert.ok(hat.min[0] < -0.12, 'its tip falls over to his right');
+});

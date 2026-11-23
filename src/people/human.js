@@ -6,7 +6,7 @@ import { buildEyes, buildMouth, withLipCorners } from './human/head.js';
 import { bodyLevel } from './human/basemesh.js';
 import { zoneOf } from './human/body.js';
 import { BONES as BAKED_BONES } from './human/data/base.js';
-import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor, OUTFIT_HANGS, TAIL_GARMENTS } from './human/outfits.js';
+import { DEFAULT_OUTFIT, GARMENTS, GARMENTS_FEMALE, garmentsFor, OUTFIT_HANGS, OUTFITS, TAIL_GARMENTS } from './human/outfits.js';
 import { humanTextures } from './human/textures.js';
 import { CLIPS, moveHuman } from './human/motion.js';
 import { BLADE_MOVES, fightHands, MOVES, stanceTakesBoth } from './human/martial.js';
@@ -43,7 +43,7 @@ import { buildGlasses, SUNGLASSES } from './human/glasses.js';
  * `hands` set the rest, and `pose` takes them on every frame.
  */
 
-export { CLIPS, GARMENTS, GARMENTS_FEMALE, garmentsFor, DEFAULT_OUTFIT, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES, FIGURES, BUILDS };
+export { CLIPS, GARMENTS, GARMENTS_FEMALE, garmentsFor, DEFAULT_OUTFIT, OUTFITS, HEIGHT, HAIRSTYLES, BEARDS, BROWS, SUNGLASSES, CUSTOMIZATION, customizationFor, DEFAULT_FEATURES, FIGURES, BUILDS };
 export const HUMAN_DIMENSIONS = Object.freeze({ height: HEIGHT, headHeight: 0.22, shoulderWidth: 0.46, inseam: 0.8, armLength: 0.62, handLength: 0.19, footLength: 0.27, unit: 'm' });
 /** Each figure's measures (metres), as HUMAN_DIMENSIONS gives the man's. */
 export const DIMENSIONS = Object.freeze({
@@ -271,6 +271,7 @@ const DEFAULT_LOOK = Object.freeze({
   wool: '#2d323d', poplin: '#eef0f4', tie: '#7d1d2a', tank: '#d8d9dd', knit: '#6b2d3a', hoodie: '#3b4a5f', gi: '#f1eee6', canvas: '#a8997a',
   dress: '#8a2440', belt: '#141416', beltLeather: '#2b1b12', dressShoe: '#17110d', boot: '#4a3220',
   cap: '#2a4a7a', beanie: '#7a2c2c', felt: '#463a2f', cowboyFelt: '#8a6a44', topHatFelt: '#17171a', hatBand: '#18181a',
+  velvet: '#b3121b', fur: '#f3efe6', santaBelt: '#121214', coatWool: '#9a7550', nylon: '#1e2a3c', cardigan: '#8c7f6a', fleece: '#5b6068',
 });
 
 /**
@@ -284,6 +285,12 @@ const FABRICS = Object.freeze({
   gi: { rough: 0.9, sheen: 0.5, weave: 'coarse', scale: 0.0005 }, canvas: { rough: 0.9, sheen: 0.3, weave: 'coarse', scale: 0.0005 }, dress: { rough: 0.5, sheen: 0.8, weave: 'plain', scale: 0.0002 }, belt: { rough: 0.8, sheen: 0.4, weave: 'coarse' },
   cap: { rough: 0.9, sheen: 0.4, weave: 'twill' }, beanie: { rough: 0.95, sheen: 0.8, weave: 'knit', scale: 0.0007 }, felt: { rough: 0.95, sheen: 0.5, weave: 'felt', scale: 0.0008 }, cowboyFelt: { rough: 0.95, sheen: 0.5, weave: 'felt', scale: 0.0008 },
   topHatFelt: { rough: 0.6, sheen: 0.4, weave: 'felt' }, hatBand: { rough: 0.6, sheen: 0.5 },
+  // Velvet: deep, a strong soft sheen across its pile. Fur: matte, its pile catching the light at the edges.
+  velvet: { rough: 0.7, sheen: 0.45, weave: 'felt', scale: 0.0004 }, fur: { rough: 1, sheen: 1, weave: 'knit', scale: 0.0018 },
+  santaBelt: { rough: 0.45, sheen: 0.3, weave: 'coarse', scale: 0.0002 }, coatWool: { rough: 0.9, sheen: 0.4, weave: 'twill', scale: 0.0005 },
+  nylon: { rough: 0.35, sheen: 0.5, weave: 'plain', scale: 0.0002 }, nylonRib: { of: 'nylon', rough: 0.9, sheen: 0.6, tile: true },
+  cardigan: { rough: 0.95, sheen: 0.8, weave: 'knit', scale: 0.0005 }, cardiganRib: { of: 'cardigan', rough: 0.95, sheen: 0.8, tile: true },
+  fleece: { rough: 1, sheen: 0.8, weave: 'felt', scale: 0.0006 },
 });
 
 /** The hair's sheen: its own colour, a third of the way to white. */
@@ -359,6 +366,7 @@ function makeMaterials(GFX, look, tex) {
     bootSole: M('boot soles', { color: '#2a211b', roughness: 0.85 }),
     boot: M('boots', { color: look.boot, bumpMap: tex?.leather.bump ?? null, bumpScale: 0.0008, roughness: 0.6, clearcoat: 0.12 }),
     metal: M('hardware', { color: '#c4c6ca', metalness: 1, roughness: 0.26, clearcoat: 0.2 }),
+    gold: M('gold', { color: '#d9ad45', metalness: 1, roughness: 0.22, clearcoat: 0.3 }),
   };
   return mats;
 }

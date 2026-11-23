@@ -25,7 +25,7 @@ const TAU = Math.PI * 2;
 const WRIST = WRIST_D;
 
 /** What an untucked top (or the gi's jacket) hides the top of: the briefs, the legwear, a belt over it. */
-export const LEGWEAR = new Set(['jeans', 'briefs', 'trousers', 'shorts', 'giPants', 'dressBelt']);
+export const LEGWEAR = new Set(['jeans', 'briefs', 'trousers', 'shorts', 'giPants', 'dressBelt', 'santaPants', 'sweatpants']);
 
 // ———————————————————————————————————————————————— jackets, shirts and pullovers
 
@@ -40,6 +40,14 @@ const COATS = {
   // (Tucked in: under the trousers, its hem inside their waistband.)
   dressShirt: { open: false, layer: 2.5, slot: 'top', materials: ['poplin', 'metal'], j: { material: 'poplin', rib: 'poplin', ribTrim: 'poplin', trim: 'poplin', hem: 0.995, band: 0, cuffBand: 0.035, cuff: WRIST - 0.004, collar: 0.032, gap: 0.05, over: 0.009, loose: 0.004, stiffness: 0.45, shade: 0.9, blouse: 0.3, pockets: false, buttons: 7, buttonSize: 0.0058, placket: true, puff: 0.002 } },
   giTop: { open: true, layer: 5, slot: 'top', materials: ['gi', 'metal'], j: { material: 'gi', rib: 'gi', ribTrim: 'gi', trim: 'gi', hem: 0.87, band: 0, cuffBand: 0, cuff: 0.44, collar: 0.02, gap: 0.014, vgap: 0.05, vlow: 1.08, over: 0.016, loose: 0.03, stiffness: 0.3, shade: 0.7, blouse: 0.4, pockets: false, lapel: 0.42, lapelWide: 0.075, puff: 0.002 }, tail: true },
+  // Father Christmas's coat: red velvet to the hips, deep white fur at the hem, the cuffs and the collar, and a fur strip down the front.
+  santaCoat: { open: false, layer: 5, slot: 'outer', materials: ['velvet', 'fur', 'metal'], j: { material: 'velvet', rib: 'fur', ribTrim: 'fur', trim: 'fur', hem: 0.875, band: 0.075, bandOut: 0.022, bandThick: 0.014, cuffBand: 0.075, cuff: WRIST - 0.002, collar: 0.05, zip: false, pockets: false, placket: true, buttons: 0, gap: 0.05, over: 0.016, loose: 0.016, stiffness: 0.5, shade: 0.6, blouse: 0.5, puff: 0.006 }, crop: 0, tail: true },
+  // A wool overcoat, single-breasted, to the hips: notch lapels, four buttons.
+  overcoat: { open: false, layer: 5, slot: 'outer', materials: ['coatWool', 'metal'], j: { material: 'coatWool', rib: 'coatWool', ribTrim: 'coatWool', trim: 'coatWool', hem: 0.845, band: 0, cuffBand: 0, cuff: WRIST - 0.02, collar: 0.03, gap: 0.012, vgap: 0.06, vlow: 1.15, over: 0.018, loose: 0.018, stiffness: 0.9, shade: 0.5, blouse: 0, pockets: 'blazer', lapel: 0.3, lapelWide: 0.08, puff: 0.002, buttons: 4, buttonTop: 1.16, buttonBottom: 0.95, buttonSize: 0.009 }, crop: 0.04, tail: true },
+  // A puffer: quilted nylon, full and rounded, zipped to a stand collar, knit cuffs and hem.
+  pufferJacket: { open: false, layer: 5, slot: 'outer', materials: ['nylon', 'nylonRib', 'metal'], j: { material: 'nylon', rib: 'nylonRib', ribTrim: 'nylonRib', trim: 'nylon', hem: 0.93, band: 0.04, cuffBand: 0.04, cuff: WRIST - 0.006, collar: 0.055, gap: 0.05, over: 0.02, loose: 0.02, stiffness: 0.35, shade: 0.55, blouse: 0.9, puff: 0.014 } },
+  // A cardigan: a fine knit, open down the front, ribbed at the cuffs and hem.
+  cardigan: { open: true, layer: 4.5, slot: 'mid', materials: ['cardigan', 'cardiganRib', 'metal'], j: { material: 'cardigan', rib: 'cardiganRib', ribTrim: 'cardiganRib', trim: 'cardiganRib', hem: 0.88, band: 0.045, cuffBand: 0.05, cuff: WRIST - 0.004, collar: 0.02, zip: false, pockets: false, gap: 0.03, vgap: 0.05, vlow: 1.05, over: 0.012, loose: 0.008, stiffness: 0.4, shade: 0.6, blouse: 0.4, puff: 0.004 }, tail: true },
 };
 
 /** The garment for coat `name`, in the cut `women` (hers fitted, shorter) or his. */
@@ -150,9 +158,11 @@ function skirtParts(detail, name, { top = 1.0, hem = 0.5, flare = 0.35, pleats =
 
 // ———————————————————————————————————————————————— belt and tie
 
-/** A belt, cut from the skin and fitted over what is under it, its knot (or buckle) laid on it. */
-function belt(detail, under, name, material, buckle) {
-  const lo = 0.975, hi = 1.015;
+/**
+ * A belt, cut from the skin and fitted over what is under it, its knot (or buckle) laid on it: from `lo` to `hi`
+ * high, the buckle `size` ([across, up]) and of `metal`.
+ */
+function belt(detail, under, name, material, buckle, { lo = 0.975, hi = 1.015, size = [0.024, 0.02], metal = 'metal' } = {}) {
   const shell = skinShell(name, material, {
     under,
     gap: 0.004,
@@ -164,14 +174,15 @@ function belt(detail, under, name, material, buckle) {
     thick: 0.004,
   });
   const cast = caster(shell), hit = (x, y) => cast([x, y, 0.6], [0, 0, -1], 0.6);
-  const trim = new Part('belt trim', buckle ? 'metal' : material), leatherEnd = new Part('belt end', material);
-  const h = hit(buckle ? 0 : -0.03, 0.995);
+  const trim = new Part('belt trim', buckle ? metal : material), leatherEnd = new Part('belt end', material);
+  const mid = (lo + hi) / 2;
+  const h = hit(buckle ? 0 : -0.03, mid);
   if (h) {
     const out = h.n, up = [0, 1, 0], right = norm(sub([1, 0, 0], scale(out, out[0])));
     if (buckle) {
       // A metal frame with the leather's end showing through it.
-      box(trim, add(h.p, scale(out, 0.003)), right, up, out, [0.024, 0.02, 0.0035], h.w);
-      box(leatherEnd, add(h.p, scale(out, 0.0062)), right, up, out, [0.016, 0.012, 0.0012], h.w);
+      box(trim, add(h.p, scale(out, 0.003)), right, up, out, [size[0], size[1], 0.0035], h.w);
+      box(leatherEnd, add(h.p, scale(out, 0.0062)), right, up, out, [size[0] * 0.66, size[1] * 0.6, 0.0012], h.w);
     } else {
       // The knot, and two ends hanging from it, one a little longer, each turned a little from the other.
       box(trim, add(h.p, scale(out, 0.008)), right, up, out, [0.026, 0.022, 0.011], h.w);
@@ -323,6 +334,68 @@ const HATS = {
   }),
 };
 
+/**
+ * Father Christmas's hat: a soft red cone from a fitted band, standing up off the crown and falling over to his
+ * right and a little back, a deep white fur cuff round the band and a fur pompom at the tip.
+ */
+function santaHat(detail) {
+  const ease = 0.012, rx = 0.1 + ease, rz = 0.123 + ease, L = 0.36;
+  const yb = (a) => 1.705 - 0.045 * smooth(0.5, 1.8, a);
+  const fromFront = (th) => (th > Math.PI ? TAU - th : th);
+  const w = { head: 1 };
+  // Its middle line: up from the band for 9 cm, then falling over to his right (−x) and a little back.
+  const spine = (s) => {
+    const up = Math.min(s, 0.09), over = Math.max(0, s - 0.09);
+    let x = 0, y = 1.705 + up, z = HEAD.cz, ang = 0;
+    const steps = 24;
+    for (let i = 0; i < steps; i++) {
+      const ds = over / steps;
+      ang = 2.3 * Math.min(1, ((i + 0.5) * ds) / 0.18) ** 1.3;
+      x -= Math.sin(ang) * ds;
+      y += Math.cos(ang) * ds;
+      z -= 0.18 * Math.sin(ang) * ds;
+    }
+    return { c: [x, y, z], ang };
+  };
+  // How wide it is at `s` along its line: the band's own width at the bottom, tapering to the tip.
+  const width = (s) => (1 - s / L) ** 0.85 * (0.9 + 0.1 * smooth(0.12, 0, s));
+  const cone = new Part('santaHat', 'velvet');
+  const cols = Math.round(32 + 24 * detail), rows = Math.round(22 + 14 * detail);
+  cone.grid(rows, cols, (i, k) => {
+    const th = (k / cols) * TAU, t = i / rows, s = t * L * 0.97;
+    // The bottom row sits on the band (following its tilt); above, the cone's own rings.
+    const { c, ang } = spine(s), k1 = width(s);
+    const e1 = [Math.cos(ang), Math.sin(ang), 0], e2 = [0, 0, 1];
+    const lift = (1 - smooth(0, 0.06, s)) * (yb(fromFront(th)) - 1.705);
+    const p = [c[0] + e1[0] * Math.sin(th) * rx * k1, c[1] + e1[1] * Math.sin(th) * rx * k1 + lift, c[2] + e2[2] * Math.cos(th) * rz * k1];
+    return { p, uv: [k / cols, t], w, tint: 1 - 0.25 * smooth(0.5, 1, t) };
+  }, { flip: true });
+  // The fur cuff: out over the band and back in, its profile [out, up] from the band.
+  const PROFILE = [[0, -0.006], [0.012, -0.01], [0.022, 0.0], [0.026, 0.02], [0.024, 0.042], [0.014, 0.056], [0.002, 0.058]];
+  const cuff = new Part('santa hat fur', 'fur');
+  cuff.grid(PROFILE.length - 1, cols, (i, k) => {
+    const th = (k / cols) * TAU, [o, dy] = PROFILE[i], a = fromFront(th);
+    const fluff = 0.002 * Math.sin(th * 23 + i * 1.7);
+    return { p: [Math.sin(th) * (rx + o + fluff), yb(a) + dy, HEAD.cz + Math.cos(th) * (rz + o + fluff)], uv: [k / cols, i / (PROFILE.length - 1)], w, tint: i === 0 || i === PROFILE.length - 1 ? 0.75 : 1 };
+  }, { flip: true });
+  // The pompom at the tip: a ball of fur.
+  const tip = spine(L).c, R = 0.034, ball = new Part('santa hat pompom', 'fur');
+  ball.grid(12, 20, (i, k) => {
+    const v = (i / 12) * Math.PI, u = (k / 20) * TAU, r = R * (1 + 0.06 * Math.sin(u * 5 + v * 4));
+    return { p: [tip[0] + Math.sin(v) * Math.sin(u) * r, tip[1] - Math.cos(v) * r, tip[2] + Math.sin(v) * Math.cos(u) * r], uv: [k / 20, i / 12], w, tint: 1 };
+  });
+  const low = (a) => yb(a) - 0.006;
+  return {
+    parts: tag([cone, cuff, ball], 'santaHat'),
+    hairHides: (p) => {
+      const a = Math.abs(Math.atan2(p[0], p[2] - HEAD.cz));
+      if (p[1] < low(a)) return false;
+      return Math.hypot(p[0] / rx, (p[2] - HEAD.cz) / rz) < 1.7 || p[1] > 1.75;
+    },
+  };
+}
+HATS.santaHat = santaHat;
+
 /** A hat as a garment: worn over everything (layer 8), one at a time (`slot` 'head'), hiding the hair it covers. */
 function hatGarment(name, materials) {
   let built = null;
@@ -360,6 +433,10 @@ const PANTS = {
   trousers: legwear('trousers', 3, { hemAt: () => 0.058, flare: (y) => 0.004 + 0.011 * smooth(0.6, 0.06, y), ease: 0.0025, folds: 0.5, material: 'wool' }, { hem: 0.058, shoes: true, slim: true, materials: ['wool'] }),
   shorts: legwear('shorts', 3, { hemAt: () => 0.5, flare: (y) => 0.01 * smooth(0.75, 0.5, y), ease: 0.003, folds: 0.7, material: 'canvas' }, { hem: 0.5, materials: ['canvas'] }),
   giPants: legwear('giPants', 3, { hemAt: () => 0.3, flare: (y) => 0.02 + 0.03 * smooth(0.9, 0.3, y), ease: 0.006, folds: 1.5, material: 'gi' }, { hem: 0.3, materials: ['gi'] }),
+  // Father Christmas's trousers: full red velvet, bloused over the tops of his boots.
+  santaPants: legwear('santaPants', 3, { hemAt: () => 0.16, flare: (y) => 0.018 + 0.016 * smooth(0.85, 0.2, y), ease: 0.006, folds: 1.4, material: 'velvet' }, { hem: 0.16, shoes: true, materials: ['velvet'] }),
+  // Sweatpants: soft fleece, loose down the leg, gathered at the ankle.
+  sweatpants: legwear('sweatpants', 3, { hemAt: () => 0.07, flare: (y) => 0.012 * smooth(0.85, 0.3, y) * smooth(0.07, 0.16, y), ease: 0.005, folds: 1.2, material: 'fleece' }, { hem: 0.07, shoes: true, materials: ['fleece'] }),
 };
 
 // ———————————————————————————————————————————————— shoes
@@ -382,10 +459,11 @@ export const OUTFIT_HANGS = Object.freeze({
   miniDress: { ball: 0.06, hem: 0.03 },
   denimJacket: shirtHang, denimJacketButtoned: shirtHang, blazer: shirtHang, blazerButtoned: shirtHang,
   sweater: shirtHang, hoodie: shirtHang, dressShirt: { down: 0.35, across: 0.35, up: 1.4 }, giTop: shirtHang,
+  santaCoat: shirtHang, santaBelt: shirtHang, overcoat: shirtHang, pufferJacket: shirtHang, cardigan: shirtHang,
 });
 
 /** Garments that hang from the hips behind, and are kept over what is under them as he sits (see clearTails in human.js). */
-export const TAIL_GARMENTS = Object.freeze(['skirt', 'miniSkirt', 'dress', 'miniDress', 'giTop', 'sweater', 'hoodie', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned']);
+export const TAIL_GARMENTS = Object.freeze(['skirt', 'miniSkirt', 'dress', 'miniDress', 'giTop', 'sweater', 'hoodie', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned', 'santaCoat', 'overcoat', 'cardigan']);
 
 const SHARED = {
   tank: { layer: 4, slot: 'top', materials: ['tank'], fits: true, build: (detail, { under } = {}) => tag([tank(detail, under)], 'tank'), covers: ({ zone, y, sx = 0, z = 0 }) => (zone === 'trunk' && y > 0.9 + OPEN && y < tankTop(sx, z) - 0.02) || (LEGWEAR.has(zone) && y > 0.9 + OPEN && !seated(z)) || zone === 'bra' },
@@ -399,7 +477,21 @@ const SHARED = {
   fedora: hatGarment('fedora', ['felt', 'hatBand']),
   cowboy: hatGarment('cowboy', ['cowboyFelt', 'hatBand']),
   topHat: hatGarment('topHat', ['topHatFelt', 'hatBand']),
+  santaHat: hatGarment('santaHat', ['velvet', 'fur']),
+  // Father Christmas's belt: broad black leather over his coat, a big gold buckle.
+  santaBelt: { layer: 6, slot: 'belt', materials: ['santaBelt', 'gold'], fits: true, build: (detail, { under } = {}) => tag(belt(detail, under, 'santaBelt', 'santaBelt', true, { lo: 0.962, hi: 1.022, size: [0.05, 0.04], metal: 'gold' }), 'santaBelt'), covers: () => false },
 };
+
+/**
+ * Whole outfits by name, to wear at once (`dress(OUTFITS.santa)`). Colours are the look's (`setLook`): Father
+ * Christmas's red is `velvet`, his fur `fur`, and his boots are the boots, black in `boot`.
+ */
+export const OUTFITS = Object.freeze({
+  santa: Object.freeze(['briefs', 'socks', 'boots', 'santaPants', 'santaCoat', 'santaBelt', 'santaHat']),
+  winter: Object.freeze(['briefs', 'socks', 'boots', 'jeans', 'sweater', 'pufferJacket', 'beanie']),
+  smartCasual: Object.freeze(['briefs', 'socks', 'dressShoes', 'trousers', 'dressShirt', 'dressBelt', 'overcoat']),
+  lounge: Object.freeze(['briefs', 'socks', 'sneakers', 'sweatpants', 'tshirt', 'cardigan']),
+});
 
 /** His wardrobe: the first set, and all of the new but the dresses and skirts. */
 export const GARMENTS = Object.freeze(draped({

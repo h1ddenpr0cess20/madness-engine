@@ -252,7 +252,7 @@ function skinColour(tone, L, groom = {}) {
     // Freckles, faint, where the sun gets (the face, the shoulders, the arms); a mole here and there.
     const sun = zone === 'head' ? smooth(-0.2, 0.5, n[2]) : zone === 'arm' ? 0.7 : zone === 'trunk' ? smooth(1.3, 1.42, y) * 0.8 : 0.25;
     c = mixc(c, brown, 0.3 * sun * smooth(0.5, 0.75, noise3(x * 330 + 40, y * 330, z * 330)) * smooth(-0.2, 0.3, blotch + broad));
-    c = mixc(c, mole, 0.5 * smooth(0.94, 0.965, noise3(x * 120 + 11, y * 120 + 3, z * 120)) * smooth(0.2, 0.6, noise3(x * 500, y * 500, z * 500) + 0.6));
+    c = mixc(c, mole, 0.5 * moleAt(x, y, z));
     if (zone === 'head' || zone === 'neck') {
       const front = smooth(-0.2, 0.4, n[2]);
       // Flush: cheeks, the nose (its tip most), the ears.
@@ -377,6 +377,28 @@ function skinColour(tone, L, groom = {}) {
 /** The skin's map, on the base mesh's own UVs, `size` square: RGBA bytes. */
 export function skinPixels(size, tone, groom = {}) {
   return bodyPixels(size, skinColour(hex(tone), landmarks(), groom), [180, 130, 110]);
+}
+
+/** A whole-number hash of a cell, 0 to 1. */
+const cellHash = (i, j, k, salt) => {
+  let h = (i * 374761393 + j * 668265263 + k * 2147483647 + salt * 1442695041) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+};
+/**
+ * Moles: round, a millimetre or two across, one in about one of every 14 cells of a 4 cm grid over the body,
+ * each at its own place in its cell. How much of one is at (x, y, z), 0 to 1.
+ */
+function moleAt(x, y, z) {
+  const C = 0.04, ci = Math.floor(x / C), cj = Math.floor(y / C), ck = Math.floor(z / C);
+  let most = 0;
+  for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) for (let k = ck - 1; k <= ck + 1; k++) {
+    if (cellHash(i, j, k, 7) > 0.07) continue;
+    const px = (i + cellHash(i, j, k, 1)) * C, py = (j + cellHash(i, j, k, 2)) * C, pz = (k + cellHash(i, j, k, 3)) * C;
+    const r = 0.0007 + 0.0009 * cellHash(i, j, k, 4);
+    most = Math.max(most, smooth(r, r * 0.6, Math.hypot(x - px, y - py, z - pz)));
+  }
+  return most;
 }
 
 /**

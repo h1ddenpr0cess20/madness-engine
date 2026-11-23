@@ -301,6 +301,40 @@ touching them are not drawn while it is worn; take it off and the hair is whole.
 Colours: `setLook({ wool, poplin, tie, tank, knit, hoodie, gi, canvas, dress, belt,
 beltLeather, dressShoe, boot, cap, beanie, felt, cowboyFelt, topHatFelt, hatBand })`.
 
+## More to wear, and whole outfits
+
+| | Names |
+|---|---|
+| Father Christmas | `santaCoat`, `santaPants`, `santaBelt`, `santaHat` |
+| Coats | `overcoat`, `pufferJacket` |
+| Knit and casual | `cardigan`, `sweatpants` |
+
+They are cut from the patterns described above, all in both wardrobes:
+
+- **`santaCoat`**: the jacket pattern in red velvet to the hips, with a
+  deep fur band at the hem (`bandOut` and `bandThick` stand it off the
+  hips), fur cuffs, a fur collar and a fur strip down the front.
+- **`santaPants`**: the jeans pattern, full, bloused over the boots.
+- **`santaBelt`**: the buckled belt, broad, with a big gold buckle.
+- **`santaHat`**: a cone that stands up off the crown and falls over to his
+  right, a fur cuff round the band and a fur pompom at the tip.
+- **`overcoat`**: single-breasted wool with notch lapels.
+- **`pufferJacket`**: full and rounded, zipped to a stand collar.
+- **`cardigan`**: open, ribbed at the cuffs and hem.
+- **`sweatpants`**: loose fleece, gathered at the ankle.
+
+None of these are draped (see above).
+
+`OUTFITS` names whole outfits to put on at once:
+
+```js
+import { OUTFITS } from 'madness-engine/people';
+man.dress(OUTFITS.santa);   // also winter, smartCasual, lounge
+man.setLook({ boot: '#151515' });
+```
+
+Colours: `setLook({ velvet, fur, santaBelt, coatWool, nylon, cardigan, fleece })`.
+
 ## Character creator
 
 `CUSTOMIZATION` lists everything a character creator offers, group by group,

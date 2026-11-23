@@ -1295,13 +1295,14 @@ function jacketTrims(shell, open) {
 
 /**
  * The rib waistband: a band round the body over the t-shirt, from the hem up `J.band`, its cross-section
- * a rounded strip 5 mm thick; open, its two ends square, flush with the fronts' edges.
+ * a rounded strip 5 mm thick (`J.bandThick`); open, its two ends square, flush with the fronts' edges.
  */
 function waistband(detail, open) {
   const band = new Part('waistband', J.ribTrim ?? 'ribTrim');
   const { cloth } = shirtShape();
   // (Fitted, it is the body's own shape it goes round, clear of the t-shirt over the jeans' waistband under it.)
-  const outR = (y, th) => (cut.fitted ? jacketCloth().at(y, th) + 0.006 : cloth.at(y, th) + shirtFolds(y, th)) + 0.007 - 0.0025 * smooth(J.hem + 0.02, J.hem, y);
+  // (`J.bandOut`: further out, for a band over the hips and what is worn there, a coat's fur.)
+  const outR = (y, th) => (cut.fitted ? jacketCloth().at(y, th) + 0.006 : cloth.at(y, th) + shirtFolds(y, th)) + 0.007 + (J.bandOut ?? 0) - 0.0025 * smooth(J.hem + 0.02, J.hem, y);
   // The angle round the body where the band reaches the front's edge.
   let a0 = 0;
   if (open) {
@@ -1311,7 +1312,7 @@ function waistband(detail, open) {
     a0 = hi;
   }
   // Round its cross-section: up the outside, over the top, down the inside, under the bottom.
-  const T = 0.005, H = J.band;
+  const T = J.bandThick ?? 0.005, H = J.band;
   const section = [[0, 0.0015], [0, 0.2], [0, 0.5], [0, 0.8], [0, 0.98], [0.5, 1], [1, 0.98], [1, 0.5], [1, 0.02], [0.5, 0], [0, 0.0015]];
   const M = Math.round(160 * detail) + 32;
   const at = (k, j) => {
