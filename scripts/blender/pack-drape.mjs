@@ -11,7 +11,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const [work = 'blender-work', out = 'src/people/human/data/drape.js'] = process.argv.slice(2);
-const RANGE = 0.08;
+const RANGE = 0.16;
 const b64 = (a) => Buffer.from(a.buffer, a.byteOffset, a.byteLength).toString('base64');
 
 const entries = [];

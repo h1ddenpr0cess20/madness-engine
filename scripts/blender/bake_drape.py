@@ -49,14 +49,14 @@ PREVIEW = "--preview" in argv
 SAMPLE = 0.015
 
 # The cloths, after Blender's own presets: (mass kg/m², tension, compression, shear, bending), and how far each is let out.
-KNIT = dict(mass=0.15, tension=15, compression=1, shear=5, bending=0.05, ease=0.012)
-HEAVY_KNIT = dict(mass=0.3, tension=15, compression=2, shear=5, bending=0.3, ease=0.012)
-SHIRTING = dict(mass=0.15, tension=25, compression=4, shear=8, bending=0.2, ease=0.008)
-DENIM = dict(mass=0.4, tension=40, compression=2, shear=40, bending=2, ease=0.008)
-WOOL = dict(mass=0.3, tension=30, compression=3, shear=20, bending=1.5, ease=0.006)
-LEATHER = dict(mass=0.6, tension=80, compression=10, shear=60, bending=10, ease=0.004)
-GI = dict(mass=0.3, tension=30, compression=3, shear=20, bending=1, ease=0.01)
-FLOWING = dict(mass=0.12, tension=10, compression=1, shear=4, bending=0.03, ease=0.006)
+KNIT = dict(mass=0.15, tension=15, compression=1, shear=5, bending=0.05, ease=0.006)
+HEAVY_KNIT = dict(mass=0.3, tension=20, compression=3, shear=8, bending=0.4, ease=0.006)
+SHIRTING = dict(mass=0.15, tension=25, compression=4, shear=8, bending=0.2, ease=0.005)
+DENIM = dict(mass=0.4, tension=40, compression=4, shear=40, bending=2, ease=0.005)
+WOOL = dict(mass=0.3, tension=30, compression=4, shear=20, bending=1.5, ease=0.004)
+LEATHER = dict(mass=0.6, tension=80, compression=10, shear=60, bending=10, ease=0.003)
+GI = dict(mass=0.3, tension=30, compression=4, shear=20, bending=1, ease=0.006)
+FLOWING = dict(mass=0.12, tension=10, compression=1, shear=4, bending=0.03, ease=0.004)
 
 CLOTH = {
     "tshirt": KNIT, "tank": KNIT, "sweater": HEAVY_KNIT, "hoodie": HEAVY_KNIT,
@@ -77,6 +77,8 @@ OVER = {
 }
 # How far down from a piece's top it is held (metres): a collar or waistband's depth.
 HOLD = 0.02
+# Points further out than this either side (metres) are a sleeve's, not the trunk's.
+ARM = 0.22
 
 
 def engine(p):
@@ -100,10 +102,14 @@ def load(path):
     objs = list(bpy.context.selected_objects)
     bpy.context.view_layer.objects.active = objs[0]
     # Each piece's own top, held: before the pieces are joined, so a dress's skirt is held at its waist.
+    # And a sleeve's end, on the wrist or the arm, as its cuff holds it: else it slides off the hand.
     for o in objs:
-        top = max(v.co.y for v in o.data.vertices)  # the importer has not turned the points yet: y is up
+        co = [v.co for v in o.data.vertices]  # the importer has not turned the points yet: y is up
+        top = max(c.y for c in co)
+        arm = [c.y for c in co if abs(c.x) > ARM]
+        cuff = min(arm) + HOLD if arm and top - min(arm) < 0.75 else -1
         g = o.vertex_groups.new(name="pin")
-        g.add([v.index for v in o.data.vertices if v.co.y > top - HOLD], 1.0, 'REPLACE')
+        g.add([i for i, c in enumerate(co) if c.y > top - HOLD or (abs(c.x) > ARM and c.y < cuff)], 1.0, 'REPLACE')
     if len(objs) > 1:
         bpy.ops.object.join()
     obj = bpy.context.view_layer.objects.active
@@ -181,7 +187,7 @@ def drape(key):
 
     ev = cloth.evaluated_get(bpy.context.evaluated_depsgraph_get())
     sim = np.array([tuple(v.co) for v in ev.data.vertices])
-    move = blur(sim - rest, me, 3)
+    move = blur(sim - rest, me, 6)
     # Never in toward what it covers: that is hidden under it, and must stay so.
     into = np.einsum("ij,ij->i", move, normals)
     move -= np.minimum(into, 0)[:, None] * normals
