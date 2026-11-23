@@ -213,9 +213,12 @@ or `setLook({...})`.
 ## Draped in Blender
 
 Every garment that hangs as cloth is draped by Blender's cloth solver
-(`scripts/blender/`). That covers every top, jacket, pair of trousers,
-dress and skirt, in both wardrobes. Underwear, socks, shoes, belts, the tie
-and the hats keep their cut.
+(`scripts/blender/`). That covers all of his tops, jackets and trousers, and
+her trousers, skirts and dresses. Underwear, socks, shoes, belts, the tie,
+the hats and the leather bombers keep their cut (stiff leather holds its
+shape). Her tops keep theirs too: they hang from her
+bust already (`hang`), and draped as well they leave her arms no room in
+close stances on a heavier figure.
 
 The engine still cuts each garment as it always has. Each one is then
 draped on him in Blender, headless:
@@ -237,6 +240,14 @@ moves as the baked cloth nearest it does (`people/human/drape.js`). That
 includes its trims, cuffs, collar and hardware, which are not simulated
 themselves. No point moves in toward what the garment covers, which stays
 hidden under it.
+
+`pack-drape.mjs` also enforces a few limits while packing:
+
+- each garment stays a little further out than what it is worn over;
+- the band down his sides and the inside of the sleeves keeps its cut, so
+  his arms keep their room;
+- trousers stay as cut over the seat, where a shirt's tail must clear them
+  when he sits.
 
 To bake again (Blender 4.x; in a container, `apt-get install -y blender
 python3-numpy`), name each garment after what it is worn over, so that is

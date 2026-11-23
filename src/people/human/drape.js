@@ -10,18 +10,30 @@
  * centimetre and a half apart (data/drape.js). Any point of the garment, at
  * any detail, and its trims, cuffs and collar too, moves as the baked cloth
  * nearest it does. Her wardrobe is cut on him and carried onto her
- * afterwards, so hers is baked on him as well.
+ * afterwards, so hers is baked on him as well: her trousers, skirts and
+ * dresses (not her tops; see HER_TOPS).
  */
 import { decode } from './basemesh.js';
 import { DRAPE, RANGE } from './data/drape.js';
 
-/** The garments that drape (the rest: underwear, socks, shoes, belts, the tie and hats keep their cut). */
+/**
+ * The garments that drape. The rest keep their cut: underwear, socks, shoes, belts, the tie and hats, and
+ * the leather bombers (`jacket`, `jacketZipped`: stiff leather holds its cut, and draped, one leaves his
+ * arms no room).
+ */
 export const DRAPED = Object.freeze([
   'tshirt', 'tank', 'dressShirt', 'sweater', 'hoodie', 'giTop',
-  'jacket', 'jacketZipped', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned',
+  'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned',
   'jeans', 'trousers', 'shorts', 'giPants',
   'dress', 'miniDress', 'skirt', 'miniSkirt',
 ]);
+
+/**
+ * Her tops are not draped (scripts/blender/pack-drape.mjs leaves them out): they hang from her bust
+ * already (fit.js), and draped as well they leave her arms no room in close stances.
+ */
+export const HER_TOPS = Object.freeze(['tshirt', 'tank', 'dressShirt', 'sweater', 'hoodie', 'giTop',
+  'jacket', 'jacketZipped', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned']);
 
 /** How near (metres) the baked points a point takes its move from are, and the grid they are found on. */
 const REACH = 0.022, CELL = REACH;

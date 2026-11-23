@@ -771,18 +771,27 @@ test('a dress shirt is tucked in (under the trousers, which the belt goes over);
 });
 
 test('the garments that drape are built as Blender\'s cloth solver settles them', async () => {
-  const { DRAPED, drapes, settle } = await import('../src/people/human/drape.js');
+  const { DRAPED, HER_TOPS, drapes, settle } = await import('../src/people/human/drape.js');
   const { garmentsFor } = await import('../src/people/human/outfits.js');
   const { Part } = await import('../src/people/human/kit.js');
   for (const sex of ['male', 'female']) {
     const wardrobe = garmentsFor(sex);
-    for (const name of DRAPED) if (wardrobe[name]) assert.ok(drapes(sex, name), `${sex} ${name} has a drape baked`);
+    for (const name of DRAPED) {
+      if (!wardrobe[name]) continue;
+      const want = sex === 'male' || !HER_TOPS.includes(name);
+      assert.equal(drapes(sex, name), want, `${sex} ${name} ${want ? 'has' : 'has no'} drape baked`);
+    }
   }
-  // A point on the shirt's cloth moves to where the cloth settles; a point nowhere near any of it stays put.
+  // The shirt as cut (the plain wardrobe in clothes.js) moves to where its cloth settles: by a centimetre or so, never wildly.
+  const { GARMENTS: CUT } = await import('../src/people/human/clothes.js');
+  const parts = CUT.tshirt.build(0.5, {});
+  const before = parts.map((p) => p.pos.slice());
+  settle(parts, 'male', 'tshirt');
+  let sum = 0, n = 0, most = 0;
+  parts.forEach((p, k) => { for (let i = 0; i < p.count; i++) { const d = Math.hypot(...[0, 1, 2].map((a) => p.pos[i * 3 + a] - before[k][i * 3 + a])); sum += d; n++; most = Math.max(most, d); } });
+  assert.ok(sum / n > 0.002 && most < 0.16, `the shirt moves ${(sum / n * 1000).toFixed(1)} mm on average, ${(most * 1000).toFixed(0)} at most`);
   const probe = new Part('probe', 'shirt');
-  probe.vertex([0.12, 1.2, 0.14]);
   probe.vertex([0, 5, 0]);
   settle([probe], 'male', 'tshirt');
-  assert.ok(Math.hypot(probe.pos[0] - 0.12, probe.pos[1] - 1.2, probe.pos[2] - 0.14) > 0.001, 'a point of the shirt moves');
-  assert.deepEqual(probe.pos.slice(3), [0, 5, 0], 'a point nowhere near it does not');
+  assert.deepEqual(probe.pos, [0, 5, 0], 'a point nowhere near it does not');
 });
