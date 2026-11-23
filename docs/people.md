@@ -210,43 +210,48 @@ Colours change live: `setSkin`, `setEyeColor`, `setShirtColor`,
 `setJeansColor` (a tint over the indigo), `setShoeColor`, `setHairColor`,
 or `setLook({...})`.
 
-## Folds, from Blender
+## Draped in Blender
 
-The t-shirt and jeans hang in folds baked with Blender's cloth solver
-(`scripts/blender/`). Each garment, cut as the engine cuts it, is draped
-on him headless in Blender: it starts a little longer than it is cut, its
-held edges (the waistband; the shirt's collar, and its hem on the hips) are
-drawn back to where the cut puts them, and the cloth between, with more
-length than room, settles against his body and the floor under gravity.
-The jeans stack over the feet and crease at the knees. The shirt gathers
-above the hem and folds under the arms. How far the settled cloth stands
-off the cut, along its normal, with the broad sag blurred out, is the fold
-height. It is baked onto the body's UV layout (the shell garments share
-it) into `src/people/human/data/folds.js`: 512² texels, cropped to each
-garment, a byte each.
+Every garment that hangs as cloth is draped by Blender's cloth solver
+(`scripts/blender/`). That covers every top, jacket, pair of trousers,
+dress and skirt, in both wardrobes. Underwear, socks, shoes, belts, the tie
+and the hats keep their cut.
 
-At runtime the folds are only shading, so silhouettes and layering stay
-as they were. Each fold is relief in the material's detail map, and its
-valleys darken in the garment's colour. They follow every pose, since they
-sit on the garment's UVs, and carry onto her, whose garments are his,
-fitted. The jeans have a material of their own (`jeans`, denim with the
-folds), so the denim jacket, on a layout of its own, never takes them;
-`setJeansColor` tints both. Other garments have no baked folds.
+The engine still cuts each garment as it always has. Each one is then
+draped on him in Blender, headless:
 
-To bake again (Blender 4.x; in a container `apt-get install -y blender
-python3-numpy`):
+- its cloth is let out a little off the body;
+- it is held along its top (a collar, a waistband, a skirt's waist);
+- it settles under gravity against his body, the floor and what it is
+  worn over.
+
+The cloth properties come from Blender's presets: knit, shirting, denim,
+wool, leather and a light dress fabric. The shirt then falls off the chest
+and back instead of clinging to them, and the jeans fall straight from the
+seat. Her wardrobe is cut on him and carried onto her, so it is baked on
+him as well.
+
+How far each point moves is kept at points about 1.5 cm apart, in
+`src/people/human/data/drape.js`. Any point of a garment, at any detail,
+moves as the baked cloth nearest it does (`people/human/drape.js`). That
+includes its trims, cuffs, collar and hardware, which are not simulated
+themselves. No point moves in toward what the garment covers, which stays
+hidden under it.
+
+To bake again (Blender 4.x; in a container, `apt-get install -y blender
+python3-numpy`), name each garment after what it is worn over, so that is
+already draped:
 
 ```sh
-node scripts/blender/export-human.mjs /tmp/folds tshirt jeans
-blender -b --factory-startup --python scripts/blender/bake_folds.py -- \
-  /tmp/folds tshirt,jeans --module src/people/human/data/folds.js --preview
+node scripts/blender/export-human.mjs /tmp/drape
+blender -b --factory-startup --python scripts/blender/bake_drape.py -- \
+  /tmp/drape male/jeans,male/tshirt,male/jacket --preview
+node scripts/blender/pack-drape.mjs /tmp/drape
 ```
 
-`--preview` also renders each draped garment with Cycles
-(`<garment>-preview.png`), and each bake is written as a picture to check
-by eye (`<garment>-folds.png`). The cloth for each garment (stiffness,
-how much longer it starts, which points are held) is `CLOTH` in
-`bake_folds.py`, and `--set key=value` overrides it for a trial run.
+The cloths, and what each garment is worn over, are `CLOTH` and `OVER` in
+`bake_drape.py`. `--preview` renders each draped garment on him with
+Cycles.
 
 ## The later wardrobe
 

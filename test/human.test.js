@@ -770,25 +770,19 @@ test('a dress shirt is tucked in (under the trousers, which the belt goes over);
   assert.ok(him.garment('dressBelt').geometry.index.count < belt, 'the t-shirt hides the belt under it');
 });
 
-test('the t-shirt and jeans carry the folds baked in Blender, on the body layout and within their range', async () => {
-  const { foldHeights } = await import('../src/people/human/textures.js');
-  const { FOLDS, SIZE } = await import('../src/people/human/data/folds.js');
-  for (const name of ['tshirt', 'jeans']) {
-    const { x, y, w, h } = FOLDS[name];
-    assert.ok(x >= 0 && y >= 0 && x + w <= SIZE && y + h <= SIZE, `${name} lies on the layout`);
-    const H = foldHeights(name);
-    assert.equal(H.length, SIZE * SIZE);
-    let folded = 0;
-    for (const v of H) {
-      assert.ok(v >= -1.01 && v <= 1.01);
-      if (Math.abs(v) > 0.1) folded++;
-    }
-    // Real folds, not a blank or a noise: some of it stands out or sinks in, most lies as cut.
-    assert.ok(folded > 1000 && folded < w * h * 0.6, `${name}: ${folded} texels folded`);
+test('the garments that drape are built as Blender\'s cloth solver settles them', async () => {
+  const { DRAPED, drapes, settle } = await import('../src/people/human/drape.js');
+  const { garmentsFor } = await import('../src/people/human/outfits.js');
+  const { Part } = await import('../src/people/human/kit.js');
+  for (const sex of ['male', 'female']) {
+    const wardrobe = garmentsFor(sex);
+    for (const name of DRAPED) if (wardrobe[name]) assert.ok(drapes(sex, name), `${sex} ${name} has a drape baked`);
   }
-  assert.equal(foldHeights('sweater'), null);
-  // The jeans are denim of their own, so the denim jacket (its own layout) never takes their folds.
-  man.dress(['jeans']);
-  assert.deepEqual([man.garment('jeans').material].flat().map((m) => m.name), ['human jeans']);
-  man.dress(['briefs', 'tshirt', 'jeans', 'sneakers']);
+  // A point on the shirt's cloth moves to where the cloth settles; a point nowhere near any of it stays put.
+  const probe = new Part('probe', 'shirt');
+  probe.vertex([0.12, 1.2, 0.14]);
+  probe.vertex([0, 5, 0]);
+  settle([probe], 'male', 'tshirt');
+  assert.ok(Math.hypot(probe.pos[0] - 0.12, probe.pos[1] - 1.2, probe.pos[2] - 0.14) > 0.001, 'a point of the shirt moves');
+  assert.deepEqual(probe.pos.slice(3), [0, 5, 0], 'a point nowhere near it does not');
 });

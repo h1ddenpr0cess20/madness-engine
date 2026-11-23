@@ -1,6 +1,7 @@
 import { add, caster, clamp, norm, Part, scale, smooth, sub } from './kit.js';
 import { castBody, skinWeightsAt } from './body.js';
 import { skinShell } from './shell.js';
+import { draped } from './drape.js';
 import {
   BRIEFS, bodyDrape, bomber, box, convex, DEFAULT_OUTFIT, fill, GARMENTS as BASE, GARMENTS_FEMALE as BASE_FEMALE, HEM_FRONT, inCut, JACKET, jeansShell,
   MENS_CUT, OPEN, seated, SHIRT_Z, shoes, table, tag, WAIST, WOMENS_CUT, WRIST_D, zoneIs,
@@ -401,13 +402,13 @@ const SHARED = {
 };
 
 /** His wardrobe: the first set, and all of the new but the dresses and skirts. */
-export const GARMENTS = Object.freeze({
+export const GARMENTS = Object.freeze(draped({
   ...BASE,
   sneakers: { ...BASE.sneakers, slot: 'shoes' },
   ...Object.fromEntries(Object.keys(COATS).map((n) => [n, coat(n)])),
   ...Object.fromEntries(Object.entries(PANTS).map(([n, v]) => [n, v.men])),
   ...SHARED,
-});
+}, 'male'));
 
 const dressOf = (name, { hem, flare, pleats, bodiceHem = 0.99 }) => ({
   layer: 4,
@@ -429,7 +430,7 @@ const skirtOf = (name, { hem, flare, pleats }) => ({
 });
 
 /** Her wardrobe: his in the women's cut where the cut differs, and the dresses and skirts. */
-export const GARMENTS_FEMALE = Object.freeze({
+export const GARMENTS_FEMALE = Object.freeze(draped({
   ...BASE_FEMALE,
   sneakers: { ...BASE_FEMALE.sneakers, slot: 'shoes' },
   ...Object.fromEntries(Object.keys(COATS).map((n) => [n, coat(n, true)])),
@@ -439,7 +440,7 @@ export const GARMENTS_FEMALE = Object.freeze({
   miniDress: dressOf('miniDress', { hem: 0.74, flare: 0.3, pleats: 11 }),
   skirt: skirtOf('skirt', { hem: 0.5, flare: 0.36, pleats: 13 }),
   miniSkirt: skirtOf('miniSkirt', { hem: 0.74, flare: 0.3, pleats: 11 }),
-});
+}, 'female'));
 
 /** The wardrobe for the figure `sex`. */
 export const garmentsFor = (sex) => (sex === 'female' ? GARMENTS_FEMALE : GARMENTS);

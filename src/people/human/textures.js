@@ -1,5 +1,4 @@
-import { bodyLevel, decode } from './basemesh.js';
-import { FOLDS, SIZE as FOLD_SIZE } from './data/folds.js';
+import { bodyLevel } from './basemesh.js';
 import { zoneOf } from './body.js';
 import { clamp, cross, fbm, noise3, smooth } from './kit.js';
 import { armDistance, EYE, FACE, FINGERS, JOINTS } from './skeleton.js';
@@ -595,71 +594,6 @@ function eyeMap(iris, size = 1024) {
   });
 }
 
-// ———————————————————————————————————————————————— the folds
-
-/**
- * The folds a shell garment falls into (`tshirt`, `jeans`), baked in Blender
- * (scripts/blender/bake_folds.py: its cloth solver drapes the garment on
- * him, and what is left of where it lies once its broad sag is taken off is
- * the folds), as a height on the body's UV layout: FOLD_SIZE square, 0 the
- * garment as cut, ±1 a fold standing out or sunk in by the bake's RANGE.
- * Null for a garment with none baked.
- */
-const foldCache = new Map();
-export function foldHeights(name) {
-  if (!FOLDS[name]) return null;
-  if (!foldCache.has(name)) {
-    const { x, y, w, h, data } = FOLDS[name];
-    const bytes = decode(data, Uint8Array);
-    const H = new Float32Array(FOLD_SIZE * FOLD_SIZE);
-    for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) H[(y + r) * FOLD_SIZE + x + c] = (bytes[r * w + c] - 128) / 127;
-    foldCache.set(name, H);
-  }
-  return foldCache.get(name);
-}
-
-/** The folds' height at a place on the layout (u, v in texels of a `size` square map), filtered between texels. */
-function foldAt(H, u, v, size) {
-  const k = FOLD_SIZE / size, fx = Math.max(0, Math.min(FOLD_SIZE - 1.001, u * k - 0.5)), fy = Math.max(0, Math.min(FOLD_SIZE - 1.001, v * k - 0.5));
-  const x = Math.floor(fx), y = Math.floor(fy), tx = fx - x, ty = fy - y, o = y * FOLD_SIZE + x;
-  return (H[o] * (1 - tx) + H[o + 1] * tx) * (1 - ty) + (H[o + FOLD_SIZE] * (1 - tx) + H[o + FOLD_SIZE + 1] * tx) * ty;
-}
-
-/**
- * Shades a garment's colour map (`rgba`, `size` square, on the body's layout) by its folds: the
- * cloth sunk into a fold sees less of the sky, so it darkens by up to `depth`; a ridge barely lightens.
- */
-function shadeFolds(rgba, size, name, depth = 0.2) {
-  const H = foldHeights(name);
-  if (!H) return rgba;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const h = foldAt(H, x + 0.5, y + 0.5, size);
-      const f = 1 - depth * smooth(0, 0.7, -h) + 0.04 * smooth(0, 0.7, h);
-      const o = (y * size + x) * 4;
-      rgba[o] *= f; rgba[o + 1] *= f; rgba[o + 2] *= f;
-    }
-  }
-  return rgba;
-}
-
-/**
- * A garment's folds as the material's detail map (see core.js): r their relief, g the roughness
- * as the material's, b all of the weave's bump.
- */
-function foldDetail(name) {
-  const H = foldHeights(name);
-  if (!H) return null;
-  const rgba = new Uint8ClampedArray(FOLD_SIZE * FOLD_SIZE * 4);
-  for (let o = 0; o < H.length; o++) {
-    rgba[o * 4] = 128 + 127 * H[o];
-    rgba[o * 4 + 1] = 128;
-    rgba[o * 4 + 2] = 255;
-    rgba[o * 4 + 3] = 255;
-  }
-  return canvasOf(rgba, FOLD_SIZE);
-}
-
 // ———————————————————————————————————————————————— the shirt
 
 /** The shirt: off-white to be tinted, flecked like a heather jersey, with its seams and the hems' double stitching. */
@@ -693,7 +627,7 @@ function shirtMaps() {
     c -= 40 * clamp(seam);
     return [c, c, c];
   }, [232, 232, 232]);
-  const map = canvasOf(shadeFolds(rgba, size, 'tshirt'), size);
+  const map = canvasOf(rgba, size);
   // A jersey's knit, as a repeating tile: rows of little V-shaped stitches.
   const bump = paint(128, 128, (u, v) => {
     const cols = 16, rows = 16;
@@ -702,7 +636,7 @@ function shirtMaps() {
     const h = 128 + 70 * Math.cos((cv + vshape * 0.5) * Math.PI * 2) * 0.5 - 40 * G((cu - 0.5) / 0.08);
     return [h, h, h];
   });
-  return { map, bump, detail: foldDetail('tshirt') };
+  return { map, bump };
 }
 
 // ———————————————————————————————————————————————— the later cloths
@@ -793,21 +727,18 @@ function denimMaps() {
     c = mixc(c, thread, clamp(st) * 0.6);
     return c;
   };
-  const rgba = bodyPixels(1024, (p) => {
+  const map = canvasOf(bodyPixels(1024, (p) => {
     const { th } = legAngle(p);
     const t = ((th / (Math.PI * 2)) % 1 + 1) % 1;
     const v = clamp((p[1] - jeansHeight(0, th)) / (jeansHeight(1, th) - jeansHeight(0, th)));
     return at(t, v, th, p[1], Math.abs(p[0]), p[2]);
-  }, [44, 74, 120]);
-  // The denim as it is for anything cut from it; the jeans' own, shaded into their folds.
-  const map = canvasOf(rgba, 1024);
-  const folded = canvasOf(shadeFolds(rgba.slice(), 1024, 'jeans'), 1024);
+  }, [44, 74, 120]), 1024);
   // A 3/1 twill as a repeating tile: diagonal ribs.
   const bump = paint(128, 128, (u, v) => {
     const h = 128 + 80 * Math.sin((u * 16 + v * 16) * Math.PI * 2) + 25 * noise3(u * 64, v * 64, 9);
     return [h, h, h];
   });
-  return { map, bump, folded, detail: foldDetail('jeans') };
+  return { map, bump };
 }
 
 // ———————————————————————————————————————————————— the socks
@@ -963,11 +894,8 @@ export function humanTextures(GFX, { skin = '#c08a6c', iris = '#5a4632', size = 
     const fabrics = fabricTiles(), suit = woolMap();
     const shirt = shirtMaps(), denim = denimMaps(), shoes = shoeMaps(), sock = sockMaps(), hide = leatherMaps(), ribs = ribMaps();
     const g = {
-      shirt: { map: texture(GFX, shirt.map), bump: texture(GFX, shirt.bump, { color: false, repeat: [140, 140] }), detail: shirt.detail && texture(GFX, shirt.detail, { color: false }) },
-      denim: {
-        map: texture(GFX, denim.map), bump: texture(GFX, denim.bump, { color: false, repeat: [150, 150] }),
-        folded: texture(GFX, denim.folded), detail: denim.detail && texture(GFX, denim.detail, { color: false }),
-      },
+      shirt: { map: texture(GFX, shirt.map), bump: texture(GFX, shirt.bump, { color: false, repeat: [140, 140] }) },
+      denim: { map: texture(GFX, denim.map), bump: texture(GFX, denim.bump, { color: false, repeat: [150, 150] }) },
       sock: { map: texture(GFX, sock.map), bump: texture(GFX, sock.bump, { color: false, repeat: [160, 160] }) },
       leather: { map: texture(GFX, hide.map), bump: texture(GFX, hide.bump, { color: false, repeat: [24, 24] }) },
       rib: { map: texture(GFX, ribs.map), tile: texture(GFX, ribs.tile, { repeat: [1, 1] }) },

@@ -1,71 +1,99 @@
 /**
- * The shell garments as Blender's cloth solver drapes them on him
- * (scripts/blender/bake_drape.py): each is cut from the skin and lifted off
- * it, and then every point of it is moved to where that cloth settles, let
- * out and hanging under its own weight against his body. The move is baked
- * on the body's UV layout (data/drape.js), which the shell garments share,
- * so it holds whatever detail a garment is built at.
+ * The garments as Blender's cloth solver drapes them (scripts/blender/
+ * bake_drape.py). Each is cut here as it always was, from the skin or from
+ * its pattern, and then every point of it is moved to where that cloth
+ * settles on him: let out, held where a real one is held (a collar, a
+ * waistband), hanging under its own weight against his body and what it is
+ * worn over, so it falls off the chest and seat instead of clinging to them.
+ *
+ * The bake keeps, for each garment, the move of its cloth at points about a
+ * centimetre and a half apart (data/drape.js). Any point of the garment, at
+ * any detail, and its trims, cuffs and collar too, moves as the baked cloth
+ * nearest it does. Her wardrobe is cut on him and carried onto her
+ * afterwards, so hers is baked on him as well.
  */
 import { decode } from './basemesh.js';
-import { DRAPE, RANGE, SIZE } from './data/drape.js';
+import { DRAPE, RANGE } from './data/drape.js';
 
-const cache = new Map();
+/** The garments that drape (the rest: underwear, socks, shoes, belts, the tie and hats keep their cut). */
+export const DRAPED = Object.freeze([
+  'tshirt', 'tank', 'dressShirt', 'sweater', 'hoodie', 'giTop',
+  'jacket', 'jacketZipped', 'denimJacket', 'denimJacketButtoned', 'blazer', 'blazerButtoned',
+  'jeans', 'trousers', 'shorts', 'giPants',
+  'dress', 'miniDress', 'skirt', 'miniSkirt',
+]);
 
-/** The garment `name`'s moves, SIZE² × 3 (x, y, z, metres) on the layout; null if none is baked. */
-function moves(name) {
-  if (!DRAPE[name]) return null;
-  if (!cache.has(name)) {
-    const { x, y, w, h, data } = DRAPE[name];
-    const bytes = decode(data, Uint8Array);
-    const M = new Float32Array(SIZE * SIZE * 3);
-    for (let r = 0; r < h; r++) {
-      for (let c = 0; c < w; c++) {
-        for (let k = 0; k < 3; k++) M[((y + r) * SIZE + x + c) * 3 + k] = ((bytes[(r * w + c) * 3 + k] - 128) / 127) * RANGE;
-      }
+/** How near (metres) the baked points a point takes its move from are, and the grid they are found on. */
+const REACH = 0.022, CELL = REACH;
+
+const fields = new Map();
+
+/** The baked field of `key` ('male/jeans'): its points (metres), their moves, and a grid to find them by. */
+function field(key) {
+  if (!DRAPE[key]) return null;
+  if (!fields.has(key)) {
+    const { n, points, moves } = DRAPE[key];
+    const P = Float32Array.from(decode(points, Int16Array), (v) => v / 1000);
+    const M = Float32Array.from(decode(moves, Int8Array), (v) => (v / 127) * RANGE);
+    const grid = new Map();
+    for (let i = 0; i < n; i++) {
+      const c = cellOf(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]);
+      if (!grid.has(c)) grid.set(c, []);
+      grid.get(c).push(i);
     }
-    cache.set(name, M);
+    fields.set(key, { n, P, M, grid });
   }
-  return cache.get(name);
+  return fields.get(key);
 }
 
-/** The move at a UV, filtered between texels. */
-function moveAt(M, u, v, out) {
-  const fx = Math.max(0, Math.min(SIZE - 1.001, u * SIZE - 0.5)), fy = Math.max(0, Math.min(SIZE - 1.001, (1 - v) * SIZE - 0.5));
-  const x = Math.floor(fx), y = Math.floor(fy), tx = fx - x, ty = fy - y;
-  const o = (y * SIZE + x) * 3, row = SIZE * 3;
-  for (let k = 0; k < 3; k++) {
-    out[k] = (M[o + k] * (1 - tx) + M[o + 3 + k] * tx) * (1 - ty) + (M[o + row + k] * (1 - tx) + M[o + row + 3 + k] * tx) * ty;
+const cellOf = (x, y, z) => `${Math.floor(x / CELL)},${Math.floor(y / CELL)},${Math.floor(z / CELL)}`;
+
+/** The move at (x, y, z): the baked points within REACH, nearer counting more; [0, 0, 0] if none. */
+function moveAt(F, x, y, z, out) {
+  out[0] = out[1] = out[2] = 0;
+  let sum = 0;
+  const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL), cz = Math.floor(z / CELL);
+  for (let i = -1; i <= 1; i++) {
+    for (let j = -1; j <= 1; j++) {
+      for (let k = -1; k <= 1; k++) {
+        const list = F.grid.get(`${cx + i},${cy + j},${cz + k}`);
+        if (!list) continue;
+        for (const p of list) {
+          const d2 = (F.P[p * 3] - x) ** 2 + (F.P[p * 3 + 1] - y) ** 2 + (F.P[p * 3 + 2] - z) ** 2;
+          if (d2 > REACH * REACH) continue;
+          const w = Math.exp(-d2 / (0.4 * REACH * REACH));
+          out[0] += F.M[p * 3] * w; out[1] += F.M[p * 3 + 1] * w; out[2] += F.M[p * 3 + 2] * w;
+          sum += w;
+        }
+      }
+    }
   }
+  if (sum > 0) { out[0] /= sum; out[1] /= sum; out[2] /= sum; }
   return out;
 }
 
-/** Whether the garment `name` has a drape baked. */
-export const draped = (name) => !!DRAPE[name];
+/** Whether `name` drapes on the figure `sex`. */
+export const drapes = (sex, name) => !!DRAPE[`${sex}/${name}`];
 
-/**
- * Moves the points of `parts` (the garment `name`, as cut) to where its cloth settles. A point
- * cut twice (either side of a UV seam, an edge's two faces) moves once, by the mean of its UVs'
- * moves, so the garment never opens along a seam. Returns `parts`.
- */
-export function drape(parts, name) {
-  const M = moves(name);
-  if (!M) return parts;
-  const at = new Map(), m = [0, 0, 0];
-  const key = (p, i) => `${Math.round(p[i] * 1e5)},${Math.round(p[i + 1] * 1e5)},${Math.round(p[i + 2] * 1e5)}`;
+/** Moves every point of `parts` (the garment `name`, as cut for `sex`) to where its cloth settles. Returns `parts`. */
+export function settle(parts, sex, name) {
+  const F = field(`${sex}/${name}`);
+  if (!F) return parts;
+  const m = [0, 0, 0];
   for (const part of parts) {
     for (let i = 0; i < part.count; i++) {
-      const k = key(part.pos, i * 3);
-      moveAt(M, part.uv[i * 2], part.uv[i * 2 + 1], m);
-      const s = at.get(k) ?? [0, 0, 0, 0];
-      s[0] += m[0]; s[1] += m[1]; s[2] += m[2]; s[3]++;
-      at.set(k, s);
-    }
-  }
-  for (const part of parts) {
-    for (let i = 0; i < part.count; i++) {
-      const s = at.get(key(part.pos, i * 3));
-      for (let a = 0; a < 3; a++) part.pos[i * 3 + a] += s[a] / s[3];
+      const o = i * 3;
+      moveAt(F, part.pos[o], part.pos[o + 1], part.pos[o + 2], m);
+      part.pos[o] += m[0]; part.pos[o + 1] += m[1]; part.pos[o + 2] += m[2];
     }
   }
   return parts;
+}
+
+/** `wardrobe` (name → garment) with each garment that has a drape baked for `sex` built in its draped shape. */
+export function draped(wardrobe, sex) {
+  return Object.fromEntries(Object.entries(wardrobe).map(([name, g]) => [
+    name,
+    drapes(sex, name) ? { ...g, build: (detail, opts = {}) => settle(g.build(detail, opts), sex, name) } : g,
+  ]));
 }

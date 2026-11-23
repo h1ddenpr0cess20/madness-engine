@@ -2,7 +2,6 @@ import { add, caster, clamp, cross, dot, len, norm, Part, scale, smooth, sub } f
 import { castBody, footPoints, legAxis, skinWeightsAt } from './body.js';
 import { armDistance, JOINTS, mirror } from './skeleton.js';
 import { skinShell } from './shell.js';
-import { drape as settle } from './drape.js';
 
 /**
  * The wardrobe: boxer briefs, a crew-neck t-shirt, straight jeans and a pair
@@ -1423,10 +1422,9 @@ export const GARMENTS = Object.freeze({
   jeans: {
     layer: 3,
     slot: 'legs',
-    // Denim with the jeans' own folds (human.js): the shorts and anything else cut from denim go without.
-    materials: ['jeans'],
+    materials: ['denim'],
     fits: true,
-    build: (detail, { under, sex } = {}) => tag(settle([jeans(detail, under, sex, { material: 'jeans' })], 'jeans'), 'jeans'),
+    build: (detail, { under, sex } = {}) => tag([jeans(detail, under, sex)], 'jeans'),
     covers: ({ zone, y }) => ((zone === 'leg' || zone === 'trunk') && y > HEM_FRONT + 0.1 && y < WAIST - OPEN) || (zone === 'briefs' && y < WAIST - OPEN) || ((zone === 'sneakers' || zone === 'dressShoes' || zone === 'boots') && y > 0.12),
   },
   tshirt: {
@@ -1434,7 +1432,7 @@ export const GARMENTS = Object.freeze({
     slot: 'top',
     materials: ['shirt'],
     fits: true,
-    build: (detail, { under } = {}) => tag(hangFromHips(settle(shirt(detail, under), 'tshirt')), 'tshirt'),
+    build: (detail, { under } = {}) => tag(hangFromHips(shirt(detail, under)), 'tshirt'),
     covers: ({ zone, y, d, x = 1, z = 0 }) => (zone === 'trunk' && y > HEM + OPEN && (y < COLLAR - 0.1 || Math.hypot(x, z - SHIRT_Z) > 0.16)) || (zone === 'arm' && d < SLEEVE_RANGE[1] - OPEN) || (UNDER_TOP.has(zone) && y > HEM + OPEN && !seated(z)) || zone === 'bra',
   },
   jacket: bomber(true),
@@ -1471,7 +1469,7 @@ export const GARMENTS_FEMALE = Object.freeze({
     ...GARMENTS.jeans,
     // Slim, they lie close on the leg itself, not stepped out over the socks' cuffs or the briefs' hems:
     // those are hidden under them instead.
-    build: (detail, { sex } = {}) => inCut(WOMENS_CUT, () => tag([jeans(detail, null, sex, { material: 'jeans' })], 'jeans')),
+    build: (detail, { sex } = {}) => inCut(WOMENS_CUT, () => tag([jeans(detail, null, sex)], 'jeans')),
     covers: (z) => GARMENTS.jeans.covers(z) || (z.zone === 'socks' && z.y > HEM_FRONT + 0.05),
   },
   jacket: bomber(true, WOMENS_CUT),
