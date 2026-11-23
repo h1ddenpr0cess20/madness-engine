@@ -617,15 +617,19 @@ function briefsCut(p, z) {
 
 /**
  * How far the cloth over the groin stands forward (and a little down) of the
- * skin at `p`, for what the base body leaves out.
+ * skin at `p`, for what the base body leaves out: one rounded bulge, about
+ * 9 cm across and 8 tall, fullest a little below its middle, standing about
+ * 4 cm out, its edges eased into the cloth round it.
  */
 export function bulge(p) {
-  return 0.05 * G(p[0] / 0.05) * G((p[1] - 0.872) / 0.032) * smooth(0.0, 0.07, p[2]);
+  const dy = p[1] - 0.858;
+  const r = Math.hypot(p[0] / 0.046, dy / (dy < 0 ? 0.042 : 0.036));
+  return r < 1 ? 0.042 * smooth(1, 0, r) ** 0.7 * smooth(0.0, 0.06, p[2]) : 0;
 }
-// Forward, a little down, and drawn in toward the middle line.
+// Forward, a little down, and a touch in toward the middle line, so it is round and not a ridge.
 const withBulge = (p, q, k = 1) => {
   const b = bulge(p) * k;
-  return b ? [q[0] * (1 - 13 * b), q[1] - b * 0.45, q[2] + b] : q;
+  return b ? [q[0] * (1 - 3 * b), q[1] - b * 0.3, q[2] + b] : q;
 };
 
 /** Boxer briefs: one piece close over the seat and the tops of the thighs, a band at the waist, the legs' hems turned in. */
