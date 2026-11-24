@@ -209,3 +209,11 @@ test('no window, door or timber stands out over a roof', () => {
   }
   assert.deepEqual([...new Set(found)], []);
 });
+
+test('a city pack never replaces one of the core building types', async () => {
+  const { PACK_MODELS } = await import('../src/buildings/packs/index.js');
+  const core = await Promise.all(['homes', 'farm', 'works', 'industry', 'civic', 'california', 'newyork', 'castle'].map((n) => import(`../src/buildings/${n}.js`)));
+  const names = new Set(core.flatMap((m) => Object.entries(m).filter(([, v]) => typeof v === 'function').map(([k]) => k)));
+  for (const type of Object.keys(PACK_MODELS)) assert.ok(!names.has(type), `${type} is a core building type and a city pack's`);
+  assert.deepEqual(FOOTPRINTS.cathedral, [5, 7]);
+});

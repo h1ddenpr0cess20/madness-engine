@@ -77,7 +77,7 @@ export function taqueria(m, v) {
 }
 
 /** A cathedral: a white colonial church with two bell towers of arched openings and a tiled dome over the crossing, and a stone atrium before it. */
-export function cathedral(m, v) {
+export function mexicanCathedral(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, WHITE);
   const x0 = -1.0, x1 = 1.0, z0 = -1.5, z1 = 0.8, H = 1.1;
@@ -99,5 +99,5 @@ export function cathedral(m, v) {
 
 /** The footprints these models are drawn for. */
 export const MEXICO_FOOTPRINTS = Object.freeze({
-  colonial: [3, 3], cantina: [2, 2], mercado: [3, 2], taqueria: [2, 2], cathedral: [3, 4],
+  colonial: [3, 3], cantina: [2, 2], mercado: [3, 2], taqueria: [2, 2], mexicanCathedral: [3, 4],
 });
