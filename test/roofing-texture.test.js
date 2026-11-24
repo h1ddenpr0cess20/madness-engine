@@ -31,9 +31,9 @@ test('shingles lie in courses: each course is dark at its top, light at its foot
   assert.ok(foot > top * 1.25, `${top} vs ${foot}`);
 });
 
-test('the shingle colours differ, and slots are cut between the tabs', () => {
-  const charcoal = mean(paintShingles({ size: 256, color: 'charcoal' })), grey = mean(paintShingles({ size: 256, color: 'grey' }));
-  assert.ok(grey > charcoal + 15, `${charcoal} vs ${grey}`);
+test('the shingle colors differ, and slots are cut between the tabs', () => {
+  const charcoal = mean(paintShingles({ size: 256, color: 'charcoal' })), gray = mean(paintShingles({ size: 256, color: 'gray' }));
+  assert.ok(gray > charcoal + 15, `${charcoal} vs ${gray}`);
   const p = paintShingles({ size: 480, age: 0 });
   let lo = 255;
   for (const h of p.height) lo = Math.min(lo, h);

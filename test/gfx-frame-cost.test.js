@@ -47,7 +47,7 @@ test('behind glass, only the part of the picture its rays can reach is drawn, wi
   const cut = pass('transmission').scissor;
   assert.ok(cut, 'the transmission pass is cut to a rectangle');
   const [x, y, w, h] = cut;
-  // The glass is in the middle of the picture, and small: the rectangle is round the middle, and a small part of it.
+  // The glass is in the middle of the picture, and small: the rectangle is around the middle, and a small part of it.
   assert.ok(x < W / 2 && x + w > W / 2 && y < H / 2 && y + h > H / 2);
   assert.ok(w * h < 0.1 * W * H, `a small part of the picture (${w}x${h})`);
   // What is behind the glass is drawn behind it; what is off to the side is not, but is drawn on the canvas.
@@ -72,7 +72,7 @@ test('where the glass reads the map, it reads inside what was drawn', () => {
   assert.ok(u0 * W >= x + 60 && u1 * W <= x + w - 60 && v0 * H >= y + 60 && v1 * H <= y + h - 60);
 });
 
-test('the whole map is drawn for rough glass, glass that moves itself, glass round the camera, or when asked', () => {
+test('the whole map is drawn for rough glass, glass that moves itself, glass around the camera, or when asked', () => {
   const cases = {
     'asked for': (r) => { r.cropTransmission = false; return glass(); },
     'rough glass': () => glass(0.9),
@@ -148,12 +148,12 @@ test('WebGL uniforms are sent only when they change', () => {
   const u = new Uniforms(gl, {});
   u.set('roughness', 0.5, 'f');
   u.set('roughness', 0.5, 'f');
-  const colour = [1, 0.5, 0.25];
-  u.set('diffuse', colour, 'v3');
+  const color = [1, 0.5, 0.25];
+  u.set('diffuse', color, 'v3');
   u.set('diffuse', [1, 0.5, 0.25], 'v3');
   // An array changed in place is still seen to change.
-  colour[2] = 0;
-  u.set('diffuse', colour, 'v3');
+  color[2] = 0;
+  u.set('diffuse', color, 'v3');
   u.set('roughness', 0.75, 'f');
   assert.deepEqual(sent, [['roughness', 0.5], ['diffuse', [1, 0.5, 0.25]], ['diffuse', [1, 0.5, 0]], ['roughness', 0.75]]);
 });

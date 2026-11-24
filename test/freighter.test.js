@@ -17,7 +17,7 @@ test('the freighter stands on the ground facing +z, with its origin at the back 
   near(box.max.z - box.min.z, FREIGHTER.length, 0.01, 'length');
   near((box.max.x + box.min.x) / 2, 0, 0.01, 'centered across');
   // The nose is at +z: the light bar is in front of the rear doors.
-  assert.ok(f.parts.led_bar_centre.getWorldPosition(new GFX.Vector3()).z > 8);
+  assert.ok(f.parts.led_bar_center.getWorldPosition(new GFX.Vector3()).z > 8);
   assert.ok(f.parts.rear_doors.getWorldPosition(new GFX.Vector3()).z < -0.9);
   // It pivots about the back wheels: the origin is between the last two axles.
   assert.ok(FREIGHTER.axles[3] < 0 && FREIGHTER.axles[2] > 0);
@@ -54,7 +54,7 @@ test('it is built from the freighter\'s own parts: every mesh is named once, and
   assert.ok(f.parts.cab_shell.castShadow && f.wheels[0].children[0].castShadow);
 });
 
-/** The numbers and the loop the freighter was made with, as the page it came from has them (metres, seconds, the truck nosed toward −z). */
+/** The numbers and the loop the freighter was made with, as the page it came from has them (meters, seconds, the truck nosed toward −z). */
 function original() {
   const s = { speed: 0, steer: 0, heading: 0, x: 0, z: 0, spin: 0 };
   return Object.assign(s, {
@@ -142,7 +142,7 @@ test('scale changes how big it is in the game\'s units, not how it drives', () =
     a.update(1 / 60, input); b.update(1 / 60, input);
   }
   near(a.heading, b.heading, 1e-12, 'the same turn');
-  near(a.speed, b.speed, 1e-12, 'the same speed in metres a second');
+  near(a.speed, b.speed, 1e-12, 'the same speed in meters a second');
   near(b.group.position.x, a.group.position.x * 0.4, 1e-9, 'x');
   near(b.group.position.z, a.group.position.z * 0.4, 1e-9, 'z');
 });

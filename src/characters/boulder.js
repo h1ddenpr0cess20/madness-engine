@@ -3,7 +3,7 @@
  * `boulder`), several tons of granite, brought down into the dungeon to
  * roll after people. The stone is Rock's own — an icosphere pushed out by layers
  * of noise, sliced flat by a dozen cutting planes, its base ground level,
- * faceted, coloured grain by grain — with a face cut into it: two deep
+ * faceted, colored grain by grain — with a face cut into it: two deep
  * sockets under a heavy brow with a glow of molten orange in each, and moss
  * where water runs off its top.
  *
@@ -54,7 +54,7 @@ const EYES = [1, -1].map((m) => {
 
 const geometries = new Map();
 
-/** The stone, faceted and coloured; made once per detail and shared. */
+/** The stone, faceted and colored; made once per detail and shared. */
 function stone(GFX, detail) {
   if (geometries.has(detail)) return geometries.get(detail);
   const geometry = new GFX.IcosahedronGeometry(1, detail >= 1 ? 5 : 3).toNonIndexed();

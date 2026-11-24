@@ -2,12 +2,12 @@
  * Rock, in granite. The same stone as `heroes/rock`: the same shape (the same
  * noise, the same cutting planes, the same squash and turn), sampled finer so
  * its faces have no grid to them, and a surface of real granite rather than
- * vertex colour: a painted colour map of feldspar, quartz and mica in crisp
+ * vertex color: a painted color map of feldspar, quartz and mica in crisp
  * grains, and a bump map on which the grains stand proud.
  *
- * `createGraniteRock(GFX, { colour })` gives the same handle as `createRock`;
+ * `createGraniteRock(GFX, { color })` gives the same handle as `createRock`;
  * `createGraniteBoulder` the stone alone, { mesh, geometry, material }. The
- * colours are the GRANITES below, by name (GRANITE_CHOICES).
+ * colors are the GRANITES below, by name (GRANITE_CHOICES).
  */
 import { fractal, pixels, texture } from '../textures/painters.js';
 import { createRock, cuttingPlanes, noise } from './rock.js';
@@ -16,11 +16,11 @@ import { createRock, cuttingPlanes, noise } from './rock.js';
 export const GRANITE_DETAIL = 64;
 
 /**
- * The colourways: a ground, a pale feldspar and a glassy quartz (sRGB, 0 to 1),
+ * The colorways: a ground, a pale feldspar and a glassy quartz (sRGB, 0 to 1),
  * and how dark the mica flecks go into the ground.
  */
 export const GRANITES = {
-  grey: { ground: [0.54, 0.51, 0.47], feldspar: [0.84, 0.8, 0.74], quartz: [0.92, 0.92, 0.9], mica: 0.8 },
+  gray: { ground: [0.54, 0.51, 0.47], feldspar: [0.84, 0.8, 0.74], quartz: [0.92, 0.92, 0.9], mica: 0.8 },
   pink: { ground: [0.68, 0.48, 0.45], feldspar: [0.88, 0.68, 0.64], quartz: [0.84, 0.82, 0.8], mica: 0.85 },
   black: { ground: [0.17, 0.17, 0.18], feldspar: [0.34, 0.34, 0.36], quartz: [0.42, 0.42, 0.44], mica: 0.4 },
   white: { ground: [0.8, 0.78, 0.74], feldspar: [0.95, 0.94, 0.9], quartz: [0.97, 0.97, 0.96], mica: 0.9 },
@@ -39,9 +39,9 @@ const ramp = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t *
 const painted = new WeakMap();
 
 /**
- * The granite's maps for one colourway: its colour map, painted once per
- * renderer and colourway, and the bump map they share, on which the grains
- * stand proud. Under node there is no canvas, and the vertex colours carry the
+ * The granite's maps for one colorway: its color map, painted once per
+ * renderer and colorway, and the bump map they share, on which the grains
+ * stand proud. Under node there is no canvas, and the vertex colors carry the
  * tone alone.
  */
 function granite(GFX, name) {
@@ -145,12 +145,12 @@ export function createGraniteStone(GFX, { detail = GRANITE_DETAIL } = {}) {
   return geometry;
 }
 
-/** The granite stone alone: `heroes/rock`'s shape, finely sampled, with its own surface in the colour asked for. */
-export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, colour = 'grey' } = {}) {
-  if (!(colour in GRANITES)) throw new Error(`rock-granite: no granite called ${colour}; there is ${GRANITE_CHOICES.join(', ')}`);
+/** The granite stone alone: `heroes/rock`'s shape, finely sampled, with its own surface in the color asked for. */
+export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, color = 'gray' } = {}) {
+  if (!(color in GRANITES)) throw new Error(`rock-granite: no granite called ${color}; there is ${GRANITE_CHOICES.join(', ')}`);
   const geometry = createGraniteStone(GFX, { detail });
 
-  const { map, bump } = granite(GFX, colour);
+  const { map, bump } = granite(GFX, color);
   const material = new GFX.MeshStandardMaterial({
     name: 'granite',
     vertexColors: true,
@@ -168,7 +168,7 @@ export function createGraniteBoulder(GFX, { detail = GRANITE_DETAIL, colour = 'g
   return { mesh, geometry, material };
 }
 
-/** Rock in granite: `createRock`, with the granite stone in the colour asked for (`grey` by default). */
-export function createGraniteRock(GFX, { colour = 'grey', ...opts } = {}) {
-  return createRock(GFX, { ...opts, boulder: (G) => createGraniteBoulder(G, { colour }) });
+/** Rock in granite: `createRock`, with the granite stone in the color asked for (`gray` by default). */
+export function createGraniteRock(GFX, { color = 'gray', ...opts } = {}) {
+  return createRock(GFX, { ...opts, boulder: (G) => createGraniteBoulder(G, { color }) });
 }

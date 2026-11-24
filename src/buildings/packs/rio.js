@@ -33,12 +33,12 @@ export function quiosque(m, v) {
   m.box('wood', -0.7, 0.7, 0.3, 0.7, 0.78, 0.5, '#a88050');
   m.box('plaster', -0.75, 0.04, 0.4, 0.75, 0.5, 0.55, pickFrom(rnd, ['#f6f6f2', '#2a6a9a']), { skip: ['bottom', 'top'] });
   for (let i = 0; i < 5; i++) m.sphere('hedge', -0.5 + i * 0.22, 0.56, 0.45, 0.08, 0.08, 0.08, '#6a8a30', { detail: 0 });
-  // The awning: a cone of cloth, striped in two colours.
+  // The awning: a cone of cloth, striped in two colors.
   m.cone('cloth', -0.4, 0.9, -0.1, 0.8, 1.0, 8, pickFrom(rnd, ['#f4c040', '#d8402a', '#2a8a9a']));
   return { height: 1.0 };
 }
 
-/** A pousada: a bright colonial inn of two storeys, walls of yellow or pink with green shutters, a tiled roof and a palm court before it. */
+/** A pousada: a bright colonial inn of two stories, walls of yellow or pink with green shutters, a tiled roof and a palm court before it. */
 export function pousada(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, ['#f4d060', '#e8a0a0', '#8ad0b0', '#f0b080']);

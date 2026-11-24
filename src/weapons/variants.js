@@ -62,13 +62,13 @@ export function createRegularGreatsword(GFX, options = {}) {
 }
 
 /** Granite-pommel variants use regular profiles and a chipped-rock guard. */
-const GRANITE_DEFAULTS = Object.freeze({ gripColor: '#101010', graniteColour: 'grey' });
+const GRANITE_DEFAULTS = Object.freeze({ gripColor: '#101010', graniteColor: 'gray' });
 function graniteWeapon(GFX, spec, label, options = {}) {
-  const colour = options.graniteColour ?? options.graniteColor ?? GRANITE_DEFAULTS.graniteColour;
-  if (!Object.hasOwn(GRANITES, colour)) throw new Error(`no granite called ${colour}; choose ${Object.keys(GRANITES).join(', ')}`);
+  const color = options.graniteColor ?? options.graniteColor ?? GRANITE_DEFAULTS.graniteColor;
+  if (!Object.hasOwn(GRANITES, color)) throw new Error(`no granite called ${color}; choose ${Object.keys(GRANITES).join(', ')}`);
   return swordVariant(GFX, { ...spec, guardThickness: 0.024 }, label, 'granite', 'granite-shards', 'banded', {
     ...GRANITE_DEFAULTS, ...options,
-    graniteColour: colour,
+    graniteColor: color,
   });
 }
 export function createGraniteSword(GFX, options = {}) {

@@ -36,7 +36,7 @@ export default person({
   },
   extras(s) {
     glasses(s, { rim: '#16161a', round: true, size: 0.027 });
-    // The stack of zines held out: photocopied sheets, stapled, the top copy's cover a black block on grey.
+    // The stack of zines held out: photocopied sheets, stapled, the top copy's cover a black block on gray.
     const [x, y, z] = STACK, from = s.shapes.length;
     s.part('kit', () => {
       for (let i = 0; i < 6; i++) s.box([x + (i % 2) * 0.003, y + i * 0.008, z], [0.09, 0.004, 0.064], 0.002, { color: i % 2 ? '#e8e4d8' : '#f4f0e8', mat: 'paper', bone: 'chest', k: 0.001 });

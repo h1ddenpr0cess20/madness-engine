@@ -13,16 +13,16 @@ export const cached = (key, make) => {
 /**
  * What the posters on the walls and the stencil on the shutters say: each
  * game's own. `bands` are the names on the bill; `headline` tops the big
- * flyer (null for a band off the bill), in one of `colours`; the bill's flyer
- * is in one of `billColours`, lettered in `billInk`; `badge` is stamped on the
- * small one; `shutter` is the two words stencilled on a roll-up door. As
+ * flyer (null for a band off the bill), in one of `colors`; the bill's flyer
+ * is in one of `billColors`, lettered in `billInk`; `badge` is stamped on the
+ * small one; `shutter` is the two words stenciled on a roll-up door. As
  * Metroll has them, until a game says otherwise with `bill()`.
  */
 const BILL = {
   bands: ['IRON GOSPEL', 'BLACK COUNTRY', 'NIGHT MARE', 'DIRGE', 'SLAUGHTER BAY', 'CORPSE GRINDER', 'WALL OF DEATH', 'FROSTBITE', 'GRAVEYARD', 'LAST STAND', 'HELL YEAH', 'LOUDER'],
   headline: 'LIVE · LOUD',
-  colours: ['#c8302a', '#2a4a8a', '#e8a020'],
-  billColours: ['#1a1a20', '#3a5a3a', '#6a2a6a'],
+  colors: ['#c8302a', '#2a4a8a', '#e8a020'],
+  billColors: ['#1a1a20', '#3a5a3a', '#6a2a6a'],
   billInk: '#f0d070',
   badge: 'SOLD OUT',
   shutter: ['CLOSED', 'SET'],
@@ -60,7 +60,7 @@ function brick(GFX, { posters = false } = {}) {
   const poster = (ctx) => {
     const r = random(77);
     const pick = (list) => list[Math.floor(r() * list.length)];
-    // A flyer: a bold block of colour, a big shape, a name in poster letters, tape at the corners.
+    // A flyer: a bold block of color, a big shape, a name in poster letters, tape at the corners.
     const flyer = (x, y, w, h, bg, fg, name, shape, tilt) => {
       ctx.save();
       ctx.translate(x + w / 2, y + h / 2);
@@ -92,8 +92,8 @@ function brick(GFX, { posters = false } = {}) {
       ctx.fillRect(w / 2 - 13, -h / 2 - 3, 18, 8);
       ctx.restore();
     };
-    flyer(10, 18, 104, 138, pick(BILL.colours), '#ffffff', BILL.headline ?? pick(BILL.bands), 'sun', -0.05);
-    flyer(134, 96, 112, 142, pick(BILL.billColours), BILL.billInk, pick(BILL.bands.filter((b) => b !== BILL.headline)), 'bolt', 0.04);
+    flyer(10, 18, 104, 138, pick(BILL.colors), '#ffffff', BILL.headline ?? pick(BILL.bands), 'sun', -0.05);
+    flyer(134, 96, 112, 142, pick(BILL.billColors), BILL.billInk, pick(BILL.bands.filter((b) => b !== BILL.headline)), 'bolt', 0.04);
     flyer(150, 8, 80, 78, '#f5f0e6', '#d9232f', BILL.badge, 'rings', 0.06);
   };
   return {
@@ -186,7 +186,7 @@ export function gaffTexture(GFX) {
   });
 }
 
-/** A roll-up shutter: ribbed steel, scuffed, with two words stencilled across it (BILL.shutter: CLOSED SET, STAFF ONLY) and hazard stripes at the foot. */
+/** A roll-up shutter: ribbed steel, scuffed, with two words stenciled across it (BILL.shutter: CLOSED SET, STAFF ONLY) and hazard stripes at the foot. */
 export function shutterTexture(GFX) {
   return cached('shutter', () => {
     const size = 256;
@@ -284,7 +284,7 @@ export function panelTexture(GFX, look = 'flat') {
   });
 }
 
-/** A soft round glow, for halos. White in the middle, clear at the edge: tint it with the material's colour. */
+/** A soft round glow, for halos. White in the middle, clear at the edge: tint it with the material's color. */
 export function glowTexture(GFX) {
   return cached('glow', () => {
     const [c, ctx] = canvas(64);

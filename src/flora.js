@@ -201,7 +201,7 @@ const v3 = {
  * A tube through `pts`, `radii` wide at each, `sides` round, smooth-shaded: one run of rings that every segment
  * shares, so a bend has no gap or step in it (a ring at each point stands square to the way the path goes
  * through it, and carries its twist along rather than starting afresh). `mark` ({ at(ring, side), col }) paints some
- * of its faces another colour: marks on the surface itself, not anything standing off it.
+ * of its faces another color: marks on the surface itself, not anything standing off it.
  */
 function tube(m, mat, pts, radii, sides, col, mark = null) {
   const n = pts.length;
@@ -225,7 +225,7 @@ function tube(m, mat, pts, radii, sides, col, mark = null) {
 /**
  * A leaf card: a square of the foliage atlas (textures/foliage.js) at `p`, `size` across, turned to face `face`
  * with its twig toward `up`; drawn both ways round, each side shaded as the crown is at that point (`normal`), and
- * coloured `col` (darker inside the crown and under it).
+ * colored `col` (darker inside the crown and under it).
  */
 function card(m, mat, p, face, up, size, normal, col, square) {
   const f = v3.norm(face);
@@ -366,7 +366,7 @@ export function leafy(m, { hi = true, seed = 0, form = 'oak', leaf = 'leafCard',
 }
 
 /**
- * A spruce (or fir) of needle cards: a straight trunk to the top and whorls of boughs round it, each a card of
+ * A spruce (or fir) of needle cards: a straight trunk to the top and whorls of boughs around it, each a card of
  * needles (textures/foliage.js `'needle'`) reaching out and down a little, longest near the ground; a little over
  * a tile and a half high, half a tile across at the foot, as `pine`.
  */
@@ -386,7 +386,7 @@ export function spruce(m, { hi = true, seed = 0, needle = 'needleCard', bark = '
       const side = [-out[2], 0, out[0]];
       const lit = 0.55 + 0.45 * f;
       const normal = v3.norm([out[0], 0.7, out[2]]);
-      // The bough lies with its face up and the spray along it; two more sprays of it tilted either way round it, so it is full from every side.
+      // The bough lies with its face up and the spray along it; two more sprays of it tilted either way around it, so it is full from every side.
       let flat = v3.norm(v3.cross(dir, side));
       if (flat[1] < 0) flat = v3.mul(flat, -1);
       const tilt = (ang) => v3.add(v3.mul(flat, Math.cos(ang)), v3.mul(v3.cross(dir, flat), Math.sin(ang)));

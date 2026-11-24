@@ -1,7 +1,7 @@
 /**
  * A board of any species from `textures/wood`, in any finish: the reusable
  * wood, as a prop to look at. A board is `length` by `width` by `thickness`
- * metres, lying flat on its face (+y), with its grain along its length (x).
+ * meters, lying flat on its face (+y), with its grain along its length (x).
  *
  * The finishes: `raw` (sawn, matt), `sanded` (a smooth oil-like satin), and
  * `lacquered` (a sealed clearcoat over the sanded face).
@@ -16,7 +16,7 @@ export const WOOD_LOOKS = Object.freeze({
 });
 const FINISH = WOOD_LOOKS;
 
-/** Texture coordinates from the board's place: one repeat a metre, the grain along x on every face. */
+/** Texture coordinates from the board's place: one repeat a meter, the grain along x on every face. */
 function worldUV(GFX, geometry, scale) {
   const p = geometry.attributes.position, nrm = geometry.attributes.normal;
   const uv = new Float32Array(p.count * 2);
@@ -52,7 +52,7 @@ export function createWoodBoard(GFX, { species = 'walnut', finish = 'sanded', le
   }
   const material = woodBoardMaterial(GFX, species, finish);
   const geometry = new GFX.BoxGeometry(length, thickness, width);
-  // One repeat of the library's map is a metre of board: the same for every board of a species.
+  // One repeat of the library's map is a meter of board: the same for every board of a species.
   worldUV(GFX, geometry, 1);
   const mesh = new GFX.Mesh(geometry, material);
   mesh.name = `${finish} ${species} board`;

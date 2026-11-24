@@ -3,7 +3,7 @@ import { grainy } from '../models/skins.js';
 
 /**
  * A debating podium: a lectern with a plinth, a column, a reading surface
- * tipped towards whoever stands behind it, and a colored panel on its front,
+ * tipped toward whoever stands behind it, and a colored panel on its front,
  * which is the one place it says whose it is.
  *
  * It faces +z, as a person does, so a speaker stands behind it on the -z side
@@ -11,7 +11,7 @@ import { grainy } from '../models/skins.js';
  * people (about 0.8 to 0.9 tall): the reading surface comes to a person's
  * chest, `PODIUM_TOP` up.
  *
- * `podium` is the plain one, with a grey panel. `podiumOf({ accent })` is one
+ * `podium` is the plain one, with a gray panel. `podiumOf({ accent })` is one
  * with a panel of any color: asking twice for the same color gives the same
  * definition, so it is baked once, however many podiums are stood up.
  */
@@ -78,7 +78,7 @@ export function podiumOf({ accent = PODIUM_ACCENT } = {}) {
   return made.get(key);
 }
 
-/** The plain podium, with a grey panel. */
+/** The plain podium, with a gray panel. */
 export const podium = podiumOf();
 
 export default podium;

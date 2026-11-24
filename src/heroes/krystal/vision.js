@@ -1,10 +1,10 @@
 /**
- * The visions: coloured mist swirling inside the glass, drawn by marching a
+ * The visions: colored mist swirling inside the glass, drawn by marching a
  * ray through the ball and adding up the light of what it passes.
  *
  * The mist is a vortex — turned about the upright, harder toward the middle —
  * whose space is then folded back on itself a few times with sines, which is
- * what makes the wisps curl and split rather than just rotate. Colour comes
+ * what makes the wisps curl and split rather than just rotate. Color comes
  * from where in that folded space a wisp lies, run through a palette that
  * goes violet, magenta, rose, gold, teal; `hue` slides the whole palette
  * round, so a mood can lean the visions toward one end of it. `tint` multiplies the light, to take the palette toward one color it
@@ -260,7 +260,7 @@ export function createVisionMaterial(GFX) {
  * The same palette on the CPU, for what the visions light outside the glass:
  * the stand, the aura. Returns 0..1 RGB.
  */
-export function paletteColour(t) {
+export function paletteColor(t) {
   const a = [0.56, 0.40, 0.62];
   const b = [0.44, 0.38, 0.38];
   const d = [0.0, 0.30, 0.62];

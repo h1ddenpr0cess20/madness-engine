@@ -50,7 +50,7 @@ const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const smooth = (t) => { t = clamp(t); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 
-/** How big a 'low' cover is painted, square: its colours and shapes for a book seen from afar, the detail left out. */
+/** How big a 'low' cover is painted, square: its colors and shapes for a book seen from afar, the detail left out. */
 export const LOW_SIZE = 64;
 
 export const DEFAULTS = {
@@ -103,7 +103,7 @@ function along(x0, y0, psi0, k, t, out) {
 }
 
 /**
- * The cover's centre line at openness `a` (0 shut, 1 lying flat): its five
+ * The cover's center line at openness `a` (0 shut, 1 lying flat): its five
  * runs and where each begins. The back board is fixed; the hinges are the
  * only places it bends. The front hinge unbends over the first half of the
  * opening, the back hinge (so the spine rolls flat) over the second.
@@ -130,7 +130,7 @@ function layoutAt(plan, a, segs = []) {
   return segs;
 }
 
-/** The centre line at arc length `s`: [x, y, heading], extended straight past either end. */
+/** The center line at arc length `s`: [x, y, heading], extended straight past either end. */
 function atLayout(segs, s, out) {
   let i = segs.length - 1;
   while (i > 0 && segs[i].s0 > s) i--;
@@ -391,7 +391,7 @@ export function createBook(GFX, options = {}) {
     const tint = 1 + ((((k * 7919) % 13) / 13) - 0.5) * 0.04;
     const gutterShade = (s) => shadeOf((0.66 + 0.34 * smooth(s / 0.08)) * tint);
     const lr = th / 2;
-    // Fine where the leaf bends through the gutter (the bend can be a few millimetres long, and a column must fall in it).
+    // Fine where the leaf bends through the gutter (the bend can be a few millimeters long, and a column must fall in it).
     const sg = gridOf([0, 0.03, 0.2], -embed + lr, len - lr, (s) => (s < 0.03 ? 0.0015 : s < 0.2 ? 0.006 : 0.02));
     const zg = [lr, o.height - lr];
     const across = (s) => clamp(s / len);

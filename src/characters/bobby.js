@@ -1,10 +1,10 @@
 import { buttons, cloth, cord, hold, person, strap } from './person.js';
-import { moustache } from './wardrobe.js';
+import { mustache } from './wardrobe.js';
 
 /**
  * The Bobby: a London constable on the beat, in the tall custodian helmet
  * with its star badge and its knob on top, the dark tunic buttoned up in
- * silver, the chequered band, a whistle on its chain, and the hands behind
+ * silver, the checkred band, a whistle on its chain, and the hands behind
  * the back, rocking heel to toe. Evening all. Mind how you roll. About 1.0
  * tiles tall, helmet and all.
  */
@@ -34,7 +34,7 @@ export default person({
     },
   },
   extras(s) {
-    moustache(s, { color: '#5a3a24', wide: 1.1 });
+    mustache(s, { color: '#5a3a24', wide: 1.1 });
     s.part('kit', () => {
       const H = { color: '#14161e', mat: 'cloth', bone: 'head' };
       // The helmet: tall, domed, a rim, the badge on the front and the knob on top.

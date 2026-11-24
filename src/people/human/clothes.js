@@ -93,7 +93,7 @@ function convex(t) {
 
 /**
  * Cloth hanging from a body table: at each height, the most of the body
- * within `reach` above it, less `slope(th)` per metre down (the cloth drawn
+ * within `reach` above it, less `slope(th)` per meter down (the cloth drawn
  * in as it falls), plus `ease`. Never inside the body.
  */
 function drape(body, { reach, slope, ease, up = 1 }) {
@@ -790,14 +790,14 @@ function toeCap(part, loop, m, detail) {
   const ankle = mirror(JOINTS.ankle, m);
   const J = Math.round(14 * detail) + 4;
   const ease = 0.0013;
-  // The skin's UV scale here (UV per metre round the edge), so the cap's knit is the same size as the shell's.
+  // The skin's UV scale here (UV per meter round the edge), so the cap's knit is the same size as the shell's.
   let du = 0, dp = 0;
   for (let k = 0; k < loop.length; k++) {
     const a = loop[k], b = loop[(k + 1) % loop.length];
     du += Math.hypot(part.uv[a * 2] - part.uv[b * 2], part.uv[a * 2 + 1] - part.uv[b * 2 + 1]);
     dp += len(sub(P(a), P(b)));
   }
-  const perMetre = du / (dp || 1);
+  const perMeter = du / (dp || 1);
   const along = new Array(ring.length + 1).fill(0), prev = [];
   part.grid(J, ring.length, (j, k) => {
     const kk = k % ring.length, q = ring[kk];
@@ -817,7 +817,7 @@ function toeCap(part, loop, m, detail) {
     // (Rows are made in turn, so each column's last point is the row before's.)
     if (j > 0) along[k] += len(sub(p, prev[k]));
     prev[k] = p;
-    const uv = [part.uv[loop[kk] * 2], part.uv[loop[kk] * 2 + 1] + along[k] * perMetre];
+    const uv = [part.uv[loop[kk] * 2], part.uv[loop[kk] * 2 + 1] + along[k] * perMeter];
     return { p, uv, w, tint: part.tint[loop[kk]], zone: { zone: 'foot', y: p[1], d: p[2] - ankle[2], x: Math.abs(p[0]), sx: p[0], z: p[2] } };
   });
 }
@@ -1091,7 +1091,7 @@ const frontLine = (open, part) => (open ? (q, p, z) => {
   return [s * frontGap(q[1]), q[1], q[2]];
 } : null);
 
-/** The knit rib at the waist (`band`) or the wrists (`cuffs`): snug, a few millimetres thick. */
+/** The knit rib at the waist (`band`) or the wrists (`cuffs`): snug, a few millimeters thick. */
 function ribShell(detail, under, open, part) {
   return skinShell(part === 'band' ? 'waistband' : 'cuffs', J.rib ?? 'rib', {
     level: detail >= 0.8 ? 1 : 0,
@@ -1149,7 +1149,7 @@ function zip(tape, teeth, path, { pull = true } = {}) {
   box(teeth, at(0, 0.021, 0.0042), side, down, top.n, [0.0034, 0.011, 0.0008], top.w);
 }
 
-/** A rounded box: centre `c`, axes `u`, `v`, `n`, half-sizes `h`. */
+/** A rounded box: center `c`, axes `u`, `v`, `n`, half-sizes `h`. */
 function box(part, c, u, v, n, h, w) {
   part.grid(8, 16, (i, j) => {
     const lat = (i / 8 - 0.5) * Math.PI, lon = (j / 16) * Math.PI * 2;

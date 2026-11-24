@@ -1,15 +1,15 @@
 /**
  * Building facades, painted from what a real facade is made of and checked against
- * photographs of real buildings: one storey of one bay, `TILE` metres square, to be
+ * photographs of real buildings: one story of one bay, `TILE` meters square, to be
  * repeated up a wall and along it.
  *
  *   import { facadeTexture, FACADES } from 'madness-engine/textures/facades';
  *   const { map, bump } = facadeTexture(GFX, 'curtain');
  *
- * - `curtain`: a glass curtain wall. Three panes of blue-grey reflective glass a
- *   storey, each with its own tone and the soft reflection of sky and cloud (and a
+ * - `curtain`: a glass curtain wall. Three panes of blue-gray reflective glass a
+ *   story, each with its own tone and the soft reflection of sky and cloud (and a
  *   darker one of the building across the street), silver mullions between them,
- *   and a spandrel panel at the foot of each storey, with the slab line across it.
+ *   and a spandrel panel at the foot of each story, with the slab line across it.
  * - `precast`: cream precast concrete panels, with the grain of the formwork and
  *   the sand in the mix, a horizontal joint, punched windows with dark frames and
  *   a deep reveal, and a darker spandrel band under them.
@@ -20,7 +20,7 @@
  *   dark in its joints, round an arched window with a ring of dressed voussoirs
  *   and a projecting sill.
  *
- * Colours are neutral enough to be tinted by the vertex colour of the building
+ * Colors are neutral enough to be tinted by the vertex color of the building
  * they are on (a different blue, a different cream); the glass of the curtain wall
  * and the windows are dark so a tint barely moves them.
  *
@@ -31,7 +31,7 @@
 import { fractal } from './painters.js';
 import { Pixels, clamp, hash, lerp, made, prng, ramp } from './pixel-kit.js';
 
-/** How many metres one tile spans, across and up. */
+/** How many meters one tile spans, across and up. */
 export const TILE = 3.6;
 
 export const FACADES = Object.freeze(['curtain', 'precast', 'terracotta', 'sandstone']);
@@ -55,7 +55,7 @@ function curtain(s, { seed }) {
       else if (v > 0.74 - 0.014 && v < 0.74 + 0.01) { rgb = [196, 199, 204]; h = 0.82; }
       else if (v > 0.965 || v < 0.01) { rgb = [190, 193, 198]; h = 0.8; }
       else if (!spandrel) {
-        // Vision glass: a deep blue-grey with the sky in it, lighter high up, cloud and the street opposite as soft patches.
+        // Vision glass: a deep blue-gray with the sky in it, lighter high up, cloud and the street opposite as soft patches.
         const cloud = ramp(0.4, 0.85, sky(u * 0.9 + pane * 0.07, v * 0.6));
         const block = ramp(0.45, 0.8, city(u * 0.8 + pane * 0.05, v * 0.7));
         const base = mix([54, 82, 108], [96, 132, 164], clamp(1 - v / 0.74) * 0.8);
@@ -102,7 +102,7 @@ function precast(s, { seed }) {
           else { rgb = scale(rgb, 0.78); h = 0.4; } // the shadowed reveal
         }
       }
-      // The horizontal panel joint at the foot of the storey, and one halfway up.
+      // The horizontal panel joint at the foot of the story, and one halfway up.
       const j = Math.min(Math.abs(v - 0.0), Math.abs(v - 1));
       if (j < 0.004) { rgb = scale(rgb, 0.55); h = 0.2; }
       s.r[i] = rgb[0]; s.g[i] = rgb[1]; s.b[i] = rgb[2]; s.h[i] = h;
@@ -122,7 +122,7 @@ function terracotta(s, { seed }) {
       const i = y * n + x, u = x / n, v = y / n;
       let rgb, h;
       if (u > glass.u0 && u < glass.u1) {
-        // The glass bay: tall, in a silver frame with a transom at each storey, blue-green with the sky in it.
+        // The glass bay: tall, in a silver frame with a transom at each story, blue-green with the sky in it.
         const e = Math.min(u - glass.u0, glass.u1 - u);
         if (e < 0.014) { rgb = [190, 194, 196]; h = 0.84; }
         else if (v < 0.012 || v > 0.985 || Math.abs(v - 0.5) < 0.008) { rgb = [180, 184, 188]; h = 0.8; }

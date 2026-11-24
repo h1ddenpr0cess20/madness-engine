@@ -7,7 +7,7 @@ import { build, Sculpt } from './sdf.js';
  * them over); `meshOf` makes the geometry and materials from them.
  *
  * A definition: `name`, `sculpt(s)`, `materials` ({ name: physical material
- * options }; the vertex colours give the colour), `cell` (the grid step,
+ * options }; the vertex colors give the color), `cell` (the grid step,
  * in tiles), `cells` ({ part: step } for finer parts) and `coarse` (a
  * factor on all of them).
  */

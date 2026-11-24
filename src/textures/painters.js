@@ -5,7 +5,7 @@
  * curtain, corrugated iron, damask, clapboard, stucco, a spaceship's hull,
  * castle stone, wallpaper, and the backs of scenery flats), and the bits and
  * pieces that go with them (grilles, gaffer tape, shutters, glows, beams). A floor texture is one tile across and a wall texture one
- * tile across and high, and each comes with a `bump` map. Colour mostly comes
+ * tile across and high, and each comes with a `bump` map. Color mostly comes
  * from the tile or wall under it, so the maps are near white. Under node (the
  * tests) there is no canvas, and everything is `{ map: null, bump: null }`.
  */
@@ -147,7 +147,7 @@ export function pixels(size, shade) {
   return c;
 }
 
-export const grey = (v) => [v, v, v].map((x) => Math.max(0, Math.min(255, x)));
+export const gray = (v) => [v, v, v].map((x) => Math.max(0, Math.min(255, x)));
 
 /**
  * The size every floor and wall is painted at, one tile across: the granite's
@@ -158,7 +158,7 @@ export const DETAIL = 1024;
 /** Device pixels per unit of a painter's 256-unit design. */
 export const K = DETAIL / 256;
 
-/** Fine grain over a painted map, shared with its bump, so the speckle in the colour and the speckle in the relief agree. */
+/** Fine grain over a painted map, shared with its bump, so the speckle in the color and the speckle in the relief agree. */
 const GRAIN = { seed: 881 };
 
 /**
@@ -233,7 +233,7 @@ export function concrete(GFX) {
       const oil = smoothstep(0.7, 0.9, stain(u, v)) * 0.16;
       const joint = Math.min(u, v) < 0.006 ? 0.8 : 1;
       const k = relief ? 0.55 + n(u, v) * 0.4 + (grit(u, v) - 0.5) * 0.2 : base - oil * 0.8;
-      return grey(Math.round(255 * k * joint));
+      return gray(Math.round(255 * k * joint));
     });
     const ctx = c.getContext('2d');
     ctx.strokeStyle = relief ? '#202020' : 'rgba(40,36,32,0.5)';
@@ -279,7 +279,7 @@ export function woodPhoto() {
 /**
  * A map and a bump painted from the walnut photograph by `paint(src, map, bump)`,
  * where `src` is the photograph's pixels (see `sample`). Until the photograph has
- * decoded the maps show `base`, a plain board colour; then they are painted again
+ * decoded the maps show `base`, a plain board color; then they are painted again
  * and the textures are marked changed. Under node both are null.
  */
 export function photoPair(GFX, base, paint, opts = {}) {
@@ -303,7 +303,7 @@ export function photoPair(GFX, base, paint, opts = {}) {
   return { map, bump, ...opts };
 }
 
-/** The photograph's colour at (x, y), wrapping, from its pixel data. */
+/** The photograph's color at (x, y), wrapping, from its pixel data. */
 export function sample(pix, x, y) {
   const i = ((((y % DETAIL) + DETAIL) % DETAIL) * DETAIL + (((x % DETAIL) + DETAIL) % DETAIL)) * 4;
   return [pix[i], pix[i + 1], pix[i + 2]];
@@ -370,12 +370,12 @@ export function checker(GFX) {
     const grime = smoothstep(0.1, 0.0, edge) * 0.25;
     const base = dark ? 0.42 : 0.96;
     const k = relief ? 0.6 + wear * 0.3 - (edge < 0.012 ? 0.5 : 0) : (base - grime) * (0.84 + wear * 0.26) * (edge < 0.012 ? 0.45 : 1);
-    return grey(Math.round(255 * k));
+    return gray(Math.round(255 * k));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
-/** Carpet: a field of woven pile with a diamond pattern laid in it. The theatre. */
+/** Carpet: a field of woven pile with a diamond pattern laid in it. The theater. */
 export function carpet(GFX) {
   const pile = fractal(31, 48, 2), cloud = fractal(5, 3, 3);
   const paint = (relief) => (size) => pixels(size, (u, v) => {
@@ -385,7 +385,7 @@ export function carpet(GFX) {
     const line = smoothstep(0.025, 0, Math.abs(a - 0.42));
     const p = pile(u, v);
     const k = relief ? 0.5 + p * 0.5 : (0.7 + 0.18 * big + 0.28 * small + 0.3 * line) * (0.82 + p * 0.3) * (0.92 + cloud(u, v) * 0.14);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -404,7 +404,7 @@ export function plate(GFX) {
     const raised = smoothstep(1, 0.7, d);
     const w = wear(u, v);
     const k = relief ? 0.2 + raised * 0.8 : (0.58 + raised * 0.34) * (0.8 + w * 0.3);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -415,7 +415,7 @@ export function grass(GFX) {
   const paint = (relief) => (size) => pixels(size, (u, v) => {
     const p = patch(u, v), b = blade(u, v);
     const k = relief ? 0.4 + b * 0.6 : (0.62 + p * 0.38) * (0.74 + b * 0.4);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -430,7 +430,7 @@ export function panels(GFX) {
     const bevel = smoothstep(0.1, 0.02, edge);
     const gap = edge < 0.022 ? 1 : 0;
     const k = relief ? 0.7 - gap * 0.7 - bevel * 0.1 : gap ? 0.25 : (alt ? 0.82 : 1) * (0.94 + bevel * 0.12);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -442,7 +442,7 @@ export function mud(GFX) {
     const churn = a(u, v), rut = b(u, v);
     const puddle = smoothstep(0.52, 0.6, churn);
     const k = relief ? 0.35 + churn * 0.5 + rut * 0.2 : (0.7 + rut * 0.3) * (1 - puddle * 0.35);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -477,7 +477,7 @@ export function asphalt(GFX) {
     const puddle = smoothstep(0.58, 0.66, wet(u, v));
     const speck = grit(u, v) > 0.62 ? 0.18 : 0;
     const k = relief ? 0.5 + (grit(u, v) - 0.5) * 0.5 * (1 - puddle) : (0.62 + n(u, v) * 0.16 + speck) * (1 - puddle * 0.45);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -493,7 +493,7 @@ export function dirt(GFX) {
       const d = Math.hypot(u - x, v - y) / r;
       if (d < 1) k = relief ? 0.6 + (1 - d) * 0.4 : k * (1.12 - d * 0.1);
     }
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -506,7 +506,7 @@ export function grate(GFX) {
     const bar = Math.min(fu, 1 - fu) < 0.14 || Math.min(fv, 1 - fv) < 0.14;
     const edge = Math.min(u, v, 1 - u, 1 - v) < 0.02;
     const k = relief ? (bar || edge ? 0.85 : 0.05) : bar || edge ? 0.72 + wear(u, v) * 0.25 : 0.12;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -524,7 +524,7 @@ export function cobble(GFX) {
     const dome = Math.max(0, 1 - Math.pow(dx ** 4 + dy ** 4, 0.25));
     const joint = dome < 0.08;
     const k = relief ? (joint ? 0 : 0.3 + dome * 0.7) : joint ? 0.25 : tones[(r * 4 + c) % tones.length] * (0.8 + dome * 0.2) * (0.9 + n(u, v) * 0.15);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -537,7 +537,7 @@ export function snow(GFX) {
   const paint = (relief) => (size) => pixels(size, (u, v) => {
     const drift = n(u, v), glint = g(u, v) > 0.82 ? 0.06 : 0;
     const k = relief ? 0.35 + drift * 0.65 : 0.78 + drift * 0.16 + glint;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -548,7 +548,7 @@ export function sand(GFX) {
   const paint = (relief) => (size) => pixels(size, (u, v) => {
     const ripple = 0.5 + 0.5 * Math.sin((v + n(u, v) * 0.25) * Math.PI * 2 * 6);
     const k = relief ? 0.4 + ripple * 0.4 + (g(u, v) - 0.5) * 0.2 : 0.84 + ripple * 0.08 + (g(u, v) - 0.5) * 0.1;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -560,7 +560,7 @@ export function tatami(GFX) {
     const binding = u < 0.05 || u > 0.95;
     const weave = 0.5 + 0.5 * Math.sin(v * Math.PI * 2 * 48) * (0.6 + 0.4 * Math.sin(u * Math.PI * 2 * 3));
     const k = relief ? (binding ? 0.55 : 0.4 + weave * 0.35) : binding ? 0.32 : 0.82 + weave * 0.08 + n(u, v) * 0.06;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -575,7 +575,7 @@ export function terracotta(GFX) {
     const joint = Math.min(fu, fv, 1 - fu, 1 - fv) < 0.025;
     const t = tones[Math.floor(u * 2) + Math.floor(v * 2) * 2];
     const k = relief ? (joint ? 0 : 0.6 + n(u, v) * 0.2) : joint ? 0.62 : t * (0.92 + n(u, v) * 0.1);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -587,7 +587,7 @@ export function marble(GFX) {
     const vein = Math.abs(Math.sin((u * 2 + v + n(u, v) * 2.4) * Math.PI * 2));
     const dark = smoothstep(0.08, 0.0, vein) * 0.35;
     const k = relief ? 0.7 : 0.94 - dark + n(u, v) * 0.04;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -603,7 +603,7 @@ export function mosaic(GFX) {
     const joint = Math.min(fu, fv, 1 - fu, 1 - fv) < 0.09;
     const j = jitter[(cu * 31 + cv) % jitter.length];
     const k = relief ? (joint ? 0.2 : 0.7) : joint ? 0.45 : wave ? 0.12 + j * 0.06 : 0.92 + j * 0.06;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -615,14 +615,14 @@ export function scree(GFX) {
     const facet = Math.abs(n(u, v) - 0.5) * 2;
     const crack = smoothstep(0.06, 0.0, facet) * 0.4;
     const k = relief ? 0.3 + facet * 0.6 : 0.7 + facet * 0.2 + (m(u, v) - 0.5) * 0.12 - crack;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 export const FLOORS = { concrete, planks, checker, carpet, plate, grass, panels, mud, asphalt, dirt, grate, cobble, snow, sand, tatami, terracotta, marble, mosaic, scree };
 
-/** Plywood: a sheet to the tile, screwed to the studs, with a stencilled mark. The garage. */
+/** Plywood: a sheet to the tile, screwed to the studs, with a stenciled mark. The garage. */
 export function plywood(GFX) {
   // A sheet to the tile: veneer grain across the sheet, the seams at its edges, and the screws along the studs.
   return photoPair(GFX, '#b89a6e', (pix, mc, bc) => {
@@ -650,7 +650,7 @@ export function foam(GFX) {
     const h = 1 - Math.max(Math.abs(fu - 0.5), Math.abs(fv - 0.5)) * 2;
     const light = 0.55 + (fu - fv) * 0.5 * (1 - h * 0.2);
     const k = relief ? h : (0.3 + h * 0.6 * light) * (0.85 + sp(u, v) * 0.25);
-    return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
+    return gray(Math.round(255 * Math.max(0, Math.min(1, k))));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -662,7 +662,7 @@ export function curtain(GFX) {
     const f = Math.sin((u * 4 + wob(u, v * 0.2) * 0.6) * Math.PI * 2);
     const fold = 0.5 + 0.5 * f;
     const k = relief ? 0.3 + fold * 0.7 : 0.45 + fold * 0.55 - v * 0.05;
-    return grey(Math.round(255 * k));
+    return gray(Math.round(255 * k));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -674,7 +674,7 @@ export function corrugated(GFX) {
     const rib = 0.5 + 0.5 * Math.sin(u * Math.PI * 2 * 8);
     const r = rust(u, v);
     const k = relief ? 0.2 + rib * 0.8 : (0.5 + rib * 0.45) * (0.8 + r * 0.3);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -689,12 +689,12 @@ export function block(GFX) {
     const fu = ((u + shift) * 2) % 1;
     const joint = Math.min(fr, 1 - fr) < 0.045 || Math.min(fu, 1 - fu) < 0.03;
     const k = relief ? (joint ? 0 : 0.6 + n(u, v) * 0.3) : joint ? 0.28 : 0.74 + n(u, v) * 0.26;
-    return grey(Math.round(255 * k));
+    return gray(Math.round(255 * k));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
-/** Damask paper over panelling, with a gold rail: the theatre's walls. */
+/** Damask paper over panelling, with a gold rail: the theater's walls. */
 export function damask(GFX) {
   const n = fractal(101, 6, 2);
   const paint = (relief) => (size) => pixels(size, (u, v) => {
@@ -704,7 +704,7 @@ export function damask(GFX) {
     const motif = smoothstep(0.34, 0.3, d) * (1 - smoothstep(0.2, 0.16, d)) + smoothstep(0.08, 0.04, Math.hypot(fu, fv));
     const rail = v > 0.9 ? 1 : 0;
     const k = relief ? 0.4 + motif * 0.5 + rail * 0.3 : (0.55 + motif * 0.45) * (0.9 + n(u, v) * 0.15) + rail * 0.3;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -719,7 +719,7 @@ export function canvasWall(GFX) {
     const weave = 0.5 + 0.5 * Math.sin(u * 256 * Math.PI) * Math.sin(v * 256 * Math.PI);
     const sag = 0.94 + 0.06 * Math.sin(f * Math.PI);
     const k = relief ? 0.55 + n(u, v) * 0.2 + weave * 0.15 - seam * 0.3 : (stripe ? 1 : 0.88) * sag * (0.94 + n(u, v) * 0.1 + weave * 0.04) * (1 - seam * 0.2);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -733,7 +733,7 @@ export function fence(GFX) {
     const rail = Math.abs(v - 0.22) < 0.035 || Math.abs(v - 0.78) < 0.035 ? 1 : 0;
     const block = v > 0.32 && v < 0.62 && Math.floor(u * 2) % 2 === 0 && (u * 2) % 1 > 0.08 && (u * 2) % 1 < 0.92 ? 1 : 0;
     const k = relief ? 0.5 + n(u, v) * 0.2 - gap * 0.4 + rail * 0.25 + block * 0.1 : (0.86 + n(u, v) * 0.16) * (1 - gap * 0.5) * (rail ? 0.72 : 1) * (block ? 0.6 : 1);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -771,7 +771,7 @@ export function stucco(GFX) {
     const rough = a(u, v), swirl = b(u, v);
     const foot = v > 0.86 ? 0.78 : 1;
     const k = relief ? 0.35 + rough * 0.65 : (0.84 + rough * 0.12 + swirl * 0.06) * foot;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -785,7 +785,7 @@ export function hull(GFX) {
       const seam = Math.min(fu, fv, 1 - fu, 1 - fv) < 0.012;
       const stripe = Math.abs(v - 0.5) < 0.035 ? 1 : 0;
       const k = relief ? (seam ? 0 : 0.6 + n(u, v) * 0.1) : seam ? 0.3 : (0.78 + n(u, v) * 0.12) * (stripe ? 0.6 : 1);
-      return grey(Math.round(255 * Math.min(1, k)));
+      return gray(Math.round(255 * Math.min(1, k)));
     });
     const ctx = c.getContext('2d');
     ctx.fillStyle = relief ? '#fff' : '#9aa0aa';
@@ -815,7 +815,7 @@ export function stone(GFX) {
     const joint = Math.min(fu, 1 - fu) < 0.025 || Math.min(fv, 1 - fv) < 0.03;
     const damp = 1 - smoothstep(0.6, 1, v) * 0.25 * m(u, v);
     const k = relief ? (joint ? 0 : 0.45 + n(u, v) * 0.5) : joint ? 0.22 : tones[r * 2 + c] * (0.8 + n(u, v) * 0.25) * damp;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -823,8 +823,8 @@ export function stone(GFX) {
 /**
  * Ashlar: dressed stone laid in level courses, eight to the tile, each block
  * its own length and its own tone, the arrises a little worn and the joints
- * fine. At a town's scale a tile is about a storey, so a wall shows three or
- * four courses to a storey. The courses tile across and up; with `level`
+ * fine. At a town's scale a tile is about a story, so a wall shows three or
+ * four courses to a story. The courses tile across and up; with `level`
  * texture coordinates (see the mesher) they run level round a building.
  */
 export function ashlar(GFX) {
@@ -848,11 +848,11 @@ export function ashlar(GFX) {
     // Distance to the nearest joint, in pixels.
     const px = Math.min(fu * blk.len, (1 - fu) * blk.len) * size, py = Math.min(fv, 1 - fv) * (size / courses);
     const e = Math.min(px, py);
-    if (e < 1.1) return grey(Math.round(255 * (relief ? 0.08 : 0.5)));
+    if (e < 1.1) return gray(Math.round(255 * (relief ? 0.08 : 0.5)));
     const arris = smoothstep(1.1, 3.6, e);
     const p = pit(u, v), w = weather(u, v);
     const k = relief ? 0.35 + arris * 0.4 + p * 0.25 : (blk.tone * (0.9 + p * 0.12) * (0.82 + arris * 0.18)) * (0.92 + w * 0.12) * (1 - (blk.dv - 0.5) * fv * 0.06);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -883,11 +883,11 @@ export function rubble(GFX) {
     const g = grit(u, v);
     if (edge < 0.07) {
       const k = relief ? 0.05 + g * 0.1 : 0.58 + g * 0.1;
-      return grey(Math.round(255 * k));
+      return gray(Math.round(255 * k));
     }
     const dome = smoothstep(0.07, 0.3, edge);
     const k = relief ? 0.25 + dome * 0.55 + g * 0.2 : best.tone * (0.8 + dome * 0.2) * (0.9 + g * 0.14);
-    if (relief) return grey(Math.round(255 * Math.min(1, k)));
+    if (relief) return gray(Math.round(255 * Math.min(1, k)));
     const t = best.cast * 0.08;
     return [Math.round(255 * Math.min(1, k * (1 + t))), Math.round(255 * Math.min(1, k)), Math.round(255 * Math.min(1, k * (1 - t)))];
   });
@@ -911,7 +911,7 @@ export function bedrock(GFX) {
     const k = relief
       ? 0.35 + g * 0.35 + f * 0.2 + bed * 0.08 - line * 0.25
       : (0.74 + (b - 0.5) * 0.22 + (g - 0.5) * 0.16 + (f - 0.5) * 0.1 + (bed - 0.5) * 0.05) * (1 - line * 0.16);
-    return grey(Math.round(255 * Math.max(0, Math.min(1, k))));
+    return gray(Math.round(255 * Math.max(0, Math.min(1, k))));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -929,12 +929,12 @@ export function wallpaper(GFX) {
     const k = relief
       ? rail ? 0.9 : panel ? (box ? 0.7 : 0.5) : 0.5 + fine * 0.05
       : rail ? 0.95 : panel ? (box ? 0.5 : 0.42) * (0.9 + n(u, v) * 0.15) : stripe * (0.92 + fine * 0.05) * (0.94 + n(u, v) * 0.08);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
-/** The back of the set: scenery flats from behind, canvas on a timber frame, braced, stencilled with the stage. */
+/** The back of the set: scenery flats from behind, canvas on a timber frame, braced, stenciled with the stage. */
 export function flats(GFX) {
   const n = fractal(233, 4, 3), grain = fractal(239, 2, 4);
   const paint = (relief) => (size) => {
@@ -944,7 +944,7 @@ export function flats(GFX) {
       const brace = Math.abs((u - 0.5) - (v - 0.45) * 0.9) < 0.022 && u > 0.5 && v > 0.45;
       const wood = stile || rail || brace;
       const k = relief ? (wood ? 0.85 : 0.4 + n(u, v) * 0.1) : wood ? 0.7 + grain(u, v * 4) * 0.2 : 0.9 + n(u, v) * 0.1;
-      return grey(Math.round(255 * Math.min(1, k)));
+      return gray(Math.round(255 * Math.min(1, k)));
     });
     if (!relief) {
       const ctx = c.getContext('2d');
@@ -972,7 +972,7 @@ export function sandstone(GFX) {
     const joint = edge < 0.03;
     const strata = 0.5 + 0.5 * Math.sin((v * 2 + n(u, v) * 0.3) * Math.PI * 2 * 5);
     const k = relief ? (joint ? 0 : smoothstep(0.0, 0.08, edge) * (0.6 + n(u, v) * 0.3)) : joint ? 0.45 : 0.8 + strata * 0.08 + m(u, v) * 0.08;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -984,7 +984,7 @@ export function cliff(GFX) {
     const strata = Math.abs(Math.sin((v + u * 0.3 + n(u, v) * 0.4) * Math.PI * 2 * 3));
     const fissure = smoothstep(0.05, 0.0, strata) * 0.45;
     const k = relief ? 0.25 + n(u, v) * 0.6 - fissure : 0.66 + n(u, v) * 0.22 + m(u, v) * 0.1 - fissure;
-    return grey(Math.round(255 * Math.min(1, Math.max(0, k))));
+    return gray(Math.round(255 * Math.min(1, Math.max(0, k))));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -997,7 +997,7 @@ export function shoji(GFX) {
     const bar = Math.min(fu, 1 - fu) < 0.04 || Math.min(fv, 1 - fv) < 0.04;
     const frame = u < 0.04 || u > 0.96 || v > 0.9;
     const k = relief ? (bar || frame ? 0.9 : 0.45) : frame ? 0.35 : bar ? 0.5 : 0.96 + n(u, v) * 0.03;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -1030,7 +1030,7 @@ export function haussmann(GFX) {
     const shutter = !win && Math.abs(u - 0.5) < 0.27 && v > 0.12 && v < 0.78;
     const rail = v > 0.66 && v < 0.72 && Math.abs(u - 0.5) < 0.3 && (Math.floor(u * 40) % 2 === 0 || v < 0.675);
     const k = relief ? (win ? 0.1 : rail ? 0.9 : joint ? 0.3 : 0.65) : rail ? 0.15 : win ? 0.22 : shutter ? 0.55 : joint ? 0.7 : 0.9 + n(u, v) * 0.06;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -1044,7 +1044,7 @@ export function azulejo(GFX) {
     const petal = r < 0.18 + 0.14 * Math.abs(Math.cos(a * 2));
     const corner = Math.hypot(Math.min(fu, 1 - fu), Math.min(fv, 1 - fv)) < 0.16;
     const k = relief ? (joint ? 0.2 : 0.75) : joint ? 0.8 : petal || corner ? 0.35 : 0.97;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }
@@ -1055,7 +1055,7 @@ export function hedge(GFX) {
   const paint = (relief) => (size) => pixels(size, (u, v) => {
     const leaf = n(u, v);
     const k = relief ? 0.2 + leaf * 0.8 : 0.55 + leaf * 0.35 + m(u, v) * 0.1;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
   return pair(GFX, DETAIL, paint(false), paint(true));
 }

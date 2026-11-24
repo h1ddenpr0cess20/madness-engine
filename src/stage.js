@@ -104,7 +104,7 @@ const canvasTexture = (canvas) => {
  * @param options
  *   - `lens`: { distance, fov } (LENS)
  *   - `view`: where the camera is round the target (views/*; the arcade's by default)
- *   - `sky`: a painted canvas round everything, or a colour (`backdrop`)
+ *   - `sky`: a painted canvas round everything, or a color (`backdrop`)
  *   - `room`: a painted canvas the reflections come from, or null for none
  *   - `lights`: any of LIGHTS' parts to change; `fill: null` for no fill
  *   - `fixtures`: how many real lights a light show (scenery/lightshow) may set at once (0).
@@ -191,7 +191,7 @@ export async function createStage(host, {
     scene.add(fill, fill.target);
   }
 
-  // Opaque all round: glass refracts whatever is behind it, and over nothing at all it would bend the renderer's stand-in grey.
+  // Opaque all round: glass refracts whatever is behind it, and over nothing at all it would bend the renderer's stand-in gray.
   const backdropMaterial = new GFX.MeshBasicMaterial({ name: 'backdrop', color: new GFX.Color(backdrop), side: GFX.BackSide, depthWrite: false });
   const dome = new GFX.Mesh(new GFX.SphereGeometry(300, 64, 32), backdropMaterial);
   dome.renderOrder = -1;
@@ -202,7 +202,7 @@ export async function createStage(host, {
   };
   scene.add(dome);
 
-  // The fixtures nearest the ball: a light show sets where they are, what colour and how bright.
+  // The fixtures nearest the ball: a light show sets where they are, what color and how bright.
   const fixtureLights = Array.from({ length: fixtures }, () => {
     const light = new GFX.PointLight(0xffffff, 0, 7, 1.1);
     scene.add(light);
@@ -220,10 +220,10 @@ export async function createStage(host, {
     target: new GFX.Vector3(),
     /** How hard the camera is being shaken, in tiles. The game sets it and lets it die away. */
     shake: 0,
-    /** Where the key light comes from (a unit vector towards it, `lights.key.from`): move it to move the sun. */
+    /** Where the key light comes from (a unit vector toward it, `lights.key.from`): move it to move the sun. */
     keyFrom: new GFX.Vector3().copy(rig.key.from),
 
-    /** Paints the sky round everything with `canvas` (or the backdrop colour if null). */
+    /** Paints the sky round everything with `canvas` (or the backdrop color if null). */
     setSky(canvas) {
       const map = canvasTexture(canvas);
       backdropMaterial.map = map;
@@ -326,7 +326,7 @@ export async function createStage(host, {
    * (`depth` sets the ratio and the limits). A 24-bit depth buffer tells
    * apart surfaces about d² / (near × 2²⁴) apart at a distance d: a near
    * plane held at 30 cm while the camera backs off hundreds of tiles leaves
-   * surfaces laid a few centimetres apart (a road on the ground, a decal)
+   * surfaces laid a few centimeters apart (a road on the ground, a decal)
    * flickering through each other, so a game that zooms far out lets it go
    * out with the camera (`most: Infinity`). With `reach`, the far plane goes
    * out too, so what the camera backs away from stays in the picture.

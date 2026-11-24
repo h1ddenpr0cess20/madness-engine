@@ -1,5 +1,5 @@
 /**
- * Ground, painted the way the granite is: not as noise with a colour on it
+ * Ground, painted the way the granite is: not as noise with a color on it
  * but as what it is made of.
  *
  *   import { turfTexture } from 'madness-engine/textures/ground';
@@ -10,14 +10,14 @@
  * down its middle, lit on the side that faces the light; laid in four layers
  * over the thatch and soil, the tall ones last. Clover leaves come up between
  * them, dead straw lies in them, and where the lawn is worn the soil shows
- * through with its stones. A tile wraps in both directions, `TILE.turf` metres
+ * through with its stones. A tile wraps in both directions, `TILE.turf` meters
  * across, and comes with a bump map in the same pixels (blades stand out of
  * the soil, tip highest).
  *
  * Gravel is stones laid on stones (angular crushed rock for a railway's
  * ballast, rounded river gravel for a roof or a path) in three sizes, dark in the
  * gaps between, each with the shadow it throws; pavers are fired bricks in a
- * running bond, every one its own colour and speckle with the kiln's dark flash
+ * running bond, every one its own color and speckle with the kiln's dark flash
  * at its edges, a bevel, a chip, and the sand between them with grass seed in
  * it.
  *
@@ -28,7 +28,7 @@
 import { fractal } from './painters.js';
 import { Pixels, clamp, grain, hash, lerp, made, pickStone, prng, ramp } from './pixel-kit.js';
 
-/** How many metres one tile of each spans. */
+/** How many meters one tile of each spans. */
 export const TILE = Object.freeze({ turf: 1.5, gravel: 2, pavers: 1.6 });
 
 const LIGHT = -2.2;
@@ -225,14 +225,14 @@ export function paintGravel({ size = 2048, kind = 'roof', seed = 1 } = {}) {
 
 const BRICKS = {
   brick: [[0.3, [150, 66, 48]], [0.24, [168, 80, 56]], [0.18, [128, 54, 42]], [0.14, [184, 100, 70]], [0.1, [104, 48, 40]], [0.04, [196, 150, 112]]],
-  grey: [[0.4, [150, 150, 148]], [0.3, [128, 128, 128]], [0.2, [170, 168, 162]], [0.1, [104, 104, 106]]],
+  gray: [[0.4, [150, 150, 148]], [0.3, [128, 128, 128]], [0.2, [170, 168, 162]], [0.1, [104, 104, 106]]],
   tan: [[0.4, [190, 164, 124]], [0.3, [172, 142, 104]], [0.2, [208, 186, 150]], [0.1, [150, 118, 90]]],
 };
 
 /**
  * Pavers, as pixels: fired bricks (or concrete blocks) in a running bond, every one its own.
- * @param options `size` (2048); `kind`: 'brick', 'grey' or 'tan'; `wear` (0 to 1, how much grime and moss is in the joints, 0.4); `seed`
- *   One tile is 8 bricks across (200 mm by 100 mm, with a joint of 5 mm) and 16 rows: `TILE.pavers` metres.
+ * @param options `size` (2048); `kind`: 'brick', 'gray' or 'tan'; `wear` (0 to 1, how much grime and moss is in the joints, 0.4); `seed`
+ *   One tile is 8 bricks across (200 mm by 100 mm, with a joint of 5 mm) and 16 rows: `TILE.pavers` meters.
  */
 export function paintPavers({ size = 2048, kind = 'brick', wear = 0.4, seed = 1 } = {}) {
   const s = new Pixels(size);

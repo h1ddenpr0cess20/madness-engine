@@ -249,7 +249,7 @@ test('the character creator: every slot has a default, the built ones change him
   assert.equal(him.look.skin, '#8a5a3c');
   assert.equal(him.features.noseShape, 'aquiline', 'a shape slot is kept as set');
   assert.equal(him.features.tattoo, 'none', 'a slot not built yet is kept');
-  him.customize({ eyeSize: 0.4, hairColour: '#c8a060', hair: 'sidePart' });
+  him.customize({ eyeSize: 0.4, hairColor: '#c8a060', hair: 'sidePart' });
   assert.equal(him.features.eyeSize, 0.4);
   assert.equal(him.look.hair, '#c8a060');
   assert.equal(him.hair.hair, 'sidePart');
@@ -389,7 +389,7 @@ test('every shape slot is baked: each recipe in features.js is in data/shapes.js
   for (const k of ['height', 'muscle', 'weight', 'shoulders', 'face', 'jaw', 'eyeShape', 'eyeSize', 'noseShape', 'mouthShape', 'earShape', 'browArch']) {
     assert.ok(SLOTS[k].ready, `${k} is built`);
   }
-  for (const k of ['age', 'freckles', 'scars', 'tattoo', 'moustache', 'stubble', 'lipColour']) assert.ok(!SLOTS[k].ready, `${k} is not built yet`);
+  for (const k of ['age', 'freckles', 'scars', 'tattoo', 'mustache', 'stubble', 'lipColor']) assert.ok(!SLOTS[k].ready, `${k} is not built yet`);
 });
 
 test('the creator shapes him: the skin, his joints, his eyes and all he wears follow, and he stays on the ground', () => {
@@ -619,7 +619,7 @@ test('a coin flipped goes up turning and comes back to the hand; a shut book is 
   assert.ok(Math.hypot(at[0] - hand[0], at[1] - hand[1], at[2] - hand[2]) < 0.15, 'in the left hand');
   // Gripped by its top edge: the fingers' tips on its near board, the thumb's on its far one, the book between.
   const e = book.group.matrix.elements, face = [e[4], e[5], e[6]].map((v, i, a) => v / Math.hypot(...a));
-  // (The box is centred on the book's origin, so its middle is where the book is.)
+  // (The box is centered on the book's origin, so its middle is where the book is.)
   const off = (bone, p) => { const q = who.point(bone, p); return [0, 1, 2].reduce((t, a) => t + (q[a] - e[12 + a]) * face[a], 0); };
   const tip = (name) => FINGERS[name].joints[3];
   for (const name of ['index', 'middle', 'ring']) assert.ok(off(`${name}3L`, tip(name)) < -0.013, `${name} on the near board`);

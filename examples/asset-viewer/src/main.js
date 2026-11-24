@@ -29,7 +29,7 @@ const el = (tag, props = {}, ...kids) => {
 
 // ———————————————————————————————————————————————— flags
 
-const REASONS = ['Geometry', 'Colour / material', 'Animation', 'Scale / pose', 'Clipping', 'Too heavy', 'Missing', 'Other'];
+const REASONS = ['Geometry', 'Color / material', 'Animation', 'Scale / pose', 'Clipping', 'Too heavy', 'Missing', 'Other'];
 const STORE = 'asset-viewer.flags';
 let flags = {};
 try { flags = JSON.parse(localStorage.getItem(STORE) ?? '{}'); } catch { /* private window: carry on without */ }
@@ -110,7 +110,7 @@ scene.add(plate);
 
 // ———————————————————————————————————————————————— the viewer's state
 
-const view = { item: null, colours: {}, draft: {}, coloursFor: null, weaponMetals: {}, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
+const view = { item: null, colors: {}, draft: {}, colorsFor: null, weaponMetals: {}, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
 const options = { level: 1, variant: 0, construction: 0, detail: 1 };
 
 const VIEWS = [
@@ -158,8 +158,8 @@ async function show(item) {
     const saved = view.weaponMetals[item.id] ?? {};
     options.metal = saved.metal ?? item.palette.metal ?? 'steel';
   }
-  // Another person starts in their own colours.
-  if (view.coloursFor !== item.id) { view.colours = {}; view.draft = {}; view.coloursFor = item.id; view.seed = 0; }
+  // Another person starts in their own colors.
+  if (view.colorsFor !== item.id) { view.colors = {}; view.draft = {}; view.colorsFor = item.id; view.seed = 0; }
   $('busy').style.display = 'grid';
   $('err').textContent = '';
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
@@ -174,7 +174,7 @@ async function show(item) {
     if (!values.includes(options[name])) options[name] = values.default ?? values[0];
   }
   try {
-    const built = await item.build({ ...options, colours: view.colours, lights: stage.fixtureLights, stage });
+    const built = await item.build({ ...options, colors: view.colors, lights: stage.fixtureLights, stage });
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
@@ -202,7 +202,7 @@ async function show(item) {
     if (item.kind === 'room') stage.setRoom(built.canvas);
     if (item.kind === 'mood') { stage.setMood(item.mood); syncLights(); }
     $('moodrow').style.display = item.kind === 'object' ? '' : 'none';
-    // Models stand on y = 0; centre the thing over the origin and look at its middle.
+    // Models stand on y = 0; center the thing over the origin and look at its middle.
     const b = built.frame ? { min: built.frame.center.map((c) => c - built.frame.radius), max: built.frame.center.map((c) => c + built.frame.radius), size: [2, 2, 2].map((v) => v * built.frame.radius) } : boundsOf(built.object);
     floor.visible = !built.noFloor && $('gridbtn').classList.contains('on');
     view.center.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
@@ -217,7 +217,7 @@ async function show(item) {
     view.clock = 0;
     view.clipStart = 0;
     animGroup(built);
-    colourGroup(item);
+    colorGroup(item);
     frame(0.7, 0.3);
   } catch (err) {
     console.error(err);
@@ -241,7 +241,7 @@ let uiTimer = null;
  * An item can hand over `ui`, a list of controls for itself: { type: 'buttons', items: [{ label, onClick }] },
  * { type: 'range', label, min, max, step, get, set }, { type: 'select', label, options, get, set },
  * { type: 'color' | 'text', label, get, set }, { type: 'check', label, get, set }, { type: 'textarea', label, apply, onApply }
- * and { type: 'heading', label }. Those with a `get` follow the item while it moves on its own; `disabled` greys a
+ * and { type: 'heading', label }. Those with a `get` follow the item while it moves on its own; `disabled` grays a
  * control out (its `title` saying why).
  */
 function renderItemUi(specs) {
@@ -297,7 +297,7 @@ function renderItemUi(specs) {
 }
 
 /**
- * The shown model as it first came: its option menus back to their defaults, its colours and saved metals
+ * The shown model as it first came: its option menus back to their defaults, its colors and saved metals
  * forgotten, and it built afresh, so whatever its own controls changed (a person's shape, outfit, weapon, face)
  * is as it was made too. The camera, light and animation are left as they are.
  */
@@ -310,7 +310,7 @@ function resetItem() {
     options.bladeMetal = item.palette.bladeMetal ?? 'steel';
     options.hiltMetal = item.palette.hiltMetal ?? 'steel';
   } else if (item.palette?.kind === 'morningstar') options.metal = item.palette.metal ?? 'steel';
-  view.colours = {}; view.draft = {}; view.seed = 0;
+  view.colors = {}; view.draft = {}; view.seed = 0;
   show(item);
 }
 $('itemreset').onclick = resetItem;
@@ -390,10 +390,10 @@ function animGroup(built) {
   }
 }
 
-// ———————————————————————————————————————————————— colours
+// ———————————————————————————————————————————————— colors
 
-/** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
-function colourRows(item) {
+/** What a person's colors are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
+function colorRows(item) {
   const pal = item.palette, c = view.draft;
   if (pal.kind === 'granite-weapon') return [['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }]];
   if (pal.kind === 'weapon') {
@@ -429,8 +429,8 @@ function colourRows(item) {
   if (pal.kind === 'bouncy-ball') {
     return [
       ['Rubber', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
-      ['Second colour', pal.swirl, c.swirl, (v) => { c.swirl = v; }, () => { delete c.swirl; }],
-      ['Third colour', pal.accent, c.accent, (v) => { c.accent = v; }, () => { delete c.accent; }],
+      ['Second color', pal.swirl, c.swirl, (v) => { c.swirl = v; }, () => { delete c.swirl; }],
+      ['Third color', pal.accent, c.accent, (v) => { c.accent = v; }, () => { delete c.accent; }],
     ];
   }
   if (pal.kind === 'bowling-pin') {
@@ -458,7 +458,7 @@ function colourRows(item) {
     ['Eyes', pal.eyes, c.eyes, (v) => { c.eyes = v; }, () => { delete c.eyes; }],
     ['Brows', pal.brow, c.brow, (v) => { c.brow = v; }, () => { delete c.brow; }],
   ];
-  // Clothes that are one colour change together, so a suit stays a suit.
+  // Clothes that are one color change together, so a suit stays a suit.
   for (const slots of pal.groups) {
     const was = pal.look[slots[0]], now = c.look?.[slots[0]];
     rows.push([slots.join(' · '), was, now,
@@ -490,11 +490,11 @@ function randomBowlingPinPalette(random = Math.random) {
 }
 
 /** Whether what is chosen in the pickers is not what is on show. */
-const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colours);
+const colorDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colors);
 
-/** The colour pickers for the person on show; nothing for what is not a person. Choosing changes nothing on show until Apply. */
-function colourGroup(item) {
-  const group = $('colourgroup');
+/** The color pickers for the person on show; nothing for what is not a person. Choosing changes nothing on show until Apply. */
+function colorGroup(item) {
+  const group = $('colorgroup');
   group.style.display = item.palette ? '' : 'none';
   const weaponRows = $('weaponmetalrows');
   weaponRows.style.display = 'none';
@@ -508,7 +508,7 @@ function colourGroup(item) {
   const isGraniteWeapon = item.palette.kind === 'granite-weapon';
   const isMorningstar = item.palette.kind === 'morningstar';
   const isStaff = item.palette.kind === 'staff';
-  $('colourdiverse').style.display = isStaff || isDice || isWeapon || isGraniteWeapon || isMorningstar ? 'none' : '';
+  $('colordiverse').style.display = isStaff || isDice || isWeapon || isGraniteWeapon || isMorningstar ? 'none' : '';
   if (isWeapon || isMorningstar) {
     const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
     for (const [key, label] of metalOptions) {
@@ -528,12 +528,12 @@ function colourGroup(item) {
     }
     weaponRows.style.display = 'grid';
   }
-  $('colourdiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall || isBouncyBall ? 'Randomise colours' : 'Randomise';
-  $('colourdiverse').title = isBowlingPin
+  $('colordiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall || isBouncyBall ? 'Randomize colors' : 'Randomize';
+  $('colordiverse').title = isBowlingPin
     ? 'Generate a coordinated random resin and enamel palette for this pin'
     : isBowlingBall
       ? 'Pick a coordinated random bowling-ball palette'
-      : 'Randomise this character palette';
+      : 'Randomize this character palette';
   $('bowlingdesignrow').style.display = isBowlingBall || isBowlingPin || isBouncyBall ? '' : 'none';
   if (isBowlingBall || isBowlingPin || isBouncyBall) {
     const choices = isBowlingPin
@@ -542,63 +542,63 @@ function colourGroup(item) {
         ? [['solid', 'Solid rubber'], ['swirl', 'Swirl'], ['marble', 'Rubber marble'], ['tiedye', 'Tie-dye spiral'], ['stripe', 'Band'], ['confetti', 'Superball flecks'], ['beach', 'Beach ball']]
         : [['marble', 'Classic marble'], ['spiral', 'Spiral ribbons'], ['flame', 'Flame ribbons'], ['split', 'Two-tone split'], ['blotch', 'Blotchy marble'], ['solid', 'Solid']];
     $('bowlingdesign').replaceChildren(...choices.map(([value, label]) => el('option', { value }, label)));
-    $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : isBouncyBall ? 'swirl' : 'marble');
+    $('bowlingdesign').value = view.draft.design ?? view.colors.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : isBouncyBall ? 'swirl' : 'marble');
     $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
   }
   if (isGraniteWeapon) {
     const select = el('select', { className: 'weapon-metal-select' }, ...item.palette.graniteChoices.map((name) => el('option', { value: name }, name[0].toUpperCase() + name.slice(1))));
-    select.value = view.draft.graniteColour ?? view.colours.graniteColour ?? item.palette.granite;
-    select.onchange = () => { view.draft.graniteColour = select.value; colourGroup(item); };
+    select.value = view.draft.graniteColor ?? view.colors.graniteColor ?? item.palette.granite;
+    select.onchange = () => { view.draft.graniteColor = select.value; colorGroup(item); };
     const row = el('div', { className: 'line' }, el('label', {}, 'All stone parts'), select);
     row.style.justifyContent = 'space-between'; row.style.width = '100%';
     $('weaponmetalrows').append(row); $('weaponmetalrows').style.display = 'grid';
   }
-  $('colourhint').textContent = isStaff
+  $('colorhint').textContent = isStaff
     ? (item.palette.metal
       ? 'Choose the color of the leather wrap on the grip and of its crossed thread, then press Apply. The metal and topper are in the options above.'
       : 'Choose the color of the leather wrap on the grip and of its crossed thread, then press Apply. Wood, finish and topper are in the options above.')
     : isGraniteWeapon
-    ? 'The blade, guard and fused handle are granite; choose its granite colourway and the leather wrap colour.'
+    ? 'The blade, guard and fused handle are granite; choose its granite colorway and the leather wrap color.'
     : isWeapon
     ? (item.palette.thread
       ? 'Choose blade and hilt metals, then customize the leather and contrasting grip thread independently.'
-      : 'Choose blade and hilt metals, then set the leather grip colour here. Metal finishes update immediately; Apply commits the grip colour.')
+      : 'Choose blade and hilt metals, then set the leather grip color here. Metal finishes update immediately; Apply commits the grip color.')
     : isMorningstar
-      ? 'Choose the morningstar head and haft metal, then set the leather grip colour. Metal finishes update immediately; Apply commits the grip colour.'
+      ? 'Choose the morningstar head and haft metal, then set the leather grip color. Metal finishes update immediately; Apply commits the grip color.'
     : isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
     : isBouncyBall
-      ? 'A rubber bouncy ball: choose a pattern and its three colours. Apply updates the ball. In a game, pair it with the physics\' RUBBER bounce.'
+      ? 'A rubber bouncy ball: choose a pattern and its three colors. Apply updates the ball. In a game, pair it with the physics\' RUBBER bounce.'
     : isBowlingBall
-      ? 'Choose a surface design and change the base resin, swirl, accent veins, and recessed finger-hole colour. Apply updates the ball.'
+      ? 'Choose a surface design and change the base resin, swirl, accent veins, and recessed finger-hole color. Apply updates the ball.'
       : isBowlingPin
         ? 'Choose a resin finish and tune the base, marbling, pearlescent highlight, and red neck enamel. Apply updates the pin.'
-        : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
-  $('colourrows').replaceChildren(...colourRows(item).map(([label, was, now, set, clear]) => {
+        : 'The same model in other colors: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
+  $('colorrows').replaceChildren(...colorRows(item).map(([label, was, now, set, clear]) => {
     const input = el('input', { type: 'color', value: now ?? was });
     const undo = el('button', { title: 'Back to how they come', textContent: '×' });
     const row = el('div', { className: `swatchrow${now ? ' changed' : ''}` }, el('label', { title: label }, label), input, undo);
-    input.onchange = () => { set(input.value); colourGroup(item); };
-    undo.onclick = () => { clear(); colourGroup(item); };
+    input.onchange = () => { set(input.value); colorGroup(item); };
+    undo.onclick = () => { clear(); colorGroup(item); };
     return row;
   }));
-  const dirty = colourDirty();
-  $('colourapply').disabled = !dirty;
-  $('colourapply').classList.toggle('on', dirty);
-  $('colourapply').textContent = dirty ? 'Apply changes' : 'Applied';
+  const dirty = colorDirty();
+  $('colorapply').disabled = !dirty;
+  $('colorapply').classList.toggle('on', dirty);
+  $('colorapply').textContent = dirty ? 'Apply changes' : 'Applied';
 }
 
-$('colourapply').onclick = () => { view.colours = structuredClone(view.draft); show(view.item); };
-$('colourdiverse').onclick = () => {
+$('colorapply').onclick = () => { view.colors = structuredClone(view.draft); show(view.item); };
+$('colordiverse').onclick = () => {
   if (view.item.palette?.kind === 'bowling-pin') {
-    const design = view.draft.design ?? view.colours.design ?? view.item.palette.design ?? 'classic';
+    const design = view.draft.design ?? view.colors.design ?? view.item.palette.design ?? 'classic';
     view.draft = { ...view.draft, ...randomBowlingPinPalette(), design };
   } else if (view.item.palette?.kind === 'bouncy-ball') {
-    const design = view.draft.design ?? view.colours.design ?? view.item.palette.design ?? 'swirl';
+    const design = view.draft.design ?? view.colors.design ?? view.item.palette.design ?? 'swirl';
     const hue = Math.random() * 360, col = (h, s, l) => '#' + new GFX.Color().setHSL(((h % 360) + 360) % 360 / 360, s, l).getHexString();
     view.draft = { base: col(hue, 0.85, 0.52), swirl: col(hue + 60 + Math.random() * 60, 0.9, 0.58), accent: col(hue + 180 + Math.random() * 40, 0.8, 0.5), design };
   } else if (view.item.palette?.kind === 'bowling-ball') {
-    const current = { ...view.item.palette, ...view.colours, ...view.draft };
+    const current = { ...view.item.palette, ...view.colors, ...view.draft };
     const design = current.design ?? 'marble';
     view.draft = { ...randomBowlingBallPalette(Math.random, current), design };
   } else {
@@ -606,33 +606,33 @@ $('colourdiverse').onclick = () => {
     view.draft = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
     if (keep) view.draft.look = keep;
   }
-  colourGroup(view.item);
+  colorGroup(view.item);
 };
-$('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
+$('colorreset').onclick = () => { view.draft = {}; colorGroup(view.item); };
 $('bowlingdesign').onchange = () => {
   if (!['bowling-ball', 'bowling-pin', 'bouncy-ball'].includes(view.item?.palette?.kind)) return;
   view.draft.design = $('bowlingdesign').value;
-  colourGroup(view.item);
+  colorGroup(view.item);
 };
-$('colourcopy').onclick = async () => {
+$('colorcopy').onclick = async () => {
   let code;
   if (view.item.palette?.kind === 'dice') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createDieProp } from 'madness-engine/props/dice';\n\n"
       + "const die = createDieProp(GFX, '" + view.item.dieType + "', "
-      + JSON.stringify(view.colours, null, 2) + ");";
+      + JSON.stringify(view.colors, null, 2) + ");";
   } else if (view.item.palette?.kind === 'bouncy-ball') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBouncyBall } from 'madness-engine/props/bouncy-ball';\n"
       + "import { createBall, RUBBER } from 'madness-engine/physics';\n\n"
       + "const bouncyBall = createBouncyBall(GFX, { colors: "
-      + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'swirl') + "' });\n"
+      + JSON.stringify(view.colors, null, 2) + ", design: '" + (view.colors.design ?? 'swirl') + "' });\n"
       + "const body = createBall({ r: bouncyBall.radius, ...RUBBER });";
   } else if (view.item.palette?.kind === 'bowling-ball') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingBall } from 'madness-engine/props/bowling-ball';\n\n"
       + "const bowlingBall = createBowlingBall(GFX, { colors: "
-      + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'marble') + "' });";
+      + JSON.stringify(view.colors, null, 2) + ", design: '" + (view.colors.design ?? 'marble') + "' });";
   } else if (view.item.palette?.kind === 'morningstar') {
     const factory = view.item.factory;
     const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -640,7 +640,7 @@ $('colourcopy').onclick = async () => {
       + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
       + "const " + variable + " = " + factory + "(GFX, { metal: '"
       + (options.metal ?? 'steel') + "', gripColor: '"
-      + (view.colours.gripColor ?? '#633b2c') + "' });";
+      + (view.colors.gripColor ?? '#633b2c') + "' });";
   } else if (view.item.palette?.kind === 'staff') {
     const topper = options.topper ?? 'orb';
     const planet = GLASS_PLANET_NAMES.includes(topper);
@@ -652,16 +652,16 @@ $('colourcopy').onclick = async () => {
       + "import { createStaff } from 'madness-engine/weapons';\n\n"
       + (planet ? "const planetMaps = { " + topper + ": await loadGlassPlanetMaps('" + topper + "') };\n" : '')
       + "const staff = createStaff(GFX, { " + wood + ", topper: '" + topper + "'" + (planet ? ', planetMaps' : '')
-      + ", gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip) + "', threadColor: '"
-      + (view.colours.threadColor ?? view.item.palette.thread) + "' });";
+      + ", gripColor: '" + (view.colors.gripColor ?? view.item.palette.grip) + "', threadColor: '"
+      + (view.colors.threadColor ?? view.item.palette.thread) + "' });";
   } else if (view.item.palette?.kind === 'granite-weapon') {
     const factory = view.item.factory;
     const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
     code = "import * as GFX from 'madness-engine/gfx';\\n"
       + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\\n\\n"
-      + "const " + variable + " = " + factory + "(GFX, { graniteColour: '"
-      + (view.colours.graniteColour ?? view.item.palette.granite ?? 'grey')
-      + "', gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip ?? '#101010') + "' });";
+      + "const " + variable + " = " + factory + "(GFX, { graniteColor: '"
+      + (view.colors.graniteColor ?? view.item.palette.granite ?? 'gray')
+      + "', gripColor: '" + (view.colors.gripColor ?? view.item.palette.grip ?? '#101010') + "' });";
   } else if (view.item.palette?.kind === 'weapon') {
     const factory = view.item.factory;
     const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -669,20 +669,20 @@ $('colourcopy').onclick = async () => {
       + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
       + "const " + variable + " = " + factory + "(GFX, { bladeMetal: '"
       + (options.bladeMetal ?? 'steel') + "', hiltMetal: '" + (options.hiltMetal ?? 'steel')
-      + (view.item.palette.metalGrip ? "'" : "', gripColor: '" + (view.colours.gripColor ?? view.item.palette.grip ?? '#633b2c') + "'")
+      + (view.item.palette.metalGrip ? "'" : "', gripColor: '" + (view.colors.gripColor ?? view.item.palette.grip ?? '#633b2c') + "'")
       + (view.item.palette.thread
-        ? ", threadColor: '" + (view.colours.threadColor ?? view.item.palette.thread) + "'"
+        ? ", threadColor: '" + (view.colors.threadColor ?? view.item.palette.thread) + "'"
         : '') + " });";
   } else if (view.item.palette?.kind === 'bowling-pin') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\n\n"
       + "const bowlingPin = createBowlingPin(GFX, { colors: "
-      + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'classic') + "' });";
+      + JSON.stringify(view.colors, null, 2) + ", design: '" + (view.colors.design ?? 'classic') + "' });";
   } else {
     const name = view.item.name.replace(/[^a-z0-9]/gi, '');
-    code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;
+    code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colors, null, 2)});`;
   }
-  try { await navigator.clipboard.writeText(code); flash($('colourcopy'), 'Copied'); } catch { flash($('colourcopy'), 'Copy failed'); }
+  try { await navigator.clipboard.writeText(code); flash($('colorcopy'), 'Copied'); } catch { flash($('colorcopy'), 'Copy failed'); }
 };
 
 // ———————————————————————————————————————————————— marked areas
@@ -714,7 +714,7 @@ function describe(position) {
   const h = Math.round(frac(position[1], 1) * 100);
   const x = frac(position[0], 0), z = frac(position[2], 2);
   const side = x > 0.62 ? 'left side' : x < 0.38 ? 'right side' : 'middle';
-  const depth = z > 0.62 ? 'front' : z < 0.38 ? 'back' : 'centre';
+  const depth = z > 0.62 ? 'front' : z < 0.38 ? 'back' : 'center';
   return `${h}% up, ${side}, ${depth}`;
 }
 

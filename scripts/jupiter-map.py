@@ -7,9 +7,9 @@ layout, from one photograph of its disc.
     python3 scripts/jupiter-map.py disc.png CX CY R LON0 [out.js] [preview.png]
 
 `disc.png` is a photograph of Jupiter, square, with the planet a disc of radius
-R pixels centred on (CX, CY). LON0 is the longitude, in degrees east, that faces
+R pixels centered on (CX, CY). LON0 is the longitude, in degrees east, that faces
 the middle of the photograph. The photograph is enlarged, its brightness is
-stretched over the disc, and that brightness is run through Jupiter's colour
+stretched over the disc, and that brightness is run through Jupiter's color
 scale (stops of value and color, as globes' temperature scale is). The disc is
 projected orthographically onto the sphere, so its visible hemisphere lands where
 the planet has it, from -180 east at the left to 180 at the right and 90N at the
@@ -18,7 +18,7 @@ camera is not in the photograph; each latitude there takes the mean of that
 latitude's visible values, so the belts run all the way round without inventing
 detail.
 
-The output is one colour JPEG, base64 in the module, which the glass globe holds
+The output is one color JPEG, base64 in the module, which the glass globe holds
 as a field of mist (`setField`), as globes does with its temperature.
 """
 import base64, io, os, sys
@@ -29,7 +29,7 @@ OUT_W, OUT_H = 4096, 2048
 SPOT = (230, 246, 34)  # the Great Red Spot in the 352 px disc: x, y, radius
 UPSCALE = 4
 
-# Jupiter's colour scale, in globes' form (stops of value and color, as its temperature scale is): the value
+# Jupiter's color scale, in globes' form (stops of value and color, as its temperature scale is): the value
 # is the photograph's brightness, 0 darkest to 1 brightest. The belts go to brown and rust, the zones to
 # cream and a cool white, so the planet reads as itself rather than as the photograph, which is dim and faded.
 JUPITER_STOPS = [
@@ -88,8 +88,8 @@ def scale_from_photo(disc, value, cx, cy, r, saturation=3.0, bins=24):
         if m.sum() < 50:
             continue
         c = np.median(disc[m], axis=0)
-        grey = c.mean()
-        c = np.clip(grey + (c - grey) * saturation, 0, 255)
+        gray = c.mean()
+        c = np.clip(gray + (c - gray) * saturation, 0, 255)
         stops.append([v, c.tolist()])
     return stops
 
@@ -148,18 +148,18 @@ def main():
     value = layout(value_disc, cx, cy, r, lon0)
     red = layout(redness_of(disc, cx, cy, r), cx, cy, r, lon0)
     lut = stops_lut(JUPITER_STOPS)
-    colours = lut[np.round(value * (len(lut) - 1)).astype(int)]
-    # the red the photograph has: pull the colour toward rust where it is red, most where it is dark
+    colors = lut[np.round(value * (len(lut) - 1)).astype(int)]
+    # the red the photograph has: pull the color toward rust where it is red, most where it is dark
     rust = np.array([196.0, 58.0, 30.0])
     k = (np.clip(red * 1.3 - 0.25, 0, 1) ** 1.3)[..., None]
-    colours = np.clip(colours * (1 - k) + rust * k * (0.8 + 0.4 * value[..., None]), 0, 255).astype(np.uint8)
-    im = Image.fromarray(colours, "RGB")
+    colors = np.clip(colors * (1 - k) + rust * k * (0.8 + 0.4 * value[..., None]), 0, 255).astype(np.uint8)
+    im = Image.fromarray(colors, "RGB")
     buf = io.BytesIO()
     im.save(buf, "JPEG", quality=85, optimize=True)
     packed = base64.b64encode(buf.getvalue()).decode()
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "w").write(f"""/**
- * Jupiter's clouds as a 2:1 colour layout, rows from 90N down, columns from
+ * Jupiter's clouds as a 2:1 color layout, rows from 90N down, columns from
  * -180 east, made by `scripts/jupiter-map.py` from one photograph of the disc
  * (its visible hemisphere; the far side is the mean of each latitude's belts).
  * Do not edit by hand.

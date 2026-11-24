@@ -9,7 +9,7 @@ import { glass, glow, gloss, kit, metal, seeded, std, X, Z } from './dressing.js
  * cypress stump in the Florida swamp.
  *
  * Each is built from plain shapes, standing on y = 0 over its footprint
- * (`w` by `d` tiles, centred on the origin) and, if it has a front, facing
+ * (`w` by `d` tiles, centered on the origin) and, if it has a front, facing
  * +z. No canvas: they are built under node for the tests as well.
  */
 
@@ -67,12 +67,12 @@ function furnace(GFX, { w = 2, d = 2, rise = 1.3 }) {
 function oildrums(GFX, { w = 1, d = 1, ...spec }) {
   const group = new GFX.Group();
   const rnd = seeded(spec);
-  const colours = ['#a8262a', '#2a5a8a', '#6a6a60', '#5a3a28'].map((c) => std(GFX, c, { roughness: 0.55, metalness: 0.4 }));
+  const colors = ['#a8262a', '#2a5a8a', '#6a6a60', '#5a3a28'].map((c) => std(GFX, c, { roughness: 0.55, metalness: 0.4 }));
   const band = std(GFX, '#2a2a2e', { metalness: 0.7, roughness: 0.5 });
   along(GFX, group, { w, d }, (g, i) => {
     const bottom = [[-0.2, -0.18], [0.2, -0.12], [0.0, 0.2]];
     bottom.forEach(([x, z]) => {
-      const m = colours[Math.floor(rnd() * colours.length)];
+      const m = colors[Math.floor(rnd() * colors.length)];
       const c = new GFX.Mesh(new GFX.CylinderGeometry(0.19, 0.19, 0.5, 14), m);
       c.position.set(x, 0.25, z);
       c.castShadow = c.receiveShadow = true;
@@ -85,7 +85,7 @@ function oildrums(GFX, { w = 1, d = 1, ...spec }) {
       }
     });
     if (i % 2 === 0) {
-      const top = new GFX.Mesh(new GFX.CylinderGeometry(0.19, 0.19, 0.5, 14), colours[Math.floor(rnd() * colours.length)]);
+      const top = new GFX.Mesh(new GFX.CylinderGeometry(0.19, 0.19, 0.5, 14), colors[Math.floor(rnd() * colors.length)]);
       top.position.set(0.0, 0.75, -0.02);
       top.castShadow = true;
       g.add(top);

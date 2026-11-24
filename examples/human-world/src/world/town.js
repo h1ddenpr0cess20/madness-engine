@@ -26,7 +26,7 @@ export const WALLS = { x0: 1.2, z0: 1.2, x1: SIZE - 1.2, z1: 76.6 };
 const TINTS = {
   cold: [0.5, 0.58, 0.6],
   green: [0.46, 0.58, 0.52],
-  grey: [0.55, 0.57, 0.6],
+  gray: [0.55, 0.57, 0.6],
   warm: [0.62, 0.55, 0.5],
   dark: [0.38, 0.44, 0.48],
   bruise: [0.52, 0.48, 0.6],
@@ -37,7 +37,7 @@ const TINTS = {
  * (`enter`); the rest are shut and dark. `door` is the doorstep in the world.
  */
 export const BUILDINGS = [
-  { id: 'chapel', enter: 'chapel', name: "St. Wick's Chapel", type: 'chapel', variant: 0, door: [40, 20.4], yaw: 0, tint: TINTS.grey },
+  { id: 'chapel', enter: 'chapel', name: "St. Wick's Chapel", type: 'chapel', variant: 0, door: [40, 20.4], yaw: 0, tint: TINTS.gray },
   { id: 'tavern', enter: 'tavern', name: 'The Hanged Man', type: 'tavern', variant: 1, door: [34.0, 44], yaw: Math.PI / 2, tint: TINTS.warm },
   { id: 'apothecary', enter: 'apothecary', name: "Morrow's Apothecary", type: 'healer', variant: 0, door: [46.0, 36.5], yaw: -Math.PI / 2, tint: TINTS.green },
   { id: 'smithy', enter: 'smithy', name: "Brandt's Forge", type: 'smithy', variant: 0, door: [46.0, 59.5], yaw: -Math.PI / 2, tint: TINTS.dark },
@@ -49,12 +49,12 @@ export const BUILDINGS = [
   // Shut up, the lot of them.
   { id: 'h1', enter: null, name: 'A shuttered house', type: 'house', variant: 2, door: [34.0, 29], yaw: Math.PI / 2, tint: TINTS.cold, lit: false },
   { id: 'h2', enter: null, name: 'A shuttered shop', type: 'shop', variant: 1, door: [34.0, 69], yaw: Math.PI / 2, tint: TINTS.green, lit: false },
-  { id: 'h3', enter: null, name: 'A barred house', type: 'merchant', variant: 0, door: [46.0, 48.5], yaw: -Math.PI / 2, tint: TINTS.grey, lit: true },
+  { id: 'h3', enter: null, name: 'A barred house', type: 'merchant', variant: 0, door: [46.0, 48.5], yaw: -Math.PI / 2, tint: TINTS.gray, lit: true },
   { id: 'h4', enter: null, name: 'The weaver’s', type: 'weaver', variant: 0, door: [46.0, 27.5], yaw: -Math.PI / 2, tint: TINTS.bruise, lit: false },
   { id: 'h5', enter: null, name: 'A dark house', type: 'house', variant: 4, door: [46.0, 70], yaw: -Math.PI / 2, tint: TINTS.dark, lit: false, skip: [] },
   { id: 'h6', enter: null, name: 'The old brewery', type: 'brewery', variant: 0, door: [22.5, 52], yaw: Math.PI / 2, tint: TINTS.dark, lit: false },
   { id: 'h7', enter: null, name: 'A leaning cottage', type: 'cottage', variant: 2, door: [22.5, 64], yaw: Math.PI / 2, tint: TINTS.cold, lit: false },
-  { id: 'well', enter: null, name: 'The well', type: 'well', variant: 0, door: [40, 46], yaw: 0, tint: TINTS.grey, lit: false },
+  { id: 'well', enter: null, name: 'The well', type: 'well', variant: 0, door: [40, 46], yaw: 0, tint: TINTS.gray, lit: false },
 ];
 
 const inRect = (x, z, x0, z0, x1, z1) => x >= x0 && x <= x1 && z >= z0 && z <= z1;

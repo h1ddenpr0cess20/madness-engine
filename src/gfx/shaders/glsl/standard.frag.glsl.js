@@ -89,7 +89,7 @@ in vec3 vViewPosition;
 #ifdef USE_SUBSURFACE
   uniform vec3 subsurfaceColor;
 
-  // Light carried under the surface past where it falls: each colour wrapped round the form as far as
+  // Light carried under the surface past where it falls: each color wrapped round the form as far as
   // it travels (skin's red furthest), over the smooth shape, not the pores'.
   vec3 subsurfaceScatter( vec3 L, vec3 lightColor, vec3 N, vec3 albedo ) {
     float nl = dot( N, L );
@@ -110,7 +110,7 @@ in vec3 vViewPosition;
     float dBy = bumpScale * TILED( bumpMap, vBumpMapUv + dSTdy ).x - Hll;
     vec2 dH = vec2( dBx, dBy );
     #ifdef USE_DETAILMAP
-      // The detail map, on the colour map's layout: how much of the fine bump shows here (b), and a
+      // The detail map, on the color map's layout: how much of the fine bump shows here (b), and a
       // relief of its own (r) for what the tile cannot hold: creases, wrinkles, folds.
       vec3 detail = texture( detailMap, vMapUv ).xyz;
       dH *= detail.z;
@@ -190,7 +190,7 @@ out highp vec4 pc_fragColor;
 #ifdef USE_STRANDS
   // Hair's two highlights (Kajiya and Kay's model, as Scheuermann shifts it): light glancing off each
   // strand's surface, white and tight, toward the root; and light that went into the strand and back out,
-  // coloured by it and broader, toward the tip. Both run across the strands, not along them, as hair's do.
+  // colored by it and broader, toward the tip. Both run across the strands, not along them, as hair's do.
   vec3 strandSpecular( vec3 L, vec3 lightColor, vec3 N, vec3 V, vec3 T, float jitter, vec3 tint ) {
     vec3 H = normalize( L + V );
     vec3 T1 = normalize( T + N * ( 0.1 + jitter ) ), T2 = normalize( T - N * ( 0.12 - jitter ) );
@@ -211,7 +211,7 @@ void main() {
   #endif
   #if defined( EMISSIVE_SCATTER ) && defined( USE_MAP )
     {
-      // Each repeat of the map (a window) by its own chance; the vertex colour (a building's tint) shuffles them.
+      // Each repeat of the map (a window) by its own chance; the vertex color (a building's tint) shuffles them.
       #ifdef EMISSIVE_CELLS
         float seed = dot( floor( vMapUv * EMISSIVE_CELLS ), vec2( 12.9898, 78.233 ) );
       #else
@@ -277,9 +277,9 @@ void main() {
     vec2 sst0 = dFdx( vMapUv ), sst1 = dFdy( vMapUv );
     vec3 strand = cross( sq1, normal ) * sst0.y + cross( normal, sq0 ) * sst1.y;
     strand *= inversesqrt( max( dot( strand, strand ), 1e-20 ) );
-    // Each strand's highlight a little off its neighbours', by its own shade in the texture.
+    // Each strand's highlight a little off its neighbors', by its own shade in the texture.
     float strandJitter = ( texture( map, vMapUv ).g - 0.9 ) * 0.5;
-    // The second highlight has been through the strand: it is the hair's own colour, as bright as the hair is.
+    // The second highlight has been through the strand: it is the hair's own color, as bright as the hair is.
     vec3 strandTint = diffuseColor.rgb;
   #endif
 

@@ -116,7 +116,7 @@ fn vs(in: VertexInput) -> Varyings {
 #include <bump>
 #endif
 #ifdef USE_SUBSURFACE
-// Light carried under the surface past where it falls: each colour wrapped round the form as far as
+// Light carried under the surface past where it falls: each color wrapped round the form as far as
 // it travels (skin's red furthest), over the smooth shape, not the pores'.
 fn subsurfaceScatter(L: vec3f, lightColor: vec3f, N: vec3f, albedo: vec3f) -> vec3f {
   let nl = dot(N, L);
@@ -153,7 +153,7 @@ fn getDistanceAttenuation(lightDistance: f32, cutoffDistance: f32, decayExponent
 #ifdef USE_STRANDS
 // Hair's two highlights (Kajiya and Kay's model, as Scheuermann shifts it): light glancing off each
 // strand's surface, white and tight, toward the root; and light that went into the strand and back out,
-// coloured by it and broader, toward the tip. Both run across the strands, not along them, as hair's do.
+// colored by it and broader, toward the tip. Both run across the strands, not along them, as hair's do.
 fn strandSpecular(L: vec3f, lightColor: vec3f, N: vec3f, V: vec3f, T: vec3f, jitter: f32, tint: vec3f) -> vec3f {
   let H = normalize(L + V);
   let T1 = normalize(T + N * (0.1 + jitter));
@@ -177,7 +177,7 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #ifdef EMISSIVE_SCATTER
   #ifdef USE_MAP
   {
-    // Each repeat of the map (a window) by its own chance; the vertex colour (a building's tint) shuffles them.
+    // Each repeat of the map (a window) by its own chance; the vertex color (a building's tint) shuffles them.
     #ifdef EMISSIVE_CELLS
     var seed = dot(floor(in.mapUv * EMISSIVE_CELLS), vec2f(12.9898, 78.233));
     #else
@@ -253,9 +253,9 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   let sst1 = dFdy2(in.mapUv);
   var strand = cross(sq1, normal) * sst0.y + cross(normal, sq0) * sst1.y;
   strand *= inverseSqrt(max(dot(strand, strand), 1e-20));
-  // Each strand's highlight a little off its neighbours', by its own shade in the texture.
+  // Each strand's highlight a little off its neighbors', by its own shade in the texture.
   let strandJitter = (textureSample(t_map, s_map, in.mapUv).g - 0.9) * 0.5;
-  // The second highlight has been through the strand: it is the hair's own colour, as bright as the hair is.
+  // The second highlight has been through the strand: it is the hair's own color, as bright as the hair is.
   let strandTint = diffuseColor.rgb;
   #endif
 

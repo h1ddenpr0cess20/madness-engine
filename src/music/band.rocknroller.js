@@ -89,7 +89,7 @@ export const THEMES = {
     riff: [[0, 5, 3], [4, 4, 1], [6, 2, 2], [8, 3, 4], [14, 2, 2], [16, 5, 3], [20, 6, 2], [22, 4, 2], [24, 2, 6]],
     lead: 'tube', gain: 1,
   },
-  theatre: {
+  theater: {
     key: 38, scale: 'minor', prog: [0, 8, 3, 10, 0, 8, 5, 7], drums: 'half', strum: 'anthem', bass: 'octave', pad: true,
     riff: [[0, 4, 4], [6, 5, 2], [8, 6, 4], [14, 5, 2], [16, 4, 4], [22, 3, 2], [24, 2, 8]],
     lead: 'saw', gain: 1,

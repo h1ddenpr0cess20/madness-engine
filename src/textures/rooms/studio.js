@@ -17,11 +17,11 @@ export function paintRoom(width = 1024) {
   ctx.fillStyle = wall;
   ctx.fillRect(0, 0, width, height);
 
-  const box = (x, y, w, h, colour, glow) => {
+  const box = (x, y, w, h, color, glow) => {
     ctx.save();
-    ctx.shadowColor = colour;
+    ctx.shadowColor = color;
     ctx.shadowBlur = glow;
-    ctx.fillStyle = colour;
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.roundRect(x - w / 2, y - h / 2, w, h, Math.min(w, h) * 0.2);
     ctx.fill();

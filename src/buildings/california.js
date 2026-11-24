@@ -156,7 +156,7 @@ export function beachhouse(m, v) {
 
 // ---- High density homes ----
 
-/** A dingbat: a two-storey stucco box on stilts over a carport, a name in script on the front, a starburst. */
+/** A dingbat: a two-story stucco box on stilts over a carport, a name in script on the front, a starburst. */
 export function dingbat(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, CAL.pastel);
@@ -245,7 +245,7 @@ export function condotower(m, v) {
 
 // ---- Commerce ----
 
-/** A strip mall: one storey of shopfronts under a sign band, a taco stand's awning, parking in front. */
+/** A strip mall: one story of shopfronts under a sign band, a taco stand's awning, parking in front. */
 export function stripmall(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, CAL.stucco);
@@ -263,7 +263,7 @@ export function stripmall(m, v) {
   return { height: 1 };
 }
 
-/** A two-storey shopfront building: arcade of awnings below, offices with windows above. */
+/** A two-story shopfront building: arcade of awnings below, offices with windows above. */
 export function boutique(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, [...CAL.pastel, ...CAL.stucco]);
@@ -298,7 +298,7 @@ export function officetower(m, v) {
   const { rnd } = v;
   const glass = pickFrom(rnd, CAL.glass);
   m.box('plain', -0.98, 0, -1.4, 0.98, 0.012, 1.4, '#bdb8ac', { skip: ['bottom', 'front', 'back', 'left', 'right'] });
-  // The lobby: two storeys of glass set back under the tower, a canopy over the doors.
+  // The lobby: two stories of glass set back under the tower, a canopy over the doors.
   m.box('glass', -0.7, 0.012, -1.0, 0.7, 0.62, 0.8, '#6a9ab0', { skip: ['bottom', 'top'] });
   const lobby = faces(-0.7, -1.0, 0.7, 0.8, 0.012, 0.62);
   panel(m, 'glow', lobby.front, 0.08, 0.04, 1.32, 0.56, 0.008, PALETTE.warm);
@@ -427,7 +427,7 @@ export function firehouse(m) {
   return { height: 1.9 };
 }
 
-/** A school: a long two-storey wing, a bell tower, a playground and a field with a track. */
+/** A school: a long two-story wing, a bell tower, a playground and a field with a track. */
 export function school(m) {
   const F = slabBlock(m, -1.4, -1.4, 1.4, -0.5, 0, 0.8, '#f0dcb8', { parapet: 0 });
   m.hip('tile', -1.4, -1.4, 1.4, -0.5, 0.8, 1.05, CAL.tile[0], { over: 0.08 });
@@ -797,7 +797,7 @@ export function cityhall(m, v) {
 
 // ---- Alternates: other houses, courts, roadside stops, a mission and a lighthouse ----
 
-/** A painted lady: a pastel Victorian with a two-storey bay on the front, a porch over the door and a hip roof. */
+/** A painted lady: a pastel Victorian with a two-story bay on the front, a porch over the door and a hip roof. */
 export function victorian(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, CAL.pastel);
@@ -846,7 +846,7 @@ export function spanishcourt(m, v) {
   return { height: 0.92 };
 }
 
-/** A motel: two storeys of stucco rooms, a walkway with a rail on the upper floor, a pool in front and a pole sign by the road. */
+/** A motel: two stories of stucco rooms, a walkway with a rail on the upper floor, a pool in front and a pole sign by the road. */
 export function motel(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, CAL.stucco);
@@ -1018,7 +1018,7 @@ export function midcenturyhome(m, v) {
   return { height: 0.75 };
 }
 
-/** An adobe: a thick earth-coloured house with a flat roof, a parapet to the front, wooden vigas through the wall and a beehive oven. */
+/** An adobe: a thick earth-colored house with a flat roof, a parapet to the front, wooden vigas through the wall and a beehive oven. */
 export function adobe(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, ['#c8a878', '#d4b488', '#bf9c6c']);

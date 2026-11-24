@@ -2,7 +2,7 @@ import { cloth, hold, person, plate } from './person.js';
 import { hood, robe } from './metalwear.js';
 
 /**
- * The Cultist: a long robe the colour of a bad bruise, a hood, a candle in
+ * The Cultist: a long robe the color of a bad bruise, a hood, a candle in
  * one hand and a book in the other that is mostly the same word over and
  * over. Chants. Does not say what. Has been here since before the venue,
  * and will be here after. A slow walker who is not at all in a hurry.

@@ -21,7 +21,7 @@ test('creates a high-resolution glossy ball with three true recessed finger hole
   ball.dispose();
 });
 
-test('repaints colours in place without replacing shell geometry', () => {
+test('repaints colors in place without replacing shell geometry', () => {
   const ball = createBowlingBall(GFX, { colors: { base: '#182b50', swirl: '#d93b7b', accent: '#f3bc66' } });
   const geometry = ball.shell.geometry;
   const attribute = geometry.getAttribute('color');
@@ -53,7 +53,7 @@ test('all five surface designs are distinct and can be switched without replacin
   ball.dispose();
 });
 
-test('supports size and colour aliases, and rejects invalid radii', () => {
+test('supports size and color aliases, and rejects invalid radii', () => {
   const ball = createBowlingBall(GFX, {
     radius: 0.8, widthSegments: 64, heightSegments: 48,
     baseColor: '#123456', swirlColor: '#654321', accentColor: '#fedcba', holeColor: '#070809',

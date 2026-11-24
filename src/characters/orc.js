@@ -3,7 +3,7 @@ import { rgb } from '../models/sdf.js';
 import { cloth, hold, onBody, person, shell, strap } from './person.js';
 
 /**
- * The orc brute: a slab of grey-green muscle, broad in the shoulder and
+ * The orc brute: a slab of gray-green muscle, broad in the shoulder and
  * thick in the neck, the head sunk low between them. A brow like a shelf
  * over small burning eyes, a flat wide nose, an underbite with two tusks
  * up out of it, pointed ears, old scars, and a black topknot. Bare-chested
@@ -16,7 +16,7 @@ import { cloth, hold, onBody, person, shell, strap } from './person.js';
 const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone === 'string' ? sh.bone : sh.bone[0][0]);
 const BASE = coat({ over: '#5d7448', under: '#7e9266', vary: 0.14, freq: 10, grain: 0.06, edge: [-0.5, 0.6] });
 const SCAR = rgb('#a89482');
-/** Grey-green hide, darker on the back and shoulders, with pale old scars across the chest and one arm. */
+/** Gray-green hide, darker on the back and shoulders, with pale old scars across the chest and one arm. */
 const SKIN = (p, n) => {
   let c = BASE(p, n);
   c = mix(c, c.map((v) => v * 0.78), smooth(0.2, -0.6, n[2]) * smooth(0.4, 0.55, p[1]) * 0.6);

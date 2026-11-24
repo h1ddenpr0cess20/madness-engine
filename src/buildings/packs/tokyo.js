@@ -3,7 +3,7 @@ import { block, glassTier, grid } from './kit.js';
 
 /**
  * A Tokyo pack: a Kyoto-style machiya townhouse, a tiered pagoda on a plinth,
- * a konbini convenience store with its bright sign, a two-storey izakaya with
+ * a konbini convenience store with its bright sign, a two-story izakaya with
  * paper lanterns, a danchi concrete housing block, and a neon tower.
  */
 
@@ -22,7 +22,7 @@ export function machiya(m, v) {
   return { height: H + 0.35 };
 }
 
-/** A tiered pagoda: a stone plinth, three wooden storeys each under a deep tiled roof, and a gilt spire. Windows only on the ground storey, the storeys above standing on the roofs. */
+/** A tiered pagoda: a stone plinth, three wooden stories each under a deep tiled roof, and a gilt spire. Windows only on the ground story, the stories above standing on the roofs. */
 export function pagoda(m, v) {
   const { rnd } = v;
   const tile = pickFrom(rnd, ['#8a4a32', '#a85a3c', '#6a3a2a']);
@@ -55,7 +55,7 @@ export function konbini(m, v) {
   return { height: 0.95 };
 }
 
-/** An izakaya: two storeys of dark wood under a tiled roof, paper lanterns on the eaves, and a noren curtain over the door. */
+/** An izakaya: two stories of dark wood under a tiled roof, paper lanterns on the eaves, and a noren curtain over the door. */
 export function izakaya(m, v) {
   const { rnd } = v;
   const tile = pickFrom(rnd, ['#6a3a2a', '#4a3a3a', '#8a4a32']);
@@ -71,7 +71,7 @@ export function izakaya(m, v) {
   return { height: 1.75 };
 }
 
-/** A danchi: a long concrete housing block of many storeys, with balconies of pale rail and a stair tower at one end. */
+/** A danchi: a long concrete housing block of many stories, with balconies of pale rail and a stair tower at one end. */
 export function danchi(m, v) {
   const { rnd } = v;
   const floors = 5 + Math.floor(rnd() * 2), fh = 0.3, H = floors * fh;

@@ -7,8 +7,8 @@
  * Every pass is drawn with clip-space y negated, which stores it in OpenGL's
  * row order: the shadow map, the transmission buffer and the environment
  * atlas are then read with the same maths as the WebGL backend's, and the
- * frame itself is rasterised (multisample coverage included) exactly as
- * WebGL rasterises it, then turned the right way up as it is presented.
+ * frame itself is rasterized (multisample coverage included) exactly as
+ * WebGL rasterizes it, then turned the right way up as it is presented.
  */
 
 import { LinearMipmapLinearFilter, RepeatWrapping, SRGBColorSpace } from './core.js';
@@ -680,7 +680,7 @@ export class WebGPUBackend {
           );
         } catch (err) {
           // The browser could not copy the picture (out of memory on the card, a canvas it lost): the frame goes on
-          // with a plain grey texel in its place, rather than the whole loop stopping on one texture.
+          // with a plain gray texel in its place, rather than the whole loop stopping on one texture.
           if (!this._copyWarned) { console.warn(`gfx: a texture could not be uploaded (${err.message}); drawn plain instead.`); this._copyWarned = true; }
           entry.texture.destroy();
           entry.texture = this.device.createTexture({ size: [1, 1], format, usage: T.TEXTURE_BINDING | T.COPY_DST });

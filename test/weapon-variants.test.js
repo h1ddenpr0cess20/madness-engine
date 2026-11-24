@@ -127,7 +127,7 @@ test('Marc blade guards reuse the inverted Madness sweep with integrated pointed
       maxX = Math.max(maxX, position.getX(i));
     }
     assert.ok(minY < weapon.guardY - 0.004,
-      'the centre of the flipped Madness arch sits below the guard root');
+      'the center of the flipped Madness arch sits below the guard root');
     assert.ok(maxY > weapon.guardY + 0.02,
       'the sharpened terminal tips rise above the guard root');
     assert.ok(maxX > weapon.dimensions.guardSpan / 2);
@@ -234,12 +234,12 @@ test('Krystal sword and dagger use the lightning guard, two-tone diamond grip an
 
     krystal.setGripColor('#75452e');
     assert.equal(krystal.handle.material.color.getHexString(), '75452e',
-      'changing the leather colour leaves its thread untouched');
+      'changing the leather color leaves its thread untouched');
     assert.equal(krystal.threadColor, '#a7e6ff');
     krystal.setThreadColor('#ffb04a');
     assert.equal(krystal.threadColor, '#ffb04a');
     assert.equal(krystal.handle.material.color.getHexString(), '75452e',
-      'changing the thread colour leaves the leather untouched');
+      'changing the thread color leaves the leather untouched');
     assert.throws(() => krystal.setThreadColor('blue'), /threadColor/);
 
     assert.ok(krystal.bladeMist, 'a separate mist volume surrounds the blade');
@@ -283,7 +283,7 @@ test('shared sword and dagger blade geometry keeps its width and ends in a short
 
 
 
-test('named weapon families use their requested default metals and grip colours', () => {
+test('named weapon families use their requested default metals and grip colors', () => {
   for (const weapon of [
     createMadnessSword(GFX),
     createMadnessDagger(GFX),
@@ -369,8 +369,8 @@ test('Magic Egg Sword uses the glass egg, white/yellow mist and inverted lightni
   weapon.group.position.set(0.3, 1.2, -0.4);
   weapon.group.updateMatrixWorld(true);
   weapon.pommelAsset.mist.onBeforeRender();
-  const centre = new GFX.Vector3().setFromMatrixPosition(weapon.pommelAsset.mist.matrixWorld).applyMatrix4(eggMistUniforms.uInverse.value);
-  assert.ok(centre.length() < 1e-6, 'the inverse takes the egg back to its own middle');
+  const center = new GFX.Vector3().setFromMatrixPosition(weapon.pommelAsset.mist.matrixWorld).applyMatrix4(eggMistUniforms.uInverse.value);
+  assert.ok(center.length() < 1e-6, 'the inverse takes the egg back to its own middle');
   assert.equal(eggMistUniforms.uGlow.value, 1.15,
     'the internal egg mist has enough radiance to read through the glass');
   assert.deepEqual(eggMistUniforms.uDuoC.value.toArray(), [1, 0.82, 0.38],
@@ -525,7 +525,7 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
   for (let i = 0; i < granite.length; i++) {
     const weapon = granite[i], base = regular[i];
     assert.equal(weapon.pommelAsset.kind, 'granite');
-    assert.equal(weapon.graniteColour, 'grey');
+    assert.equal(weapon.graniteColor, 'gray');
     assert.equal(weapon.pommelAsset.material.name, 'granite');
     assert.equal(weapon.pommelAsset.mesh.name, 'single carved granite pommel and grip core');
     assert.ok(weapon.pommelAsset.mesh.geometry.attributes.position.count > 1000,
@@ -589,28 +589,28 @@ test('granite sword and dagger use granite pommels, tapered shard guards and sel
       const mirrored = [-guardPositions.getX(vertex), guardPositions.getY(vertex), guardPositions.getZ(vertex)]
         .map((value) => Math.round(value * 1e5)).join(',');
       assert.ok(mirroredVertices.has(mirrored),
-        'granite shard guard profile is symmetrical across the grip centreline');
+        'granite shard guard profile is symmetrical across the grip centerline');
     }
     assert.equal(weapon.guard.children.length, 1,
-      'the guard has no separate socket: its centre meets the molded grip/blade neck');
+      'the guard has no separate socket: its center meets the molded grip/blade neck');
     assert.equal(weapon.dimensions.guardThickness, 0.024);
     assert.equal(weapon.dimensions.bladeLength, base.dimensions.bladeLength);
     assert.equal(weapon.dimensions.bladeWidth, base.dimensions.bladeWidth);
     assert.equal(weapon.dimensions.gripLength, base.dimensions.gripLength);
     assert.equal(weapon.dimensions.guardSpan, base.dimensions.guardSpan);
-    weapon.setGraniteColour('pink');
-    assert.equal(weapon.graniteColour, 'pink');
-    assert.equal(weapon.pommelAsset.colour, 'pink');
+    weapon.setGraniteColor('pink');
+    assert.equal(weapon.graniteColor, 'pink');
+    assert.equal(weapon.pommelAsset.color, 'pink');
     assert.equal(weapon.blade.material.name, 'polished granite blade');
     assert.equal(weapon.guard.children[0].material, weapon.pommelAsset.material,
-      'changing the stone colour updates the entire stone assembly');
+      'changing the stone color updates the entire stone assembly');
     weapon.setGripColor('#8b4c2e');
     assert.equal(weapon.handle.material.color.getHexString(), '8b4c2e');
   }
-  assert.deepEqual(GRANITE_CHOICES, ['grey', 'pink', 'black', 'white', 'green']);
-  for (const colour of GRANITE_CHOICES) {
-    assert.equal(createGraniteSword(GFX, { graniteColour: colour }).graniteColour, colour);
-    assert.equal(createGraniteDagger(GFX, { graniteColour: colour }).graniteColour, colour);
+  assert.deepEqual(GRANITE_CHOICES, ['gray', 'pink', 'black', 'white', 'green']);
+  for (const color of GRANITE_CHOICES) {
+    assert.equal(createGraniteSword(GFX, { graniteColor: color }).graniteColor, color);
+    assert.equal(createGraniteDagger(GFX, { graniteColor: color }).graniteColor, color);
   }
-  assert.throws(() => createGraniteDagger(GFX, { graniteColour: 'blue' }), /no granite/);
+  assert.throws(() => createGraniteDagger(GFX, { graniteColor: 'blue' }), /no granite/);
 });

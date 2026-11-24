@@ -5,11 +5,11 @@ import { Part } from './human/kit.js';
  * A builder for rigid machine parts on the man's rig: chamfered boxes, and
  * lathed cylinders, cones, domes and rings, each bound whole to one bone, so
  * it moves with that bone and does not bend. Everything is placed in the man's
- * rest pose (metres), taking his joints and surface as the guide.
+ * rest pose (meters), taking his joints and surface as the guide.
  *
  * Edges are real geometry (a chamfer strip between faces, with normals given
  * for each flat), so they catch light as a machined edge does. Texture
- * coordinates are planar in metres, so a brushed grain keeps its scale.
+ * coordinates are planar in meters, so a brushed grain keeps its scale.
  */
 
 const IDENTITY = Object.freeze({ x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] });
@@ -80,7 +80,7 @@ export class Mech {
   }
 
   /**
-   * A solid of revolution about the line `p0` to `p1`: `profile` is [[s, r], ...], s along it (metres from
+   * A solid of revolution about the line `p0` to `p1`: `profile` is [[s, r], ...], s along it (meters from
    * `p0`), r the radius there. A cylinder is [[0,0],[0,r],[L,r],[L,0]]; chamfers and domes are more points.
    */
   lathe(material, bone, p0, p1, profile, { segs = 18, ref = [1, 0, 0], squash = 1, arc = [0, Math.PI * 2] } = {}) {

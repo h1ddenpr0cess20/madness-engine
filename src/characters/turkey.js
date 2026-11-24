@@ -69,7 +69,7 @@ const hash = (i, j) => {
 
 /**
  * The feathers on a surface, at arc length `s` along the body and height y:
- * `edge` is how far the point is from the centre of the feather covering it,
+ * `edge` is how far the point is from the center of the feather covering it,
  * as a share of the feather's size (0 at its middle, 1 at its tip, more than
  * 1 where no feather covers it); `shadow` how close it lies under a feather
  * above that does not cover it (0 clear, 1 in its shadow); `tone` how light
@@ -176,7 +176,7 @@ const primaryColor = (i) => (p, n, t, edge) => {
 /**
  * Each tail feather: dark crossbars, then a broad cream band, a dark sub-tip
  * and a cream rim. A pale shaft runs up its middle, and a dark shadow along
- * each side where it overlaps its neighbour, so every feather reads on its own.
+ * each side where it overlaps its neighbor, so every feather reads on its own.
  */
 const fanColor = (i) => {
   const variation = 0.5 + 0.5 * Math.sin(i * 8.13 + 0.8);

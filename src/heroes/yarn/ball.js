@@ -1,8 +1,8 @@
 import { buildTube, createYarn, SEG_IDX } from './model.js';
 
-/** As the tube in `model.js`: sides round it, and ply phase per metre over the texture's tile. */
+/** As the tube in `model.js`: sides round it, and ply phase per meter over the texture's tile. */
 const RADIAL = 8;
-const UV_PER_METRE = (3 / 0.03) / 4;
+const UV_PER_METER = (3 / 0.03) / 4;
 import { STEP, YR } from './winding.js';
 
 /**
@@ -18,16 +18,16 @@ import { STEP, YR } from './winding.js';
  * along the strand winds it back on. Past a holder's limit, it snaps, and
  * that much yarn is gone.
  *
- * The ball is in metres, as Carol is; `root` is scaled to the house.
+ * The ball is in meters, as Carol is; `root` is scaled to the house.
  */
 
-/** Metres to a tile of the house. */
-export const TILE_METRES = 0.3;
+/** Meters to a tile of the house. */
+export const TILE_METERS = 0.3;
 
-/** The longest the strand pays out before it snaps, whatever holds it, in metres. */
+/** The longest the strand pays out before it snaps, whatever holds it, in meters. */
 export const MAX_LAID = 4.5;
 
-/** Further than this in one step (metres) and the ball didn't roll there: it fell, or was put there. */
+/** Further than this in one step (meters) and the ball didn't roll there: it fell, or was put there. */
 const JUMP = 0.12;
 
 /** The floor path is sampled every 2 mm, as Carol's route is. */
@@ -62,7 +62,7 @@ export function createBall(GFX, floor) {
 
   const root = new GFX.Group();
   root.name = 'yarn';
-  root.scale.setScalar(1 / TILE_METRES);
+  root.scale.setScalar(1 / TILE_METERS);
   root.add(ball);
 
   /* The laid part: where each bit of strand rests once it's down. No slip —
@@ -110,7 +110,7 @@ export function createBall(GFX, floor) {
         nor[3 * v] = qx; nor[3 * v + 1] = qy; nor[3 * v + 2] = qz;
         const ao = laidAO(i, px, py, pz, qx, qy, qz);
         col[3 * v] = col[3 * v + 1] = col[3 * v + 2] = ao;
-        uv[2 * v] = A[i] * UV_PER_METRE;
+        uv[2 * v] = A[i] * UV_PER_METER;
         uv[2 * v + 1] = j / RADIAL;
       }
     }
@@ -141,7 +141,7 @@ export function createBall(GFX, floor) {
   }
 
   // Where the strand ends now (lost yarn has gone from the outside), and the
-  // floor path it has paid out along since it was caught, in metres.
+  // floor path it has paid out along since it was caught, in meters.
   let end = TOTAL;
   let holder = null;
   const path = [];
@@ -176,7 +176,7 @@ export function createBall(GFX, floor) {
     return lo;
   }
 
-  /** The radius the ball rides on with the bit at `a` at the contact, in metres (to its middle). */
+  /** The radius the ball rides on with the bit at `a` at the contact, in meters (to its middle). */
   const riding = (a) => {
     const [lo, hi, f] = sampleAt(cum, N, clamp(a, 0, TOTAL));
     return rBall[lo] + (rBall[hi] - rBall[lo]) * f + YR;
@@ -253,12 +253,12 @@ export function createBall(GFX, floor) {
     piece.receiveShadow = true;
     const group = new GFX.Group();
     group.name = 'lost-yarn';
-    group.scale.setScalar(1 / TILE_METRES);
+    group.scale.setScalar(1 / TILE_METERS);
     group.add(piece);
     const tip = path[0];
     const along = [];
-    for (let i = 0; i < path.length; i += 40) along.push([path[i][0] / TILE_METRES, path[i][2] / TILE_METRES]);
-    return { group, metres: s, at: [tip[0] / TILE_METRES, tip[1] / TILE_METRES, tip[2] / TILE_METRES], along };
+    for (let i = 0; i < path.length; i += 40) along.push([path[i][0] / TILE_METERS, path[i][2] / TILE_METERS]);
+    return { group, meters: s, at: [tip[0] / TILE_METERS, tip[1] / TILE_METERS, tip[2] / TILE_METERS], along };
   }
 
   function release() {
@@ -268,12 +268,12 @@ export function createBall(GFX, floor) {
     qFree.copy(qPosed);
   }
 
-  const out = { radius: riding(end) / TILE_METRES, snapped: null, rewound: false, piece: null };
+  const out = { radius: riding(end) / TILE_METERS, snapped: null, rewound: false, piece: null };
 
   return {
     root, ball, wound, laid, material,
-    /** Yarn on the ball, in metres; what has paid out still counts until it snaps. */
-    get metres() { return end; },
+    /** Yarn on the ball, in meters; what has paid out still counts until it snaps. */
+    get meters() { return end; },
     get total() { return TOTAL; },
     get holder() { return holder; },
     get paid() { return holder ? paidOut() : 0; },
@@ -284,7 +284,7 @@ export function createBall(GFX, floor) {
 
     /**
      * The loose end is caught where the ball is, by `who`: { snap: how many
-     * metres pay out before it snaps, letGo: whether it lets the strand wind
+     * meters pay out before it snaps, letGo: whether it lets the strand wind
      * all the way back on }. False if it is already caught.
      */
     snag(b, q, who) {
@@ -292,7 +292,7 @@ export function createBall(GFX, floor) {
       holder = who;
       const f = floor(b.x, b.z);
       path.length = 0;
-      path.push([b.x * TILE_METRES, (f ?? b.y - b.r) * TILE_METRES, b.z * TILE_METRES]);
+      path.push([b.x * TILE_METERS, (f ?? b.y - b.r) * TILE_METERS, b.z * TILE_METERS]);
       // The end trails back the way the ball came.
       const v = Math.hypot(b.vx ?? 0, b.vz ?? 0);
       const e = NL - 1;
@@ -308,7 +308,7 @@ export function createBall(GFX, floor) {
     /**
      * Once a physics step, after the ball `b` (tiles) has moved: the strand
      * pays out or winds back on. Returns { radius (tiles, for the physics),
-     * snapped (metres lost, or null), piece (what was left on the floor),
+     * snapped (meters lost, or null), piece (what was left on the floor),
      * rewound (wound all the way back on) }.
      */
     step(b, dt) {
@@ -316,9 +316,9 @@ export function createBall(GFX, floor) {
       out.piece = null;
       out.rewound = false;
       if (holder) {
-        const x = b.x * TILE_METRES, z = b.z * TILE_METRES;
+        const x = b.x * TILE_METERS, z = b.z * TILE_METERS;
         const f = floor(b.x, b.z);
-        const y = (f ?? b.y - b.r) * TILE_METRES;
+        const y = (f ?? b.y - b.r) * TILE_METERS;
         // Off the edge of the floor, or put down somewhere else all at once (back where it was safe, or in
         // the next room): the strand can't follow it there, so it snaps where it lies.
         const was = path[path.length - 1];
@@ -329,7 +329,7 @@ export function createBall(GFX, floor) {
           end -= s;
           if (path.length > 1) strandPose(end, ...headingAt(s));
           release();
-          out.radius = riding(end) / TILE_METRES;
+          out.radius = riding(end) / TILE_METERS;
           return out;
         }
         // Back over the strand: it winds back on. Anywhere else: it pays out.
@@ -364,7 +364,7 @@ export function createBall(GFX, floor) {
           lay(s);
         }
       }
-      out.radius = riding(holder ? end - paidOut() : end) / TILE_METRES;
+      out.radius = riding(holder ? end - paidOut() : end) / TILE_METERS;
       blend = Math.min(1, blend + dt / 0.2);
       return out;
     },
@@ -389,16 +389,16 @@ export function createBall(GFX, floor) {
         qPosed.copy(ball.quaternion);
         if (holder) laidGeo.setDrawRange(0, 0);
       }
-      ball.position.set(b.x * TILE_METRES, b.y * TILE_METRES, b.z * TILE_METRES);
+      ball.position.set(b.x * TILE_METERS, b.y * TILE_METERS, b.z * TILE_METERS);
       wound.geometry.setDrawRange(0, (Math.min(N - 2, lo + 1) + 1) * SEG_IDX);
       if (contact) {
         const ground = floor(b.x, b.z);
         const lift = ground === null ? Infinity : b.y - b.r - ground;
         contact.visible = lift < 0.6;
         if (contact.visible) {
-          contact.position.set(b.x * TILE_METRES, ground * TILE_METRES + 0.0006, b.z * TILE_METRES);
+          contact.position.set(b.x * TILE_METERS, ground * TILE_METERS + 0.0006, b.z * TILE_METERS);
           contact.material.opacity = clamp(1 - lift / 0.6, 0, 1);
-          contact.scale.setScalar(b.r * TILE_METRES * 1.9);
+          contact.scale.setScalar(b.r * TILE_METERS * 1.9);
         }
       }
     },
@@ -410,24 +410,24 @@ export function createBall(GFX, floor) {
       const piece = s > RS * 4 ? cut(s) : null;
       end -= s;
       release();
-      out.radius = riding(end) / TILE_METRES;
+      out.radius = riding(end) / TILE_METERS;
       return piece;
     },
 
-    /** Winds `metres` more on (a skein found), up to a whole ball; how much went on. */
-    windOn(metres) {
+    /** Winds `meters` more on (a skein found), up to a whole ball; how much went on. */
+    windOn(meters) {
       if (holder) return 0;
       const before = end;
-      end = Math.min(TOTAL, end + metres);
-      out.radius = riding(end) / TILE_METRES;
+      end = Math.min(TOTAL, end + meters);
+      out.radius = riding(end) / TILE_METERS;
       return end - before;
     },
 
     /** How much yarn is on it, outright (a new run). */
-    set(metres) {
+    set(meters) {
       if (holder) release();
-      end = clamp(metres, STEP * 8, TOTAL);
-      out.radius = riding(end) / TILE_METRES;
+      end = clamp(meters, STEP * 8, TOTAL);
+      out.radius = riding(end) / TILE_METERS;
     },
   };
 }

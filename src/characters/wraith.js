@@ -2,7 +2,7 @@ import { rgb } from '../models/sdf.js';
 import { grainy, mix, ramp } from '../models/skins.js';
 
 /**
- * The wraith: a hooded spectre with no legs, floating. A cowl with only
+ * The wraith: a hooded specter with no legs, floating. A cowl with only
  * dark inside it and two cold eyes burning in the dark; wide sleeves with
  * long bony claws reaching out of them; a robe that falls away into ragged
  * wisps that stream and wave. The cloth glows a little of itself. A flyer:

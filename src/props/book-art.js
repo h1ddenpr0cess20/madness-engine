@@ -55,7 +55,7 @@ const canvasOf = (w, h) => {
   return c;
 };
 
-/** Foil: a gradient in the colour pass, plain white in the bump pass so it stands proud of the leather. */
+/** Foil: a gradient in the color pass, plain white in the bump pass so it stands proud of the leather. */
 function makeFoil(ctx, mode, hex, bg) {
   return {
     mode, bg, hex,
@@ -277,7 +277,7 @@ function trim(ctx, F, kind, x0, y0, x1, y1, rand) {
 /* the cover                                                           */
 /* ------------------------------------------------------------------ */
 
-/** Text centred at (x, y), letter by letter so it can be spaced. */
+/** Text centered at (x, y), letter by letter so it can be spaced. */
 function spaced(ctx, text, x, y, size, track, family, weight = 'bold') {
   ctx.font = `${weight} ${size}px ${family}`;
   ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
@@ -302,7 +302,7 @@ const TITLE_FONT = '"Cinzel","Trajan Pro","Palatino Linotype","Book Antiqua",Geo
 
 /**
  * The cover as one picture, outer face above and inner face below, in
- * millimetres: `s` along the unrolled cover, `z` up the book. `mode` is
+ * millimeters: `s` along the unrolled cover, `z` up the book. `mode` is
  * 'color' or 'bump' (what stands proud). Returns a canvas.
  */
 export function paintCover(g, mode) {
@@ -691,7 +691,7 @@ const PARAGRAPHS = [
   'The mirror in the hall has begun to arrive late. When I raise my arm it raises its arm, afterwards, thoughtfully, as though it is considering whether to. I have tried to catch it out. I wave very quickly. It is learning to wave quickly.',
   'Mice in the clock, mice in the bread, mice in the pocket of the dead man who sits in the parlor on Thursdays and does not mind. They are not mice. Do not call them mice to their faces. They will want to know what you mean.',
   'It was explained to me by a bird that the sea is not wet, that wet is a thing the sea *does to us*, out of spite. I wrote this down at once. I have since wept at how right the bird was. It sat on the rail and took the credit.',
-  'The bees have started making something other than honey. It is dark and it smells of cold pennies and it fills the combs in the roof in shapes I almost recognise. I put a spoon to it. The spoon came out *older*.',
+  'The bees have started making something other than honey. It is dark and it smells of cold pennies and it fills the combs in the roof in shapes I almost recognize. I put a spoon to it. The spoon came out *older*.',
   'THEY SAY I MUST REST. They say it through the keyhole in very reasonable voices. I have said that I will rest when the last of the dust has been accounted for, and the dust is *infinite*, and they have stopped saying it through the keyhole and have started to say it through the floor.',
   'Page forty-one is missing from every book in the house. It is not torn out. The books simply have no forty-one, and go from forty to forty-two as if it were nothing, as if forty-one were a word you are not supposed to know. I know it. I do not wish to write it.',
   'I met myself on the landing, going the other way, in a better coat. We nodded. There was no need to speak. He knew what I had done and I knew what he was going to do and we agreed, in the way of men on staircases, to do it in different rooms.',
@@ -700,7 +700,7 @@ const PARAGRAPHS = [
   'My hands are not my hands today. They are the hands of a careful person, one who would never spill. I have decided to let them do my writing, and you will notice the improvement, and you will not ask whose hands.',
   'Under the floor of the chapel is another chapel, and under that one, a third, and in the third a very long table laid for a great many, with all the chairs pulled out a little. I was shown to my place. My name was already there, spelled the old way.',
   'I have invented a new color. It is the color of the second before you remember something. I painted one wall with it and now I cannot remember what I was going to say, and the wall is *very pleased*.',
-  'A small grey man sells me the evenings. He will take nothing for them but the mornings. I thought this a bargain. I am beginning to doubt that I have ever had a morning. I will ask the man. I cannot find the man. It is evening.',
+  'A small gray man sells me the evenings. He will take nothing for them but the mornings. I thought this a bargain. I am beginning to doubt that I have ever had a morning. I will ask the man. I cannot find the man. It is evening.',
 ];
 
 const HEADINGS = [

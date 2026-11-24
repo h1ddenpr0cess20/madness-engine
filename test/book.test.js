@@ -131,7 +131,7 @@ test('leaves do not pass through each other when stacked or fanned', () => {
         const A = lines[k], B = lines[k + 1];
         for (let i = 4; i < A.length; i += 2) {
           for (let j = 0; j < B.length - 2; j += 2) {
-            // Middle lines of neighbours stay clear by a good part of a leaf's pitch, however the spine is rolled.
+            // Middle lines of neighbors stay clear by a good part of a leaf's pitch, however the spine is rolled.
             assert.ok(segment(A[i], A[i + 1], B[j], B[j + 1], B[j + 2], B[j + 3]) > pitch * 0.25, `leaves ${k + 1} and ${k + 2} meet in ${JSON.stringify(pose)} (${leaves} leaves)`);
           }
         }

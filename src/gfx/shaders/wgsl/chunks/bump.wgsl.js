@@ -15,7 +15,7 @@ fn dHdxy_fwd(bumpMapUv: vec2f, mapUv: vec2f) -> vec2f {
   #endif
   var dH = vec2f(dBx, dBy);
   #ifdef USE_DETAILMAP
-  // The detail map, on the colour map's layout: how much of the fine bump shows here (b), and a
+  // The detail map, on the color map's layout: how much of the fine bump shows here (b), and a
   // relief of its own (r) for what the tile cannot hold: creases, wrinkles, folds.
   let detail = textureSample(t_detail, s_detail, mapUv).xyz;
   dH *= detail.z;

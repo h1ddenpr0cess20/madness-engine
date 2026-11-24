@@ -243,7 +243,7 @@ export function footProfile(m) {
   const at = (z) => {
     const f = Math.max(0, Math.min(N, ((z - back) / (front - back)) * N));
     const i = Math.min(N - 1, Math.floor(f)), t = f - i;
-    // Smoothed over the neighbouring bins.
+    // Smoothed over the neighboring bins.
     const pick = (k) => bins[Math.max(0, Math.min(N, k))];
     const avg = (key, k) => (pick(k - 1)[key] + 2 * pick(k)[key] + pick(k + 1)[key]) / 4;
     const lerp = (key) => avg(key, i) * (1 - t) + avg(key, i + 1) * t;

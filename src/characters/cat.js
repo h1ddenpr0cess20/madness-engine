@@ -26,7 +26,7 @@ const SCALE = 3;
 export const CAT_KINDS = {
   ginger: { name: 'Blaze', coat: 'ginger', speed: 5.0, sight: 7.5, fov: 2.4, wary: 1.0, ears: 1.0, play: 4.5, size: 1, reach: 0.62 },
   black: { name: 'Nyx', coat: 'black', speed: 5.6, sight: 8.5, fov: 2.2, wary: 1.1, ears: 1.2, play: 3.5, size: 1, reach: 0.62 },
-  grey: { name: 'Ghost', coat: 'grey', speed: 4.4, sight: 6.5, fov: 2.4, wary: 0.8, ears: 0.8, play: 5, size: 1, reach: 0.62 },
+  gray: { name: 'Ghost', coat: 'gray', speed: 4.4, sight: 6.5, fov: 2.4, wary: 0.8, ears: 0.8, play: 5, size: 1, reach: 0.62 },
   calico: { name: 'Jinx', coat: 'calico', speed: 5.0, sight: 7, fov: 2.4, wary: 0.9, ears: 1.0, play: 6.5, size: 0.95, reach: 0.6 },
   siamese: { name: 'Vex', coat: 'siamese', speed: 5.4, sight: 9.5, fov: 2.6, wary: 1.35, ears: 1.3, play: 3.5, size: 0.95, reach: 0.6 },
   tom: { name: 'Brutus', coat: 'tom', speed: 4.6, sight: 9, fov: 2.5, wary: 1.2, ears: 1.1, play: 3.0, size: 1.35, reach: 0.9 },
@@ -111,7 +111,7 @@ function pale(p, n) {
 /** Fine grain along the way the fur lies. */
 const hairs = (p, k = 0.1) => 1 + (noise(p[0] * 220, p[1] * 220, p[2] * 70) - 0.5) * 2 * k;
 
-/** Soft variation over the coat, so no colour is flat. */
+/** Soft variation over the coat, so no color is flat. */
 const shade = (p, k = 0.12) => 1 + (fbm(p[0] * 18, p[1] * 18, p[2] * 18, 2) - 0.5) * 2 * k;
 
 /** Tabby stripes: rings round the tail, bars on the legs, bands swept down the sides, lines over the crown. */
@@ -144,7 +144,7 @@ const COATS = {
     return lerp3(over, C('#f6dcb4'), pale(p, n)).map((v) => v * hairs(p) * shade(p));
   },
   black: (p, n) => C('#17141a').map((v) => v * (1 + 0.25 * pale(p, n)) * hairs(p, 0.2) * shade(p, 0.2)),
-  grey: (p, n) => lerp3(C('#7b818c'), C('#a3a8b0'), pale(p, n) * 0.8).map((v) => v * hairs(p) * shade(p, 0.08)),
+  gray: (p, n) => lerp3(C('#7b818c'), C('#a3a8b0'), pale(p, n) * 0.8).map((v) => v * hairs(p) * shade(p, 0.08)),
   calico: (p, n) => {
     const white = C('#f4eee4');
     const a = fbm(p[0] * 9 + 3, p[1] * 9, p[2] * 9, 3), b = fbm(p[0] * 8, p[1] * 8 + 7, p[2] * 8, 3);
@@ -169,12 +169,12 @@ const COATS = {
   },
 };
 
-/** The eye colour for each coat. */
-const EYES = { ginger: '#c8e05a', black: '#f2c43a', grey: '#e8a63a', calico: '#7ac86a', siamese: '#5aa8f0', tom: '#e8b030' };
+/** The eye color for each coat. */
+const EYES = { ginger: '#c8e05a', black: '#f2c43a', gray: '#e8a63a', calico: '#7ac86a', siamese: '#5aa8f0', tom: '#e8b030' };
 
 const side = (s) => (s > 0 ? 'L' : 'R');
 
-/** An eye's centre, the way it looks (`d`), and the turn that stands a shape along it. */
+/** An eye's center, the way it looks (`d`), and the turn that stands a shape along it. */
 function eyeFrame(m) {
   const c = at(EYE, m), dir = [m * EYE_DIR[0], EYE_DIR[1], EYE_DIR[2]];
   const l = Math.hypot(...dir), d = dir.map((v) => v / l);
@@ -184,7 +184,7 @@ function eyeFrame(m) {
 /** The eye's radii: across, up, and front to back. */
 const EYE_R = [0.0124, 0.0096, 0.0096];
 
-/** p in an eye's own frame (`R` its turn, `c` its centre): x across, y up, z out the front. */
+/** p in an eye's own frame (`R` its turn, `c` its center): x across, y up, z out the front. */
 function toEye(p, c, R) {
   const v = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
   return [
@@ -194,7 +194,7 @@ function toEye(p, c, R) {
   ];
 }
 
-/** An eye's colour: the iris bright in the middle and dark at its rim, and a slit of a pupil down the front. */
+/** An eye's color: the iris bright in the middle and dark at its rim, and a slit of a pupil down the front. */
 function eyeColor(hex, m) {
   const { c, rot } = eyeFrame(m);
   const R = rotation(rot);

@@ -1,7 +1,7 @@
 /**
  * Rock. The asset is Rock's own boulder, from github.com/h1ddenpr0cess20/rock
  * (`src/client/boulder/geometry.js`, here as `createBoulder`): the same
- * granite, the same shape, the same colours and material, only sampled more
+ * granite, the same shape, the same colors and material, only sampled more
  * finely (`DETAIL`) so its faces are crisp and its grain fine up close. Here it is only turned as the
  * physics rolls it, and squashed on landing by the same sort of spring Rock's
  * own animation uses.

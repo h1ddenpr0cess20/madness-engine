@@ -1,10 +1,10 @@
-import { buildWeapon, WEAPON_WORLD_UNITS_PER_METRE } from './common.js';
+import { buildWeapon, WEAPON_WORLD_UNITS_PER_METER } from './common.js';
 import { HANDS } from './categories.js';
 
 /**
  * A broadsword-derived greatsword. It preserves the broadsword's blade profile,
  * fuller, pommel and construction. Only blade length, blade width, grip length and
- * guard-bar thickness differ. All dimensions are in metres.
+ * guard-bar thickness differ. All dimensions are in meters.
  */
 export const GREATSWORD_DIMENSIONS = Object.freeze({
   overallLength: 1.524,
@@ -25,7 +25,7 @@ export const GREATSWORD_SPEC = Object.freeze({
   ...GREATSWORD_DIMENSIONS,
 });
 
-export const WORLD_UNITS_PER_METRE = WEAPON_WORLD_UNITS_PER_METRE;
+export const WORLD_UNITS_PER_METER = WEAPON_WORLD_UNITS_PER_METER;
 
 export function createGreatsword(GFX, options = {}) {
   return buildWeapon(GFX, GREATSWORD_SPEC, options);

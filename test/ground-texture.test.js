@@ -65,7 +65,7 @@ test('gravel is stones: it tiles, has relief, and each kind is its own', () => {
   assert.notDeepEqual(kinds[1].color, kinds[2].color);
 });
 
-test('pavers: a joint between every brick, bricks of different colours, tiling', () => {
+test('pavers: a joint between every brick, bricks of different colors, tiling', () => {
   const p = paintPavers({ size: 512, seed: 2 });
   assert.ok(seamOf(p) < 2, `seam ${seamOf(p)}`);
   // The joint between the rows: along a column, the lowest places are the joints, one row of bricks apart.
@@ -75,7 +75,7 @@ test('pavers: a joint between every brick, bricks of different colours, tiling',
   assert.ok(joint < face - 100, `${joint} vs ${face}`);
   const reds = new Set();
   for (let r = 0; r < 16; r++) reds.add(Math.round(p.color[(Math.floor(r * row + row / 2) * 512 + 40) * 4] / 12));
-  assert.ok(reds.size > 3, `colours ${reds.size}`);
+  assert.ok(reds.size > 3, `colors ${reds.size}`);
   assert.deepEqual(paintPavers({ size: 128, seed: 3 }).color, paintPavers({ size: 128, seed: 3 }).color);
 });
 

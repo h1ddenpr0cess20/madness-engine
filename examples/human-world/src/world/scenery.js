@@ -284,7 +284,7 @@ export function drawCrypt(m) {
   }
 }
 
-/** The belfry bell, hung in its frame: gold-grey, a clapper that swings. Drawn so the town can show it. */
+/** The belfry bell, hung in its frame: gold-gray, a clapper that swings. Drawn so the town can show it. */
 export function bellFrame() {
   return make((m) => {
     m.box('wood', -0.3, 0, -0.04, -0.24, 0.5, 0.04, PALETTE.wood[1], { skip: ['bottom'] });

@@ -1,10 +1,10 @@
 import { buttons, cloth, hold, onBody, person, shell, strap } from './person.js';
-import { moustache } from './wardrobe.js';
+import { mustache } from './wardrobe.js';
 
 /**
  * The Pizzaiolo: from the wood-fired oven at the back of a trattoria off
  * the Campo, big and floury, in chef's whites, a tall toque, a red
- * neckerchief, flour to the elbows, a moustache, the sleeves rolled
+ * neckerchief, flour to the elbows, a mustache, the sleeves rolled
  * up, and the dough up on one hand over his head, spinning, wider every
  * turn. Spins the dough. Throws the dough. Has never missed. About 1.1
  * tiles tall with the hat.
@@ -42,7 +42,7 @@ const base = person({
     },
   },
   extras(s) {
-    moustache(s, { color: '#1a120a', wide: 1.4 });
+    mustache(s, { color: '#1a120a', wide: 1.4 });
     // The toque: a white band fitted round the head, and the tall pleated crown puffed out on top of it.
     shell(s, (p) => 0.7 - p[1], { color: '#fbfaf8', mat: 'cloth', part: 'outer', thick: 0.008, lift: 0.002, over: ['head', 'hair'], bone: 'head', k: 0.004 });
     const top = onBody(s, [0, 0.9, -0.004], ['outer']);

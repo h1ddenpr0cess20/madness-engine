@@ -211,7 +211,7 @@ function createRig(GFX, { w, d, height }) {
   return { group, update(up, time) { lensMat.color.setRGB(1, 0.9 + 0.05 * Math.sin(time * 20), 0.75); } };
 }
 
-/** The props department's boulder: papier-mâché painted grey, lumpy, on a cable. The talent has opinions about it. */
+/** The props department's boulder: papier-mâché painted gray, lumpy, on a cable. The talent has opinions about it. */
 function createBoulder(GFX, { w, d, height }) {
   const group = new GFX.Group();
   const geometry = new GFX.IcosahedronGeometry(0.5, 1).toNonIndexed();
@@ -262,7 +262,7 @@ function createPiston(GFX, { w, d, height }) {
   return { group, update(up, time) { const k = up < 0.99 && up > 0.01 ? 1 : 0.4 + 0.3 * Math.sin(time * 6); glowMat.color.setRGB(k, 0.2 * k, 0.15 * k); } };
 }
 
-/** A wooden crate on a crane hook: slats, steel bands, stencilled. */
+/** A wooden crate on a crane hook: slats, steel bands, stenciled. */
 function createCrate(GFX, { w, d, height }) {
   const group = new GFX.Group();
   const plank = floorTexture(GFX, 'planks');
@@ -311,10 +311,10 @@ function createChandelier(GFX, { w, d, height }) {
     drop.position.set(Math.cos(a) * r * 0.78, -height * 0.34 - 0.04, Math.sin(a) * r * 0.78);
     group.add(drop);
   }
-  const centre = new GFX.Mesh(new GFX.ConeGeometry(0.1, 0.34, 8), crystal);
-  centre.rotation.x = Math.PI;
-  centre.position.y = -height * 0.4;
-  group.add(centre);
+  const center = new GFX.Mesh(new GFX.ConeGeometry(0.1, 0.34, 8), crystal);
+  center.rotation.x = Math.PI;
+  center.position.y = -height * 0.4;
+  group.add(center);
   const chain = new GFX.Mesh(new GFX.CylinderGeometry(0.03, 0.03, 8, 8), brass);
   chain.position.y = height / 2 + 4;
   group.add(chain);
@@ -332,13 +332,13 @@ export function createPyroMesh(GFX, { x, z, w, d, venue }) {
   const burst = BURSTS[kind];
   // Steam, and the tour's snow cannons, sand spouts and fountains, billow up off a round plate; flame and fireworks lick up through a grating.
   const steam = kind === 'steam' || Boolean(burst?.billow);
-  const colours = burst ?? (steam ? { flame: '#c8d0dc', core: '#ffffff', halo: '#dce4ee' } : { flame: '#ff7a1a', core: '#fff2b0', halo: '#ffa050' });
+  const colors = burst ?? (steam ? { flame: '#c8d0dc', core: '#ffffff', halo: '#dce4ee' } : { flame: '#ff7a1a', core: '#fff2b0', halo: '#ffa050' });
   const group = new GFX.Group();
   const iron = dark(GFX, '#2b2b30', { metalness: 0.8, roughness: 0.4 });
-  const flameMat = new GFX.MeshBasicMaterial({ color: new GFX.Color(colours.flame), transparent: true, opacity: steam ? 0.45 : 0.85, toneMapped: false, blending: GFX.AdditiveBlending, depthWrite: false });
-  const coreMat = new GFX.MeshBasicMaterial({ color: new GFX.Color(colours.core), transparent: true, opacity: steam ? 0.5 : 0.95, toneMapped: false, blending: GFX.AdditiveBlending, depthWrite: false });
+  const flameMat = new GFX.MeshBasicMaterial({ color: new GFX.Color(colors.flame), transparent: true, opacity: steam ? 0.45 : 0.85, toneMapped: false, blending: GFX.AdditiveBlending, depthWrite: false });
+  const coreMat = new GFX.MeshBasicMaterial({ color: new GFX.Color(colors.core), transparent: true, opacity: steam ? 0.5 : 0.95, toneMapped: false, blending: GFX.AdditiveBlending, depthWrite: false });
   const glow = glowTexture(GFX).map;
-  const haloMat = glow ? new GFX.SpriteMaterial({ map: glow, color: new GFX.Color(colours.halo), blending: GFX.AdditiveBlending, depthWrite: false, opacity: 0.8 }) : null;
+  const haloMat = glow ? new GFX.SpriteMaterial({ map: glow, color: new GFX.Color(colors.halo), blending: GFX.AdditiveBlending, depthWrite: false, opacity: 0.8 }) : null;
   const jets = [];
   const flameGeometry = steam ? new GFX.CylinderGeometry(0.34, 0.16, 1, 12) : new GFX.ConeGeometry(0.18, 1, 10);
   const coreGeometry = steam ? new GFX.CylinderGeometry(0.2, 0.1, 1, 10) : new GFX.ConeGeometry(0.09, 1, 8);
@@ -413,10 +413,10 @@ export function createLiftMesh(GFX, { w, d, thickness, style, lift = null }) {
   const side = dark(GFX, '#101012', { roughness: 0.8 });
   const top = thickness / 2;
   let live = null;
-  const wheels = (radius, colour, inset = 0.25) => {
-    const tyre = dark(GFX, colour, { roughness: 0.8 });
+  const wheels = (radius, color, inset = 0.25) => {
+    const tire = dark(GFX, color, { roughness: 0.8 });
     for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const wheel = new GFX.Mesh(new GFX.CylinderGeometry(radius, radius, 0.12, 14), tyre);
+      const wheel = new GFX.Mesh(new GFX.CylinderGeometry(radius, radius, 0.12, 14), tire);
       wheel.rotation.z = Math.PI / 2;
       wheel.position.set(cx * (w / 2 - inset), -top - radius * 0.6, cz * (d / 2 - inset));
       group.add(wheel);
@@ -622,7 +622,7 @@ export function createLiftMesh(GFX, { w, d, thickness, style, lift = null }) {
   return { group, style, update(time) { live?.(time); } };
 }
 
-/** A closed set: a roll-up shutter of corrugated steel, stencilled CLOSED SET; or (`look` 'bars') a gate of iron bars. */
+/** A closed set: a roll-up shutter of corrugated steel, stenciled CLOSED SET; or (`look` 'bars') a gate of iron bars. */
 export function createGateMesh(GFX, { span, height, thickness, across, look }) {
   const group = new GFX.Group();
   if (look === 'border') {
@@ -743,14 +743,14 @@ export function createPanelMesh(GFX, { span, height, thickness, across, look }) 
 export function createBumperMesh(GFX, { radius, look = 'post' }) {
   const group = new GFX.Group();
   const parts = [];
-  let flashColour = [1, 0.23, 0.54], rest = [1, 0.23, 0.54];
+  let flashColor = [1, 0.23, 0.54], rest = [1, 0.23, 0.54];
   const ringMat = new GFX.MeshBasicMaterial({ color: new GFX.Color(...rest), toneMapped: false });
   if (BUMPERS[look]) {
     const made = BUMPERS[look](GFX, { radius, ringMat });
     group.add(...made.objects);
     parts.push(...made.parts);
     rest = made.rest;
-    flashColour = made.flash;
+    flashColor = made.flash;
   } else if (look === 'rope') {
     const brass = dark(GFX, '#d8a848', { metalness: 0.9, roughness: 0.25 });
     const base = new GFX.Mesh(new GFX.CylinderGeometry(radius * 0.55, radius * 0.7, 0.08, 18), brass);
@@ -769,7 +769,7 @@ export function createBumperMesh(GFX, { radius, look = 'post' }) {
     parts.push(base, post, knob, rope);
     group.add(...parts, ring);
     rest = [1, 0.75, 0.3];
-    flashColour = [1, 1, 0.8];
+    flashColor = [1, 1, 0.8];
   } else if (look === 'podium') {
     const shell = dark(GFX, '#1a1424', { metalness: 0.3, roughness: 0.35 });
     const cube = new GFX.Mesh(new GFX.BoxGeometry(radius * 1.6, 0.5, radius * 1.6), shell);
@@ -781,7 +781,7 @@ export function createBumperMesh(GFX, { radius, look = 'post' }) {
     parts.push(cube);
     group.add(cube, top, band);
     rest = [0.2, 0.85, 1];
-    flashColour = [1, 0.3, 0.8];
+    flashColor = [1, 0.3, 0.8];
   } else if (look === 'barrel') {
     const wood = dark(GFX, '#8a5a32', { roughness: 0.8 });
     const band = dark(GFX, '#3a3a40', { metalness: 0.7, roughness: 0.4 });
@@ -802,7 +802,7 @@ export function createBumperMesh(GFX, { radius, look = 'post' }) {
     parts.push(body, bulge);
     group.add(body, bulge, ring);
     rest = [0.9, 0.55, 0.2];
-    flashColour = [1, 0.95, 0.6];
+    flashColor = [1, 0.95, 0.6];
   } else if (look === 'cactus') {
     const green = dark(GFX, '#3a7a3a', { roughness: 0.7 });
     const trunk = new GFX.Mesh(new GFX.CylinderGeometry(radius * 0.45, radius * 0.5, 1.4, 12), green);
@@ -827,7 +827,7 @@ export function createBumperMesh(GFX, { radius, look = 'post' }) {
     ring.position.y = 0.04;
     group.add(ring);
     rest = [0.5, 0.85, 0.3];
-    flashColour = [1, 1, 0.6];
+    flashColor = [1, 1, 0.6];
   } else if (look === 'hydrant') {
     const paint = dark(GFX, '#c8302a', { roughness: 0.45, metalness: 0.3 });
     const body = new GFX.Mesh(new GFX.CylinderGeometry(radius * 0.4, radius * 0.48, 0.6, 14), paint);
@@ -847,7 +847,7 @@ export function createBumperMesh(GFX, { radius, look = 'post' }) {
     parts.push(body, dome, arms);
     group.add(body, dome, nut, arms, base, ring);
     rest = [1, 0.85, 0.7];
-    flashColour = [1, 1, 1];
+    flashColor = [1, 1, 1];
   } else if (look === 'drum') {
     const shellMat = dark(GFX, '#b81c2a', { metalness: 0.2, roughness: 0.3 });
     const chrome = dark(GFX, '#e8eaf0', { metalness: 0.9, roughness: 0.2 });
@@ -866,7 +866,7 @@ export function createBumperMesh(GFX, { radius, look = 'post' }) {
     parts.push(body);
     group.add(body, skin, ring, glow);
     rest = [1, 0.6, 0.2];
-    flashColour = [1, 1, 0.6];
+    flashColor = [1, 1, 0.6];
   } else {
     const chrome = dark(GFX, '#eef0f6', { metalness: 0.55, roughness: 0.22, emissive: new GFX.Color('#4a3a58'), emissiveIntensity: 0.7 });
     const post = new GFX.Mesh(new GFX.CylinderGeometry(radius * 0.8, radius, 0.5, 20), chrome);
@@ -878,14 +878,14 @@ export function createBumperMesh(GFX, { radius, look = 'post' }) {
     ring.position.y = 0.22;
     parts.push(post, cap);
     group.add(post, cap, ring);
-    flashColour = [1, 0.93, 0.94];
+    flashColor = [1, 0.93, 0.94];
   }
   for (const m of parts) m.castShadow = true;
   return {
     group,
     update(since) {
       const flash = since >= 0 && since < 0.25 ? 1 - since / 0.25 : 0;
-      ringMat.color.setRGB(...rest.map((v, i) => v + (flashColour[i] - v) * flash));
+      ringMat.color.setRGB(...rest.map((v, i) => v + (flashColor[i] - v) * flash));
       group.scale.setScalar(1 + flash * 0.12);
     },
   };

@@ -2,7 +2,7 @@ import { grime } from '../models/skins.js';
 import { cloth, person, shell } from './person.js';
 
 /**
- * The Zombie: up out of the swamp for the death-metal vocals. Grey-green skin, dark round the
+ * The Zombie: up out of the swamp for the death-metal vocals. Gray-green skin, dark round the
  * eyes, a torn shirt and a tie still on, trousers in rags at the knee, one
  * shoe; arms out in front, as the director asked, and shuffling. Hungry,
  * for a very specific guitar tone. About 0.9 tiles tall.
@@ -43,7 +43,7 @@ export default person({
     // His office tie, still on, loosened and pulled askew; the knot slipped down.
     shell(s, (p) => { const c = (0.52 - p[1]) * 0.3; return Math.max(Math.abs(p[0] - c) - 0.008 - Math.max(0, 0.5 - p[1]) * 0.06, p[1] - 0.52, 0.4 - p[1], 0.02 - p[2]); }, { color: '#6a2a2a', mat: 'cloth', part: 'outer', thick: 0.004, lift: 0.001, over: ['top'], bone: 'chest', k: 0.002 });
     s.part('outer2', () => s.ellipsoid([0.0, 0.517, 0.083], [0.011, 0.01, 0.008], { color: '#6a2a2a', mat: 'cloth', bone: 'chest', k: 0.002 }));
-    // The shirt torn open at the side and the trousers through at the knees, his grey skin showing, frayed.
+    // The shirt torn open at the side and the trousers through at the knees, his gray skin showing, frayed.
     const tear = (c, r, sx, sy) => (p) => Math.hypot((p[0] - c[0]) * sx, (p[1] - c[1]) * sy) - r - Math.sin(p[0] * 700 + p[1] * 500) * 0.0025;
     const hole = tear([0.05, 0.36], 0.024, 1, 1.3);
     s.paint((p) => Math.max(hole(p), 0.02 - p[2]), flesh, 0.002);

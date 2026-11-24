@@ -7,7 +7,7 @@ import { dance } from './dance.js';
  * leap, attack, cast, hit, ko, win, sit, talk, yell), driven the same way the
  * cast is driven ({ clip, t, time, seed, speed }) and with the same
  * cadences, so a game that moves one moves the other in step, but worked
- * out for a man of real size: every rise, fall and step is in metres, the
+ * out for a man of real size: every rise, fall and step is in meters, the
  * shoulders swing against the hips, the head stays level as he goes, the
  * foot rolls off its toes.
  *
@@ -142,7 +142,7 @@ const STRIDE = [
   [1, -0.42, 0.22, -0.12, 0],
 ];
 
-/** The stride at `u` (0..1, wrapping), eased through its keys (Catmull–Rom, round the loop). */
+/** The stride at `u` (0..1, wrapping), eased through its keys (Catmull–Rom, around the loop). */
 function strideAt(u) {
   u = ((u % 1) + 1) % 1;
   let i = 0;

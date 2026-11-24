@@ -84,7 +84,7 @@ function awning(m, f, u0, u1, v, col) {
 
 // ---- Street houses ----
 
-/** A brownstone: three storeys of brown stone on a raised stoop, a door with a transom, and a cornice. */
+/** A brownstone: three stories of brown stone on a raised stoop, a door with a transom, and a cornice. */
 export function brownstone(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, NY.brown);
@@ -103,7 +103,7 @@ export function brownstone(m, v) {
   return { height: H + 0.1 };
 }
 
-/** A walk-up tenement: five storeys of brick with two fire escapes down the front and a stoop door. */
+/** A walk-up tenement: five stories of brick with two fire escapes down the front and a stoop door. */
 export function tenement(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, NY.brick);
@@ -139,7 +139,7 @@ export function bodega(m, v) {
 
 // ---- Lofts and churches ----
 
-/** A cast-iron loft: four storeys behind an iron front of pilasters and bands, tall windows between the pilasters. */
+/** A cast-iron loft: four stories behind an iron front of pilasters and bands, tall windows between the pilasters. */
 export function castironloft(m, v) {
   const { rnd } = v;
   const x0 = -0.9, x1 = 0.9, z0 = -1.3, z1 = 1.3, H = 1.45;
@@ -174,7 +174,7 @@ export function brickchurch(m, v) {
 
 // ---- More homes: an Italianate row and a two-family brick house ----
 
-/** An Italianate row house: five narrow storeys with arched-top windows, a bracketed cornice and a stoop. */
+/** An Italianate row house: five narrow stories with arched-top windows, a bracketed cornice and a stoop. */
 export function italianaterow(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, ['#c8b89a', '#d8c8a8', '#b8a488']);
@@ -193,7 +193,7 @@ export function italianaterow(m, v) {
   return { height: H + 0.1 };
 }
 
-/** A two-family brick house: three storeys, two front doors each with its own stoop, and a wooden porch on the upper floor. */
+/** A two-family brick house: three stories, two front doors each with its own stoop, and a wooden porch on the upper floor. */
 export function brickduplex(m, v) {
   const { rnd } = v;
   const wall = pickFrom(rnd, NY.brick);

@@ -159,7 +159,7 @@ const DRESSING = [
   "paintRoom({ colors: look.reflect ?? [palette.lamp ?? '#ffa04a'], ceiling: look.ceiling })",
 ];
 
-/** The lantern the game's stage hangs over the ball, which the look colours: how bright, how far it reaches, how it falls off, how high. */
+/** The lantern the game's stage hangs over the ball, which the look colors: how bright, how far it reaches, how it falls off, how high. */
 function lanternOf(game, stage) {
   const light = /const lantern = new GFX\.PointLight\(0x[0-9a-f]{6}, ([\d.]+), ([\d.]+), ([\d.]+)\);/.exec(stage);
   const over = /lantern\.position\.set\(stage\.(\w+)\.x, stage\.\1\.y \+ ([\d.]+), stage\.\1\.z\);/.exec(stage);

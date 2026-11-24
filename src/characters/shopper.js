@@ -10,7 +10,7 @@ import { satchel } from './wardrobe.js';
  */
 
 const PUFFER = (p, n) => {
-  // Quilted: a seam every few centimetres up the body and the sleeves, each band puffed between.
+  // Quilted: a seam every few centimeters up the body and the sleeves, each band puffed between.
   const f = (((p[1] - 0.29) / 0.042) % 1 + 1) % 1, k = 0.82 + 0.25 * Math.sin(f * Math.PI);
   const c = cloth('#2a8a8a', '#1e6a6a')(p, n);
   return f < 0.08 ? c.map((v) => v * 0.55) : c.map((v) => Math.min(1, v * k));

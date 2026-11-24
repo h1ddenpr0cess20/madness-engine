@@ -3,7 +3,7 @@ import { cloth, hold, person, shell, strap } from './person.js';
 /**
  * The Troll: the one from under the bridge, as broad as it is tall, a skin
  * like wet slate with moss growing on the shoulders, a nose like a root
- * vegetable, a lumpy brow, hair in grey rags, a rag of sheepskin round
+ * vegetable, a lumpy brow, hair in gray rags, a rag of sheepskin round
  * the middle and a spruce trunk for a club. Has been charging a toll since
  * the Middle Ages and will not take a debit card. About 1.4 tiles tall.
  */

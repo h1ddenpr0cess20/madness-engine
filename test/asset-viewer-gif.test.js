@@ -74,14 +74,14 @@ test('lzw round-trips, through every growth of the code size and a table reset',
 
 test('a GIF has its frames, delays and loop, and their pictures come back close to what went in', () => {
   const W = 64, H = 48, gif = new GifEncoder(W, H);
-  const colourAt = (f, x, y) => {
+  const colorAt = (f, x, y) => {
     const d = Math.hypot(x - (12 + f * 10), y - 24);
     return d < 10 ? [250, 60 + d * 8, 40] : [x * 3, y * 4, 180 - x];
   };
   const frames = [];
   for (let f = 0; f < 4; f++) {
     const px = new Uint8ClampedArray(W * H * 4);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) px.set([...colourAt(f, x, y), 255], (y * W + x) * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) px.set([...colorAt(f, x, y), 255], (y * W + x) * 4);
     frames.push(px);
     gif.addFrame(px, 80);
   }

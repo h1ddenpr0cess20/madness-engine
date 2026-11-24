@@ -7,7 +7,7 @@ laser altimetry, as the frosting an etcher would leave for it.
     python3 scripts/moon-relief.py ldem_16.img [out.js] [preview.png]
 
 `ldem_16.img` is the LOLA gridded topography, LDEM_16 (16 pixels per degree,
-5760 x 2880, 16-bit integers in metres), read with its PDS label `ldem_16.lbl`
+5760 x 2880, 16-bit integers in meters), read with its PDS label `ldem_16.lbl`
 beside it: the label gives the grid size, byte order, scale, offset and the
 null value, so nothing is assumed about them.
 
@@ -19,7 +19,7 @@ one grayscale JPEG, 0 clear to 255 frosted, rows from 90N down and columns
 from -180 east (the prime meridian in the middle).
 
 LDEM columns run from 0 to 360 degrees east, so they are rolled half a turn
-to put the near side's centre (longitude 0) in the middle, as Mars's are.
+to put the near side's center (longitude 0) in the middle, as Mars's are.
 """
 import base64, io, os, re, sys
 import numpy as np
@@ -40,7 +40,7 @@ def read_label(path):
 
 
 def read_elevation(path):
-    """The gridded topography in metres, with the label's nulls set to NaN."""
+    """The gridded topography in meters, with the label's nulls set to NaN."""
     label = read_label(path)
     lines, samples = int(label["LINES"]), int(label["LINE_SAMPLES"])
     bits = int(label.get("SAMPLE_BITS", "16"))
@@ -53,8 +53,8 @@ def read_elevation(path):
     scale = float(label.get("SCALING_FACTOR", "1"))
     # HEIGHT = DN * SCALING_FACTOR, in the label's UNIT. OFFSET is the reference
     # radius, a constant, so it moves every pixel alike and leaves the slopes alone.
-    metres = {"KILOMETER": 1000.0, "METER": 1.0}[label.get("UNIT", "METER")]
-    elevation = raw * scale * metres
+    meters = {"KILOMETER": 1000.0, "METER": 1.0}[label.get("UNIT", "METER")]
+    elevation = raw * scale * meters
     elevation[missing] = np.nan
     return elevation
 
@@ -62,7 +62,7 @@ def read_elevation(path):
 def frost_of(elevation):
     """The frost, 0 to 1, of each pixel: the relief lit from the north-west."""
     h, w = elevation.shape
-    # Metres a pixel spans: north-south is constant, east-west shrinks with cos(latitude).
+    # Meters a pixel spans: north-south is constant, east-west shrinks with cos(latitude).
     lat = np.radians(90 - (np.arange(h) + 0.5) * 180 / h)
     dy = MOON_RADIUS_M * np.pi / h
     dx = (MOON_RADIUS_M * 2 * np.pi / w) * np.cos(lat)[:, None]

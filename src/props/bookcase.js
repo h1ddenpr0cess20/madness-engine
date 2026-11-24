@@ -6,13 +6,13 @@
  * show the spine they were painted with.
  *
  * The wood is the library's (`textures/wood.js`: `woodTexture`, one repeat of
- * a map a metre of board, the grain running along each board) when that file
- * is there, and plain painted boards in the same species' colours when it is
+ * a map a meter of board, the grain running along each board) when that file
+ * is there, and plain painted boards in the same species' colors when it is
  * not. It is looked for when this file loads, so a tree that gains the wood
  * library gains the grain here with no change: `WOOD_SOURCE` says which it
  * has, 'library' or 'plain'.
  *
- * Coordinates are metres: the middle of the footprint on the floor, the front
+ * Coordinates are meters: the middle of the footprint on the floor, the front
  * of the case facing +z.
  *
  *   const case_ = createBookcase(GFX, { species: 'walnut', shelves: 5 });
@@ -29,10 +29,10 @@ const WOOD_LIBRARY = '../textures/wood.js';
 let library = null;
 try { library = await import(/* @vite-ignore */ WOOD_LIBRARY); } catch { library = null; }
 
-/** Where the wood comes from: 'library' (textures/wood.js) or 'plain' (painted colours). */
+/** Where the wood comes from: 'library' (textures/wood.js) or 'plain' (painted colors). */
 export const WOOD_SOURCE = library ? 'library' : 'plain';
 
-/** The colours of a plain board, by species: the same names as the library's. */
+/** The colors of a plain board, by species: the same names as the library's. */
 const PLAIN = Object.freeze({
   walnut: '#8a5f3b', oak: '#a9793f', mahogany: '#6b3a2c', maple: '#d8b98a', cherry: '#a8603f', ash: '#cf8b4a', pine: '#d4a96a', teak: '#9c6b37',
 });
@@ -72,7 +72,7 @@ export function mulberry(seed) {
   };
 }
 
-/** A board's material: the species in the finish, from the library's maps (or a plain colour). */
+/** A board's material: the species in the finish, from the library's maps (or a plain color). */
 export function woodMaterial(GFX, species, finish) {
   const maps = library ? library.woodTexture(GFX, species, finish) : { map: null, bump: null };
   const material = new GFX.MeshPhysicalMaterial({
@@ -88,7 +88,7 @@ export function woodMaterial(GFX, species, finish) {
 
 /**
  * A box's texture coordinates from where it is in the world, one repeat a
- * metre, the grain running along `grain` ('x' for a shelf, 'y' for a side),
+ * meter, the grain running along `grain` ('x' for a shelf, 'y' for a side),
  * with `jitter` so that two boards of one species are not the same board.
  */
 export function woodUV(GFX, geometry, offset, grain) {

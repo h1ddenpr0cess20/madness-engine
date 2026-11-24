@@ -1,12 +1,12 @@
 /**
  * Asphalt and concrete, painted the way the granite is: not as noise with a
- * colour on it but as what the material is made of.
+ * color on it but as what the material is made of.
  *
  *   import { asphaltTexture, concreteTexture } from 'madness-engine/textures/road';
  *   const { map, bump } = asphaltTexture(GFX, { age: 0.5, cracks: 0.4 });
  *
  * Asphalt is crushed stone in a bitumen binder. Here every stone is its own
- * grain (an irregular, faceted, domed particle of grey granite, dark diorite,
+ * grain (an irregular, faceted, domed particle of gray granite, dark diorite,
  * tan limestone, pink feldspar, white quartz or black basalt, three sizes of
  * them laid coarse over fine), lying in a dark mastic of binder and sand with
  * pits where the mix did not fill. The binder wears off the stones that
@@ -15,7 +15,7 @@
  * dark line, or the tar band a crew laid over one; a patch is a different mix
  * with a sealed edge; oil drips darken it.
  *
- * Concrete is cement paste with sand in it: a mottled warm grey, the fine
+ * Concrete is cement paste with sand in it: a mottled warm gray, the fine
  * sand grains standing out of it, the air voids (bugholes) the pour trapped,
  * a few pebbles of aggregate where the paste has worn off them, the fine
  * ridges of a broom drawn across it, a control joint cut round each slab with
@@ -23,13 +23,13 @@
  *
  * Every field is periodic and every grain wraps, so a tile is seamless in both
  * directions. A texture is one tile across: `TILE.asphalt` and `TILE.concrete`
- * say how many metres. The maps are painted at 2048 by default, about a
- * millimetre a pixel for asphalt, so a stone is ten pixels across and has its own
+ * say how many meters. The maps are painted at 2048 by default, about a
+ * millimeter a pixel for asphalt, so a stone is ten pixels across and has its own
  * edge, light side, shadow side and the shadow it throws on the binder; and each comes with a bump map (the stones stand proud of the
  * binder, the pits and cracks sink, the joints are cut) in the same pixels.
  *
  * `paintAsphalt` and `paintConcrete` return the raw pixels (`{ size, color,
- * height }`, RGBA and one grey byte a pixel) with no canvas, so they run under
+ * height }`, RGBA and one gray byte a pixel) with no canvas, so they run under
  * node; the `*Texture` functions put them on a canvas and make the textures,
  * and give `{ map: null, bump: null }` without a document, as the other
  * painters do.
@@ -37,11 +37,11 @@
 import { fractal } from './painters.js';
 import { Pixels, clamp, grain, hash, lerp, made, pickStone, prng, ramp, wander } from './pixel-kit.js';
 
-/** How many metres one tile of each spans, for laying it on a street. */
+/** How many meters one tile of each spans, for laying it on a street. */
 export const TILE = Object.freeze({ asphalt: 2, concrete: 3 });
 
 const ASPHALT_STONES = [
-  { w: 0.4, rgb: [128, 127, 124] }, // grey granite
+  { w: 0.4, rgb: [128, 127, 124] }, // gray granite
   { w: 0.26, rgb: [78, 78, 81] }, //  dark diorite
   { w: 0.09, rgb: [140, 131, 117] }, // tan limestone
   { w: 0.06, rgb: [138, 122, 118] }, // pink feldspar
@@ -54,7 +54,7 @@ const ASPHALT_STONES = [
  * Asphalt, as pixels.
  * @param options
  *   - `size`: pixels a side (2048)
- *   - `age`: 0 fresh and black, 1 grey and worn to its stones (0.5)
+ *   - `age`: 0 fresh and black, 1 gray and worn to its stones (0.5)
  *   - `cracks`: how much it has cracked, 0 to 1: hairlines, and tar bands laid over the worst (0.2)
  *   - `patches`: how many repairs, 0 to 1 (0: a patch is a square, and a tile repeats it)
  *   - `stains`: oil and rubber, 0 to 1 (0.3)
@@ -82,7 +82,7 @@ export function paintAsphalt({ size = 2048, age = 0.5, cracks = 0.2, patches = 0
     return 0;
   };
 
-  // The mastic: binder with sand in it, darker where it is fresh, greyer where the sun has had it.
+  // The mastic: binder with sand in it, darker where it is fresh, grayer where the sun has had it.
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const u = x / size, v = y / size, i = y * size + x;
@@ -206,7 +206,7 @@ export function paintConcrete({ size = 2048, finish = 'broom', slabs = 1, wear =
   const slab = size / slabs;
   const broom = finish !== 'trowel';
 
-  // The paste: warm grey, clouded by the water in the mix and by the way it was floated.
+  // The paste: warm gray, clouded by the water in the mix and by the way it was floated.
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const u = x / size, v = y / size, i = y * size + x;
@@ -231,7 +231,7 @@ export function paintConcrete({ size = 2048, finish = 'broom', slabs = 1, wear =
     grain(s, x, y, (0.9 + rnd() * 1.1) * Math.max(S, 0.6), rnd, { rgb, top: 0.14, base: s.h[s.at(Math.floor(x), Math.floor(y))], speck: 0.04, shadow: 0.35 });
   }
 
-  // Pebbles: where the paste has worn off the coarse aggregate, round stones, each its own colour, ringed by the paste it sits in.
+  // Pebbles: where the paste has worn off the coarse aggregate, round stones, each its own color, ringed by the paste it sits in.
   const pebbles = Math.floor(size * size * 0.00018 * (0.25 + wear * 2.6));
   for (let n = 0; n < pebbles; n++) {
     const x = rnd() * size, y = rnd() * size;

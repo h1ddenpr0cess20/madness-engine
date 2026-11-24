@@ -1,10 +1,10 @@
 import { coat } from '../models/skins.js';
 import { cloth, person, strap } from './person.js';
-import { moustache, suitFront } from './wardrobe.js';
+import { mustache, suitFront } from './wardrobe.js';
 
 /**
- * The Angry Neighbour: a pink-faced man in a terry-cloth bathrobe and
- * slippers, a grey comb-over and a mighty moustache, who has come round at
+ * The Angry Neighbor: a pink-faced man in a terry-cloth bathrobe and
+ * slippers, a gray comb-over and a mighty mustache, who has come round at
  * eleven at night with a broom. About 0.9 tiles tall, and cross about it.
  */
 
@@ -24,7 +24,7 @@ const TRUNK = (sh) => !/^(arm|fore|hand|thigh|shin|foot)/.test(typeof sh.bone ==
 
 
 export default person({
-  name: 'neighbour',
+  name: 'neighbor',
   scale: 1.4,
   b: 1.12,
   shape: { legs: 0.9, girth: 1.12, head: 0.98 },
@@ -46,11 +46,11 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    // The dressing gown's shawl collar open over a bare chest and a tuft of grey hair; its belt tied in a bow.
+    // The dressing gown's shawl collar open over a bare chest and a tuft of gray hair; its belt tied in a bow.
     suitFront(s, { shirt: '#f0a58a', tie: null, lapel: cloth('#f4f8f6', '#d8e0dc'), low: 0.4, belly: 0.7, b: 1.12 });
     s.paint((p) => Math.max(Math.hypot(p[0], p[1] - 0.46) - 0.025, 0.04 - p[2]), hairy, 0.008);
     belt(s);
-    // The comb-over: three long strands of grey laid across the bald top from a parting low over the left ear.
+    // The comb-over: three long strands of gray laid across the bald top from a parting low over the left ear.
     for (const [z, y] of [[-0.035, 0.0], [-0.005, 0.003], [0.028, 0.0]]) {
       strap(s, [[0.1, 0.69 + y, z], [0.07, 0.765 + y, z], [0.0, 0.79 + y, z], [-0.07, 0.765 + y, z], [-0.098, 0.7 + y, z]], { width: 0.011, thick: 0.0028, color: hairy, mat: 'hair', over: ['head'], bone: 'head' });
     }
@@ -59,7 +59,7 @@ export default person({
       const top = 0.7 - Math.max(0, p[2]) * 0.6 + Math.max(0, -p[2]) * 0.25;
       return Math.max(p[1] - top, 0.632 - p[1], p[2] - 0.035, Math.abs(p[0]) - 0.1);
     }, hairy, 0.012);
-    moustache(s, { color: '#8a8a8a', wide: 1.4 });
+    mustache(s, { color: '#8a8a8a', wide: 1.4 });
     // The broom, upright in his fist: the long wooden handle, the straw fanned out at the floor, sewn in two bands.
     const G = pose.grip('R'), al = G.along;
     pose.hold(s, 'handR', () => {

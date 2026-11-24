@@ -7,7 +7,7 @@ const SIZE = 384;
 
 const luma = (color, i) => (color[i * 4] + color[i * 4 + 1] + color[i * 4 + 2]) / 3;
 
-/** How much a tile jumps across its own wrap, against how much it changes between any two neighbours inside it: about 1 when it tiles. */
+/** How much a tile jumps across its own wrap, against how much it changes between any two neighbors inside it: about 1 when it tiles. */
 function seam({ size, color }) {
   let across = 0, inside = 0;
   for (let k = 0; k < size; k++) {
@@ -55,7 +55,7 @@ test('cracks and patches change the road, and it still tiles', () => {
   assert.ok(seam(bad) < 1.8, `seam ${seam(bad)}`);
 });
 
-test('concrete is pale grey, tiles, and each finish is its own', () => {
+test('concrete is pale gray, tiles, and each finish is its own', () => {
   const broom = paintConcrete({ size: SIZE, finish: 'broom' }), trowel = paintConcrete({ size: SIZE, finish: 'trowel' }), aged = paintConcrete({ size: SIZE, finish: 'aged' });
   for (const c of [broom, trowel, aged]) {
     const { mean } = stats(c);

@@ -1,10 +1,10 @@
 import { bands, grainy } from '../models/skins.js';
 import { cloth, onBody, person, strap } from './person.js';
-import { moustache } from './wardrobe.js';
+import { mustache } from './wardrobe.js';
 
 /**
  * The Gondolier: a navy-and-white striped shirt, black trousers, a red sash,
- * a straw boater with a red ribbon down the back, a moustache, and the long
+ * a straw boater with a red ribbon down the back, a mustache, and the long
  * oar off the back of his gondola, which he leans on between verses. Sings
  * "O Sole Mio" with his arm out to the canal, unasked, all of it. The song
  * costs extra. About 1.2 tiles tall, the oar taller.
@@ -14,7 +14,7 @@ const stripes = bands(1, 0.034, '#f4f2ec', '#1a2450', 0.5, 0.15);
 const black = cloth('#1a1a20', '#0a0a0c');
 const straw = (p, n) => {
   const c = grainy('#e8c878', 0.14, 70)(p, n);
-  // Plaited round and round: a faint ring every few millimetres.
+  // Plaited round and round: a faint ring every few millimeters.
   const k = 0.9 + 0.1 * Math.abs(Math.sin(p[1] * 260 + Math.hypot(p[0], p[2]) * 260));
   return c.map((v) => v * k);
 };
@@ -54,7 +54,7 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    moustache(s, { color: '#1a120c', wide: 1.35 });
+    mustache(s, { color: '#1a120c', wide: 1.35 });
     s.part('kit', () => {
       // A straw boater: a flat brim, a flat-topped crown, a red ribbon round it, the ends down the back.
       const tilt = [-0.12, 0, 0.06];

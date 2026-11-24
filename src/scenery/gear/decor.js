@@ -249,8 +249,8 @@ function bar(GFX, { w = 3, d = 1, rise = 0.9, venue }) {
   const rail = new GFX.Mesh(new GFX.CylinderGeometry(0.025, 0.025, length * 0.94, 10), std(GFX, '#e0b44a', { metalness: 1, roughness: 0.25 }));
   rail.rotation.z = Math.PI / 2;
   rail.position.set(0, 0.22, 0.46);
-  const glowColour = venue?.look?.barNeon ?? '#ff2d95';
-  const strip = new GFX.Mesh(new GFX.BoxGeometry(length * 0.9, 0.025, 0.012), new GFX.MeshBasicMaterial({ color: new GFX.Color(glowColour), toneMapped: false }));
+  const glowColor = venue?.look?.barNeon ?? '#ff2d95';
+  const strip = new GFX.Mesh(new GFX.BoxGeometry(length * 0.9, 0.025, 0.012), new GFX.MeshBasicMaterial({ color: new GFX.Color(glowColor), toneMapped: false }));
   strip.position.set(0, rise * 0.55, 0.436);
   holder.add(body, top, rail, strip);
   // The front in panels: raised frames a tile apart, and a kick plate along the floor.
@@ -294,8 +294,8 @@ function bar(GFX, { w = 3, d = 1, rise = 0.9, venue }) {
       spout.position.set(x, rise + 0.15, 0.04);
       holder.add(tap, spout);
     } else {
-      const colour = ['#2a7a3a', '#8a4a1a', '#3a5aa8', '#a8802a'][i % 4];
-      const bottle = shadowed(new GFX.Mesh(new GFX.CylinderGeometry(0.03, 0.035, 0.2, 10), new GFX.MeshPhysicalMaterial({ color: new GFX.Color(colour), roughness: 0.1, clearcoat: 1 })));
+      const color = ['#2a7a3a', '#8a4a1a', '#3a5aa8', '#a8802a'][i % 4];
+      const bottle = shadowed(new GFX.Mesh(new GFX.CylinderGeometry(0.03, 0.035, 0.2, 10), new GFX.MeshPhysicalMaterial({ color: new GFX.Color(color), roughness: 0.1, clearcoat: 1 })));
       bottle.position.set(x, rise + 0.1, -0.1 + (i % 2) * 0.1);
       const neck = new GFX.Mesh(new GFX.CylinderGeometry(0.012, 0.022, 0.08, 8), bottle.material);
       neck.position.set(x, rise + 0.24, -0.1 + (i % 2) * 0.1);
@@ -335,8 +335,8 @@ function pool(GFX, { w = 3, d = 2, rise = 0.7 }) {
     p.position.set(x * (L / 2 - 0.1), rise + 0.015, z * (W / 2 - 0.1));
     holder.add(p);
   }
-  const colours = ['#ffd23a', '#2a5ad9', '#d9232f', '#7a3ae8', '#ff7a1a', '#1f8a3a', '#8a1a1a', '#101014', '#f4f0e6'];
-  colours.forEach((c, i) => {
+  const colors = ['#ffd23a', '#2a5ad9', '#d9232f', '#7a3ae8', '#ff7a1a', '#1f8a3a', '#8a1a1a', '#101014', '#f4f0e6'];
+  colors.forEach((c, i) => {
     const row = Math.floor((Math.sqrt(8 * i + 1) - 1) / 2);
     const col = i - (row * (row + 1)) / 2;
     const b = shadowed(new GFX.Mesh(new GFX.SphereGeometry(0.035, 10, 8), std(GFX, c, { roughness: 0.1, clearcoat: 1 })));
@@ -352,7 +352,7 @@ function pool(GFX, { w = 3, d = 2, rise = 0.7 }) {
   return { group };
 }
 
-/** A jukebox: a rounded cabinet of chrome and wood with a lit panel that changes colour, and a bubble of coloured tubes. */
+/** A jukebox: a rounded cabinet of chrome and wood with a lit panel that changes color, and a bubble of colored tubes. */
 function jukebox(GFX, { rise = 1.1 }) {
   const group = new GFX.Group();
   const chrome = std(GFX, '#d6d9e0', { metalness: 1, roughness: 0.2 });
@@ -467,7 +467,7 @@ export const FACING = new Set(['amp', 'drums', 'speaker', 'console', 'rack', 'ju
  * tiles, until a wall or a change of level stops it (or another prop right
  * up against it); one with its back to a wall faces away from it. So a row
  * of amps along a wall faces into the room, not along the wall at its
- * neighbour's back.
+ * neighbor's back.
  */
 export function openSide(venue, { x, z, w, d, base }) {
   const open = (i, j, near) => {

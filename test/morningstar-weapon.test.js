@@ -50,7 +50,7 @@ test('morningstar metal selection updates the complete head and haft finish', ()
   assert.throws(() => weapon.setMetal('unobtainium'), /no metal/);
 });
 
-test('morningstar leather grip colour is independent of its metal finish', () => {
+test('morningstar leather grip color is independent of its metal finish', () => {
   const weapon = createMorningstar(GFX, { gripColor: '#78452e' });
   const shaft = weapon.shaft.material.color.getHexString();
   weapon.setGripColor('#292d36');

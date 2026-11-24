@@ -162,7 +162,7 @@ export async function compareMoods(game, dir) {
   return { ok: true, sets: moods.length, grades: grades.length };
 }
 
-/** The town's prop kit, and the colour function it needs: the game's own, to the letter, bar where the colour function is found. */
+/** The town's prop kit, and the color function it needs: the game's own, to the letter, bar where the color function is found. */
 export function compareKit(dir) {
   const kit = readFileSync(join(dir, 'src/kit.js'), 'utf8').replace("from './map.js'", "from './color.js'");
   if (kit !== readFileSync(join(SRC, 'kit.js'), 'utf8')) return { ok: false, detail: 'kit.js differs' };

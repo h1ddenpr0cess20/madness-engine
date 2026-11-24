@@ -23,7 +23,7 @@ test('textures clamp unless they ask to repeat', () => {
   assert.notEqual(GFX.RepeatWrapping, GFX.ClampToEdgeWrapping);
 });
 
-test('the camera is centred unless its lens is shifted', () => {
+test('the camera is centered unless its lens is shifted', () => {
   const cam = new GFX.PerspectiveCamera(50, 1, 0.1, 100);
   assert.equal(cam.lensShift, 0);
 });
@@ -109,7 +109,7 @@ test('a material that hides its repeat samples its tiles through the anti-tiling
   assert.equal(new (await import('../src/gfx/index.js')).MeshStandardMaterial().antiTile, false);
 });
 
-test('a material with an emissive map glows only where the map says, over the colour map\'s layout, in both languages', async () => {
+test('a material with an emissive map glows only where the map says, over the color map\'s layout, in both languages', async () => {
   const { programSources } = await import('../src/gfx/shaders/glsl.js');
   const { moduleSource } = await import('../src/gfx/shaders/wgsl.js');
   const gfx = await import('../src/gfx/index.js');

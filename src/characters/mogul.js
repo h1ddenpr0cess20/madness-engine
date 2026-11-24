@@ -3,14 +3,14 @@ import { glasses, suitFront } from './wardrobe.js';
 
 /**
  * The Mogul: owns the studio, the lot, and the rights to your face. A
- * giant, bald as an egg but for a grey fringe, round tortoiseshell glasses,
+ * giant, bald as an egg but for a gray fringe, round tortoiseshell glasses,
  * a three-piece suit with a gold watch chain over the belly, a bow tie, a
  * cigar as long as your arm, and the studio's gold statuette clutched in
  * the other fist like a club. When he has had enough he stamps, and the
  * floor throws you back. The last boss: about 2.8 tiles tall.
  */
 
-const grey = cloth('#4a4a54', '#26262e');
+const gray = cloth('#4a4a54', '#26262e');
 const GOLD = { color: '#f0c040', mat: 'metal' };
 const GOLD_K = { ...GOLD, k: 0.004 };
 
@@ -22,7 +22,7 @@ export default person({
   skin: '#e8b494',
   shape: { legs: 0.84, torso: 1.06, head: 1.14, girth: 1.42, hips: 1.25 },
   belly: 2.4,
-  look: { torso: grey, sleeve: grey, cuff: grey, legs: grey, boot: '#0c0806', sole: '#020202' },
+  look: { torso: gray, sleeve: gray, cuff: gray, legs: gray, boot: '#0c0806', sole: '#020202' },
   mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'cloth', legs: 'cloth', boot: 'leather' },
   face: { eyeColor: '#2a3a4a', brow: '#b8b0a8', mood: 1, jaw: 1.3, blush: 0.6 },
   style: {
@@ -44,7 +44,7 @@ export default person({
   extras(s, J, { pose }) {
     glasses(s, { rim: '#6a3a1a', round: true, size: 0.026 });
     suitFront(s, { shirt: '#f4f2ee', tie: '#7a1420', bow: true, lapel: '#3a3a44', buttons: '#2a2a30', belly: 2.4, b: 1.7 });
-    // The grey fringe round the back of a bald head, and the jowls.
+    // The gray fringe round the back of a bald head, and the jowls.
     s.part('hair', () => {
       s.torus([0, 0.675, -0.01], 0.097, 0.022, { color: cloth('#c8c0b8', '#8a847c'), mat: 'hair', bone: 'head', k: 0.012, rot: [-0.2, 0, 0] });
       s.box([0, 0.68, 0.1], [0.14, 0.08, 0.075], 0.02, { op: 'sub', k: 0.015 });

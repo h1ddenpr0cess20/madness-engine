@@ -27,7 +27,7 @@ export const DEPTH = 6;
 /** Walls on the back sides of a room and on the front, above the floor. */
 export const WALL = Object.freeze({ back: 2.2, front: 0.7 });
 
-/** Colour index for wall tops: the last colour in a palette's `tiles`. */
+/** Color index for wall tops: the last color in a palette's `tiles`. */
 export const CAP = -1;
 
 /** Corner order: (x, z), (x + 1, z), (x, z + 1), (x + 1, z + 1). */
@@ -46,7 +46,7 @@ const BURST_AT = 0.6;
 export class Venue {
   /**
    * `palette`: `tiles` (floor, stairs, bridges, wall tops), `walls` (the
-   * colours down the sides), `ambient`, `trap`, `lift`, `lamp` (a colour) and
+   * colors down the sides), `ambient`, `trap`, `lift`, `lamp` (a color) and
    * the rest of what scenery.js reads. `tempo` is the beats a minute the
    * music and everything that moves in time with it keep.
    */
@@ -305,7 +305,7 @@ export class Venue {
   /**
    * One of the people (see foes.js): `kind` is one of `FOES`. Walkers stay
    * within `range` of where they start, and go round `path` (a loop of tile
-   * centres) when nothing is near; crawlers and flyers only go round it.
+   * centers) when nothing is near; crawlers and flyers only go round it.
    * `facing` is which way it looks to begin with, in radians from +z toward +x.
    */
   foe(kind, x, z, { range = 6, path = null, facing = 0 } = {}) {
@@ -548,7 +548,7 @@ function banked(u, bank) {
   return bank * Math.min(k * k, 1.8);
 }
 
-/** sRGB hex to linear RGB — vertex colours are linear. */
+/** sRGB hex to linear RGB — vertex colors are linear. */
 export function linearRGB(hex) {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
@@ -572,10 +572,10 @@ export const HEADING = Object.freeze({ '+x': [1, 0], '-x': [-1, 0], '+z': [0, 1]
  * glow round every lamp, every fixture of the light rig, every electrified
  * tile and the exit. The fixtures nearest the ball also get real lights
  * when it is drawn (`stage.js`, the engine's `scenery/lightshow`); this is what keeps the rest
- * of the venue from being black, and what gives each one its colour.
+ * of the venue from being black, and what gives each one its color.
  */
 export function bakeLight(venue) {
-  const lampColour = linearRGB(venue.palette.lamp ?? '#ffb060').map((v) => v * 1.1);
+  const lampColor = linearRGB(venue.palette.lamp ?? '#ffb060').map((v) => v * 1.1);
   const lamps = venue.lamps.map(({ x, z }) => {
     const c = venue.cell(x, z);
     return [x + 0.5, (c ? Math.max(...c.h) : 0) + 0.6, z + 0.5];
@@ -583,9 +583,9 @@ export function bakeLight(venue) {
   const rig = venue.fixtures.filter((f) => f.reach !== 0).map((f) => {
     const c = venue.cell(Math.floor(f.x), Math.floor(f.z));
     const y = (f.floor ?? (c ? Math.max(...c.h) : 0)) + (f.height ?? 1.2);
-    const colour = linearRGB((f.colors?.[0]) ?? '#ffffff');
+    const color = linearRGB((f.colors?.[0]) ?? '#ffffff');
     const k = f.glow ?? 0.5;
-    return { pos: [f.x, y, f.z], reach: f.reach ?? 6, colour: colour.map((v) => v * k) };
+    return { pos: [f.x, y, f.z], reach: f.reach ?? 6, color: color.map((v) => v * k) };
   });
   const zaps = [];
   const exits = [];
@@ -597,9 +597,9 @@ export function bakeLight(venue) {
     }
   }
   const ambient = venue.palette.ambient ?? [0.42, 0.44, 0.55];
-  const zapColour = linearRGB(venue.palette.zap ?? '#3acbff').map((v) => v * 0.28);
-  const exitColour = linearRGB(venue.palette.exit ?? '#ff3fa4').map((v) => v * 0.4);
-  const glow = (sources, x, y, z, reach, colour, out) => {
+  const zapColor = linearRGB(venue.palette.zap ?? '#3acbff').map((v) => v * 0.28);
+  const exitColor = linearRGB(venue.palette.exit ?? '#ff3fa4').map((v) => v * 0.4);
+  const glow = (sources, x, y, z, reach, color, out) => {
     for (const s of sources) {
       const [sx, sy, sz] = s.pos ?? s;
       const dx = x - sx, dz = z - sz;
@@ -608,16 +608,16 @@ export function bakeLight(venue) {
       const d = Math.hypot(dx, (y - sy) * 0.8, dz);
       if (d >= r) continue;
       const k = (1 - d / r) ** 2;
-      const col = s.colour ?? colour;
+      const col = s.color ?? color;
       out[0] += col[0] * k; out[1] += col[1] * k; out[2] += col[2] * k;
     }
   };
   return (x, y, z) => {
     const out = [...ambient];
-    glow(lamps, x, y, z, 5.5, lampColour, out);
+    glow(lamps, x, y, z, 5.5, lampColor, out);
     glow(rig, x, y, z, 6, null, out);
-    glow(zaps, x, y, z, 2.6, zapColour, out);
-    glow(exits, x, y, z, 4, exitColour, out);
+    glow(zaps, x, y, z, 2.6, zapColor, out);
+    glow(exits, x, y, z, 4, exitColor, out);
     return out.map((v) => Math.min(1.7, v));
   };
 }
@@ -640,15 +640,15 @@ export function buildVenue(venue) {
   };
   const sticky = blank(), ice = blank(), belts = blank(), zap = blank();
   const palette = venue.palette;
-  const tileColours = palette.tiles.map(linearRGB);
-  const exitColour = linearRGB(palette.exit ?? '#2a2a36');
-  const trapColour = linearRGB(palette.trap ?? '#3a3a40');
-  const stickyColour = linearRGB(palette.sticky ?? '#8a6a3a');
-  const iceColour = linearRGB(palette.ice ?? '#cfe6f4');
-  const wallColours = (palette.walls ?? palette.tiles).map(linearRGB);
+  const tileColors = palette.tiles.map(linearRGB);
+  const exitColor = linearRGB(palette.exit ?? '#2a2a36');
+  const trapColor = linearRGB(palette.trap ?? '#3a3a40');
+  const stickyColor = linearRGB(palette.sticky ?? '#8a6a3a');
+  const iceColor = linearRGB(palette.ice ?? '#cfe6f4');
+  const wallColors = (palette.walls ?? palette.tiles).map(linearRGB);
   const light = bakeLight(venue);
 
-  const colourAt = (i) => tileColours[((i % tileColours.length) + tileColours.length) % tileColours.length];
+  const colorAt = (i) => tileColors[((i % tileColors.length) + tileColors.length) % tileColors.length];
 
   const normalOf = (a, b, c) => {
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
@@ -663,10 +663,10 @@ export function buildVenue(venue) {
     return [base[0] * l[0], base[1] * l[1], base[2] * l[2]];
   };
 
-  const face = (out, a, b, c, normal, colours, uvs) => {
+  const face = (out, a, b, c, normal, colors, uvs) => {
     out.position.push(...a, ...b, ...c);
     for (let k = 0; k < 3; k++) out.normal.push(...normal);
-    out.color.push(...colours[0], ...colours[1], ...colours[2]);
+    out.color.push(...colors[0], ...colors[1], ...colors[2]);
     out.uv.push(...uvs[0], ...uvs[1], ...uvs[2]);
   };
 
@@ -715,12 +715,12 @@ export function buildVenue(venue) {
       const [h00, h10, h01, h11] = c.h;
       const checker = (x + z) % 2;
       let base;
-      if (c.kind === 'exit') base = exitColour;
+      if (c.kind === 'exit') base = exitColor;
       else if (c.kind === 'zap') base = [1, 1, 1];
-      else if (c.trap) base = trapColour;
-      else if (c.fx === 'sticky') base = stickyColour;
-      else if (c.fx === 'ice') base = iceColour;
-      else base = c.kind === 'wall' ? colourAt(CAP) : colourAt(c.color);
+      else if (c.trap) base = trapColor;
+      else if (c.fx === 'sticky') base = stickyColor;
+      else if (c.fx === 'ice') base = iceColor;
+      else base = c.kind === 'wall' ? colorAt(CAP) : colorAt(c.color);
       const vary = palette.vary ?? 0.1;
       const tint = c.kind === 'zap' ? 1 : (checker ? 1 - vary * 0.3 : 1) * (1 - vary * 0.5 + vary * grain(x, z));
       const col = base.map((v) => v * tint);
@@ -750,7 +750,7 @@ export function buildVenue(venue) {
         face(out, B, C, D, normalOf(B, C, D), [shadeOf(B), shadeOf(C), shadeOf(D)], [uv([1, 1]), uv([0, 0]), uv([1, 0])]);
       } else if (c.base !== undefined && c.kind === 'wall') {
         // Under a prop, the floor it stands on, for wherever the prop doesn't cover its tile.
-        const y = c.base + 0.002, floorCol = colourAt(0).map((v) => v * tint);
+        const y = c.base + 0.002, floorCol = colorAt(0).map((v) => v * tint);
         const a = [x, y, z], b = [x + 1, y, z], cc = [x, y, z + 1], dd = [x + 1, y, z + 1];
         const under = layer(floors, 'floor'), up = [0, 1, 0];
         face(under, a, cc, b, up, [lit(floorCol, a), lit(floorCol, cc), lit(floorCol, b)], [uv([0, 1]), uv([0, 0]), uv([1, 1])]);
@@ -760,11 +760,11 @@ export function buildVenue(venue) {
       world.addTriangle(...B, ...C, ...D);
 
       // The sides: down to the next tile, or into the dark.
-      const wallBase = wallColours[((c.color % wallColours.length) + wallColours.length) % wallColours.length];
+      const wallBase = wallColors[((c.color % wallColors.length) + wallColors.length) % wallColors.length];
       wallKey = c.wtex ?? 'wall';
       const low = Math.min(...c.h) - DEPTH;
       const edges = [
-        // [ends, this tile's heights there, neighbour, its heights there, outward]
+        // [ends, this tile's heights there, neighbor, its heights there, outward]
         [[x, z], [x + 1, z], h00, h10, venue.cell(x, z - 1), (n) => [n.h[H01], n.h[H11]], [0, 0, -1]],
         [[x, z + 1], [x + 1, z + 1], h01, h11, venue.cell(x, z + 1), (n) => [n.h[H00], n.h[H10]], [0, 0, 1]],
         [[x, z], [x, z + 1], h00, h01, venue.cell(x - 1, z), (n) => [n.h[H10], n.h[H11]], [-1, 0, 0]],

@@ -8,7 +8,7 @@
  * seams where one would meet itself. Inside is a mist of the same color,
  * Krystal's, drawn in the glass as her visions are.
  *
- * `createJewelRock(GFX, { colour })` gives the same handle as `createRock`, so
+ * `createJewelRock(GFX, { color })` gives the same handle as `createRock`, so
  * it rolls, squashes and turns as the granite does; `createJewelBoulder` the
  * stone alone. The colors are the `JEWELS` below, by name (`JEWEL_CHOICES`), or
  * any six-digit hex as `color`.
@@ -47,14 +47,14 @@ const CREASE_COS = Math.cos(Math.PI / 6);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const ramp = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 
-/** The color `colour` names, or `color` as given; a bad hex is refused. */
-export function jewelHex(colour = 'sapphire', color = null) {
+/** The color `jewel` names, or `color` as given; a bad hex is refused. */
+export function jewelHex(jewel = 'sapphire', color = null) {
   if (color !== null) {
     if (!/^#[0-9a-f]{6}$/i.test(color)) throw new TypeError(`jewel color must be a six-digit hex color, got ${color}`);
     return color.toLowerCase();
   }
-  if (!Object.hasOwn(JEWELS, colour)) throw new Error(`rock-jewel: no jewel called ${colour}; there is ${JEWEL_CHOICES.join(', ')}`);
-  return JEWELS[colour];
+  if (!Object.hasOwn(JEWELS, jewel)) throw new Error(`rock-jewel: no jewel called ${jewel}; there is ${JEWEL_CHOICES.join(', ')}`);
+  return JEWELS[jewel];
 }
 
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
@@ -90,11 +90,11 @@ function grainFields(geometry) {
 }
 
 /** The vertex colors of the stone in `hex`, worked from its grain fields. */
-function inclusionColours(fields, hex) {
+function inclusionColors(fields, hex) {
   const { tone, feld, quartz, mica, pit } = fields;
   const base = rgb(hex);
   const n = tone.length;
-  const colours = new Float32Array(n * 3);
+  const colors = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
     const b = tone[i] - 0.5;
     const f = ramp(0.56, 0.62, feld[i]) * 0.15;
@@ -104,10 +104,10 @@ function inclusionColours(fields, hex) {
       let x = base[c] * (1 + b * 0.5);
       x += (1 - x) * f;
       x += (1 - x) * q;
-      colours[3 * i + c] = clamp01(x * k);
+      colors[3 * i + c] = clamp01(x * k);
     }
   }
-  return colours;
+  return colors;
 }
 
 /**
@@ -144,16 +144,16 @@ function creaseNormals(GFX, geometry) {
 }
 
 /**
- * The jewel stone alone: `{ mesh, geometry, material, glass, mist, setColour, setMist }`. `mesh` is a group of the glass
+ * The jewel stone alone: `{ mesh, geometry, material, glass, mist, setColor, setMist }`. `mesh` is a group of the glass
  * and its mist, and both move together, so the stone is drawn at whatever scale its parent gives it.
  */
-export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mist = true, detail = GRANITE_DETAIL, size = 1 } = {}) {
-  let hex = jewelHex(colour, color);
+export function createJewelBoulder(GFX, { jewel = 'sapphire', color = null, mist = true, detail = GRANITE_DETAIL, size = 1 } = {}) {
+  let hex = jewelHex(jewel, color);
   const geometry = createGraniteStone(GFX, { detail });
   // No uv: the granite's projected uvs seam along the cut planes, and a clear gem shows the seams as lines.
   geometry.deleteAttribute('uv');
   const fields = grainFields(geometry);
-  geometry.setAttribute('color', new GFX.BufferAttribute(inclusionColours(fields, hex), 3));
+  geometry.setAttribute('color', new GFX.BufferAttribute(inclusionColors(fields, hex), 3));
   creaseNormals(GFX, geometry);
 
   const material = new GFX.MeshPhysicalMaterial({
@@ -227,13 +227,13 @@ export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mis
 
   return {
     mesh: group, geometry, material, glass, mist: mistMesh, mistMaterial: vision,
-    get colour() { return hex; },
+    get color() { return hex; },
     /** Tints the stone and its mist: a `JEWELS` name, or any six-digit hex as `color`. */
-    setColour(name, color = null) {
+    setColor(name, color = null) {
       hex = jewelHex(name, color);
       material.attenuationColor.set(hex);
       material.emissive.set(hex);
-      geometry.setAttribute('color', new GFX.BufferAttribute(inclusionColours(fields, hex), 3));
+      geometry.setAttribute('color', new GFX.BufferAttribute(inclusionColors(fields, hex), 3));
       setDuo(hex);
       return this;
     },
@@ -244,17 +244,17 @@ export function createJewelBoulder(GFX, { colour = 'sapphire', color = null, mis
   };
 }
 
-/** A jewel rock: `createRock`, with the jewel stone in the color asked for and its mist. `colour` is a `JEWELS` name. */
-export function createJewelRock(GFX, { colour = 'sapphire', color = null, mist = true, radius = 0.45, ...opts } = {}) {
+/** A jewel rock: `createRock`, with the jewel stone in the color asked for and its mist. `jewel` is a `JEWELS` name. */
+export function createJewelRock(GFX, { jewel = 'sapphire', color = null, mist = true, radius = 0.45, ...opts } = {}) {
   let asset = null;
   const rock = createRock(GFX, {
     ...opts,
     radius,
-    boulder: (G) => (asset = createJewelBoulder(G, { colour, color, mist, size: radius / SOURCE_RADIUS })),
+    boulder: (G) => (asset = createJewelBoulder(G, { jewel, color, mist, size: radius / SOURCE_RADIUS })),
   });
   // A getter, defined as one: Object.assign would copy its value once, and the color would stop following the stone.
-  Object.defineProperty(rock, 'colour', { get: () => asset.colour, enumerable: true });
-  rock.setColour = (name, hex = null) => { asset.setColour(name, hex); return rock; };
+  Object.defineProperty(rock, 'color', { get: () => asset.color, enumerable: true });
+  rock.setColor = (name, hex = null) => { asset.setColor(name, hex); return rock; };
   rock.setMist = (show = true) => { asset.setMist(show); return rock; };
   return rock;
 }

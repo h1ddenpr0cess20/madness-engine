@@ -22,7 +22,7 @@ test('the asset viewer exposes four palette channels, surface patterns and rando
   for (const design of ['marble', 'spiral', 'flame', 'split', 'blotch']) assert.ok(html.includes('value="' + design + '"'));
   assert.ok(viewer.includes("madness-engine/props/bowling-ball"));
   assert.ok(viewer.includes("import { randomBowlingBallPalette } from './bowling-ball-palettes.js';"));
-  assert.ok(viewer.includes("'Randomise colours'"));
+  assert.ok(viewer.includes("'Randomize colors'"));
   assert.ok(viewer.includes("$('bowlingdesign').onchange"));
   assert.ok(viewer.includes('view.draft = { ...randomBowlingBallPalette(Math.random, current), design };'));
 });

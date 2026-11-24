@@ -7,7 +7,7 @@ import { paintSky } from '../textures/skies/skyline.js';
  * a basement under it. Everything is taught here: rolling over picks,
  * running at somebody to smash them, a speaker stack that comes down on the
  * beat, a gate and its pass, and a flimsy panel that someone ought to run at,
- * with a gold record behind it. Little brothers and a neighbour with a broom.
+ * with a gold record behind it. Little brothers and a neighbor with a broom.
  * The band's light show is two strings of fairy lights and a couple of cans.
  *
  * The mood of `garage`, a set in rocknroller (src/venues/garage.js): its

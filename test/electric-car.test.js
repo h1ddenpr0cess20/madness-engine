@@ -18,7 +18,7 @@ test('the electric car stands on the ground facing +z, with its origin at the ba
   near(box.max.z - box.min.z, ELECTRIC_CAR.length, 0.01, 'length');
   near((box.max.x + box.min.x) / 2, 0, 0.01, 'centered across');
   const at = new GFX.Vector3();
-  assert.ok(car.parts.led_bar_centre.getWorldPosition(at).z > 3, 'the light bar is at the nose');
+  assert.ok(car.parts.led_bar_center.getWorldPosition(at).z > 3, 'the light bar is at the nose');
   assert.ok(car.parts.tail_bar.getWorldPosition(at).z < 0, 'the tail bar is behind the back wheels');
 });
 
@@ -114,13 +114,13 @@ test('the lights and badges stand proud of the body they are mounted on, not bur
   const body = boxOf(car.parts.body_shell), face = boxOf(car.parts.front_valance);
   const proud = 0.005;
   assert.ok(boxOf(car.parts.tail_bar).min.z < body.min.z - proud, 'the tail bar shows at the back');
-  for (const name of ['led_bar_centre', 'led_bar_wing_l', 'led_bar_wing_r', 'headlamp_l', 'headlamp_r', 'bolt_badge', 'bumper']) {
+  for (const name of ['led_bar_center', 'led_bar_wing_l', 'led_bar_wing_r', 'headlamp_l', 'headlamp_r', 'bolt_badge', 'bumper']) {
     assert.ok(boxOf(car.parts[name]).max.z > face.max.z + proud, `${name} shows at the front`);
   }
   assert.ok(boxOf(car.parts.rear_bumper).min.z < body.min.z - proud, 'the rear bumper shows');
   // ...and each is still joined to it: it reaches back into the body, so it does not float.
   assert.ok(boxOf(car.parts.tail_bar).max.z > body.min.z + 0.005, 'the tail bar is on the body');
-  for (const name of ['led_bar_centre', 'headlamp_l', 'bolt_badge']) assert.ok(boxOf(car.parts[name]).min.z < face.max.z, `${name} is on the face`);
+  for (const name of ['led_bar_center', 'headlamp_l', 'bolt_badge']) assert.ok(boxOf(car.parts[name]).min.z < face.max.z, `${name} is on the face`);
   for (const side of ['l', 'r']) {
     const line = boxOf(car.parts[`door_line_${side}_f`]);
     const x = Math.max(Math.abs(line.min.x), Math.abs(line.max.x));
