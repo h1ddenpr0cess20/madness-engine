@@ -20,6 +20,13 @@ export const CLIPS = Object.freeze(['idle', 'walk', 'run', 'jump', 'leap', 'atta
 
 const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 const win = (t, a, b) => ease((t - a) / (b - a));
+/** `Math.max(0, x)` with its corner rounded off over about `e` (so a joint driven by it does not jolt there). */
+// (Each scaled to be the same at 1 as what it rounds off: the movement's reach is kept.)
+const pos = (x, e = 0.12) => (x + Math.sqrt(x * x + e * e) - e) / (1 + Math.sqrt(1 + e * e) - e);
+/** `Math.abs(x)`, rounded off the same way. */
+const mag = (x, e = 0.12) => (Math.sqrt(x * x + e * e) - e) / (Math.sqrt(1 + e * e) - e);
+/** The larger of `a` and `b`, the hand-over from one to the other rounded off over about `e`. */
+const smax = (a, b, e) => 0.5 * (a + b + Math.sqrt((a - b) * (a - b) + e * e));
 /** The legs' length: what every rise and fall is measured against. */
 // The legs' lengths, and how high the hips stand: the man's, until a skeleton of another figure is posed.
 let THIGH = JOINTS.hip[1] - JOINTS.knee[1], SHIN = JOINTS.knee[1] - JOINTS.ankle[1];
@@ -91,28 +98,28 @@ function idle(k, T, armed) {
 function walk(k, T, speed, heavy, armed) {
   const ph = T * (9 - heavy * 2) * Math.max(0.5, speed), g = Math.sin(ph), c = Math.cos(ph);
   // The hips: lowest as the feet pass, highest over the planted leg; swaying over it, turning with the stride.
-  k.move('hips', 0, Math.abs(c) * 0.02 - 0.014, 0);
+  k.move('hips', 0, mag(c, 0.3) * 0.02 - 0.014, 0);
   k.turn('hips', 0, g * 0.11, Math.sin(ph * 2) * 0.02);
   k.turn('spine', 0.03, -g * 0.05, 0);
   k.turn('chest', 0.03, -g * 0.1, 0);
   k.turn('neck', 0, g * 0.06, 0);
   k.turn('head', 0, g * 0.04, 0);
   for (const [S, m] of [['L', 1], ['R', -1]]) {
-    const a = m * g, swing = Math.max(0, m * c);
+    const a = m * g, swing = pos(m * c);
     k.turn(`thigh${S}`, -a * 0.5 - swing * 0.12, 0, 0);
-    k.turn(`shin${S}`, 0.08 + swing * 0.75 + Math.max(0, -a) * 0.15, 0, 0);
+    k.turn(`shin${S}`, 0.08 + swing * 0.75 + pos(-a) * 0.15, 0, 0);
     // Heel down in front, rolling up onto the toes behind.
     k.turn(`foot${S}`, -a * 0.22 + swing * 0.15, 0, 0);
-    k.turn(`toes${S}`, Math.max(0, -a) * Math.max(0, -m * c) * -0.5, 0, 0);
+    k.turn(`toes${S}`, pos(-a) * pos(-m * c) * -0.5, 0, 0);
   }
   // The arms against the legs (an armed one held ready, swinging a little).
   if (isArmed(armed, 'L')) { ready(k, 'L', 0.8); k.turn('armL', g * 0.08, 0, 0); } else {
     k.turn('armL', g * 0.38, 0, 0);
-    k.turn('foreL', -0.12 - Math.max(0, g) * 0.35, 0, 0);
+    k.turn('foreL', -0.12 - pos(g) * 0.35, 0, 0);
   }
   if (isArmed(armed, 'R')) { ready(k, 'R', 0.8); k.turn('armR', -g * 0.08, 0, 0); } else {
     k.turn('armR', -g * 0.38, 0, 0);
-    k.turn('foreR', -0.12 - Math.max(0, -g) * 0.35, 0, 0);
+    k.turn('foreR', -0.12 - pos(-g) * 0.35, 0, 0);
   }
   k.turn('clavicleL', 0, -g * 0.05, 0);
   k.turn('clavicleR', 0, -g * 0.05, 0);
@@ -142,10 +149,17 @@ function strideAt(u) {
   while (i < STRIDE.length - 2 && u > STRIDE[i + 1][0]) i++;
   const n = STRIDE.length - 1;
   const at = (j) => STRIDE[((j % n) + n) % n];
+  // The keys are not evenly spaced in time: each key's tangent is taken over the time either side of it, so the
+  // stride's speed carries on through a key instead of changing at it.
+  const tOf = (j) => Math.floor(j / n) + at(j)[0];
   const p0 = at(i - 1), p1 = STRIDE[i], p2 = STRIDE[i + 1], p3 = at(i + 2);
-  const f = (u - p1[0]) / (p2[0] - p1[0]);
-  const f2 = f * f, f3 = f2 * f;
-  return [1, 2, 3, 4].map((c) => 0.5 * ((2 * p1[c]) + (-p0[c] + p2[c]) * f + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * f2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * f3));
+  const t0 = tOf(i - 1), t1 = p1[0], t2 = p2[0], t3 = i + 2 >= n ? 1 + at(i + 2)[0] : p3[0];
+  const h = t2 - t1, f = (u - t1) / h, f2 = f * f, f3 = f2 * f;
+  const h00 = 2 * f3 - 3 * f2 + 1, h10 = f3 - 2 * f2 + f, h01 = -2 * f3 + 3 * f2, h11 = f3 - f2;
+  return [1, 2, 3, 4].map((c) => {
+    const m1 = (p2[c] - p0[c]) / (t2 - t0), m2 = (p3[c] - p1[c]) / (t3 - t1);
+    return h00 * p1[c] + h10 * h * m1 + h01 * p2[c] + h11 * h * m2;
+  });
 }
 
 /** How far below the hip the ankle hangs, for a leg at `thigh` (− forward) with its knee bent by `knee`. */
@@ -157,8 +171,9 @@ function run(k, T, speed, heavy, armed) {
   const u = ph / (Math.PI * 2);
   const L = strideAt(u), R = strideAt(u + 0.5);
   // The hips ride on whichever leg is down (so its foot stays on the ground), and rise off both between.
-  const flight = (x) => { x = ((x % 0.5) + 0.5) % 0.5; return Math.sin(Math.PI * Math.max(0, Math.min(1, (x - 0.3) / 0.2))); };
-  const down = Math.max(legHeight(L[0] + 0.12, L[1]), legHeight(R[0] + 0.12, R[1]));
+  // (Each rise eased in and out, and the hand-over from one leg to the other rounded off: the hips do not jolt at either.)
+  const flight = (x) => { x = ((x % 0.5) + 0.5) % 0.5; return Math.sin(Math.PI * Math.max(0, Math.min(1, (x - 0.3) / 0.2))) ** 2; };
+  const down = smax(legHeight(L[0] + 0.12, L[1]), legHeight(R[0] + 0.12, R[1]), 0.02);
   k.move('hips', 0, down - LEG + 0.035 * flight(u), 0.02);
   // Leaning into it from the hips, the pelvis and shoulders turning against each other.
   const twist = Math.sin(ph);
@@ -180,8 +195,8 @@ function run(k, T, speed, heavy, armed) {
     if (isArmed(armed, S)) { ready(k, S, 0.9); k.turn(`arm${S}`, 0.15 * other[0], 0, 0); continue; }
     const swing = other[0]; // − when that leg is forward: then this arm is forward too
     // Elbows kept in by the sides; the forearms pointing ahead and a little in, not out.
-    k.turn(`arm${S}`, 0.15 + swing * 1.1, 0, -m * (0.07 + 0.04 * Math.max(0, -swing)));
-    k.turn(`fore${S}`, -1.45 + 0.35 * Math.max(0, swing) - 0.15 * Math.max(0, -swing), -m * (0.55 + 0.15 * Math.max(0, -swing)), 0);
+    k.turn(`arm${S}`, 0.15 + swing * 1.1, 0, -m * (0.07 + 0.04 * pos(-swing)));
+    k.turn(`fore${S}`, -1.45 + 0.35 * pos(swing) - 0.15 * pos(-swing), -m * (0.55 + 0.15 * pos(-swing)), 0);
     k.turn(`hand${S}`, 0.1, 0, m * 0.1);
   }
 }

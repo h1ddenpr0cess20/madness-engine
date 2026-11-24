@@ -12,9 +12,9 @@
  */
 
 import {
-  AdditiveBlending, BackSide, DoubleSide, FrontSide, NormalBlending, PCFShadowMap,
+  AdditiveBlending, BackSide, DoubleSide, FrontSide, NormalBlending, Object3D, PCFShadowMap,
 } from './core.js';
-import { Euler, Frustum, Matrix3, Matrix4, Vector3, Vector4 } from './math.js';
+import { Euler, Frustum, Matrix3, Matrix4, Sphere, Vector3, Vector4 } from './math.js';
 import { pmremLayout } from './pmrem.js';
 
 const _projScreenMatrix = new Matrix4();
@@ -24,6 +24,19 @@ const _envRotation = new Matrix3();
 const _frustum = new Frustum();
 const _vector4 = new Vector4();
 const _vector3 = new Vector3();
+const _sphere = new Sphere();
+const _within = new Frustum();
+const _crop = new Matrix4();
+const _cropped = new Matrix4();
+const _defaultBeforeRender = Object3D.prototype.onBeforeRender;
+/**
+ * Where only part of the transmission map is drawn (`_transmissionRect`), the blurriest of it a transmissive draw
+ * reads (a mip level: the shader's lookup is capped there), and so how far past where its rays leave it the map is
+ * drawn: its bicubic taps reach up to three of that level's texels out, each 2^level pixels, and a texel of it holds
+ * the pixels of its own block.
+ */
+const CROP_LOD = 4;
+const CROP_MARGIN = 4 * 2 ** CROP_LOD + 2;
 
 function painterSortStable(a, b) {
   if (a.groupOrder !== b.groupOrder) return a.groupOrder - b.groupOrder;
@@ -64,6 +77,8 @@ export class Renderer {
     this.domElement = canvas;
     this.shadowMap = { enabled: false, type: PCFShadowMap };
     this.sortObjects = true;
+    /** Whether the transmission map is drawn only round the transmissive draws (`_transmissionRect`), or whole. */
+    this.cropTransmission = true;
     this._pixelRatio = 1;
     this._width = canvas.width;
     this._height = canvas.height;
@@ -181,12 +196,19 @@ export class Renderer {
     if (lists.transmissive.length > 0) {
       const size = [this.domElement.width, this.domElement.height];
       const frame = this._frame_(context, 'linear', null);
+      // Only what the glass can see through itself is drawn behind it: the part of the screen its refraction can
+      // reach (`_transmissionRect`), and what is in view there. A marble is a few per cent of the picture, and the
+      // rest of the city would be drawn twice for nothing.
+      const cut = this._transmissionRect(lists.transmissive, camera, size);
       // Cleared to white at half alpha, premultiplied by the context: where nothing opaque
       // is behind a transmissive surface, that gray is what it refracts.
-      this.backend.beginPass({ target: 'transmission', clear: [0.5, 0.5, 0.5, 0.5], frame });
-      this._renderItems(lists.opaque, context, frame);
+      this.backend.beginPass({ target: 'transmission', clear: [0.5, 0.5, 0.5, 0.5], frame, scissor: cut?.scissor ?? null });
+      this._renderItems(cut ? this._inRect(lists.opaque, cut.scissor, size) : lists.opaque, context, frame);
       this.backend.endPass();
-      context.transmission = { size };
+      // `bounds`: where the glass's rays may leave it, [u0, v0, u1, v1] of the map ([0, 0, 0, 0] where all of it was
+      // drawn); a ray from the very edge of a silhouette, whose position is reckoned past the surface, can be sent far
+      // outside it, and reads the nearest of what was drawn this frame rather than what an earlier one left there.
+      context.transmission = { size, bounds: cut?.bounds ?? [0, 0, 0, 0], maxLod: CROP_LOD };
     }
 
     const frame = this._frame_(context, 'srgb', context.transmission ?? null);
@@ -199,11 +221,85 @@ export class Renderer {
     this._frame++;
   }
 
+  /**
+   * The pixels of the transmission map the transmissive draws can read: `scissor`, [x, y, width, height] counted
+   * from the bottom left of the drawing buffer, and `bounds`, [u0, v0, u1, v1], where their rays can leave them,
+   * before the blur; or null for all of it. A transmissive surface samples the map where its
+   * refracted ray leaves it: a point inside its bounding sphere grown by its thickness (shaders' getVolumeTransmissionRay:
+   * at most `thickness` times the model's largest scale from the surface), blurred by its roughness (the mip level
+   * getTransmissionSample reads, whose bicubic taps reach about three of that level's texels out, at most four, of
+   * 2^level pixels each). Its lookups are kept to that: their coordinates to where the rays can leave (`bounds`),
+   * their blur to CROP_LOD, so the very edge of a silhouette, which the shader blurs further (its geometry roughness)
+   * and whose position it reckons past the surface, reads what is round the glass this frame, not a whole picture
+   * that was not drawn. Anything that cannot be bounded that way (no bounding sphere, a mesh that moves or reshapes
+   * itself just before it draws, one that reaches behind the camera, glass rough enough to blur past CROP_LOD) gets
+   * the whole map, as does a set of them that covers half the screen or more; and all of them do with
+   * `renderer.cropTransmission = false`.
+   */
+  _transmissionRect(items, camera, [width, height]) {
+    if (!this.cropTransmission || !(width > 0 && height > 0)) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    let u0 = Infinity, v0 = Infinity, u1 = -Infinity, v1 = -Infinity;
+    const view = camera.matrixWorldInverse.elements, proj = camera.projectionMatrix.elements;
+    for (const { object, geometry, material } of items) {
+      if (object.onBeforeRender !== _defaultBeforeRender || object.isSprite) return null;
+      const sphere = object.isInstancedMesh ? object.boundingSphere : geometry?.boundingSphere;
+      if (!sphere) return null;
+      // The blur the material asks for itself (the shader's floor on roughness included).
+      const lod = Math.log2(width) * Math.max(material.roughness ?? 0, 0.0525) * Math.min(1, Math.max(0, (material.ior ?? 1.5) * 2 - 2));
+      if (!(lod <= CROP_LOD)) return null;
+      _sphere.copy(sphere).applyMatrix4(object.matrixWorld);
+      const reach = _sphere.radius + Math.max(0, material.thickness ?? 0) * object.matrixWorld.getMaxScaleOnAxis();
+      if (!Number.isFinite(reach)) return null;
+      // The sphere's middle in view space.
+      const { x, y, z } = _sphere.center;
+      const vx = view[0] * x + view[4] * y + view[8] * z + view[12];
+      const vy = view[1] * x + view[5] * y + view[9] * z + view[13];
+      const vz = view[2] * x + view[6] * y + view[10] * z + view[14];
+      if (!camera.isOrthographicCamera && vz + reach >= -camera.near) return null;
+      // The corners of the cube round it, in view space, onto the screen: the cube holds the sphere, and in front of
+      // the camera the picture of a cube is held by the pictures of its corners.
+      for (let k = 0; k < 8; k++) {
+        const cx = vx + (k & 1 ? reach : -reach), cy = vy + (k & 2 ? reach : -reach), cz = vz + (k & 4 ? reach : -reach);
+        const w = proj[3] * cx + proj[7] * cy + proj[11] * cz + proj[15];
+        if (!(w > 0)) return null;
+        const nx = (proj[0] * cx + proj[4] * cy + proj[8] * cz + proj[12]) / w;
+        const ny = (proj[1] * cx + proj[5] * cy + proj[9] * cz + proj[13]) / w;
+        const px = (nx + 1) * 0.5 * width, py = (ny + 1) * 0.5 * height;
+        u0 = Math.min(u0, px); u1 = Math.max(u1, px); v0 = Math.min(v0, py); v1 = Math.max(v1, py);
+        x0 = Math.min(x0, px - CROP_MARGIN); x1 = Math.max(x1, px + CROP_MARGIN);
+        y0 = Math.min(y0, py - CROP_MARGIN); y1 = Math.max(y1, py + CROP_MARGIN);
+      }
+    }
+    x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+    x1 = Math.min(width, Math.ceil(x1)); y1 = Math.min(height, Math.ceil(y1));
+    if (!(x1 > x0 && y1 > y0)) return { scissor: [0, 0, 1, 1], bounds: [0, 0, 1 / width, 1 / height] };
+    if ((x1 - x0) * (y1 - y0) >= 0.5 * width * height) return null;
+    return { scissor: [x0, y0, x1 - x0, y1 - y0], bounds: [u0 / width, v0 / height, u1 / width, v1 / height] };
+  }
+
+  /** The opaque draws that can show in `rect` (pixels, from the bottom left), in the order they came. */
+  _inRect(items, [x, y, w, h], [width, height]) {
+    // The view's frustum cut down to the rectangle: the projection stretched so that the rectangle fills it.
+    const nx0 = (x / width) * 2 - 1, nx1 = ((x + w) / width) * 2 - 1;
+    const ny0 = (y / height) * 2 - 1, ny1 = ((y + h) / height) * 2 - 1;
+    const sx = 2 / (nx1 - nx0), sy = 2 / (ny1 - ny0);
+    _crop.set(
+      sx, 0, 0, -(nx1 + nx0) / (nx1 - nx0),
+      0, sy, 0, -(ny1 + ny0) / (ny1 - ny0),
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    );
+    _within.setFromProjectionMatrix(_cropped.multiplyMatrices(_crop, _projScreenMatrix));
+    return items.filter(({ object }) => object.frustumCulled === false || !(object.isMesh || object.isLine) || _within.intersectsObject(object));
+  }
+
   _project(object, camera, groupOrder, lists) {
     if (object.visible === false) return;
     if (object.layers.test(camera.layers)) {
       if (object.isGroup) {
         groupOrder = object.renderOrder;
+        if (object.boundingSphere !== null && object.frustumCulled && !sphereInView(_frustum, object)) return;
       } else if (object.isLight) {
         lists.lights.push(object);
         if (object.castShadow && object.isDirectionalLight) lists.shadows.push(object);
@@ -334,6 +430,7 @@ export class Renderer {
       const items = [];
       const collect = (object) => {
         if (object.visible === false) return;
+        if (object.isGroup && object.boundingSphere && object.frustumCulled && !sphereInView(shadow.frustum, object)) return;
         if (object.layers.test(camera.layers) && (object.isMesh || object.isLine) && object.castShadow
           && !(object.isInstancedMesh && object.count === 0)
           && (!object.frustumCulled || shadow.frustum.intersectsObject(object))) {
@@ -444,6 +541,12 @@ export class Renderer {
       },
     });
   }
+}
+
+/** Whether a group's bounding sphere, where it is in the world, is in `frustum`. */
+function sphereInView(frustum, group) {
+  _sphere.copy(group.boundingSphere).applyMatrix4(group.matrixWorld);
+  return frustum.intersectsSphere(_sphere);
 }
 
 /** What an instanced mesh's draw needs to know of its copies (null for any other object). */
