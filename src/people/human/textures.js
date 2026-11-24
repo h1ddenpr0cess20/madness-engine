@@ -55,7 +55,7 @@ function texture(GFX, canvas, { color = true, repeat = null } = {}) {
 
 /**
  * Where on the body each texel of the skin's UV layout is: its rest
- * position, normal and zone, by rasterising the body's quads in UV space.
+ * position, normal and zone, by rasterizing the body's quads in UV space.
  * Texels no quad covers are left empty (zone 0).
  */
 const positionMaps = new Map();

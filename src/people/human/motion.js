@@ -142,7 +142,7 @@ const STRIDE = [
   [1, -0.42, 0.22, -0.12, 0],
 ];
 
-/** The stride at `u` (0..1, wrapping), eased through its keys (Catmull–Rom, round the loop). */
+/** The stride at `u` (0..1, wrapping), eased through its keys (Catmull–Rom, around the loop). */
 function strideAt(u) {
   u = ((u % 1) + 1) % 1;
   let i = 0;

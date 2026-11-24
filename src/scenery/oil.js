@@ -81,7 +81,7 @@ export const pumpframe = {
   },
 };
 
-/** The walking beam, pivoting at the origin along x: an I-beam, the horsehead curving down at +x with its bridle, the equaliser at −x. */
+/** The walking beam, pivoting at the origin along x: an I-beam, the horsehead curving down at +x with its bridle, the equalizer at −x. */
 export const pumpbeam = {
   name: 'pumpbeam', cell: 0.045, cells: { fine: 0.022 },
   materials: { paint: PAINT, steel: STEEL, cable: { roughness: 0.4, metalness: 0.9 } },
@@ -100,7 +100,7 @@ export const pumpbeam = {
       return Math.max(arc, span * R, z - 0.2) - 0.02;
     }, [[1.5, -1.3, -0.25], [2.4, 0.7, 0.25]], { color: yellow, mat: 'paint', k: 0.03 });
     s.paint((p) => Math.max(Math.abs(Math.hypot(p[0], p[1]) - 2.25) - 0.06, -1), '#1d1d22', 0.02);
-    // The equaliser and the pitman arms going down to the cranks.
+    // The equalizer and the pitman arms going down to the cranks.
     s.box([-2.0, -0.05, 0], [0.1, 0.12, 0.45], 0.03, { color: '#5a6068', mat: 'steel', k: 0.02 });
     s.part('fine', () => {
       // The bridle: two cables down the face of the horsehead to the carrier bar.

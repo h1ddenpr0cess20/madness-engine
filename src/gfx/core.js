@@ -733,7 +733,7 @@ export class InstancedMesh extends Mesh {
     return this.count++;
   }
 
-  /** Sends the copies up again and works out the sphere round them. Call it after placing copies. */
+  /** Sends the copies up again and works out the sphere around them. Call it after placing copies. */
   update() {
     this.instancePlace.needsUpdate = true;
     this.instanceLook.needsUpdate = true;
@@ -1189,7 +1189,7 @@ export class MeshPhysicalMaterial extends MeshStandardMaterial {
     this.iridescence = 0;
     this.iridescenceIOR = 1.3;
     this.iridescenceThicknessRange = [100, 400];
-    // Light scattered under the surface (skin, wax): how much, and how far each color is carried round the form.
+    // Light scattered under the surface (skin, wax): how much, and how far each color is carried around the form.
     this.subsurface = 0;
     this.subsurfaceColor = new Color(0x000000);
     this.sheen = 0;

@@ -77,7 +77,7 @@ export class Renderer {
     this.domElement = canvas;
     this.shadowMap = { enabled: false, type: PCFShadowMap };
     this.sortObjects = true;
-    /** Whether the transmission map is drawn only round the transmissive draws (`_transmissionRect`), or whole. */
+    /** Whether the transmission map is drawn only around the transmissive draws (`_transmissionRect`), or whole. */
     this.cropTransmission = true;
     this._pixelRatio = 1;
     this._width = canvas.width;
@@ -197,7 +197,7 @@ export class Renderer {
       const size = [this.domElement.width, this.domElement.height];
       const frame = this._frame_(context, 'linear', null);
       // Only what the glass can see through itself is drawn behind it: the part of the screen its refraction can
-      // reach (`_transmissionRect`), and what is in view there. A marble is a few per cent of the picture, and the
+      // reach (`_transmissionRect`), and what is in view there. A marble is a few percent of the picture, and the
       // rest of the city would be drawn twice for nothing.
       const cut = this._transmissionRect(lists.transmissive, camera, size);
       // Cleared to white at half alpha, premultiplied by the context: where nothing opaque
@@ -230,7 +230,7 @@ export class Renderer {
    * getTransmissionSample reads, whose bicubic taps reach about three of that level's texels out, at most four, of
    * 2^level pixels each). Its lookups are kept to that: their coordinates to where the rays can leave (`bounds`),
    * their blur to CROP_LOD, so the very edge of a silhouette, which the shader blurs further (its geometry roughness)
-   * and whose position it reckons past the surface, reads what is round the glass this frame, not a whole picture
+   * and whose position it reckons past the surface, reads what is around the glass this frame, not a whole picture
    * that was not drawn. Anything that cannot be bounded that way (no bounding sphere, a mesh that moves or reshapes
    * itself just before it draws, one that reaches behind the camera, glass rough enough to blur past CROP_LOD) gets
    * the whole map, as does a set of them that covers half the screen or more; and all of them do with
@@ -257,7 +257,7 @@ export class Renderer {
       const vy = view[1] * x + view[5] * y + view[9] * z + view[13];
       const vz = view[2] * x + view[6] * y + view[10] * z + view[14];
       if (!camera.isOrthographicCamera && vz + reach >= -camera.near) return null;
-      // The corners of the cube round it, in view space, onto the screen: the cube holds the sphere, and in front of
+      // The corners of the cube around it, in view space, onto the screen: the cube holds the sphere, and in front of
       // the camera the picture of a cube is held by the pictures of its corners.
       for (let k = 0; k < 8; k++) {
         const cx = vx + (k & 1 ? reach : -reach), cy = vy + (k & 2 ? reach : -reach), cz = vz + (k & 4 ? reach : -reach);

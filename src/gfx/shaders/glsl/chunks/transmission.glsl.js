@@ -87,7 +87,7 @@ export default `// Transmission: the scene behind, refracted through the volume 
     refractionCoords += 1.0;
     refractionCoords /= 2.0;
     // A ray from the very edge of a silhouette (its position reckoned past the surface) can land far off: where the
-    // map was drawn only round the glass, it reads the nearest of what was drawn.
+    // map was drawn only around the glass, it reads the nearest of what was drawn.
     if ( transmissionBounds.z > transmissionBounds.x ) refractionCoords = clamp( refractionCoords, transmissionBounds.xy, transmissionBounds.zw );
     transmittedLight = getTransmissionSample( refractionCoords, roughness, ior );
     transmittance = diffuseColor * volumeAttenuation( length( transmissionRay ), attenuationColor, attenuationDistance );

@@ -1,7 +1,7 @@
 /**
  * High-detail bowling pin with a sculpted continuous shell and procedural
  * marbled resin finish. Surface color is sampled in object space (not UV
- * space), so the marbling has no longitude seam or pole artefacts.
+ * space), so the marbling has no longitude seam or pole artifacts.
  */
 export const BOWLING_PIN_HEIGHT = 1.2;
 export const BOWLING_PIN_RADIUS = 0.19;
