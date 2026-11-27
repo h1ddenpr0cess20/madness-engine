@@ -104,8 +104,8 @@ const base = person({
         hold(k, 'footR', -0.16, 0, 0);
         // Foot targets are attached to the deck pivot, so both soles follow
         // the board through pop, flight and touchdown.
-        step?.(k, 'L', 'deck', [0, DECK_Y + 0.01, -0.105]);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.105]);
+        step?.(k, 'L', 'deck', [0, DECK_Y + 0.018, -0.09]);
+        step?.(k, 'R', 'deck', [0, DECK_Y + 0.018, 0.09]);
       } else if (pushing) {
         // The front (right) foot stays planted over the front truck and the
         // board glides on it. The back (left) foot does the pushing, every
@@ -116,27 +116,32 @@ const base = person({
         const cadence = clip === 'run' ? 1.6 : 1.0;
         const phase = ((T * cadence * Math.max(0.5, Math.abs(rate))) % 1 + 1) % 1;
         const strength = clip === 'run' ? 1.3 : 1;
-        const onDeck = [0, DECK_Y + 0.01, -0.105];
-        const plant = [0.085, 0.006, 0.06];
-        const away = [0.085, 0.006, -0.2];
+        const onDeck = [0, DECK_Y + 0.018, -0.09];
+        const plant = [0.1, 0.006, 0.04];
+        const away = [0.1, 0.006, -0.2];
         const lerp = (p, q, u) => p.map((v, i) => v + (q[i] - v) * u);
+        // Moving between the deck and the ground, the foot lifts clear of the
+        // board first and only then moves sideways past its edge.
+        const hop = (from, to, u) => {
+          const side = smoothstep(0.25, 0.75, u);
+          const t = lerp(from, to, u);
+          t[0] = from[0] + (to[0] - from[0]) * side;
+          t[1] = Math.max(t[1], DECK_Y + 0.06 * Math.sin(Math.PI * Math.min(1, u * 1.15)));
+          if (u > 0.8) t[1] = lerp(from, to, u)[1] + (t[1] - lerp(from, to, u)[1]) * (1 - smoothstep(0.8, 1, u));
+          return t;
+        };
         let target;
         let down = 0;
         if (phase < 0.18) {
-          // Off the tail and forward, lifted clear of the deck's edge.
           const u = smoothstep(0, 0.18, phase);
-          target = lerp(onDeck, plant, u);
-          target[1] += 0.03 * Math.sin(Math.PI * u);
+          target = hop(onDeck, plant, u);
           down = u;
         } else if (phase < 0.62) {
-          // Foot on the ground, driving back.
           target = lerp(plant, away, smoothstep(0.18, 0.62, phase));
           down = 1;
         } else if (phase < 0.84) {
-          // Swing back up onto the tail.
           const u = smoothstep(0.62, 0.84, phase);
-          target = lerp(away, onDeck, u);
-          target[1] += 0.035 * Math.sin(Math.PI * u);
+          target = hop(away, onDeck, u);
           down = 1 - u;
         } else {
           target = onDeck;
@@ -149,7 +154,7 @@ const base = person({
         hold(k, 'thighL', -0.5 - 0.3 * (1 - down), 0, 0);
         hold(k, 'shinL', 0.8 + 0.5 * (1 - down), 0, 0);
         hold(k, 'footL', -0.14, 0, 0);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.105]);
+        step?.(k, 'R', 'deck', [0, DECK_Y + 0.018, 0.09]);
         step?.(k, 'L', 'root', target);
       } else {
         // Idle/ride: balanced sideways glide with both feet on the deck.
@@ -159,8 +164,8 @@ const base = person({
         hold(k, 'shinR', 0.8, 0, 0);
         hold(k, 'footL', -0.16, 0, 0);
         hold(k, 'footR', -0.16, 0, 0);
-        step?.(k, 'L', 'deck', [0, DECK_Y + 0.01, -0.105]);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.105]);
+        step?.(k, 'L', 'deck', [0, DECK_Y + 0.018, -0.09]);
+        step?.(k, 'R', 'deck', [0, DECK_Y + 0.018, 0.09]);
       }
 
       // The four wheels use the vehicle convention: angle = distance/radius.
