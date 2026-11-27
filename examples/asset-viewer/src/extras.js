@@ -15,7 +15,7 @@ import { createOcean, SEAS, SKIES } from '../../../src/ocean.js';
 import { createRiver, RIVERS, riverOf } from '../../../src/river.js';
 import { createEffects, CONFETTI, WEATHER, shardGeometry } from '../../../src/effects.js';
 import { createDungeonMeshes, createExit, createTorches, flicker } from '../../../src/scenery/dungeon.js';
-import { createLavaMaterial } from '../../../src/textures/lava.js';
+import { createLavaPit } from '../../../src/textures/lavapit.js';
 import { createBogMaterial } from '../../../src/textures/bog.js';
 import { createIceCube } from '../../../src/scenery/ice.js';
 import { PROPS } from '../../../src/scenery/gear/decor.js';
@@ -33,15 +33,15 @@ const ticker = () => {
   };
 };
 
-/** A Mesher's finished parts, one mesh each, coloured by material name. */
-export function meshesOf(parts, colours = {}) {
+/** A Mesher's finished parts, one mesh each, colored by material name. */
+export function meshesOf(parts, colors = {}) {
   const group = new GFX.Group();
   for (const [name, p] of Object.entries(parts)) {
     const g = new GFX.BufferGeometry();
     g.setAttribute('position', new GFX.BufferAttribute(p.pos, 3));
     g.setAttribute('normal', new GFX.BufferAttribute(p.nor, 3));
     g.setAttribute('color', new GFX.BufferAttribute(p.col, 3));
-    const m = new GFX.Mesh(g, new GFX.MeshStandardMaterial({ name, vertexColors: true, color: new GFX.Color(colours[name] ?? '#ffffff'), roughness: 0.85, side: GFX.DoubleSide }));
+    const m = new GFX.Mesh(g, new GFX.MeshStandardMaterial({ name, vertexColors: true, color: new GFX.Color(colors[name] ?? '#ffffff'), roughness: 0.85, side: GFX.DoubleSide }));
     m.castShadow = m.receiveShadow = true;
     group.add(m);
   }
@@ -152,7 +152,7 @@ const effectItems = () => [
     const glass = new GFX.MeshStandardMaterial({ color: '#9ad0ff', roughness: 0.1, metalness: 0.2, flatShading: true });
     return (dt, now) => { if (now) fx.burst({ at: [0, 0.4, 0], count: 30, mesh: () => new GFX.Mesh(geometry, glass), speed: 4, up: 5, life: 1.5 }); };
   }),
-  effectItem('ring', 'Shock ring', (fx) => (dt, now) => { if (now) fx.ring(0, 0.05, 0, { colour: '#ffffff', reach: 3, life: 0.8 }); }),
+  effectItem('ring', 'Shock ring', (fx) => (dt, now) => { if (now) fx.ring(0, 0.05, 0, { color: '#ffffff', reach: 3, life: 0.8 }); }),
 ];
 
 // ———————————————————————————————————————————————— a stretch of dungeon
@@ -236,25 +236,12 @@ const dungeonItem = () => ({
 
 /** The lava by itself: a pool of it three tiles across in a rim of dark stone, moving as it does in the dungeon. */
 const lavaItem = () => ({
-  id: 'textures/lava', category: 'Dungeon', group: 'dungeon', name: 'Lava (shader)', source: 'textures/lava.js', kind: 'object',
+  id: 'textures/lava', category: 'Dungeon', group: 'dungeon', name: 'Lava pit', source: 'textures/lavapit.js', kind: 'object',
   build() {
-    const material = createLavaMaterial(GFX);
-    const pool = new GFX.Mesh(new GFX.PlaneGeometry(3, 3, 1, 1), material);
-    pool.rotation.x = -Math.PI / 2;
-    pool.position.y = -0.04;
-    pool.frustumCulled = false;
-    const group = new GFX.Group();
-    group.add(pool);
-    const stone = new GFX.MeshStandardMaterial({ color: '#2e2a28', roughness: 0.9 });
-    for (const [x, z, w, d] of [[0, -1.6, 3.4, 0.2], [0, 1.6, 3.4, 0.2], [-1.6, 0, 0.2, 3.0], [1.6, 0, 0.2, 3.0]]) {
-      const rim = new GFX.Mesh(new GFX.BoxGeometry(w, 0.12, d), stone);
-      rim.position.set(x, 0.02, z);
-      rim.castShadow = rim.receiveShadow = true;
-      group.add(rim);
-    }
-    const pose = ({ time }) => { material.uniforms.uTime.value = time; };
+    const pit = createLavaPit(GFX, { width: 3, depth: 3, sink: 0.6 });
+    const pose = ({ time }) => pit.update(time);
     pose({ time: 0 });
-    return { object: group, pose, dark: true, info: { Source: 'textures/lava.js', Kind: 'shader (GLSL and WGSL)', Size: '3 × 3 tiles' } };
+    return { object: pit.group, pose, dark: true, info: { Source: 'textures/lavapit.js', Kind: 'shader (GLSL and WGSL), stone rim, walls and a flickering light', Size: '3 × 3 tiles, 0.6 deep' } };
   },
 });
 

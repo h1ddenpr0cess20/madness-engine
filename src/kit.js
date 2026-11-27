@@ -2,8 +2,8 @@ import { linearRGB } from './color.js';
 
 /**
  * Props are built from plain shapes — boxes, cylinders, cones, spheres —
- * each with a colour. A kit gathers them, already placed, into one
- * vertex-coloured geometry per finish (matte, shiny, glowing), so a whole
+ * each with a color. A kit gathers them, already placed, into one
+ * vertex-colored geometry per finish (matte, shiny, glowing), so a whole
  * town of pumps, houses and fences draws in a handful of calls.
  */
 
@@ -24,15 +24,15 @@ export function createKit(GFX) {
     return geometries.get(key);
   };
 
-  /** Add `geometry` (unit-sized, centred) scaled to `size`, turned by `rot` ([x, y, z] radians), at `at`. */
-  function add(geometry, at, size, rot, colour, finish) {
+  /** Add `geometry` (unit-sized, centered) scaled to `size`, turned by `rot` ([x, y, z] radians), at `at`. */
+  function add(geometry, at, size, rot, color, finish) {
     const out = parts[finish] ?? parts.matte;
     e.set(rot[0], rot[1], rot[2]);
     q.setFromEuler(e);
     m.compose(p.set(at[0], at[1], at[2]), q, s.set(size[0], size[1], size[2]));
     n3.getNormalMatrix(m);
     const pos = geometry.attributes.position.array, nor = geometry.attributes.normal.array;
-    const c = linearRGB(colour);
+    const c = linearRGB(color);
     for (let i = 0; i < pos.length; i += 3) {
       v.set(pos[i], pos[i + 1], pos[i + 2]).applyMatrix4(m);
       out.position.push(v.x, v.y, v.z);
@@ -43,43 +43,43 @@ export function createKit(GFX) {
   }
 
   const kit = {
-    /** A box centred on `at`, `size` across. */
-    box(at, size, colour, { rot = [0, 0, 0], finish = 'matte' } = {}) {
-      add(cached('box', () => new GFX.BoxGeometry(1, 1, 1)), at, size, rot, colour, finish);
+    /** A box centered on `at`, `size` across. */
+    box(at, size, color, { rot = [0, 0, 0], finish = 'matte' } = {}) {
+      add(cached('box', () => new GFX.BoxGeometry(1, 1, 1)), at, size, rot, color, finish);
       return kit;
     },
     /** A box from its corners, (x0, y0, z0) to (x1, y1, z1). */
-    slab(x0, y0, z0, x1, y1, z1, colour, opts) {
-      return kit.box([(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], [x1 - x0, y1 - y0, z1 - z0], colour, opts);
+    slab(x0, y0, z0, x1, y1, z1, color, opts) {
+      return kit.box([(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], [x1 - x0, y1 - y0, z1 - z0], color, opts);
     },
-    /** An upright cylinder centred on `at`, radius `r` (or [top, bottom]) and `h` tall; `rot` lays it down. */
-    cyl(at, r, h, colour, { rot = [0, 0, 0], finish = 'matte', segments = 16, open = false } = {}) {
+    /** An upright cylinder centered on `at`, radius `r` (or [top, bottom]) and `h` tall; `rot` lays it down. */
+    cyl(at, r, h, color, { rot = [0, 0, 0], finish = 'matte', segments = 16, open = false } = {}) {
       const [rt, rb] = Array.isArray(r) ? r : [r, r];
       const k = rb || 1;
-      add(cached(`cyl${segments}${rt / k}${open}`, () => new GFX.CylinderGeometry(rt / k, 1, 1, segments, 1, open)), at, [k, h, k], rot, colour, finish);
+      add(cached(`cyl${segments}${rt / k}${open}`, () => new GFX.CylinderGeometry(rt / k, 1, 1, segments, 1, open)), at, [k, h, k], rot, color, finish);
       return kit;
     },
-    cone(at, r, h, colour, { rot = [0, 0, 0], finish = 'matte', segments = 16 } = {}) {
-      add(cached(`cone${segments}`, () => new GFX.ConeGeometry(1, 1, segments)), at, [r, h, r], rot, colour, finish);
+    cone(at, r, h, color, { rot = [0, 0, 0], finish = 'matte', segments = 16 } = {}) {
+      add(cached(`cone${segments}`, () => new GFX.ConeGeometry(1, 1, segments)), at, [r, h, r], rot, color, finish);
       return kit;
     },
-    sphere(at, r, colour, { finish = 'matte', scale = [1, 1, 1], rot = [0, 0, 0], segments = 16 } = {}) {
-      add(cached(`sphere${segments}`, () => new GFX.SphereGeometry(1, segments, Math.max(10, Math.round(segments * 0.6)))), at, [r * scale[0], r * scale[1], r * scale[2]], rot, colour, finish);
+    sphere(at, r, color, { finish = 'matte', scale = [1, 1, 1], rot = [0, 0, 0], segments = 16 } = {}) {
+      add(cached(`sphere${segments}`, () => new GFX.SphereGeometry(1, segments, Math.max(10, Math.round(segments * 0.6)))), at, [r * scale[0], r * scale[1], r * scale[2]], rot, color, finish);
       return kit;
     },
-    torus(at, r, tube, colour, { rot = [0, 0, 0], finish = 'matte', segments = 20 } = {}) {
-      add(cached(`torus${tube / r}:${segments}`, () => new GFX.TorusGeometry(1, tube / r, 8, segments)), at, [r, r, r], rot, colour, finish);
+    torus(at, r, tube, color, { rot = [0, 0, 0], finish = 'matte', segments = 20 } = {}) {
+      add(cached(`torus${tube / r}:${segments}`, () => new GFX.TorusGeometry(1, tube / r, 8, segments)), at, [r, r, r], rot, color, finish);
       return kit;
     },
     /** A beam from point a to point b, `t` thick. */
-    beam(a, b, t, colour, opts = {}) {
+    beam(a, b, t, color, opts = {}) {
       const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
       const len = Math.hypot(dx, dy, dz);
       if (len < 1e-6) return kit;
       const dir = new GFX.Vector3(dx / len, dy / len, dz / len);
       q.setFromUnitVectors(new GFX.Vector3(0, 1, 0), dir);
       e.setFromQuaternion(q);
-      return kit.cyl([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], t, len, colour, { ...opts, rot: [e.x, e.y, e.z], segments: opts.segments ?? 6 });
+      return kit.cyl([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], t, len, color, { ...opts, rot: [e.x, e.y, e.z], segments: opts.segments ?? 6 });
     },
     get empty() { return FINISHES.every((f) => parts[f].position.length === 0); },
 

@@ -66,7 +66,7 @@ function fakePage() {
       appendChild(c) { el.children.push(c); c.parentNode = el; return c; },
       querySelector: (sel) => (sel === 'canvas' ? el.children.find((c) => c.tagName === 'canvas') ?? null : null),
       animate(keyframes, options) {
-        const a = { keyframes, options, cancelled: false, cancel() { a.cancelled = true; } };
+        const a = { keyframes, options, canceled: false, cancel() { a.canceled = true; } };
         el.animations.push(a);
         return a;
       },
@@ -123,7 +123,7 @@ test('film: the grade goes on the picture, the vignette and the grain over it, t
   assert.equal(canvas.style.filter, MOODS.london.film.filter);
   assert.equal(hud.style.filter, '');
   assert.equal(frame.style.display, 'none');
-  assert.ok(grain.animations[0].cancelled, 'the grain stops dancing when it goes');
+  assert.ok(grain.animations[0].canceled, 'the grain stops dancing when it goes');
   assert.equal(vignette.style.display, '');
 
   // A sandstorm's haze, in place of the vignette.

@@ -2,9 +2,10 @@
  * The layout and schedule of the prefiltered radiance atlas ("cube UV"): six
  * cube faces per roughness level, packed into one texture, each level blurred
  * from the one before by GGX importance sampling. Both backends run exactly
- * this schedule with their own shaders; the numbers are three.js r186's
- * PMREMGenerator (MIT, © 2010-2025 three.js authors), which is what the
+ * this schedule with their own shaders; the numbers are what the
  * materials' environment lookup expects to find.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 const LOD_MIN = 4;
@@ -28,7 +29,7 @@ export function pmremLayout(equirectWidth) {
 /**
  * One quad per face per level, in clip space, carrying the direction each
  * corner looks along. The UVs overshoot the face by one texel so the border
- * the bilinear lookup reads is baked from the neighbouring faces.
+ * the bilinear lookup reads is baked from the neighboring faces.
  */
 export function pmremPlanes(lodMax) {
   const planes = [];

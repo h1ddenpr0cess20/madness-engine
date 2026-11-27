@@ -4,7 +4,7 @@ import { canvas, cached, copyOf, glowTexture, random, texture } from '../texture
  * The light show. Every venue is lit by a rig, and the rig keeps the beat:
  *
  *   bulb     a caged bulb: warm, steady, with a little flicker.
- *   par      a PAR can: a coloured wash and a shaft of haze, changing colour
+ *   par      a PAR can: a colored wash and a shaft of haze, changing color
  *            on the beat (`program`: 'chase', 'pulse', 'rainbow', 'static').
  *   spot     a moving head: a beam and a pool of light that wander the floor,
  *            `radius` either way of the fixture, or of `aim` (an offset in
@@ -12,7 +12,7 @@ import { canvas, cached, copyOf, glowTexture, random, texture } from '../texture
  *   strobe   flashes white on the beat. Never more than three times a
  *            second, and where `flashing` is off it only glows.
  *   ball     a mirror ball: it turns, and throws a field of sparkles across
- *            the floor, in colours that chase.
+ *            the floor, in colors that chase.
  *   laser    a fan of thin beams, sweeping.
  *   chandelier  crystal and candle-bulbs on brass arms, hung high: warm,
  *            steady, glittering a little as it sways.
@@ -44,7 +44,7 @@ const SOFT = { lift: 1.4, spread: 1.5, gain: 0.42 };
 /** The most flashes a second a strobe makes. */
 export const STROBE_MAX_HZ = 3;
 
-/** A colour as [r, g, b] each 0–1, linear enough for lights. */
+/** A color as [r, g, b] each 0–1, linear enough for lights. */
 const rgb = (hex) => {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
@@ -56,7 +56,7 @@ const smooth = (a, b, x) => {
 };
 
 /**
- * The colour a fixture shows at `beat`: it steps through its `colors`, one
+ * The color a fixture shows at `beat`: it steps through its `colors`, one
  * every `every` beats (`shift` of them out of step with the rest), fading
  * across the step in the last tenth of it.
  */
@@ -178,8 +178,8 @@ const neonPixels = (text) => Math.max(160, text.length * 46 + NEON_PAD);
 export const neonWidth = (text, size) => (size * neonPixels(text)) / NEON_H;
 
 /** A word in neon tube: bright letters with a glow round them, on nothing, on a canvas as wide as the word. */
-function neonTexture(GFX, text, colour) {
-  return cached(`neon:${text}:${colour}`, () => {
+function neonTexture(GFX, text, color) {
+  return cached(`neon:${text}:${color}`, () => {
     const h = NEON_H, most = neonPixels(text);
     const [c, ctx] = canvas(most, h);
     ctx.font = NEON_FONT;
@@ -190,10 +190,10 @@ function neonTexture(GFX, text, colour) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
-    ctx.shadowColor = colour;
+    ctx.shadowColor = color;
     for (const [blur, alpha] of [[30, 0.8], [16, 0.9], [6, 1]]) {
       ctx.shadowBlur = blur;
-      ctx.strokeStyle = colour;
+      ctx.strokeStyle = color;
       ctx.lineWidth = 5;
       ctx.globalAlpha = alpha;
       ctx.strokeText(text, w / 2, h / 2, w - NEON_PAD);
@@ -277,22 +277,22 @@ export function createLightshow(GFX, venue) {
   const rig = venue.look.rig ?? {};
   const defaults = { colors: rig.colors ?? ['#ff3a8a', '#2ad0ff'], program: rig.program ?? 'chase', every: rig.every ?? 2 };
 
-  /** What every fixture offers the stage's lights: where, what colour, how bright, how far it carries. */
+  /** What every fixture offers the stage's lights: where, what color, how bright, how far it carries. */
   const sources = [];
 
-  const halo = (colour, size) => {
-    const m = new GFX.SpriteMaterial({ map: glow, color: new GFX.Color(...colour), opacity: 0.8, ...additive });
+  const halo = (color, size) => {
+    const m = new GFX.SpriteMaterial({ map: glow, color: new GFX.Color(...color), opacity: 0.8, ...additive });
     const s = new GFX.Sprite(m);
     s.scale.set(size, size, 1);
     return s;
   };
-  const tint = (material, colour, k = 1) => material.color.setRGB(colour[0] * k, colour[1] * k, colour[2] * k);
+  const tint = (material, color, k = 1) => material.color.setRGB(color[0] * k, color[1] * k, color[2] * k);
 
   /** A cone of light from `from` down to `to`, wider at the foot. */
-  const beam = (angle, colour) => {
+  const beam = (angle, color) => {
     const geometry = new GFX.ConeGeometry(1, 1, 20, 1, true);
     geometry.translate(0, -0.5, 0);
-    const material = new GFX.MeshBasicMaterial({ map: beamMap, color: new GFX.Color(...colour), side: GFX.DoubleSide, opacity: 0.3, ...additive });
+    const material = new GFX.MeshBasicMaterial({ map: beamMap, color: new GFX.Color(...color), side: GFX.DoubleSide, opacity: 0.3, ...additive });
     const mesh = new GFX.Mesh(geometry, material);
     mesh.frustumCulled = false;
     const up = new GFX.Vector3(0, -1, 0), d = new GFX.Vector3();
@@ -309,8 +309,8 @@ export function createLightshow(GFX, venue) {
   };
 
   /** A pool of light on the floor. */
-  const pool = (colour) => {
-    const material = new GFX.MeshBasicMaterial({ map: poolMap, color: new GFX.Color(...colour), opacity: 0.6, ...additive });
+  const pool = (color) => {
+    const material = new GFX.MeshBasicMaterial({ map: poolMap, color: new GFX.Color(...color), opacity: 0.6, ...additive });
     const mesh = new GFX.Mesh(new GFX.CircleGeometry(1, 28), material);
     mesh.rotation.x = -Math.PI / 2;
     mesh.frustumCulled = false;
@@ -333,13 +333,13 @@ export function createLightshow(GFX, venue) {
     const over = venue.cell(Math.floor(f.x), Math.floor(f.z)) !== null;
     const y = f.floor ?? heightOf(f.x, f.z);
     const high = f.height ?? 3.2;
-    const centre = [f.x, y + high, f.z];
-    const colour = rgb(f.color ?? '#ffd59a');
+    const center = [f.x, y + high, f.z];
+    const color = rgb(f.color ?? '#ffd59a');
     const brass = new GFX.MeshStandardMaterial({ name: 'chandelier-brass', color: new GFX.Color('#c89a48'), roughness: 0.3, metalness: 0.95 });
-    const crystal = new GFX.MeshStandardMaterial({ name: 'chandelier-crystal', color: new GFX.Color('#f4f0ff'), roughness: 0.05, metalness: 0.4, emissive: new GFX.Color(...colour), emissiveIntensity: 0.6, flatShading: true });
-    const flame = new GFX.MeshBasicMaterial({ color: new GFX.Color(colour[0] * 1.3, colour[1] * 1.2, colour[2]), toneMapped: false });
+    const crystal = new GFX.MeshStandardMaterial({ name: 'chandelier-crystal', color: new GFX.Color('#f4f0ff'), roughness: 0.05, metalness: 0.4, emissive: new GFX.Color(...color), emissiveIntensity: 0.6, flatShading: true });
+    const flame = new GFX.MeshBasicMaterial({ color: new GFX.Color(color[0] * 1.3, color[1] * 1.2, color[2]), toneMapped: false });
     const g = new GFX.Group();
-    g.position.set(...centre);
+    g.position.set(...center);
     const chain = new GFX.Mesh(new GFX.CylinderGeometry(0.015, 0.015, 6, 6), brass);
     chain.position.y = 3.3;
     const stem = new GFX.Mesh(new GFX.CylinderGeometry(0.05, 0.09, 0.6, 10), brass);
@@ -383,18 +383,18 @@ export function createLightshow(GFX, venue) {
     tip.scale.y = 2;
     tip.position.y = -0.55;
     g.add(tip);
-    const h = halo(colour, 3.2);
+    const h = halo(color, 3.2);
     h.position.y = -0.05;
     g.add(h);
     g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
     group.add(g);
     // A warm pool on the floor below.
-    const p = pool(colour);
+    const p = pool(color);
     p.mesh.position.set(f.x, y + 0.04, f.z);
     p.mesh.scale.setScalar(f.radius ?? 3.2);
     p.mesh.visible = over;
     group.add(p.mesh);
-    sources.push({ pos: centre, colour, reach: f.reach ?? 8, strength: 1 });
+    sources.push({ pos: center, color, reach: f.reach ?? 8, strength: 1 });
     const seed = f.x * 1.3 + f.z * 0.7;
     return {
       update(time, beat, ctx) {
@@ -402,8 +402,8 @@ export function createLightshow(GFX, venue) {
         g.rotation.z = Math.sin(time * 0.4 + seed) * 0.015;
         crystal.emissiveIntensity = 0.45 + 0.2 * Math.sin(time * 3 + seed);
         h.material.opacity = 0.5 + 0.06 * Math.sin(time * 7 + seed);
-        tint(p.material, colour, 0.35);
-        ctx.offer({ pos: [f.x, centre[1] - 0.4, f.z], color: colour, intensity: 10, reach: f.reach ?? 9 });
+        tint(p.material, color, 0.35);
+        ctx.offer({ pos: [f.x, center[1] - 0.4, f.z], color: color, intensity: 10, reach: f.reach ?? 9 });
       },
     };
   }
@@ -414,7 +414,7 @@ export function createLightshow(GFX, venue) {
     const high = f.height ?? 2.2;
     const n = f.bulbs ?? Math.max(4, Math.round(Math.hypot(dx, dz) * 1.6));
     const sag = f.sag ?? 0.35;
-    const colours = (f.colors ?? ['#ffd28a']).map(rgb);
+    const colors = (f.colors ?? ['#ffd28a']).map(rgb);
     const at = (t) => {
       const x = f.x + dx * t, z = f.z + dz * t;
       return [x, heightOf(f.x, f.z) * (1 - t) + heightOf(f.x + dx, f.z + dz) * t + high - sag * 4 * t * (1 - t), z];
@@ -439,7 +439,7 @@ export function createLightshow(GFX, venue) {
     const lamps = [];
     for (let i = 0; i < n; i++) {
       const t = (i + 0.5) / n;
-      const c = colours[i % colours.length];
+      const c = colors[i % colors.length];
       const p = at(t);
       const mat = new GFX.MeshBasicMaterial({ color: new GFX.Color(...c), toneMapped: false });
       const glass = new GFX.Mesh(new GFX.SphereGeometry(0.06, 8, 6), mat);
@@ -450,7 +450,7 @@ export function createLightshow(GFX, venue) {
       lamps.push({ mat, hh, c, i });
     }
     const mid = at(0.5);
-    sources.push({ pos: mid, colour: colours[0], reach: f.reach ?? 6, strength: 0.6 });
+    sources.push({ pos: mid, color: colors[0], reach: f.reach ?? 6, strength: 0.6 });
     return {
       update(time, beat, ctx) {
         // The bulbs take turns being brightest, round the string, on the beat.
@@ -459,7 +459,7 @@ export function createLightshow(GFX, venue) {
           tint(l.mat, l.c, k * 1.1);
           l.hh.material.opacity = 0.45 * k;
         }
-        ctx.offer({ pos: mid, color: colours[0], intensity: 5, reach: 7 });
+        ctx.offer({ pos: mid, color: colors[0], intensity: 5, reach: 7 });
       },
     };
   }
@@ -467,14 +467,14 @@ export function createLightshow(GFX, venue) {
   // ——— a caged bulb.
   function bulb(f) {
     const y = heightOf(f.x, f.z) + (f.wall ? 0 : 0);
-    const colour = rgb(f.color ?? venue.palette.lamp ?? '#ffb766');
+    const color = rgb(f.color ?? venue.palette.lamp ?? '#ffb766');
     const g = new GFX.Group();
     g.position.set(f.x, y, f.z);
     const post = new GFX.Mesh(new GFX.CylinderGeometry(0.03, 0.045, 0.34, 8), iron);
     post.position.y = 0.17;
     const socket = new GFX.Mesh(new GFX.CylinderGeometry(0.07, 0.07, 0.09, 10), iron);
     socket.position.y = 0.38;
-    const glass = new GFX.Mesh(new GFX.SphereGeometry(0.1, 14, 10), new GFX.MeshBasicMaterial({ color: new GFX.Color(colour[0] * 1.2, colour[1] * 1.1, colour[2]), toneMapped: false }));
+    const glass = new GFX.Mesh(new GFX.SphereGeometry(0.1, 14, 10), new GFX.MeshBasicMaterial({ color: new GFX.Color(color[0] * 1.2, color[1] * 1.1, color[2]), toneMapped: false }));
     glass.position.y = 0.52;
     // A cage round it: three rings.
     const cage = new GFX.Group();
@@ -484,26 +484,26 @@ export function createLightshow(GFX, venue) {
       cage.add(ring);
     }
     cage.position.y = 0.52;
-    const h = halo(colour, 1.5);
+    const h = halo(color, 1.5);
     h.position.y = 0.55;
     post.castShadow = true;
     g.add(post, socket, glass, cage, h);
     group.add(g);
     const seed = f.x * 3.1 + f.z * 1.7;
     const at = [f.x, y + 0.6, f.z];
-    sources.push({ pos: at, colour, reach: f.reach ?? 5.5, strength: 0.9 });
+    sources.push({ pos: at, color, reach: f.reach ?? 5.5, strength: 0.9 });
     return {
       update(time, beat, ctx) {
         const flicker = 1 + 0.05 * Math.sin(time * 11 + seed) + 0.03 * Math.sin(time * 23 + seed * 2);
         const buzz = f.buzz && Math.sin(time * 1.3 + seed) > 0.985 ? 0.35 : 1;
         const k = flicker * buzz;
         h.material.opacity = 0.6 * k;
-        ctx.offer({ pos: at, color: colour, intensity: 6.5 * k, reach: 7 });
+        ctx.offer({ pos: at, color: color, intensity: 6.5 * k, reach: 7 });
       },
     };
   }
 
-  // ——— a PAR can on a post: a wash of colour, a shaft down, a pool where it lands. The can faces where its beam lands, lens first.
+  // ——— a PAR can on a post: a wash of color, a shaft down, a pool where it lands. The can faces where its beam lands, lens first.
   function par(f) {
     const y = heightOf(f.x, f.z);
     const high = f.height ?? 1.6;
@@ -537,7 +537,7 @@ export function createLightshow(GFX, venue) {
     p.mesh.position.set(...target);
     p.mesh.scale.setScalar(Math.hypot(...lens.map((v, i) => v - target[i])) * (f.angle ?? PAR_ANGLE) * 1.1);
     group.add(p.mesh);
-    sources.push({ pos: lens, colour: rgb(f.colors?.[0] ?? defaults.colors[0]), reach: f.reach ?? 6, strength: 0.7 });
+    sources.push({ pos: lens, color: rgb(f.colors?.[0] ?? defaults.colors[0]), reach: f.reach ?? 6, strength: 0.7 });
     return {
       update(time, beat, ctx) {
         const c = colorAt(f, beat), l = levelAt(f, beat);
@@ -580,7 +580,7 @@ export function createLightshow(GFX, venue) {
     const p = pool([1, 1, 1]);
     group.add(p.mesh);
     const target = [0, 0, 0];
-    sources.push({ pos: lens, colour: rgb(f.colors?.[0] ?? defaults.colors[0]), reach: f.reach ?? 6, strength: 0.6 });
+    sources.push({ pos: lens, color: rgb(f.colors?.[0] ?? defaults.colors[0]), reach: f.reach ?? 6, strength: 0.6 });
     return {
       update(time, beat, ctx) {
         const [tx, tz] = spotTarget(f, beat);
@@ -605,7 +605,8 @@ export function createLightshow(GFX, venue) {
   function strobe(f) {
     const y = heightOf(f.x, f.z);
     const high = f.height ?? 1.5;
-    const lens = [f.x, y + high, f.z];
+    // The lens is the front (+z) face of the housing: the light comes out of it, not out of the middle of the box.
+    const lens = [f.x, y + high, f.z + 0.2];
     const g = new GFX.Group();
     g.position.set(f.x, y, f.z);
     const post = new GFX.Mesh(new GFX.CylinderGeometry(0.025, 0.04, high, 8), iron);
@@ -616,12 +617,12 @@ export function createLightshow(GFX, venue) {
     const faceMesh = new GFX.Mesh(new GFX.BoxGeometry(0.54, 0.1, 0.02), faceMat);
     faceMesh.position.set(0, high, 0.115);
     const h = halo([1, 1, 1], 2.4);
-    h.position.y = high;
+    h.position.set(0, high, 0.2);
     h.material.opacity = 0;
     post.castShadow = bar.castShadow = true;
     g.add(post, bar, faceMesh, h);
     group.add(g);
-    sources.push({ pos: lens, colour: [0.9, 0.95, 1], reach: f.reach ?? 6, strength: 0.4 });
+    sources.push({ pos: lens, color: [0.9, 0.95, 1], reach: f.reach ?? 6, strength: 0.4 });
     return {
       strobe: true,
       update(time, beat, ctx) {
@@ -631,7 +632,9 @@ export function createLightshow(GFX, venue) {
         const k = Math.max(s, calm);
         faceMat.color.setRGB(0.25 + k * 3, 0.25 + k * 3, 0.3 + k * 3);
         h.material.opacity = k * 0.95;
-        if (k > 0.01) ctx.offer({ pos: [lens[0], lens[1] + 0.3, lens[2]], color: [0.92, 0.96, 1], intensity: 38 * k, reach: 11, flash: s });
+        // Offered every frame, dark between flashes: a light that came and went with each flash would
+        // re-rank every other offer, and the stage's real lights would jump from fixture to fixture on the beat.
+        ctx.offer({ pos: lens, color: [0.92, 0.96, 1], intensity: 38 * k, reach: 11, flash: s });
       },
     };
   }
@@ -640,9 +643,9 @@ export function createLightshow(GFX, venue) {
   function ball(f) {
     const y = heightOf(f.x, f.z);
     const high = f.height ?? 2.6;
-    const centre = [f.x, y + high, f.z];
+    const center = [f.x, y + high, f.z];
     const g = new GFX.Group();
-    g.position.set(...centre);
+    g.position.set(...center);
     const geometry = new GFX.IcosahedronGeometry(0.34, 5).toNonIndexed();
     const rnd = random(Math.floor(f.x * 31 + f.z * 7));
     const colors = new Float32Array(geometry.attributes.position.count * 3);
@@ -677,7 +680,7 @@ export function createLightshow(GFX, venue) {
     floor.position.set(f.x, y + 0.045, f.z);
     floor.frustumCulled = false;
     group.add(floor);
-    sources.push({ pos: centre, colour: rgb(f.colors?.[0] ?? defaults.colors[0]), reach: radius, strength: 0.5, glow: 0.4 });
+    sources.push({ pos: center, color: rgb(f.colors?.[0] ?? defaults.colors[0]), reach: radius, strength: 0.5, glow: 0.4 });
     return {
       update(time, beat, ctx) {
         sphere.rotation.y = time * 0.5;
@@ -705,8 +708,8 @@ export function createLightshow(GFX, venue) {
     const y = heightOf(f.x, f.z);
     const high = f.height ?? 2.6;
     const from = [f.x, y + high, f.z];
-    const colour = rgb(f.color ?? '#3aff7a');
-    const material = new GFX.MeshBasicMaterial({ color: new GFX.Color(...colour), opacity: 0.85, ...additive });
+    const color = rgb(f.color ?? '#3aff7a');
+    const material = new GFX.MeshBasicMaterial({ color: new GFX.Color(...color), opacity: 0.85, ...additive });
     const count = f.beams ?? 5;
     const reach = f.radius ?? 5;
     const up = new GFX.Vector3(0, 1, 0), d = new GFX.Vector3();
@@ -722,7 +725,7 @@ export function createLightshow(GFX, venue) {
     base.position.set(f.x, from[1], f.z);
     group.add(base);
     const dots = Array.from({ length: count }, () => {
-      const s = halo(colour, 0.35);
+      const s = halo(color, 0.35);
       group.add(s);
       return s;
     });
@@ -747,10 +750,10 @@ export function createLightshow(GFX, venue) {
 
   // ——— a neon sign: a word, in tube, on a wall.
   function neon(f) {
-    const colour = f.color ?? f.colors?.[0] ?? '#ff3a8a';
+    const color = f.color ?? f.colors?.[0] ?? '#ff3a8a';
     const text = f.text ?? 'LIVE';
-    const tex = neonTexture(GFX, text, colour);
-    const c = rgb(colour);
+    const tex = neonTexture(GFX, text, color);
+    const c = rgb(color);
     const height = f.size ?? 0.55;
     const width = tex.aspect ? height * tex.aspect : neonWidth(text, height);
     const { at, turn, base } = mountSign(venue, f, height);
@@ -779,7 +782,7 @@ export function createLightshow(GFX, venue) {
     h.material.opacity = 0.3;
     group.add(h);
     const seed = f.x * 7.7 + f.z * 3.1;
-    sources.push({ pos: at, colour: c, reach: f.reach ?? 5, strength: 0.5 });
+    sources.push({ pos: at, color: c, reach: f.reach ?? 5, strength: 0.5 });
     return {
       update(time, beat, ctx) {
         // The odd stutter, as neon does.

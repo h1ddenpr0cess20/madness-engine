@@ -4,7 +4,7 @@ import { bird, hue, iridescent, plumed } from './bird.js';
 
 /**
  * The Pigeon: a city pigeon, the same one in every square in Europe. Plump
- * and blue-grey, a small round head, the neck shot through with green and
+ * and blue-gray, a small round head, the neck shot through with green and
  * purple, two black bars across each wing, dark tips to the wings and a
  * black band across the end of the tail, an orange eye, a white blob over
  * a little dark beak, and coral-pink feet. Has seen every statue on the
@@ -17,7 +17,7 @@ const SHOT = iridescent('#3c8a5a', '#7a3a7a');
 const NECK = [0, 0.036, 0.06];
 
 const COAT = plumed((p, n) => {
-  // The head darker, the neck and the top of the breast shot with colour, the rest blue-grey.
+  // The head darker, the neck and the top of the breast shot with color, the rest blue-gray.
   const neck = smooth(0.034, 0.018, Math.hypot(p[0] * 0.9, (p[1] - NECK[1]) * 1.1, p[2] - NECK[2]));
   const head = smooth(0.062, 0.072, p[2] + p[1] * 0.3);
   let c = mix(BODY, HEAD, head);

@@ -58,7 +58,7 @@ export default person({
       s.limb(R.at(0.1), R.at(0.135), 0.0105, 0.016, { color: '#c8906a', mat: 'hair', k: 0.004 });
       s.sphere(R.at(0.138), 0.0165, { color: '#e8b498', mat: 'hair', k: 0.006 });
     }));
-    // The palette in the left: a black case open flat, held by its edge, its pans of colour in rows.
+    // The palette in the left: a black case open flat, held by its edge, its pans of color in rows.
     const L = pose.grip('L'), c = L.at(0, 0, -0.05);
     pose.hold(s, 'handL', () => s.part('kit', () => {
       plate(s, c, L.along, L.out, [0.05, 0.045, 0.004], 0.003, { color: '#141418', mat: 'plastic', k: 0.002 });

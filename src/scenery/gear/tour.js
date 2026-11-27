@@ -1,4 +1,5 @@
 import { glass, glow, gloss, kit, metal, seeded, std, X, Z } from './dressing.js';
+import { woodTexture } from '../../textures/wood.js';
 
 /**
  * The furniture of the places on the tour (see decor.js, which these
@@ -10,11 +11,11 @@ import { glass, glow, gloss, kit, metal, seeded, std, X, Z } from './dressing.js
  * bazaar and the yokocho; the quarry's cut stones and the sarcophagi in
  * the tomb; Tokyo's vending machines, karaoke and taiko drums; the samba
  * school's surdos; the flags
- * on the Harbour Bridge, the barbecues in the Rocks, beach umbrellas, surf
+ * on the Harbor Bridge, the barbecues in the Rocks, beach umbrellas, surf
  * racks and the surf club's lockers.
  *
  * Each is built from plain shapes, standing on y = 0 over its footprint
- * (`w` by `d` tiles, centred on the origin) and, if it has a front, facing
+ * (`w` by `d` tiles, centered on the origin) and, if it has a front, facing
  * +z. No canvas: they are built under node for the tests as well.
  */
 
@@ -54,22 +55,81 @@ function phonebox(GFX, { rise = 1.6 }) {
   return { group };
 }
 
-/** A park bench: slats of wood for the seat and the back, cast-iron ends. */
+/**
+ * Walnut for the slats: the library's photograph-backed wood, raw. One repeat of
+ * its map is a meter, so the grain runs on through the bench, not stretched once
+ * over each slat.
+ */
+function benchWood(GFX) {
+  const { map, bump } = woodTexture(GFX, 'walnut', 'raw');
+  return new GFX.MeshStandardMaterial({ name: 'bench walnut', color: '#ffffff', map, bumpMap: bump, bumpScale: 1.2, roughness: 0.78 });
+}
+
+/** A slat as a box whose texture runs along its length in the world (one repeat a meter). */
+function slat(GFX, k, size, mat, at, rot = null) {
+  const geo = new GFX.BoxGeometry(...size);
+  const p = geo.attributes.position, n = geo.attributes.normal;
+  const uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i) + at[0], y = p.getY(i) + at[1], z = p.getZ(i) + at[2];
+    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
+    let u, v;
+    if (ay >= ax && ay >= az) { u = x; v = z; } else if (ax >= az) { u = z; v = y; } else { u = x; v = y; }
+    uv[2 * i] = u;
+    uv[2 * i + 1] = v;
+  }
+  geo.setAttribute('uv', new GFX.BufferAttribute(uv, 2));
+  return k.put(geo, mat, at, { rot });
+}
+
+/** A round iron rod from `a` to `b`, radius `r`. */
+function rod(GFX, group, a, b, r, mat) {
+  const from = new GFX.Vector3(...a), to = new GFX.Vector3(...b);
+  const dir = to.clone().sub(from);
+  const len = dir.length();
+  const mesh = new GFX.Mesh(new GFX.CylinderGeometry(r, r, len, 10), mat);
+  mesh.position.copy(from).add(to).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new GFX.Vector3(0, 1, 0), dir.normalize());
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return mesh;
+}
+
+/**
+ * A park bench, facing +z: five walnut slats on two iron battens for the seat;
+ * three slats on iron uprights for the back, leaning back at a real angle; a
+ * cast-iron A-frame at each end with a stretcher. `rise` is the back's height.
+ */
 function bench(GFX, { rise = 0.8 }) {
   const group = new GFX.Group();
   const k = kit(GFX, group);
-  const wood = std(GFX, '#8a5a2e', { roughness: 0.75 });
+  const wood = benchWood(GFX);
   const iron = std(GFX, '#1a1e1a', { metalness: 0.6, roughness: 0.4 });
-  const top = Math.min(0.95, rise);
-  for (const x of [-0.42, 0.42]) {
-    k.box([0.05, 0.42, 0.06], iron, [x, 0.21, 0.14]);
-    k.box([0.05, 0.42, 0.06], iron, [x, 0.21, -0.14]);
-    k.box([0.05, 0.05, 0.4], iron, [x, 0.4, 0.0]);
-    k.box([0.05, top - 0.42, 0.05], iron, [x, 0.42 + (top - 0.42) / 2, -0.17], { rot: [-0.15, 0, 0] });
-    k.box([0.05, 0.3, 0.05], iron, [x, 0.55, 0.2], { rot: [0.5, 0, 0] });
+  const seatY = 0.46, seatZ = -0.2;
+  const lean = 0.22;
+  const backTop = Math.min(0.95, Math.max(0.8, rise));
+
+  // The seat: five slats across, spaced, on two battens beneath.
+  for (let i = 0; i < 5; i++) slat(GFX, k, [1.0, 0.04, 0.07], wood, [0, seatY, -0.18 + i * 0.09]);
+  for (const z of [-0.12, 0.12]) k.box([0.96, 0.03, 0.035], iron, [0, seatY - 0.035, z]);
+
+  // The back: three slats, each leaning back on the same line as the uprights.
+  const backZ = (y) => seatZ - (y - seatY) * Math.tan(lean);
+  // Three slats, spread evenly between the seat and the top of the back, whatever its height.
+  const lo = seatY + 0.14, hi = backTop - 0.05;
+  for (let i = 0; i < 3; i++) {
+    const y = lo + ((hi - lo) * i) / 2;
+    slat(GFX, k, [1.0, 0.07, 0.03], wood, [0, y, backZ(y)], [-lean, 0, 0]);
   }
-  for (const z of [-0.12, -0.04, 0.04, 0.12]) k.box([0.92, 0.035, 0.07], wood, [0, 0.44, z]);
-  for (const y of [0.6, 0.72, 0.84]) if (y < top) k.box([0.92, 0.07, 0.03], wood, [0, y, -0.18 - (y - 0.5) * 0.15], { rot: [-0.15, 0, 0] });
+
+  // Each end: an A-frame of cast iron, the back upright continuing it, and a stretcher low down.
+  for (const x of [-0.44, 0.44]) {
+    rod(GFX, group, [x, 0, 0.2], [x, seatY, 0.1], 0.022, iron);
+    rod(GFX, group, [x, 0, -0.2], [x, seatY, seatZ + 0.04], 0.022, iron);
+    rod(GFX, group, [x, seatY, seatZ], [x, backTop, backZ(backTop)], 0.02, iron);
+    rod(GFX, group, [x, 0.14, -0.2], [x, 0.14, 0.2], 0.014, iron);
+  }
   return { group };
 }
 
@@ -298,7 +358,7 @@ function stove(GFX, { rise = 1.2 }) {
   return { group };
 }
 
-/** A ski rack: a wooden frame, pairs of skis standing in it in every colour, poles hooked on. */
+/** A ski rack: a wooden frame, pairs of skis standing in it in every color, poles hooked on. */
 function skirack(GFX, spec) {
   const group = new GFX.Group();
   const k = kit(GFX, group);
@@ -306,9 +366,9 @@ function skirack(GFX, spec) {
   const wood = std(GFX, '#8a5a2e', { roughness: 0.8 });
   for (const x of [-0.4, 0.4]) k.box([0.06, 0.7, 0.3], wood, [x, 0.35, 0]);
   for (const y of [0.25, 0.65]) k.box([0.86, 0.05, 0.08], wood, [0, y, 0]);
-  const colours = ['#ff3a8a', '#1a5ad8', '#f0c020', '#1a1a1e', '#2aa04a', '#ff6a1a'];
+  const colors = ['#ff3a8a', '#1a5ad8', '#f0c020', '#1a1a1e', '#2aa04a', '#ff6a1a'];
   for (let i = 0; i < 5; i++) {
-    const c = std(GFX, colours[Math.floor(rnd() * 6)], { roughness: 0.4 });
+    const c = std(GFX, colors[Math.floor(rnd() * 6)], { roughness: 0.4 });
     for (const dx of [-0.02, 0.02]) {
       k.box([0.035, 1.5, 0.012], c, [-0.32 + i * 0.16 + dx, 0.75, 0.05], { rot: [-0.08, 0, (rnd() - 0.5) * 0.1] });
     }
@@ -485,7 +545,7 @@ function surdo(GFX, { rise = 0.85, ...spec }) {
   const chrome = metal(GFX, '#d6d9e0', 0.2);
   const head = std(GFX, '#f4f0e6', { roughness: 0.6 });
   const iron = std(GFX, '#2a2a30', { metalness: 0.6, roughness: 0.4 });
-  const colours = ['#2aa04a', '#f0c020', '#1a5ad8', '#e8301a'];
+  const colors = ['#2aa04a', '#f0c020', '#1a5ad8', '#e8301a'];
   along(GFX, group, spec, (g, i) => {
     const r = 0.3, h = Math.min(0.5, rise * 0.6);
     for (let l = 0; l < 3; l++) {
@@ -494,7 +554,7 @@ function surdo(GFX, { rise = 0.85, ...spec }) {
     }
     k.cyl(r, r, h, chrome, [0, 0.35 + h / 2, 0], { into: g, seg: 20 });
     k.cyl(r - 0.01, r - 0.01, 0.01, head, [0, 0.35 + h + 0.005, 0], { into: g, seg: 20 });
-    for (const y of [0.37, 0.33 + h]) k.ring(r + 0.005, 0.015, std(GFX, colours[(i + Math.floor(rnd() * 4)) % 4]), [0, y, 0], { into: g, rot: [Math.PI / 2, 0, 0], seg: 20 });
+    for (const y of [0.37, 0.33 + h]) k.ring(r + 0.005, 0.015, std(GFX, colors[(i + Math.floor(rnd() * 4)) % 4]), [0, y, 0], { into: g, rot: [Math.PI / 2, 0, 0], seg: 20 });
     k.cyl(0.015, 0.015, 0.3, std(GFX, '#e8d0a0'), [0.12, 0.38 + h, 0.05], { into: g, rot: [0, 0, 1.2], seg: 6 });
     k.ball(0.04, std(GFX, '#3a2a1a'), [0.25, 0.43 + h, 0.05], { into: g, seg: 8 });
   });
@@ -562,7 +622,7 @@ function umbrella(GFX, spec) {
   along(GFX, group, spec, (g, i) => {
     if (i === 0) {
       k.cyl(0.02, 0.02, 1.7, std(GFX, '#f4f4f8'), [0, 0.85, 0], { into: g });
-      // The canopy in rings of the two colours.
+      // The canopy in rings of the two colors.
       for (const [r, y, c] of [[0.55, 1.62, 0], [0.38, 1.71, 1], [0.2, 1.8, 0]]) k.cyl(0.0, r, 0.28 * (r / 0.55), std(GFX, stripes[c], { roughness: 0.7 }), [0, y, 0], { into: g, seg: 16 });
     } else {
       k.box([0.5, 0.02, 0.86], std(GFX, stripes[1], { roughness: 0.9 }), [0, 0.01, 0], { into: g });
@@ -573,7 +633,7 @@ function umbrella(GFX, spec) {
   return { group };
 }
 
-/** A surf rack: an A-frame of timber, the boards standing in it nose up, every colour. */
+/** A surf rack: an A-frame of timber, the boards standing in it nose up, every color. */
 function surfrack(GFX, spec) {
   const group = new GFX.Group();
   const k = kit(GFX, group);
@@ -584,9 +644,9 @@ function surfrack(GFX, spec) {
     k.box([0.05, 1.0, 0.05], wood, [x, 0.5, 0.2], { rot: [-0.3, 0, 0] });
   }
   k.box([0.9, 0.05, 0.05], wood, [0, 0.95, 0]);
-  const colours = ['#f4f2ec', '#ff6a1a', '#1aa8a8', '#f0c020', '#ff3a8a', '#1a5ad8'];
+  const colors = ['#f4f2ec', '#ff6a1a', '#1aa8a8', '#f0c020', '#ff3a8a', '#1a5ad8'];
   for (let i = 0; i < 5; i++) {
-    const board = k.ball(0.5, gloss(GFX, colours[Math.floor(rnd() * 6)]), [-0.32 + i * 0.16, 0.85, (rnd() - 0.5) * 0.1], { seg: 14 });
+    const board = k.ball(0.5, gloss(GFX, colors[Math.floor(rnd() * 6)]), [-0.32 + i * 0.16, 0.85, (rnd() - 0.5) * 0.1], { seg: 14 });
     board.scale.set(0.05, 1.6, 0.26);
     board.rotation.z = (rnd() - 0.5) * 0.12;
   }

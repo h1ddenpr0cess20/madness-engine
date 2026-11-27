@@ -4,7 +4,7 @@ import { linearRGB } from './color.js';
  * The geometry builder everything solid is drawn with. A model is a function
  * that calls `box`, `gable`, `cylinder` and the like on a `Mesher`, naming a
  * material for each part; the result is a template of vertex arrays (position,
- * normal, uv, colour) per material, which is stamped into a chunk's buffers
+ * normal, uv, color) per material, which is stamped into a chunk's buffers
  * wherever the model stands. A chunk then draws in one call per material.
  *
  * Every shape is in the model's own frame: y up, the front toward +z, standing
@@ -26,7 +26,7 @@ export const UV_SCALE = Object.freeze({
 export const LEVEL = new Set(['stone', 'rubble', 'brick', 'siding']);
 
 const colorCache = new Map();
-/** A colour as the linear RGB the vertex colours are in, from a hex string or an [r, g, b] already linear. */
+/** A color as the linear RGB the vertex colors are in, from a hex string or an [r, g, b] already linear. */
 export function rgb(c) {
   if (Array.isArray(c)) return c;
   let v = colorCache.get(c);
@@ -101,7 +101,7 @@ export class Mesher {
   /**
    * A triangle, a b c counter-clockwise seen from outside. `o`: `normals` (per
    * vertex, for smooth shading), `uv` (per vertex), `colors` (per vertex),
-   * `shade` (a brightness to multiply the colour by).
+   * `shade` (a brightness to multiply the color by).
    */
   tri(mat, a, b, c, col, o = {}) {
     const A = this.tp(a), B = this.tp(b), C = this.tp(c);
@@ -113,11 +113,16 @@ export class Mesher {
     let uvs = o.uv;
     if (!uvs) {
       const s = o.uvScale ?? UV_SCALE[mat] ?? 1;
-      const e1 = norm(sub(B, A));
-      let e2 = norm(cross(n, e1));
-      if (e2[1] < 0 && Math.abs(n[1]) < 0.9) e2 = [-e2[0], -e2[1], -e2[2]];
-      const ox = hash(A[0], A[1], A[2]), oy = hash(A[2], A[0], A[1]);
-      uvs = [A, B, C].map((P) => { const d = sub(P, A); return [dot(d, e1) * s + ox * 4, dot(d, e2) * s + oy * 4]; });
+      if (Math.abs(n[1]) >= 0.9) {
+        // Floors and ceilings: world x and z, the same for every tile (see quad).
+        uvs = [A, B, C].map((P) => [P[0] * s, P[2] * s]);
+      } else {
+        const e1 = norm(sub(B, A));
+        let e2 = norm(cross(n, e1));
+        if (e2[1] < 0) e2 = [-e2[0], -e2[1], -e2[2]];
+        const ox = hash(A[0], A[1], A[2]), oy = hash(A[2], A[0], A[1]);
+        uvs = [A, B, C].map((P) => { const d = sub(P, A); return [dot(d, e1) * s + ox * 4, dot(d, e2) * s + oy * 4]; });
+      }
     }
     const k = o.shade ?? 1;
     [A, B, C].forEach((P, i) => {
@@ -148,11 +153,17 @@ export class Mesher {
     if (!uv) {
       const s = o.uvScale ?? UV_SCALE[mat] ?? 1;
       const n = norm(cross(sub(B, A), sub(D, A)));
-      const e1 = norm(sub(B, A));
-      let e2 = norm(cross(n, e1));
-      if (e2[1] < 0 && Math.abs(n[1]) < 0.9) e2 = [-e2[0], -e2[1], -e2[2]];
-      const ox = hash(A[0], A[1], A[2]), oy = hash(A[2], A[0], A[1]);
-      uv = [a, b, c, d].map((P) => { const d2 = sub(this.tp(P), A); return [dot(d2, e1) * s + ox * 4, dot(d2, e2) * s + oy * 4]; });
+      if (Math.abs(n[1]) >= 0.9) {
+        // A floor or a ceiling: the texture runs on the world's own x and z, so every
+        // tile lines up with its neighbors whatever order its corners come in.
+        uv = [a, b, c, d].map((P) => { const W = this.tp(P); return [W[0] * s, W[2] * s]; });
+      } else {
+        const e1 = norm(sub(B, A));
+        let e2 = norm(cross(n, e1));
+        if (e2[1] < 0) e2 = [-e2[0], -e2[1], -e2[2]];
+        const ox = hash(A[0], A[1], A[2]), oy = hash(A[2], A[0], A[1]);
+        uv = [a, b, c, d].map((P) => { const d2 = sub(this.tp(P), A); return [dot(d2, e1) * s + ox * 4, dot(d2, e2) * s + oy * 4]; });
+      }
     }
     const cs = o.colors;
     const nr = o.normals;
@@ -345,11 +356,11 @@ export class Mesher {
    * faces knocked off it where it broke (`cuts`) with their edges worn a little
    * round, and a flat base (`base`, how far down it is cut as a share of `ry`)
    * to sit in the ground. It is shaded smooth and its texture is projected from
-   * the side it faces, so the grain runs on across the triangles. It is coloured
+   * the side it faces, so the grain runs on across the triangles. It is colored
    * in tilted bands of strata, darker in its hollows and underneath, paler on its
    * shoulders, with lichen and a little moss on top (`lichen`, 0..1).
    * Its detail is a step finer than `detail` says. `o.seed` makes another rock of
-   * the same size; `o.colorFn(dir, lump, grain, y)` may return a colour for a
+   * the same size; `o.colorFn(dir, lump, grain, y)` may return a color for a
    * point of the surface, for veins and stains.
    */
   rock(mat, cx, cy, cz, rx, ry, rz, col, o = {}) {
@@ -428,9 +439,9 @@ export class Mesher {
 
   /**
    * A crown of foliage: an ellipsoid made lumpy with clumps of leaves (`lump`,
-   * how deep), shaded smooth, lit from above in its vertex colours: pale on top
+   * how deep), shaded smooth, lit from above in its vertex colors: pale on top
    * and outermost, dark underneath and inside, a clump here and there lighter
-   * or darker. `col` is near-white where a material colours the leaves.
+   * or darker. `col` is near-white where a material colors the leaves.
    * `detail` is the icosphere's own (0 is 20 triangles, 1 is 80, 2 is 320).
    */
   crown(mat, cx, cy, cz, rx, ry, rz, col, o = {}) {
@@ -588,7 +599,7 @@ export class Acc {
     this.pos = grow(this.pos, 3); this.nor = grow(this.nor, 3); this.uv = grow(this.uv, 2); this.col = grow(this.col, 3);
   }
 
-  /** Stamps a part of a template here: moved to (x, y, z), turned by `yaw` and made `scale` times the size, its colours multiplied by `tint`. */
+  /** Stamps a part of a template here: moved to (x, y, z), turned by `yaw` and made `scale` times the size, its colors multiplied by `tint`. */
   stamp(part, x, y, z, yaw = 0, scale = 1, tint = null) {
     const c = Math.cos(yaw), s = Math.sin(yaw);
     this.reserve(part.count);

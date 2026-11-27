@@ -2,7 +2,7 @@ import { rgb, rotation, shingles } from '../models/sdf.js';
 import { bands, coat, grainy, mix, pelt, ramp } from '../models/skins.js';
 
 /**
- * A house mouse: Dungeon Roller's rat, made small and soft — sandy grey-brown,
+ * A house mouse: Dungeon Roller's rat, made small and soft — sandy gray-brown,
  * a pale belly, big round ears and bright black eyes. Faces +z, feet on y = 0,
  * about a quarter of a tile nose to rump (sculpted rat-sized, about 0.45
  * nose to rump, the tail as long again.
@@ -18,7 +18,7 @@ const tail = ramp(2, -0.72, -0.24, '#b4908a', '#7f625a', (p) => {
   const g = grainy('#ffffff', 0.1, 140)(p), r = rings(p);
   return [g[0] * r[0], g[1] * r[1], g[2] * r[2]];
 });
-/** The coat, lighter and greyer toward each lock's tip, darker in the creases. */
+/** The coat, lighter and grayer toward each lock's tip, darker in the creases. */
 const TIPS = rgb('#b8ab9c');
 const lockCell = { height: 0, id: 0, edge: 0 };
 const fur = (p, n) => {

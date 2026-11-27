@@ -2,7 +2,7 @@ import { bands, grime } from '../models/skins.js';
 import { cuffBand, person, strap } from './person.js';
 
 /**
- * The Mummy: wrapped head to foot in linen gone the colour of tea, the
+ * The Mummy: wrapped head to foot in linen gone the color of tea, the
  * wraps going round and round, one end come loose and trailing; a dark gap
  * for the eyes with two in it, glowing a little. Arms out, stiff, slow.
  * Wrapped since Tuesday. Coming undone. About 0.95 tiles tall.

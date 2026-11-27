@@ -14,6 +14,9 @@ import { pmremLayout, pmremPlanes, pmremSchedule } from './pmrem.js';
 const ATTRIBUTES = ['position', 'normal', 'uv', 'color', 'outputDirection', 'instancePlace', 'instanceLook'];
 /** The attributes that step once a copy rather than once a vertex: an instanced mesh's. */
 const PER_INSTANCE = new Set(['instancePlace', 'instanceLook']);
+/** The keys of the shadow map's programs. */
+const DEPTH = { kind: 'depth', instanced: false };
+const DEPTH_INSTANCED = { kind: 'depth', instanced: true };
 
 export class WebGLBackend {
   constructor(canvas) {
@@ -38,9 +41,15 @@ export class WebGLBackend {
     this.programs = new Map();
     this.buffers = new WeakMap();
     this.textures = new WeakMap();
+    // The vertex array everything but a geometry's own draws uses (the environment's prefiltering); each geometry
+    // gets one of its own for each set of attributes a program reads (`_attributes`).
     this.vao = gl.createVertexArray();
     gl.bindVertexArray(this.vao);
     ATTRIBUTES.forEach((name, location) => { if (PER_INSTANCE.has(name)) gl.vertexAttribDivisor(location, 1); });
+    this.vaos = new WeakMap();
+    this.boundVao = this.vao;
+    // What the context is set to, so a draw sets only what changes (`_forget` when anything else sets it).
+    this._forget();
     this.width = canvas.width;
     this.height = canvas.height;
     this.transmission = null;
@@ -58,9 +67,44 @@ export class WebGLBackend {
   beginFrame() {}
   endFrame() {}
 
+  /**
+   * What the draws keep of the context's state (the program, the switches, the textures on each unit) is let go:
+   * after anything else has set the context directly.
+   */
+  _forget() {
+    this.st = { program: null, blending: null, depthTest: null, depthWrite: null, colorWrite: null, cull: null, scissor: null };
+    this.units = [];
+    this.activeUnit = -1;
+  }
+
+  /** A texture onto a unit for a draw, unless it is there already. */
+  _bindUnit(unit, texture) {
+    if (this.units[unit] === texture) return;
+    const gl = this.gl;
+    if (this.activeUnit !== unit) { gl.activeTexture(gl.TEXTURE0 + unit); this.activeUnit = unit; }
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    this.units[unit] = texture;
+  }
+
+  /** A texture bound to set it up (an upload, mipmaps): the active unit no longer holds what a draw left there. */
+  _touchUnit() {
+    if (this.activeUnit >= 0) this.units[this.activeUnit] = undefined;
+    else this.units = [];
+  }
+
+  _scissor(rect) {
+    const gl = this.gl;
+    const id = rect ? rect.join(',') : '';
+    if (this.st.scissor === id) return;
+    if (rect) { gl.enable(gl.SCISSOR_TEST); gl.scissor(rect[0], rect[1], rect[2], rect[3]); }
+    else gl.disable(gl.SCISSOR_TEST);
+    this.st.scissor = id;
+  }
+
   // ------------------------------------------------------------ passes
 
-  beginPass({ target, clear, frame }) {
+  /** `scissor`: for the transmission map, the pixels [x, y, width, height] (from the bottom left) that are drawn and kept; the rest is left as it was. */
+  beginPass({ target, clear, frame, scissor = null }) {
     const gl = this.gl;
     if (target === 'canvas') {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -70,8 +114,11 @@ export class WebGLBackend {
       gl.bindFramebuffer(gl.FRAMEBUFFER, rt.msaaFramebuffer);
       gl.viewport(0, 0, rt.width, rt.height);
     }
+    this._scissor(target === 'canvas' ? null : scissor);
     gl.colorMask(true, true, true, true);
     gl.depthMask(true);
+    this.st.colorWrite = true;
+    this.st.depthWrite = true;
     gl.clearColor(clear[0], clear[1], clear[2], clear[3]);
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -83,10 +130,13 @@ export class WebGLBackend {
     const map = this._shadowTarget(size);
     gl.bindFramebuffer(gl.FRAMEBUFFER, map.framebuffer);
     gl.viewport(0, 0, size[0], size[1]);
+    this._scissor(null);
     gl.depthMask(true);
     gl.clearDepth(1);
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.BLEND);
+    this.st.depthWrite = true;
+    this.st.blending = 'none';
     this.pass = { target: 'shadow' };
     return map;
   }
@@ -97,9 +147,12 @@ export class WebGLBackend {
       const rt = this.transmission;
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, rt.msaaFramebuffer);
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, rt.resolveFramebuffer);
+      // (Where the pass was cut to a rectangle, the scissor keeps the blit to it too.)
       gl.blitFramebuffer(0, 0, rt.width, rt.height, 0, 0, rt.width, rt.height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      this._scissor(null);
       gl.bindTexture(gl.TEXTURE_2D, rt.texture);
+      this._touchUnit();
       gl.generateMipmap(gl.TEXTURE_2D);
     }
     this.pass = null;
@@ -108,10 +161,9 @@ export class WebGLBackend {
   // ------------------------------------------------------------ drawing
 
   draw(call) {
-    const gl = this.gl;
     const frame = this.pass.frame;
     const program = this._program(call.key, call.material);
-    gl.useProgram(program.handle);
+    this._use(program);
     this._state(call.state);
 
     const u = program.uniforms;
@@ -127,24 +179,30 @@ export class WebGLBackend {
       u.set('viewMatrix', frame.camera.viewMatrix, 'm4');
       u.set('cameraPosition', frame.camera.position, 'v3');
       u.set('isOrthographic', frame.camera.isOrthographic ? 1 : 0, 'i');
+      u.set('fogColor', frame.fog ? frame.fog.color : [0, 0, 0], 'v3');
+      u.set('fogDensity', frame.fog ? frame.fog.density : 0, 'f');
     }
 
     // Uploads bind whatever unit is active, so every texture is made resident
     // before any unit is assigned.
     const map = call.textures.map ? this._texture(call.textures.map) : null;
     const bumpMap = call.textures.bumpMap ? this._texture(call.textures.bumpMap) : null;
+    const detailMap = call.textures.detailMap ? this._texture(call.textures.detailMap) : null;
+    const emissiveMap = call.textures.emissiveMap ? this._texture(call.textures.emissiveMap) : null;
     let unit = 0;
     const bindTexture = (name, texture) => {
       if (!u.has(name)) return;
-      gl.activeTexture(gl.TEXTURE0 + unit);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
+      this._bindUnit(unit, texture);
       u.set(name, unit, 'i');
       unit++;
     };
 
     if (call.key.kind === 'custom') {
+      const gpu = new Map();
+      for (const [name, { value }] of Object.entries(call.material.uniforms)) if (value?.isTexture) gpu.set(name, this._texture(value));
       for (const [name, { value }] of Object.entries(call.material.uniforms)) {
-        if (typeof value === 'number') u.set(name, value, 'f');
+        if (value?.isTexture) bindTexture(name, gpu.get(name));
+        else if (typeof value === 'number') u.set(name, value, 'f');
         else if (value.isColor) u.set(name, [value.r, value.g, value.b], 'v3');
         else if (value.isVector3) u.set(name, [value.x, value.y, value.z], 'v3');
         else if (value.isVector2) u.set(name, [value.x, value.y], 'v2');
@@ -155,6 +213,8 @@ export class WebGLBackend {
       if (fresh) this._lights(u, frame);
       if (map) bindTexture('map', map);
       if (bumpMap) bindTexture('bumpMap', bumpMap);
+      if (detailMap) bindTexture('detailMap', detailMap);
+      if (emissiveMap) bindTexture('emissiveMap', emissiveMap);
       if (frame.env && call.key.envMap) bindTexture('envMap', frame.env.gpu.texture);
       bindTexture('dfgLUT', this.dfg);
       if (frame.shadow && u.has('directionalShadowMap')) {
@@ -168,7 +228,11 @@ export class WebGLBackend {
       }
       if (frame.transmission && u.has('transmissionSamplerMap')) {
         bindTexture('transmissionSamplerMap', this.transmission.texture);
-        if (fresh) u.set('transmissionSamplerSize', frame.transmission.size, 'v2');
+        if (fresh) {
+          u.set('transmissionSamplerSize', frame.transmission.size, 'v2');
+          u.set('transmissionBounds', frame.transmission.bounds ?? [0, 0, 0, 0], 'v4');
+          u.set('transmissionMaxLod', frame.transmission.maxLod ?? 0, 'f');
+        }
       }
     }
 
@@ -177,9 +241,8 @@ export class WebGLBackend {
   }
 
   drawDepth(call) {
-    const gl = this.gl;
-    const program = this._program({ kind: 'depth', instanced: Boolean(call.instances) });
-    gl.useProgram(program.handle);
+    const program = this._program(call.instances ? DEPTH_INSTANCED : DEPTH);
+    this._use(program);
     this._state({ blending: 'none', depthTest: true, depthWrite: true, colorWrite: false, cull: call.cull });
     program.uniforms.set('modelViewMatrix', call.modelViewMatrix, 'm4');
     program.uniforms.set('projectionMatrix', call.projectionMatrix, 'm4');
@@ -205,27 +268,43 @@ export class WebGLBackend {
     }
   }
 
+  _use(program) {
+    if (this.st.program === program) return;
+    this.gl.useProgram(program.handle);
+    this.st.program = program;
+  }
+
+  /** The switches a draw needs, set where they differ from the last draw's. */
   _state({ blending, depthTest, depthWrite, colorWrite, cull }) {
-    const gl = this.gl;
-    if (blending === 'none') {
-      gl.disable(gl.BLEND);
-    } else {
-      gl.enable(gl.BLEND);
-      gl.blendEquation(gl.FUNC_ADD);
-      if (blending === 'additive') gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE);
-      else gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    const gl = this.gl, st = this.st;
+    if (st.blending !== blending) {
+      if (blending === 'none') {
+        gl.disable(gl.BLEND);
+      } else {
+        gl.enable(gl.BLEND);
+        gl.blendEquation(gl.FUNC_ADD);
+        if (blending === 'additive') gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE);
+        else gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      }
+      st.blending = blending;
     }
-    if (depthTest) gl.enable(gl.DEPTH_TEST);
-    else gl.disable(gl.DEPTH_TEST);
-    gl.depthMask(depthWrite);
-    gl.colorMask(colorWrite, colorWrite, colorWrite, colorWrite);
-    if (cull === 'none') {
-      gl.disable(gl.CULL_FACE);
-      gl.frontFace(gl.CCW);
-    } else {
-      gl.enable(gl.CULL_FACE);
-      gl.cullFace(gl.BACK);
-      gl.frontFace(cull === 'front' ? gl.CW : gl.CCW);
+    if (st.depthTest !== depthTest) {
+      if (depthTest) gl.enable(gl.DEPTH_TEST);
+      else gl.disable(gl.DEPTH_TEST);
+      st.depthTest = depthTest;
+    }
+    if (st.depthWrite !== depthWrite) { gl.depthMask(depthWrite); st.depthWrite = depthWrite; }
+    if (st.colorWrite !== colorWrite) { gl.colorMask(colorWrite, colorWrite, colorWrite, colorWrite); st.colorWrite = colorWrite; }
+    if (st.cull !== cull) {
+      if (cull === 'none') {
+        gl.disable(gl.CULL_FACE);
+        gl.frontFace(gl.CCW);
+      } else {
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.BACK);
+        gl.frontFace(cull === 'front' ? gl.CW : gl.CCW);
+      }
+      st.cull = cull;
     }
   }
 
@@ -248,20 +327,50 @@ export class WebGLBackend {
     });
   }
 
+  /**
+   * The geometry's buffers onto the attributes the program reads: through a vertex array of the geometry's own for
+   * that set of attributes (and copies), made once, so a draw binds one thing rather than pointing every attribute.
+   */
   _attributes(program, geometry, instances = null) {
     const gl = this.gl;
-    for (let location = 0; location < ATTRIBUTES.length; location++) {
-      const name = ATTRIBUTES[location];
-      const attribute = !program.attributes[location] ? undefined
-        : name === 'instancePlace' ? instances?.place : name === 'instanceLook' ? instances?.look : geometry.attributes[name];
-      if (attribute === undefined) {
-        gl.disableVertexAttribArray(location);
-        continue;
-      }
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer(attribute, gl.ARRAY_BUFFER));
-      gl.enableVertexAttribArray(location);
-      gl.vertexAttribPointer(location, attribute.itemSize, gl.FLOAT, attribute.normalized, 0, 0);
+    const place = instances?.place, look = instances?.look;
+    const sources = ATTRIBUTES.map((name, location) => (!program.attributes[location] ? undefined
+      : name === 'instancePlace' ? place : name === 'instanceLook' ? look : geometry.attributes[name]));
+    let entries = this.vaos.get(geometry);
+    if (!entries) {
+      entries = [];
+      this.vaos.set(geometry, entries);
+      geometry.addEventListener?.('dispose', () => {
+        for (const e of this.vaos.get(geometry) ?? []) gl.deleteVertexArray(e.vao);
+        this.vaos.delete(geometry);
+        if (this.boundVao !== this.vao) { gl.bindVertexArray(this.vao); this.boundVao = this.vao; }
+      });
     }
+    let entry = null;
+    for (const e of entries) {
+      if (e.mask !== program.mask) continue;
+      let same = true;
+      for (let k = 0; k < sources.length; k++) if (e.sources[k] !== sources[k]) { same = false; break; }
+      if (same) { entry = e; break; }
+    }
+    if (!entry) {
+      // (A geometry given other attributes, or drawn with other copies, gets another; the oldest few are let go.)
+      if (entries.length >= 8) gl.deleteVertexArray(entries.shift().vao);
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+      this.boundVao = vao;
+      for (let location = 0; location < ATTRIBUTES.length; location++) {
+        const attribute = sources[location];
+        if (PER_INSTANCE.has(ATTRIBUTES[location])) gl.vertexAttribDivisor(location, 1);
+        if (attribute === undefined) continue;
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer(attribute, gl.ARRAY_BUFFER));
+        gl.enableVertexAttribArray(location);
+        gl.vertexAttribPointer(location, attribute.itemSize, gl.FLOAT, attribute.normalized, 0, 0);
+      }
+      entries.push({ mask: program.mask, sources, vao });
+      return;
+    }
+    if (this.boundVao !== entry.vao) { gl.bindVertexArray(entry.vao); this.boundVao = entry.vao; }
   }
 
   // ------------------------------------------------------------ resources
@@ -289,7 +398,8 @@ export class WebGLBackend {
       throw new Error(`gfx: ${key.kind} program failed to link\n${log}`);
     }
     const attributes = ATTRIBUTES.map((name) => gl.getAttribLocation(handle, name) !== -1);
-    program = { handle, attributes, uniforms: new Uniforms(gl, handle) };
+    const mask = attributes.reduce((m, on, k) => (on ? m | (1 << k) : m), 0);
+    program = { handle, attributes, mask, uniforms: new Uniforms(gl, handle) };
     this.programs.set(id, program);
     return program;
   }
@@ -322,6 +432,7 @@ export class WebGLBackend {
       else gl.bufferData(target, data, entry.version === -1 ? gl.STATIC_DRAW : gl.DYNAMIC_DRAW);
       entry.byteLength = data.byteLength;
       entry.version = attribute.version;
+      if (attribute.freeAfterUpload) attribute.array = new attribute.array.constructor(0);
     }
     return entry.buffer;
   }
@@ -346,13 +457,22 @@ export class WebGLBackend {
         entry.handle = gl.createTexture();
       }
       gl.bindTexture(gl.TEXTURE_2D, entry.handle);
+      this._touchUnit();
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, texture.flipY);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
       const internal = texture.colorSpace === SRGBColorSpace ? gl.SRGB8_ALPHA8 : gl.RGBA8;
       gl.texStorage2D(gl.TEXTURE_2D, levels, internal, image.width, image.height);
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      if (image.data && ArrayBuffer.isView(image.data)) {
+        // DataTexture stores tightly packed RGBA8 texels, not a DOM image.
+        if (image.data.byteLength !== image.width * image.height * 4) {
+          throw new Error('WebGL DataTexture expects RGBA8 texels');
+        }
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, image.width, image.height, gl.RGBA, gl.UNSIGNED_BYTE, image.data);
+      } else {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      }
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapS === RepeatWrapping ? gl.REPEAT : gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapT === RepeatWrapping ? gl.REPEAT : gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -370,6 +490,7 @@ export class WebGLBackend {
     const gl = this.gl;
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
+    this._touchUnit();
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG16F, DFG_SIZE, DFG_SIZE, 0, gl.RG, gl.HALF_FLOAT, DFG_DATA);
@@ -392,6 +513,7 @@ export class WebGLBackend {
     const levels = Math.floor(Math.log2(Math.max(width, height))) + 1;
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
+    this._touchUnit();
     gl.texStorage2D(gl.TEXTURE_2D, levels, gl.RGBA16F, width, height);
     setLinearClamp(gl, true);
     const color = gl.createRenderbuffer();
@@ -418,6 +540,7 @@ export class WebGLBackend {
     if (this.shadowMap && this.shadowMap.width === width && this.shadowMap.height === height) return this.shadowMap;
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
+    this._touchUnit();
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, width, height);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
@@ -437,6 +560,11 @@ export class WebGLBackend {
   /** Studio texture in, prefiltered cube-UV atlas out — see pmrem.js for the schedule. */
   prefilterEquirectangular(texture) {
     const gl = this.gl;
+    // This sets the context itself, on the vertex array of its own.
+    gl.bindVertexArray(this.vao);
+    this.boundVao = this.vao;
+    // (Its source is made resident first, while the unit it lands on is still known.)
+    this._texture(texture);
     const layout = pmremLayout(texture.image.width);
     const planes = pmremPlanes(layout.lodMax);
     const target = () => {
@@ -520,6 +648,7 @@ export class WebGLBackend {
     gl.disable(gl.SCISSOR_TEST);
     gl.depthMask(true);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this._forget();
     gl.deleteFramebuffer(atlas.framebuffer);
     gl.deleteFramebuffer(pingPong.framebuffer);
     gl.deleteTexture(pingPong.texture);
@@ -556,12 +685,13 @@ function uniformType(value) {
   }
 }
 
-/** Uniform locations, looked up once per program and name. */
-class Uniforms {
+/** Uniform locations, looked up once per program and name; and the value each was last set to, so it is set again only when it changes. */
+export class Uniforms {
   constructor(gl, program) {
     this.gl = gl;
     this.program = program;
     this.locations = new Map();
+    this.values = new Map();
   }
 
   location(name) {
@@ -578,6 +708,22 @@ class Uniforms {
   set(name, value, type) {
     const location = this.location(name);
     if (location === null) return;
+    // A program keeps its uniforms: what is already there is not sent again.
+    const last = this.values.get(name);
+    if (type === 'f' || type === 'i') {
+      if (last === value) return;
+      this.values.set(name, value);
+    } else {
+      const n = value.length;
+      if (last !== undefined && last.length === n) {
+        let k = 0;
+        while (k < n && last[k] === value[k]) k++;
+        if (k === n) return;
+        for (let j = k; j < n; j++) last[j] = value[j];
+      } else {
+        this.values.set(name, Float64Array.from(value));
+      }
+    }
     const gl = this.gl;
     switch (type) {
       case 'f': gl.uniform1f(location, value); break;

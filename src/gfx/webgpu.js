@@ -7,8 +7,8 @@
  * Every pass is drawn with clip-space y negated, which stores it in OpenGL's
  * row order: the shadow map, the transmission buffer and the environment
  * atlas are then read with the same maths as the WebGL backend's, and the
- * frame itself is rasterised (multisample coverage included) exactly as
- * WebGL rasterises it, then turned the right way up as it is presented.
+ * frame itself is rasterized (multisample coverage included) exactly as
+ * WebGL rasterizes it, then turned the right way up as it is presented.
  */
 
 import { LinearMipmapLinearFilter, RepeatWrapping, SRGBColorSpace } from './core.js';
@@ -22,10 +22,10 @@ import { pmremLayout, pmremPlanes, pmremSchedule } from './pmrem.js';
 
 const SAMPLES = 4;
 const DEPTH_FORMAT = 'depth24plus';
-const FRAME_SIZE = 1040;
-const DRAW_SIZE = 464;
+const FRAME_SIZE = 1072;
+const DRAW_SIZE = 480;
 const OBJECT_SIZE = 320;
-const ARENA_SIZE = 4 << 20;
+const ARENA_SIZE = 16 << 20;
 const ALIGN = 256;
 
 const LOCATIONS = { position: 0, normal: 1, uv: 2, color: 3 };
@@ -157,6 +157,10 @@ export class WebGPUBackend {
         { binding: 2, visibility: F, sampler: { type: 'filtering' } },
         { binding: 3, visibility: F, texture: { sampleType: 'float' } },
         { binding: 4, visibility: F, sampler: { type: 'filtering' } },
+        { binding: 5, visibility: F, texture: { sampleType: 'float' } },
+        { binding: 6, visibility: F, sampler: { type: 'filtering' } },
+        { binding: 7, visibility: F, texture: { sampleType: 'float' } },
+        { binding: 8, visibility: F, sampler: { type: 'filtering' } },
       ],
     });
     this.builtinLayout = d.createPipelineLayout({ bindGroupLayouts: [this.frameLayout, this.drawLayout] });
@@ -164,6 +168,8 @@ export class WebGPUBackend {
       entries: [
         { binding: 0, visibility: V | F, buffer: { type: 'uniform', hasDynamicOffset: true } },
         { binding: 1, visibility: V | F, buffer: { type: 'uniform', hasDynamicOffset: true } },
+        { binding: 2, visibility: F, texture: {} },
+        { binding: 3, visibility: F, sampler: {} },
       ],
     });
     this.depthLayout = d.createBindGroupLayout({
@@ -185,7 +191,8 @@ export class WebGPUBackend {
 
   // ------------------------------------------------------------ passes
 
-  beginPass({ target, clear, frame }) {
+  /** `scissor`: for the transmission map, the pixels [x, y, width, height] (from the bottom left, as WebGL counts them) that are drawn; the rest is cleared and left. */
+  beginPass({ target, clear, frame, scissor = null }) {
     const d = this.device;
     // Every pass is drawn upside down, the canvas included: that is what
     // ANGLE does under WebGL, and it puts the multisample pattern — which
@@ -234,6 +241,8 @@ export class WebGPUBackend {
       }],
       depthStencilAttachment: { view: depthView, depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'discard' },
     });
+    // Drawn upside down, the rows of the pass are WebGL's, bottom first: its scissor is counted the same way.
+    if (scissor && target !== 'canvas') pass.setScissorRect(scissor[0], scissor[1], scissor[2], scissor[3]);
     this.arenaUsed = 0;
     this.pass = { target, frame, flipped, encoder, pass, frameGroup, format, samples: SAMPLES, depth: true };
   }
@@ -277,7 +286,8 @@ export class WebGPUBackend {
       const size = Math.max(16, structSize(fields));
       const materialOffset = this._alloc(size);
       this._packCustom(materialOffset, fields, call.material);
-      p.pass.setBindGroup(0, this._customGroup(customWindow(size)), [objectOffset, materialOffset]);
+      const data = Object.values(call.material.uniforms).find((u) => u.value?.isTexture)?.value;
+      p.pass.setBindGroup(0, this._customGroup(customWindow(size), data ? this._texture(data) : null), [objectOffset, materialOffset]);
     } else {
       const offset = this._alloc(DRAW_SIZE);
       this._packDraw(offset, call);
@@ -368,6 +378,9 @@ export class WebGPUBackend {
       f.set(l.skyColor, 228 + i * 4);
       f.set(l.groundColor, 244 + i * 4);
     });
+    if (frame.fog) { f.set(frame.fog.color, 260); f[263] = frame.fog.density; }
+    if (frame.transmission?.bounds) f.set(frame.transmission.bounds, 264);
+    if (frame.transmission) f[83] = frame.transmission.maxLod ?? 0;
     return f;
   }
 
@@ -407,6 +420,8 @@ export class WebGPUBackend {
     f[o + 102] = p.rotation ?? 0;
     f[o + 103] = finite ? 1 : 0;
     setMat3(f, o + 104, p.envMapRotation ?? IDENTITY3);
+    f.set(p.subsurfaceColor ?? [0, 0, 0], o + 116);
+    f[o + 119] = p.detailScale ?? 0;
   }
 
   _packObject(offset, call) {
@@ -529,7 +544,9 @@ export class WebGPUBackend {
   _drawGroup(textures) {
     const map = textures.map ? this._texture(textures.map) : null;
     const bump = textures.bumpMap ? this._texture(textures.bumpMap) : null;
-    const id = `${map?.id ?? '-'}|${bump?.id ?? '-'}`;
+    const detail = textures.detailMap ? this._texture(textures.detailMap) : null;
+    const glow = textures.emissiveMap ? this._texture(textures.emissiveMap) : null;
+    const id = `${map?.id ?? '-'}|${bump?.id ?? '-'}|${detail?.id ?? '-'}|${glow?.id ?? '-'}`;
     let group = this.drawGroups.get(id);
     if (!group) {
       group = this.device.createBindGroup({
@@ -540,6 +557,10 @@ export class WebGPUBackend {
           { binding: 2, resource: map ? map.sampler : this.linear },
           { binding: 3, resource: (bump ? bump.texture : this.dummy2D).createView() },
           { binding: 4, resource: bump ? bump.sampler : this.linear },
+          { binding: 5, resource: (detail ? detail.texture : this.dummy2D).createView() },
+          { binding: 6, resource: detail ? detail.sampler : this.linear },
+          { binding: 7, resource: (glow ? glow.texture : this.dummy2D).createView() },
+          { binding: 8, resource: glow ? glow.sampler : this.linear },
         ],
       });
       this.drawGroups.set(id, group);
@@ -548,18 +569,21 @@ export class WebGPUBackend {
   }
 
   /** The bind group for a hand-written material whose uniforms take up to `window` bytes: one for each size there is. */
-  _customGroup(window) {
+  _customGroup(window, data = null) {
     this.customGroups ??= new Map();
-    let group = this.customGroups.get(window);
+    const id = `${window}|${data?.id ?? '-'}`;
+    let group = this.customGroups.get(id);
     if (!group) {
       group = this.device.createBindGroup({
         layout: this.customLayout,
         entries: [
           { binding: 0, resource: { buffer: this.arena, size: OBJECT_SIZE } },
           { binding: 1, resource: { buffer: this.arena, size: window } },
+          { binding: 2, resource: (data?.texture ?? this.dummy2D).createView() },
+          { binding: 3, resource: data?.sampler ?? this.linear },
         ],
       });
-      this.customGroups.set(window, group);
+      this.customGroups.set(id, group);
     }
     return group;
   }
@@ -581,6 +605,8 @@ export class WebGPUBackend {
 
   _buffer(attribute, usage, sync) {
     let entry = this.buffers.get(attribute);
+    // Its array let go once it was uploaded (freeAfterUpload): the buffer is all there is.
+    if (entry && attribute.freeAfterUpload && entry.version !== -1) return entry;
     const array = attribute.array instanceof Float64Array ? new Float32Array(attribute.array) : attribute.array;
     const size = alignTo(array.byteLength, 4);
     if (!entry || entry.size !== size) {
@@ -597,6 +623,7 @@ export class WebGPUBackend {
         this.device.queue.writeBuffer(entry.buffer, 0, padded);
       }
       entry.version = attribute.version;
+      if (attribute.freeAfterUpload) attribute.array = new attribute.array.constructor(0);
     }
     return entry;
   }
@@ -621,16 +648,57 @@ export class WebGPUBackend {
         size: [image.width, image.height], format, mipLevelCount: levels,
         usage: T.TEXTURE_BINDING | T.COPY_DST | T.RENDER_ATTACHMENT,
       });
-      this.device.queue.copyExternalImageToTexture(
-        { source: image, flipY: texture.flipY },
-        { texture: entry.texture, premultipliedAlpha: texture.premultiplyAlpha },
-        [image.width, image.height],
-      );
+      if (image.data && ArrayBuffer.isView(image.data)) {
+        // DataTexture is raw RGBA bytes, not an external image/canvas source.
+        // WebGPU's copyExternalImageToTexture accepts DOM image sources only;
+        // upload typed texels with writeTexture and pad rows to 256 bytes.
+        const tightBytesPerRow = image.width * 4;
+        if (image.data.byteLength !== tightBytesPerRow * image.height) {
+          throw new Error('WebGPU DataTexture expects RGBA8 texels');
+        }
+        const bytesPerRow = alignTo(tightBytesPerRow, 256);
+        let data = new Uint8Array(image.data.buffer, image.data.byteOffset, image.data.byteLength);
+        if (bytesPerRow !== tightBytesPerRow) {
+          const padded = new Uint8Array(bytesPerRow * image.height);
+          for (let row = 0; row < image.height; row++) {
+            padded.set(data.subarray(row * tightBytesPerRow, (row + 1) * tightBytesPerRow), row * bytesPerRow);
+          }
+          data = padded;
+        }
+        this.device.queue.writeTexture(
+          { texture: entry.texture },
+          data,
+          { offset: 0, bytesPerRow, rowsPerImage: image.height },
+          [image.width, image.height],
+        );
+      } else {
+        try {
+          this.device.queue.copyExternalImageToTexture(
+            { source: image, flipY: texture.flipY },
+            { texture: entry.texture, premultipliedAlpha: texture.premultiplyAlpha },
+            [image.width, image.height],
+          );
+        } catch (err) {
+          // The browser could not copy the picture (out of memory on the card, a canvas it lost): the frame goes on
+          // with a plain gray texel in its place, rather than the whole loop stopping on one texture.
+          if (!this._copyWarned) { console.warn(`gfx: a texture could not be uploaded (${err.message}); drawn plain instead.`); this._copyWarned = true; }
+          entry.texture.destroy();
+          entry.texture = this.device.createTexture({ size: [1, 1], format, usage: T.TEXTURE_BINDING | T.COPY_DST });
+          this.device.queue.writeTexture({ texture: entry.texture }, new Uint8Array([200, 200, 200, 255]), { bytesPerRow: 4 }, [1, 1]);
+          entry.sampler = this._sampler(false, 1, texture.wrapS, texture.wrapT);
+          entry.version = texture.version;
+          entry.id = `${texture.id}.${texture.version}`;
+          this.drawGroups.clear();
+          this.customGroups?.clear();
+          return entry;
+        }
+      }
       if (mipmaps) this._generateMipmaps(entry.texture, format);
       entry.sampler = this._sampler(mipmaps, texture.anisotropy, texture.wrapS, texture.wrapT);
       entry.version = texture.version;
       entry.id = `${texture.id}.${texture.version}`;
       this.drawGroups.clear();
+      this.customGroups?.clear();
     }
     return entry;
   }

@@ -4,8 +4,9 @@
  * can be built and measured under Node. The renderers read it.
  *
  * The shapes of these objects, and the order things happen in (world
- * matrices, bounds, normals), follow three.js r186 (MIT, © 2010-2025 three.js
- * authors), which is what the scenes were written against.
+ * matrices, bounds, normals), are what the scenes were written against.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 
 import {
@@ -271,8 +272,13 @@ export class Object3D extends EventDispatcher {
       this.matrixWorldNeedsUpdate = false;
       force = true;
     }
+    // A child that keeps its own world matrix (`matrixWorldAutoUpdate` false) is left, and all under it, unless
+    // something above it moved: a static part of the scene of thousands of meshes is not walked every frame.
     const children = this.children;
-    for (let i = 0, l = children.length; i < l; i++) children[i].updateMatrixWorld(force);
+    for (let i = 0, l = children.length; i < l; i++) {
+      const child = children[i];
+      if (child.matrixWorldAutoUpdate === true || force) child.updateMatrixWorld(force);
+    }
   }
 
   updateWorldMatrix(updateParents, updateChildren, force = false) {
@@ -300,6 +306,14 @@ export class Group extends Object3D {
   constructor() {
     super();
     this.type = 'Group';
+    /**
+     * A sphere in the group's own frame round everything drawn in it, or null. With one (and `frustumCulled`), the
+     * renderer leaves out the whole group, without looking at what is in it, where the sphere is out of the view (or,
+     * for the shadow map, out of the light's): a big static scene of thousands of meshes gathered into groups by
+     * place is culled a group at a time. It must hold all that is drawn in the group, and the group must hold no
+     * lights (a light in a group left out is not lit with).
+     */
+    this.boundingSphere = null;
   }
 }
 Group.prototype.isGroup = true;
@@ -310,11 +324,26 @@ export class Scene extends Object3D {
     this.type = 'Scene';
     /** The prefiltered studio the physical materials reflect — from a PMREMGenerator. */
     this.environment = null;
-    /** How that studio is turned in the world, as three's `Scene.environmentRotation` is. */
+    /** How that studio is turned in the world. */
     this.environmentRotation = new Euler();
+    /** Haze, or null: a `FogExp2`. What is drawn with a standard or physical material fades into it with distance. */
+    this.fog = null;
   }
 }
 Scene.prototype.isScene = true;
+
+/**
+ * Exponential fog: what is `d` meters from the camera is `1 - exp(-density * d)` of the way to `color`. A density of 0.02 is a
+ * haze that hides the far hills, 0.1 a fog that closes in at about thirty meters. Lit (standard and physical) materials take it;
+ * a hand-written shader (`ShaderMaterial`) does its own.
+ */
+export class FogExp2 {
+  constructor(color = 0xffffff, density = 0.02) {
+    this.color = new Color(color);
+    this.density = density;
+  }
+}
+FogExp2.prototype.isFogExp2 = true;
 
 // ---------------------------------------------------------------- geometry
 
@@ -326,6 +355,12 @@ export class BufferAttribute {
     this.count = array.length / itemSize;
     this.normalized = normalized;
     this.version = 0;
+    /**
+     * Whether the array is let go once the GPU has it: for big geometry that never changes (a city's streets and
+     * walls), so it is not held twice, once in the page and once on the card. Its `count` stays; its `array` is
+     * then empty (of the same type), and it cannot be changed or read back.
+     */
+    this.freeAfterUpload = false;
   }
 
   set needsUpdate(value) { if (value === true) this.version++; }
@@ -467,7 +502,7 @@ export class BufferGeometry extends EventDispatcher {
     this.boundingSphere.radius = Math.sqrt(maxRadiusSq);
   }
 
-  /** Area-weighted and summed in the attribute's own float32, as three does. */
+  /** Area-weighted and summed in the attribute's own float32. */
   computeVertexNormals() {
     const index = this.index;
     const positionAttribute = this.getAttribute('position');
@@ -639,7 +674,7 @@ Mesh.prototype.isMesh = true;
  * One geometry drawn many times in a single call: a forest of the same tree,
  * a pool of smoke puffs. Each copy is placed as the mesher's `Batch.stamp`
  * places one — moved to (x, y, z), turned `yaw` about y, made `scale` times
- * the size, its colour multiplied by `tint` — but the vertices stay on the
+ * the size, its color multiplied by `tint` — but the vertices stay on the
  * graphics card once, and only eight numbers a copy go up beside them.
  *
  *     const wood = new GFX.InstancedMesh(oak, bark, 500);
@@ -698,7 +733,7 @@ export class InstancedMesh extends Mesh {
     return this.count++;
   }
 
-  /** Sends the copies up again and works out the sphere round them. Call it after placing copies. */
+  /** Sends the copies up again and works out the sphere around them. Call it after placing copies. */
   update() {
     this.instancePlace.needsUpdate = true;
     this.instanceLook.needsUpdate = true;
@@ -711,7 +746,7 @@ export class InstancedMesh extends Mesh {
     if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
     if (this.boundingSphere === null) this.boundingSphere = new Sphere();
     const sphere = this.boundingSphere, gs = geometry.boundingSphere;
-    // The geometry's own sphere, set off from its origin, turns with each copy: as far as its centre is out, plus its radius.
+    // The geometry's own sphere, set off from its origin, turns with each copy: as far as its center is out, plus its radius.
     const reach = Math.hypot(gs.center.x, gs.center.y, gs.center.z) + gs.radius;
     const p = this.instancePlace.array, l = this.instanceLook.array;
     if (this.count === 0) { sphere.center.set(0, 0, 0); sphere.radius = 0; return; }
@@ -1121,8 +1156,22 @@ export class MeshStandardMaterial extends Material {
     this.map = null;
     this.emissive = new Color(0x000000);
     this.emissiveIntensity = 1.0;
+    // Where it glows: the emissive color times this texture, laid as the color map is (it needs the map): lit windows, a sign's letters.
+    this.emissiveMap = null;
+    // The share (0 to 1) of the map's repeats that glow, each by its own chance (and a little brighter or dimmer):
+    // a facade whose texture is one window lights some windows and not others. 0 for every repeat alike.
+    this.emissiveScatter = 0;
+    // How many cells each repeat of the map is split into for the scatter, [across, up]: a texture of three panes
+    // lights each pane by its own chance with [3, 1].
+    this.emissiveCells = [1, 1];
     this.bumpMap = null;
     this.bumpScale = 1;
+    // Over the map's layout (it needs the map and the bump map): r a relief of its own (scaled by detailScale),
+    // g the roughness (0.5 as the material's, to twice it), b how much of the bump map shows.
+    this.detailMap = null;
+    /** Whether a big tiled surface hides its repeat (see renderer.js). */
+    this.antiTile = false;
+    this.detailScale = 1;
     this.envMapIntensity = 1.0;
     this.flatShading = false;
     this.setValues(parameters);
@@ -1140,6 +1189,9 @@ export class MeshPhysicalMaterial extends MeshStandardMaterial {
     this.iridescence = 0;
     this.iridescenceIOR = 1.3;
     this.iridescenceThicknessRange = [100, 400];
+    // Light scattered under the surface (skin, wax): how much, and how far each color is carried around the form.
+    this.subsurface = 0;
+    this.subsurfaceColor = new Color(0x000000);
     this.sheen = 0;
     this.sheenColor = new Color(0x000000);
     this.sheenRoughness = 1.0;
@@ -1203,7 +1255,13 @@ SpriteMaterial.prototype.isSpriteMaterial = true;
  *         `Object` in shaders/wgsl.js) and the entries of `uniforms`, in
  *         declaration order, as the fields of `material`.
  *
- * Whatever comes out is written as it is: no colour-space conversion, as
+ * One uniform may be a texture (`uniforms.uData = { value: texture }`): in
+ * GLSL declare `uniform sampler2D uData;` and `texture(uData, uv)`; in WGSL it
+ * is `dataTex` with its sampler `dataSamp`, read in the fragment stage with
+ * `textureSampleLevel(dataTex, dataSamp, uv, 0.0)`. Rows run as they do for any
+ * texture here (v = 1 is the top of the image).
+ *
+ * Whatever comes out is written as it is: no color-space conversion, as
  * with any hand-written shader. The fragment stage is told what the target
  * stores, as a constant `OUTPUT_SRGB` (a `bool`): true for the canvas, false
  * for a target that is read back linear (what glass refracts).

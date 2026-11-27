@@ -2,7 +2,7 @@ import { noise, rgb, rotation, Sculpt } from '../models/sdf.js';
 import { coat, mix } from '../models/skins.js';
 
 /**
- * What the four heroes have in common: a stylised body about 0.8 tiles
+ * What the four heroes have in common: a stylized body about 0.8 tiles
  * tall and three and a half heads high, its skeleton, its face, and how it
  * moves. Each hero (hero.js, warrior.js, mage.js, healer.js) dresses it
  * and arms it.

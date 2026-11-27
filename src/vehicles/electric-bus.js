@@ -1,0 +1,269 @@
+/**
+ * The electric bus: an intercity coach with a raked windshield, long passenger windows, luggage-bay panels and four
+ * axles, built from plain shapes at real size in meters. It drives: `update(dt, input)` steers and moves it.
+ *
+ *     const bus = createElectricBus(GFX);
+ *     scene.add(bus.group);
+ *     stage.run((dt) => {
+ *       bus.update(dt, { throttle: keys.up, brake: keys.down, steer: keys.left - keys.right, handbrake: keys.space });
+ *     });
+ *
+ * It faces +z with its wheels on the ground at y = 0. Its origin is on the ground at the back wheels, which is what it
+ * turns about. Heading 0 drives toward +z; a positive heading or `steer` turns it to the left.
+ *
+ * `scale` sets the game units per meter (the traffic is about 0.4 of a tile to the meter, so a freighter there is
+ * `scale: 0.41`). Driving is worked out in meters and seconds and converted to game units on the way out, so speed,
+ * turning circle and look match at any scale.
+ */
+
+import { arc, across as acrossOf, wheelKit } from './parts.js';
+import { attachDriving } from './driving.js';
+
+/** The bus's measures, in meters. */
+export const ELECTRIC_BUS = Object.freeze({
+  name: 'electric-bus',
+  /** Overall, from the rear doors' back to the bumper's front, across the mirrors, and to the top of the canopy. */
+  length: 10.61,
+  width: 3.0,
+  height: 3.99,
+  /** The cargo box and the cab are 2.5 m across. */
+  bodyWidth: 2.5,
+  tireRadius: 0.6,
+  tireWidth: 0.345,
+  /** Where the axles are along the truck, front to back, from the origin (+z is forward). */
+  axles: Object.freeze([8.0, 6.55, 1.25, -0.55]),
+  /** The two at the front steer; the two at the back are doubled and fixed. */
+  steered: Object.freeze([0, 1]),
+  unit: 'm',
+});
+
+/**
+ * How it drives, in meters, seconds and radians. Speeds are m/s (22 is 79 km/h); `accel`, `brake`, `coast` and
+ * `handbrake` are m/s² (the brake is also reverse); `steerLock` is the angle the wheels turn to at a standstill and
+ * `steerFade` the speed at which the lock has shrunk by `steerFadeMax` of itself at most; `steerRate` is how quickly the
+ * wheels follow the stick, per second.
+ */
+export const ELECTRIC_BUS_DRIVE = Object.freeze({
+  accel: 6.5,
+  brake: 7.5,
+  coast: 2.2,
+  handbrake: 12,
+  maxForward: 22,
+  maxReverse: 6,
+  wheelbase: 7.28,
+  steerLock: 0.46,
+  steerFade: 26,
+  steerFadeMax: 0.62,
+  steerRate: 7,
+  /** The longest step it will take at once, in seconds: a hitch in the frame rate doesn't throw it. */
+  maxStep: 0.05,
+});
+
+/**
+ * @param {object} GFX The engine's graphics API.
+ * @param {object} [options]
+ * @param {number} [options.scale] Game units to the meter (default 1).
+ * @param {number|string} [options.paint] The body's color (default near white).
+ * @param {number|string} [options.accent] The green of the leaves and the bolt.
+ * @param {'treaded'|'classic'} [options.wheels] The tires: rounded and treaded (default), or the plain square-edged ones. The rim is the same either way.
+ * @param {number|string} [options.light] The glow of the light bar and the lamps.
+ * @returns the freighter: `group` to add to the scene; `update(dt, input)`; `reset()`; the state (`speed`, `kmh`,
+ *   `heading`, `steerAngle`); `wheels`, `steeredWheels` and the rest of the parts by name; `materials` and `dimensions`.
+ */
+export function createElectricBus(GFX, { scale = 1, paint = 0xf4f5f6, accent = 0x36a05a, light = 0x86ecff, wheels: wheelStyle = 'treaded' } = {}) {
+  const M = {
+    white: new GFX.MeshStandardMaterial({ name: 'body_white', color: paint, roughness: 0.30, metalness: 0.22 }),
+    glass: new GFX.MeshStandardMaterial({ name: 'glass_dark', color: 0x0c1116, roughness: 0.42, metalness: 0.06 }),
+    trim: new GFX.MeshStandardMaterial({ name: 'trim_charcoal', color: 0x22262a, roughness: 0.55, metalness: 0.22 }),
+    tire: new GFX.MeshStandardMaterial({ name: 'tire_rubber', color: 0x18181a, roughness: 0.90, metalness: 0.04 }),
+    rim: new GFX.MeshStandardMaterial({ name: 'rim_alloy', color: 0xdfe3e7, roughness: 0.26, metalness: 0.34 }),
+    led: new GFX.MeshStandardMaterial({ name: 'led_light', color: 0xe8fbff, emissive: light, emissiveIntensity: 1.6, roughness: 0.2 }),
+    green: new GFX.MeshStandardMaterial({ name: 'accent_green', color: accent, roughness: 0.38, metalness: 0.08 }),
+  };
+
+  // The chassis is built nose to −z; `facing` turns it to face +z.
+  const truck = new GFX.Group();
+  const parts = {};
+  const add = (name, geo, mat, pos, rot) => {
+    const m = new GFX.Mesh(geo, mat);
+    m.name = name;
+    m.castShadow = true;
+    if (pos) m.position.set(...pos);
+    if (rot) m.rotation.set(...rot);
+    truck.add(m);
+    parts[name] = m;
+    return m;
+  };
+  const box = (w, h, d) => new GFX.BoxGeometry(w, h, d);
+  /** A longitudinal side profile pushed across the width of the vehicle (`vehicles/parts`). */
+  const across = (shape, width, bevel) => acrossOf(GFX, shape, width, bevel);
+
+  // ---------- coach shell ----------
+  const shell = new GFX.Shape();
+  shell.moveTo(-6.00, 1.12);
+  shell.lineTo(-6.10, 1.34);
+  shell.quadraticCurveTo(-6.17, 1.58, -6.04, 1.84);
+  shell.lineTo(-5.17, 3.53);
+  shell.quadraticCurveTo(-5.02, 3.924, -4.66, 3.924);
+  shell.lineTo(3.68, 3.924);
+  shell.quadraticCurveTo(4.04, 3.924, 4.04, 3.50);
+  shell.lineTo(4.04, 1.22);
+  shell.quadraticCurveTo(4.04, 1.10, 3.84, 1.10);
+  shell.lineTo(-5.86, 1.10);
+  shell.quadraticCurveTo(-6.08, 1.10, -6.00, 1.12);
+  add('coach_body', across(shell, 2.50, 0.06), M.white);
+
+  // The windshield follows the coach's actual raked nose profile, laid across the full front width.
+  const windshield = new GFX.Shape();
+  windshield.moveTo(-6.12, 1.94);
+  windshield.quadraticCurveTo(-6.14, 2.04, -6.06, 2.18);
+  windshield.lineTo(-5.31, 3.62);
+  windshield.quadraticCurveTo(-5.22, 3.76, -5.08, 3.70);
+  windshield.lineTo(-5.17, 3.48);
+  windshield.lineTo(-5.94, 2.02);
+  windshield.quadraticCurveTo(-6.02, 1.92, -6.12, 1.94);
+  add('front_windshield', across(windshield, 2.30, 0.012), M.glass);
+
+  // Long passenger windows on both sides, separated by slim body-color pillars.
+  const sideGlass = new GFX.Shape();
+  sideGlass.moveTo(-4.88, 2.12);
+  sideGlass.lineTo(3.54, 2.12);
+  sideGlass.quadraticCurveTo(3.78, 2.12, 3.78, 2.34);
+  sideGlass.lineTo(3.78, 3.54);
+  sideGlass.quadraticCurveTo(3.78, 3.68, 3.58, 3.68);
+  sideGlass.lineTo(-4.36, 3.68);
+  sideGlass.quadraticCurveTo(-4.66, 3.68, -4.76, 3.40);
+  sideGlass.lineTo(-5.12, 2.42);
+  sideGlass.quadraticCurveTo(-5.20, 2.12, -4.88, 2.12);
+  [-1, 1].forEach((s, i) => {
+    const glazing = across(sideGlass, 0.045, 0.006);
+    glazing.translate(s * 1.245, 0, 0);
+    add(`passenger_windows_${i ? 'r' : 'l'}`, glazing, M.glass);
+    for (let z = -3.65, n = 0; z <= 3.30; z += 1.38, n++) {
+      add(`window_pillar_${i ? 'r' : 'l'}_${n}`, box(0.055, 1.50, 0.065), M.white, [s * 1.285, 2.88, z]);
+    }
+  });
+
+  // Passenger rear window and dark rear bumper trim.
+  add('rear_window', box(2.16, 0.82, 0.055), M.glass, [0, 2.82, 4.045]);
+  add('rear_bumper', box(2.28, 0.20, 0.25), M.trim, [0, 1.12, 4.02]);
+
+  // Coach mirrors beside the windshield.
+  [-1, 1].forEach((s, i) => {
+    add(`mirror_arm_${i ? 'r' : 'l'}`, new GFX.CylinderGeometry(0.032, 0.032, 0.26, 16), M.trim, [s * 1.32, 3.05, -5.05], [0, 0, Math.PI / 2]);
+    add(`mirror_pod_${i ? 'r' : 'l'}`, box(0.10, 0.30, 0.15), M.trim, [s * 1.45, 3.05, -5.05]);
+  });
+
+  // Dark front valance, cyan LED bar and green lightning badge.
+  const valance = new GFX.Shape();
+  valance.moveTo(-6.00, 1.20);
+  valance.quadraticCurveTo(-6.12, 1.48, -6.02, 1.84);
+  valance.lineTo(-5.66, 1.84);
+  valance.lineTo(-5.66, 1.20);
+  add('front_valance', across(valance, 2.40, 0.10), M.trim);
+  add('bumper', box(2.42, 0.24, 0.22), M.trim, [0, 1.20, -6.10]);
+  add('led_bar_center', box(1.82, 0.13, 0.10), M.led, [0, 1.88, -6.13]);
+  [-1, 1].forEach((s, i) => {
+    add(`led_bar_wing_${i ? 'r' : 'l'}`, box(0.30, 0.13, 0.09), M.led, [s * 1.04, 1.92, -6.05], [0, s * 0.40, s * 0.18]);
+    add(`headlamp_${i ? 'r' : 'l'}`, box(0.36, 0.10, 0.08), M.led, [s * 0.84, 1.64, -6.10]);
+  });
+  const bolt = new GFX.Shape();
+  bolt.moveTo(0.07, 0.24); bolt.lineTo(-0.11, -0.02); bolt.lineTo(0.01, -0.02);
+  bolt.lineTo(-0.06, -0.26); bolt.lineTo(0.12, 0.01); bolt.lineTo(0.00, 0.01);
+  add('bolt_badge', new GFX.ExtrudeGeometry(bolt, { depth: 0.04, bevelEnabled: false }), M.green, [0, 1.62, -6.13]);
+
+  // Lower luggage-bay seams and the same green leaf badges as the freighter.
+  [-1, 1].forEach((s, i) => {
+    for (let z = -3.0, n = 0; z <= 3.2; z += 1.55, n++) {
+      add(`luggage_bay_seam_${i ? 'r' : 'l'}_${n}`, box(0.025, 0.50, 0.035), M.trim, [s * 1.27, 1.55, z]);
+    }
+  });
+  const leaf = new GFX.Shape();
+  leaf.moveTo(0, 0);
+  leaf.quadraticCurveTo(0.66, 0.12, 0.78, 0.84);
+  leaf.quadraticCurveTo(0.12, 0.70, 0, 0);
+  const leafGeo = new GFX.ExtrudeGeometry(leaf, { depth: 0.02, bevelEnabled: false, curveSegments: 20 });
+  add('leaf_badge_left', leafGeo, M.green, [-1.27, 1.60, -1.90], [0, -Math.PI / 2, 0.30]);
+  add('leaf_badge_right', leafGeo, M.green, [1.26, 1.60, -0.30], [0, Math.PI / 2, 0.30]);
+
+  // ---------- chassis, battery, skirts ----------
+  [-1, 1].forEach((s, i) => {
+    add(`frame_rail_${i ? 'r' : 'l'}`, box(0.16, 0.28, 9.95), M.trim, [s * 0.46, 0.98, -0.95]);
+    add(`side_skirt_${i ? 'r' : 'l'}`, box(0.06, 0.34, 3.20), M.trim, [s * 1.21, 1.14, -1.40]);
+  });
+  add('battery_pack', box(1.34, 0.34, 3.20), M.trim, [0, 0.90, 0.40]);
+
+  // ---------- wheels: alloy face, lug holes, center cap ----------
+  const TIRE_R = ELECTRIC_BUS.tireRadius, TIRE_W = ELECTRIC_BUS.tireWidth;
+  const kit = wheelKit(GFX, M, { radius: TIRE_R, width: TIRE_W, style: wheelStyle });
+  const makeWheel = kit.make;
+
+  // The wheel-arch lip: a ring sector round the axle, hugging the tread (the engine's Shape has no arcs, so it is drawn in short lines).
+  const archShape = new GFX.Shape();
+  arc(archShape, 0, 0, TIRE_R + 0.095, Math.PI * 0.07, Math.PI * 0.93, { first: true });
+  arc(archShape, 0, 0, TIRE_R + 0.02, Math.PI * 0.93, Math.PI * 0.07);
+
+  // Axle positions from the front (nose at −z).
+  const axles = [-5.00, -3.55, 1.75, 3.55];
+  const wheels = [], steeredWheels = [];
+  const DUAL_IN = 0.60, DUAL_OUT = 0.60 + TIRE_W + 0.03;
+
+  axles.forEach((z, ai) => {
+    const dual = ai > 1;
+    [-1, 1].forEach((s) => {
+      const side = s < 0 ? 'l' : 'r';
+      const xs = dual ? [DUAL_IN, DUAL_OUT] : [0.94];
+      xs.forEach((ox, oi) => {
+        const w = makeWheel(`${ai}${side}${oi}`, oi === xs.length - 1 ? s : -s);
+        w.rotation.order = 'YXZ';
+        w.position.set(s * ox, TIRE_R, z);
+        truck.add(w);
+        parts[w.name] = w;
+        wheels.push(w);
+        if (!dual) steeredWheels.push(w);
+      });
+      // The arch round this axle, as wide as the tires it covers.
+      const cx = dual ? (DUAL_IN + DUAL_OUT) / 2 : 0.94;
+      const cw = dual ? (DUAL_OUT - DUAL_IN) + TIRE_W + 0.06 : TIRE_W + 0.06;
+      const arch = new GFX.Mesh(across(archShape, cw, 0.02), M.white);
+      arch.name = `fender_${ai}_${side}`;
+      arch.castShadow = true;
+      arch.position.set(s * cx, TIRE_R, z);
+      truck.add(arch);
+      parts[arch.name] = arch;
+
+      // A mudflap behind the last axle, as wide as the duals.
+      if (ai === axles.length - 1) {
+        const flap = new GFX.Mesh(box(cw - 0.04, 0.44, 0.035), M.trim);
+        flap.name = `mudflap_${side}`;
+        flap.castShadow = true;
+        flap.position.set(s * cx, 0.34, z + TIRE_R + 0.13);
+        truck.add(flap);
+        parts[flap.name] = flap;
+      }
+    });
+    add(`axle_beam_${ai}`, new GFX.CylinderGeometry(0.085, 0.085, 2.3, 20), M.trim, [0, TIRE_R, z], [0, 0, Math.PI / 2]);
+  });
+
+  // Stand it on the ground at y = 0, centered across, with its origin at the back wheels so it pivots like a truck; then face it +z.
+  truck.updateMatrixWorld(true);
+  const bb = new GFX.Box3().setFromObject(truck);
+  const c = bb.getCenter(new GFX.Vector3());
+  truck.name = 'chassis';
+  truck.position.set(-c.x, -bb.min.y, -3.0);
+  const facing = new GFX.Group();
+  facing.name = 'facing';
+  facing.rotation.y = Math.PI;
+  facing.add(truck);
+  const group = new GFX.Group();
+  group.name = 'electric_bus';
+  group.add(facing);
+  group.scale.setScalar(scale);
+
+  // ---------- driving ----------
+  const api = {
+    group, chassis: truck, parts, wheels, steeredWheels, materials: M,
+    dimensions: ELECTRIC_BUS, drive: ELECTRIC_BUS_DRIVE, scale,
+  };
+  return attachDriving(api, { group, wheels, steeredWheels, radius: TIRE_R, drive: ELECTRIC_BUS_DRIVE, scale });
+}

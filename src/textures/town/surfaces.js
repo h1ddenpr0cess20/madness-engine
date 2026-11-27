@@ -1,7 +1,7 @@
 /**
  * What the ground is made of, tile by tile: how it looks — `tex`, the floor
  * texture painted for it (`paint.js`), tinted `top`; `wtex` and `wall` for
- * the sides where it stands above its neighbour — and how it rolls.
+ * the sides where it stands above its neighbor — and how it rolls.
  *
  * - `drag`: rolling resistance, per second. Grass and dirt hold the ball
  *   back; an oil slick hardly does.
@@ -14,7 +14,7 @@
  *
  * One table for both towns: Petroll's lots and trampolines and Metrlol's
  * marble, terracotta and sea are all here, and each town uses what it lays.
- * - `map`: its colour on the map in the corner.
+ * - `map`: its color on the map in the corner.
  */
 export const SURFACES = Object.freeze({
   grass: { tex: 'grass', top: '#5a8438', wtex: 'cliff', wall: '#6a5038', drag: 1.1, grip: 1, map: '#4f7a34' },
@@ -22,7 +22,7 @@ export const SURFACES = Object.freeze({
   berm: { tex: 'grass', top: '#5e7238', wtex: 'cliff', wall: '#6a5038', drag: 1.2, grip: 1, map: '#566c34' },
   road: { tex: 'asphalt', top: '#5a5c62', wtex: 'block', wall: '#8a8a8e', drag: 0.5, grip: 1, map: '#36383e' },
   highway: { tex: 'asphalt', top: '#4e5056', wtex: 'block', wall: '#8a8a8e', drag: 0.45, grip: 1, map: '#2e3036' },
-  sidewalk: { tex: 'slabs', top: '#c4bcac', wtex: 'kerb', wall: '#b0a898', drag: 0.55, grip: 1, map: '#a49e90' },
+  sidewalk: { tex: 'slabs', top: '#c4bcac', wtex: 'curb', wall: '#b0a898', drag: 0.55, grip: 1, map: '#a49e90' },
   concrete: { tex: 'concrete', top: '#b0aa9e', wtex: 'block', wall: '#9a958a', drag: 0.55, grip: 1, map: '#948f84' },
   forecourt: { tex: 'concrete', top: '#d0cabc', wtex: 'block', wall: '#a8a296', drag: 0.55, grip: 1, map: '#bab4a6' },
   brick: { tex: 'cobble', top: '#b08068', wtex: 'stone', wall: '#9a7a66', drag: 0.6, grip: 1, map: '#8e5e48' },

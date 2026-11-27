@@ -15,8 +15,10 @@ import { texture } from '../../../src/textures/painters.js';
 import { paintRoom } from '../../../src/textures/rooms/studio.js';
 import { MOODS } from '../../../src/moods/index.js';
 import { diverse } from '../../../src/characters/person.js';
-import { boundsOf, loadCatalog } from './catalog.js';
+import { GLASS_PLANET_NAMES } from '../../../src/props/glass-planets.js';
+import { boundsOf, loadCatalog, METAL_CHOICES } from './catalog.js';
 import { randomBowlingBallPalette } from './bowling-ball-palettes.js';
+import { GifEncoder } from './gif.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => {
@@ -27,7 +29,7 @@ const el = (tag, props = {}, ...kids) => {
 
 // ———————————————————————————————————————————————— flags
 
-const REASONS = ['Geometry', 'Colour / material', 'Animation', 'Scale / pose', 'Clipping', 'Too heavy', 'Missing', 'Other'];
+const REASONS = ['Geometry', 'Color / material', 'Animation', 'Scale / pose', 'Clipping', 'Too heavy', 'Missing', 'Other'];
 const STORE = 'asset-viewer.flags';
 let flags = {};
 try { flags = JSON.parse(localStorage.getItem(STORE) ?? '{}'); } catch { /* private window: carry on without */ }
@@ -66,6 +68,8 @@ const rest = {
 };
 
 const controls = new OrbitControls(camera, renderer.domElement);
+// The near plane follows the camera to what it orbits, so a close look never cuts into a model.
+stage.focus = controls.target;
 controls.enableDamping = true;
 controls.autoRotateSpeed = 3;
 
@@ -96,6 +100,7 @@ const gridTexture = (() => {
 })();
 gridTexture.repeat.set(24, 24);
 const floor = new GFX.Mesh(new GFX.PlaneGeometry(24, 24), new GFX.MeshStandardMaterial({ map: gridTexture, roughness: 0.9 }));
+floor.visible = false; // the grid is off until Grid (G) turns it on (the button is lit while it shows)
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
@@ -105,7 +110,7 @@ scene.add(plate);
 
 // ———————————————————————————————————————————————— the viewer's state
 
-const view = { item: null, colours: {}, draft: {}, coloursFor: null, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
+const view = { item: null, colors: {}, draft: {}, colorsFor: null, weaponMetals: {}, seed: 0, built: null, radius: 1, center: new GFX.Vector3(), clip: 'idle', speed: 1, paused: false, clock: 0, clipStart: 0, token: 0 };
 const options = { level: 1, variant: 0, construction: 0, detail: 1 };
 
 const VIEWS = [
@@ -136,15 +141,25 @@ function sizeCamera() {
 function clearStage() {
   for (const l of stage.fixtureLights) l.intensity = 0;
   if (view.built) scene.remove(view.built.object);
+  renderItemUi(null);
   plate.visible = false;
   markGroup.clear();
 }
 
 async function show(item) {
   const token = ++view.token;
+  const changingItem = view.item?.id !== item.id;
   view.item = item;
-  // Another person starts in their own colours.
-  if (view.coloursFor !== item.id) { view.colours = {}; view.draft = {}; view.coloursFor = item.id; view.seed = 0; }
+  if (changingItem && item.palette?.kind === 'weapon') {
+    const saved = view.weaponMetals[item.id] ?? {};
+    options.bladeMetal = saved.bladeMetal ?? item.palette.bladeMetal ?? 'steel';
+    options.hiltMetal = saved.hiltMetal ?? item.palette.hiltMetal ?? 'steel';
+  } else if (changingItem && item.palette?.kind === 'morningstar') {
+    const saved = view.weaponMetals[item.id] ?? {};
+    options.metal = saved.metal ?? item.palette.metal ?? 'steel';
+  }
+  // Another person starts in their own colors.
+  if (view.colorsFor !== item.id) { view.colors = {}; view.draft = {}; view.colorsFor = item.id; view.seed = 0; }
   $('busy').style.display = 'grid';
   $('err').textContent = '';
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
@@ -153,11 +168,20 @@ async function show(item) {
   resetDress();
   $('title').replaceChildren(el('b', {}, item.name), el('br'), el('span', {}, `${item.category} · ${item.source}`));
   history.replaceState(null, '', `#${encodeURIComponent(item.id)}`);
+  // The options are shared from one item to the next (a chair's kind "windsor" is not a table's): any value this item
+  // does not offer goes back to its default before it is built, not only when its menu is drawn.
+  for (const [name, values] of Object.entries(item.options ?? {})) {
+    if (!values.includes(options[name])) options[name] = values.default ?? values[0];
+  }
   try {
-    const built = await item.build({ ...options, colours: view.colours, lights: stage.fixtureLights, stage });
+    const built = await item.build({ ...options, colors: view.colors, lights: stage.fixtureLights, stage });
     if (token !== view.token) return;
     view.built = built;
     scene.add(built.object);
+    renderItemUi(built.ui ?? []);
+    // What an item can switch on and off (the glass globe's mist).
+    $('togglegroup').style.display = built.mist ? '' : 'none';
+    if (built.mist) $('mistbox').checked = built.mist.get();
     // A flyer's origin is its middle: lift it clear of the floor rather than half under it. Only characters fly: a
     // building's footings, a tree's roots and a river's bed go below the ground on purpose, and stay there.
     if (!built.noFloor && !built.frame && item.kind === 'object' && item.category === 'Characters') {
@@ -178,9 +202,9 @@ async function show(item) {
     if (item.kind === 'room') stage.setRoom(built.canvas);
     if (item.kind === 'mood') { stage.setMood(item.mood); syncLights(); }
     $('moodrow').style.display = item.kind === 'object' ? '' : 'none';
-    // Models stand on y = 0; centre the thing over the origin and look at its middle.
+    // Models stand on y = 0; center the thing over the origin and look at its middle.
     const b = built.frame ? { min: built.frame.center.map((c) => c - built.frame.radius), max: built.frame.center.map((c) => c + built.frame.radius), size: [2, 2, 2].map((v) => v * built.frame.radius) } : boundsOf(built.object);
-    floor.visible = !built.noFloor && !$('gridbtn').classList.contains('on');
+    floor.visible = !built.noFloor && $('gridbtn').classList.contains('on');
     view.center.set((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2);
     view.radius = Math.max(0.2, Math.hypot(...b.size) / 2);
     view.bounds = b;
@@ -193,7 +217,7 @@ async function show(item) {
     view.clock = 0;
     view.clipStart = 0;
     animGroup(built);
-    colourGroup(item);
+    colorGroup(item);
     frame(0.7, 0.3);
   } catch (err) {
     console.error(err);
@@ -207,6 +231,89 @@ async function show(item) {
   drawMarks();
   markSelected();
 }
+
+
+// ———————————————————————————————————————————————— what an item offers
+
+let uiTimer = null;
+
+/**
+ * An item can hand over `ui`, a list of controls for itself: { type: 'buttons', items: [{ label, onClick }] },
+ * { type: 'range', label, min, max, step, get, set }, { type: 'select', label, options, get, set },
+ * { type: 'color' | 'text', label, get, set }, { type: 'check', label, get, set }, { type: 'textarea', label, apply, onApply }
+ * and { type: 'heading', label }. Those with a `get` follow the item while it moves on its own; `disabled` grays a
+ * control out (its `title` saying why).
+ */
+function renderItemUi(specs) {
+  clearInterval(uiTimer);
+  const rows = $('itemuirows');
+  rows.replaceChildren();
+  // Shown for any model (its reset is there), with whatever controls it hands over.
+  $('itemui').style.display = specs === null ? 'none' : '';
+  if (!specs?.length) return;
+  const syncs = [];
+  for (const sp of specs) {
+    if (sp.type === 'heading') {
+      rows.append(el('div', { className: 'heading' }, sp.label));
+    } else if (sp.type === 'buttons') {
+      rows.append(el('div', { className: 'line' }, ...sp.items.map((b) => el('button', { title: b.title ?? '', onclick: () => b.onClick() }, b.label))));
+    } else if (sp.type === 'textarea') {
+      const area = el('textarea', { placeholder: sp.placeholder ?? '' });
+      const status = el('div', { style: 'color:var(--dim)' });
+      area.value = sp.value ?? '';
+      rows.append(el('div', { className: 'group' }, el('label', { style: 'color:var(--dim)' }, sp.label), area, el('div', { className: 'line' }, el('button', { onclick: () => { status.textContent = sp.onApply(area.value) ?? ''; } }, sp.apply ?? 'Apply')), status));
+    } else {
+      let input;
+      const readout = el('span', { style: 'min-width:34px;text-align:right;color:var(--dim)' });
+      if (sp.type === 'range') {
+        input = el('input', { type: 'range', min: sp.min, max: sp.max, step: sp.step });
+        input.oninput = () => { sp.set(Number(input.value)); readout.textContent = Number(input.value).toFixed(2); };
+        syncs.push(() => { if (document.activeElement !== input || !sp.get) { if (sp.get) { input.value = sp.get(); readout.textContent = Number(input.value).toFixed(2); } } });
+      } else if (sp.type === 'select') {
+        input = el('select', {}, ...sp.options.map((o) => (Array.isArray(o) ? el('option', { value: o[0] }, o[1]) : el('option', { value: o }, o))));
+        input.onchange = () => sp.set(input.value);
+        syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
+      } else if (sp.type === 'color') {
+        input = el('input', { type: 'color', style: 'padding:0;width:34px;height:22px' });
+        input.onchange = () => sp.set(input.value);
+        syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
+      } else if (sp.type === 'text') {
+        input = el('input', { type: 'text' });
+        input.onchange = () => sp.set(input.value);
+        syncs.push(() => { if (document.activeElement !== input && sp.get) input.value = sp.get(); });
+      } else if (sp.type === 'check') {
+        input = el('input', { type: 'checkbox' });
+        input.onchange = () => sp.set(input.checked);
+        syncs.push(() => { if (sp.get) input.checked = !!sp.get(); });
+      }
+      if (!input) continue;
+      if (sp.disabled) Object.assign(input, { disabled: true, title: sp.title ?? '' });
+      rows.append(el('div', { className: 'line', title: sp.title ?? '', style: sp.disabled ? 'opacity:0.5' : '' }, el('label', {}, sp.label), input, sp.type === 'range' ? readout : ''));
+    }
+  }
+  const sync = () => { for (const f of syncs) f(); };
+  sync();
+  uiTimer = setInterval(sync, 200);
+}
+
+/**
+ * The shown model as it first came: its option menus back to their defaults, its colors and saved metals
+ * forgotten, and it built afresh, so whatever its own controls changed (a person's shape, outfit, weapon, face)
+ * is as it was made too. The camera, light and animation are left as they are.
+ */
+function resetItem() {
+  const item = view.item;
+  if (!item) return;
+  for (const [name, values] of Object.entries(item.options ?? {})) options[name] = values.default ?? values[0];
+  delete view.weaponMetals[item.id];
+  if (item.palette?.kind === 'weapon') {
+    options.bladeMetal = item.palette.bladeMetal ?? 'steel';
+    options.hiltMetal = item.palette.hiltMetal ?? 'steel';
+  } else if (item.palette?.kind === 'morningstar') options.metal = item.palette.metal ?? 'steel';
+  view.colors = {}; view.draft = {}; view.seed = 0;
+  show(item);
+}
+$('itemreset').onclick = resetItem;
 
 /** The stage back to its plain light, sky and room, before an item dresses it. */
 function resetDress() {
@@ -267,28 +374,63 @@ function animGroup(built) {
   if (built.clips) {
     clip.replaceChildren(...built.clips.map((c) => el('option', { value: c }, c)));
     clip.value = view.clip = built.clips.includes(view.clip) ? view.clip : built.clips[0];
+    $('capsecs').value = loopSeconds(view.clip).toFixed(1);
   }
   // Extra per-item options (a building's level, variant, how far built).
   document.querySelectorAll('.opt').forEach((n) => n.remove());
   for (const [name, values] of Object.entries(view.item.options ?? {})) {
     const select = el('select', { className: 'opt' }, ...values.map((v) => el('option', { value: v }, String(v))));
+    // Named choices (a metal) are kept as names; numbers (a building's level) as numbers.
+    const numeric = values.every((v) => typeof v === 'number');
+    if (!values.includes(options[name])) options[name] = values.default ?? values[0];
     select.value = options[name];
-    select.onchange = () => { options[name] = Number(select.value); show(view.item); };
-    $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, name), select));
+    select.onchange = () => { options[name] = numeric ? Number(select.value) : select.value; show(view.item); };
+    const label = ({ bladeMetal: 'Blade metal', hiltMetal: 'Hilt metal' })[name] ?? name.replace(/([A-Z])/g, ' $1');
+    $('detail').parentElement.after(el('div', { className: 'line opt' }, el('label', {}, label), select));
   }
 }
 
-// ———————————————————————————————————————————————— colours
+// ———————————————————————————————————————————————— colors
 
-/** What a person's colours are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
-function colourRows(item) {
+/** What a person's colors are to be: what has been chosen (not yet applied: `view.draft`), or what they come in. */
+function colorRows(item) {
   const pal = item.palette, c = view.draft;
+  if (pal.kind === 'granite-weapon') return [['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }]];
+  if (pal.kind === 'weapon') {
+    if (pal.metalGrip) return [];
+    const rows = [
+      ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
+    ];
+    if (pal.thread) rows.push([
+      'Grip thread', pal.thread, c.threadColor,
+      (v) => { c.threadColor = v; }, () => { delete c.threadColor; },
+    ]);
+    return rows;
+  }
+  if (pal.kind === 'staff') {
+    return [
+      ['Leather wrap', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
+      ['Wrap thread', pal.thread, c.threadColor, (v) => { c.threadColor = v; }, () => { delete c.threadColor; }],
+    ];
+  }
+  if (pal.kind === 'morningstar') {
+    return [
+      ['Leather grip', pal.grip, c.gripColor, (v) => { c.gripColor = v; }, () => { delete c.gripColor; }],
+    ];
+  }
   if (pal.kind === 'bowling-ball') {
     return [
       ['Base resin', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
       ['Swirl', pal.swirl, c.swirl, (v) => { c.swirl = v; }, () => { delete c.swirl; }],
       ['Accent veins', pal.accent, c.accent, (v) => { c.accent = v; }, () => { delete c.accent; }],
       ['Finger holes', pal.holes, c.holes, (v) => { c.holes = v; }, () => { delete c.holes; }],
+    ];
+  }
+  if (pal.kind === 'bouncy-ball') {
+    return [
+      ['Rubber', pal.base, c.base, (v) => { c.base = v; }, () => { delete c.base; }],
+      ['Second color', pal.swirl, c.swirl, (v) => { c.swirl = v; }, () => { delete c.swirl; }],
+      ['Third color', pal.accent, c.accent, (v) => { c.accent = v; }, () => { delete c.accent; }],
     ];
   }
   if (pal.kind === 'bowling-pin') {
@@ -316,7 +458,7 @@ function colourRows(item) {
     ['Eyes', pal.eyes, c.eyes, (v) => { c.eyes = v; }, () => { delete c.eyes; }],
     ['Brows', pal.brow, c.brow, (v) => { c.brow = v; }, () => { delete c.brow; }],
   ];
-  // Clothes that are one colour change together, so a suit stays a suit.
+  // Clothes that are one color change together, so a suit stays a suit.
   for (const slots of pal.groups) {
     const was = pal.look[slots[0]], now = c.look?.[slots[0]];
     rows.push([slots.join(' · '), was, now,
@@ -348,60 +490,115 @@ function randomBowlingPinPalette(random = Math.random) {
 }
 
 /** Whether what is chosen in the pickers is not what is on show. */
-const colourDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colours);
+const colorDirty = () => JSON.stringify(view.draft) !== JSON.stringify(view.colors);
 
-/** The colour pickers for the person on show; nothing for what is not a person. Choosing changes nothing on show until Apply. */
-function colourGroup(item) {
-  const group = $('colourgroup');
+/** The color pickers for the person on show; nothing for what is not a person. Choosing changes nothing on show until Apply. */
+function colorGroup(item) {
+  const group = $('colorgroup');
   group.style.display = item.palette ? '' : 'none';
+  const weaponRows = $('weaponmetalrows');
+  weaponRows.style.display = 'none';
+  weaponRows.replaceChildren();
   if (!item.palette) return;
   const isDice = item.palette.kind === 'dice';
   const isBowlingBall = item.palette.kind === 'bowling-ball';
   const isBowlingPin = item.palette.kind === 'bowling-pin';
-  $('colourdiverse').style.display = isDice ? 'none' : '';
-  $('colourdiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall ? 'Randomise colours' : 'Randomise';
-  $('colourdiverse').title = isBowlingPin
+  const isBouncyBall = item.palette.kind === 'bouncy-ball';
+  const isWeapon = item.palette.kind === 'weapon';
+  const isGraniteWeapon = item.palette.kind === 'granite-weapon';
+  const isMorningstar = item.palette.kind === 'morningstar';
+  const isStaff = item.palette.kind === 'staff';
+  $('colordiverse').style.display = isStaff || isDice || isWeapon || isGraniteWeapon || isMorningstar ? 'none' : '';
+  if (isWeapon || isMorningstar) {
+    const metalOptions = isMorningstar ? [['metal', 'Head / haft metal']] : [['bladeMetal', 'Blade metal'], ['hiltMetal', 'Hilt metal']];
+    for (const [key, label] of metalOptions) {
+      options[key] ??= item.palette[key] ?? 'steel';
+      const select = el('select', { className: 'weapon-metal-select' },
+        ...METAL_CHOICES.map((metal) => el('option', { value: metal }, metal)));
+      select.value = options[key];
+      select.onchange = () => {
+        options[key] = select.value;
+        view.weaponMetals[item.id] = { ...view.weaponMetals[item.id], [key]: select.value };
+        show(view.item);
+      };
+      const row = el('div', { className: 'line' }, el('label', {}, label), select);
+      row.style.justifyContent = 'space-between';
+      row.style.width = '100%';
+      weaponRows.append(row);
+    }
+    weaponRows.style.display = 'grid';
+  }
+  $('colordiverse').textContent = isBowlingPin ? 'Random pin color' : isBowlingBall || isBouncyBall ? 'Randomize colors' : 'Randomize';
+  $('colordiverse').title = isBowlingPin
     ? 'Generate a coordinated random resin and enamel palette for this pin'
     : isBowlingBall
       ? 'Pick a coordinated random bowling-ball palette'
-      : 'Randomise this character palette';
-  $('bowlingdesignrow').style.display = isBowlingBall || isBowlingPin ? '' : 'none';
-  if (isBowlingBall || isBowlingPin) {
+      : 'Randomize this character palette';
+  $('bowlingdesignrow').style.display = isBowlingBall || isBowlingPin || isBouncyBall ? '' : 'none';
+  if (isBowlingBall || isBowlingPin || isBouncyBall) {
     const choices = isBowlingPin
       ? [['classic', 'Classic resin'], ['pearl', 'Pearlescent resin'], ['swirl', 'Ribbon swirl']]
-      : [['marble', 'Classic marble'], ['spiral', 'Spiral ribbons'], ['flame', 'Flame ribbons'], ['split', 'Two-tone split'], ['blotch', 'Blotchy marble']];
+      : isBouncyBall
+        ? [['solid', 'Solid rubber'], ['swirl', 'Swirl'], ['marble', 'Rubber marble'], ['tiedye', 'Tie-dye spiral'], ['stripe', 'Band'], ['confetti', 'Superball flecks'], ['beach', 'Beach ball']]
+        : [['marble', 'Classic marble'], ['spiral', 'Spiral ribbons'], ['flame', 'Flame ribbons'], ['split', 'Two-tone split'], ['blotch', 'Blotchy marble'], ['solid', 'Solid']];
     $('bowlingdesign').replaceChildren(...choices.map(([value, label]) => el('option', { value }, label)));
-    $('bowlingdesign').value = view.draft.design ?? view.colours.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : 'marble');
+    $('bowlingdesign').value = view.draft.design ?? view.colors.design ?? item.palette.design ?? (isBowlingPin ? 'classic' : isBouncyBall ? 'swirl' : 'marble');
     $('bowlingdesignrow').querySelector('span').textContent = isBowlingPin ? 'Resin finish' : 'Surface pattern';
   }
-  $('colourhint').textContent = isDice
+  if (isGraniteWeapon) {
+    const select = el('select', { className: 'weapon-metal-select' }, ...item.palette.graniteChoices.map((name) => el('option', { value: name }, name[0].toUpperCase() + name.slice(1))));
+    select.value = view.draft.graniteColor ?? view.colors.graniteColor ?? item.palette.granite;
+    select.onchange = () => { view.draft.graniteColor = select.value; colorGroup(item); };
+    const row = el('div', { className: 'line' }, el('label', {}, 'All stone parts'), select);
+    row.style.justifyContent = 'space-between'; row.style.width = '100%';
+    $('weaponmetalrows').append(row); $('weaponmetalrows').style.display = 'grid';
+  }
+  $('colorhint').textContent = isStaff
+    ? (item.palette.metal
+      ? 'Choose the color of the leather wrap on the grip and of its crossed thread, then press Apply. The metal and topper are in the options above.'
+      : 'Choose the color of the leather wrap on the grip and of its crossed thread, then press Apply. Wood, finish and topper are in the options above.')
+    : isGraniteWeapon
+    ? 'The blade, guard and fused handle are granite; choose its granite colorway and the leather wrap color.'
+    : isWeapon
+    ? (item.palette.thread
+      ? 'Choose blade and hilt metals, then customize the leather and contrasting grip thread independently.'
+      : 'Choose blade and hilt metals, then set the leather grip color here. Metal finishes update immediately; Apply commits the grip color.')
+    : isMorningstar
+      ? 'Choose the morningstar head and haft metal, then set the leather grip color. Metal finishes update immediately; Apply commits the grip color.'
+    : isDice
     ? 'Change the resin, number / pip ink, and D20 accent of this standalone RPG prop. The character d20 remains a separate gameplay asset.'
+    : isBouncyBall
+      ? 'A rubber bouncy ball: choose a pattern and its three colors. Apply updates the ball. In a game, pair it with the physics\' RUBBER bounce.'
     : isBowlingBall
-      ? 'Choose a surface design and change the base resin, swirl, accent veins, and recessed finger-hole colour. Apply updates the ball.'
+      ? 'Choose a surface design and change the base resin, swirl, accent veins, and recessed finger-hole color. Apply updates the ball.'
       : isBowlingPin
         ? 'Choose a resin finish and tune the base, marbling, pearlescent highlight, and red neck enamel. Apply updates the pin.'
-        : 'The same model in other colours: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
-  $('colourrows').replaceChildren(...colourRows(item).map(([label, was, now, set, clear]) => {
+        : 'The same model in other colors: variant(). Choices are applied (re-baked) when you press Apply. Hair also dyes beards and crests.';
+  $('colorrows').replaceChildren(...colorRows(item).map(([label, was, now, set, clear]) => {
     const input = el('input', { type: 'color', value: now ?? was });
     const undo = el('button', { title: 'Back to how they come', textContent: '×' });
     const row = el('div', { className: `swatchrow${now ? ' changed' : ''}` }, el('label', { title: label }, label), input, undo);
-    input.onchange = () => { set(input.value); colourGroup(item); };
-    undo.onclick = () => { clear(); colourGroup(item); };
+    input.onchange = () => { set(input.value); colorGroup(item); };
+    undo.onclick = () => { clear(); colorGroup(item); };
     return row;
   }));
-  const dirty = colourDirty();
-  $('colourapply').disabled = !dirty;
-  $('colourapply').classList.toggle('on', dirty);
-  $('colourapply').textContent = dirty ? 'Apply changes' : 'Applied';
+  const dirty = colorDirty();
+  $('colorapply').disabled = !dirty;
+  $('colorapply').classList.toggle('on', dirty);
+  $('colorapply').textContent = dirty ? 'Apply changes' : 'Applied';
 }
 
-$('colourapply').onclick = () => { view.colours = structuredClone(view.draft); show(view.item); };
-$('colourdiverse').onclick = () => {
+$('colorapply').onclick = () => { view.colors = structuredClone(view.draft); show(view.item); };
+$('colordiverse').onclick = () => {
   if (view.item.palette?.kind === 'bowling-pin') {
-    const design = view.draft.design ?? view.colours.design ?? view.item.palette.design ?? 'classic';
+    const design = view.draft.design ?? view.colors.design ?? view.item.palette.design ?? 'classic';
     view.draft = { ...view.draft, ...randomBowlingPinPalette(), design };
+  } else if (view.item.palette?.kind === 'bouncy-ball') {
+    const design = view.draft.design ?? view.colors.design ?? view.item.palette.design ?? 'swirl';
+    const hue = Math.random() * 360, col = (h, s, l) => '#' + new GFX.Color().setHSL(((h % 360) + 360) % 360 / 360, s, l).getHexString();
+    view.draft = { base: col(hue, 0.85, 0.52), swirl: col(hue + 60 + Math.random() * 60, 0.9, 0.58), accent: col(hue + 180 + Math.random() * 40, 0.8, 0.5), design };
   } else if (view.item.palette?.kind === 'bowling-ball') {
-    const current = { ...view.item.palette, ...view.colours, ...view.draft };
+    const current = { ...view.item.palette, ...view.colors, ...view.draft };
     const design = current.design ?? 'marble';
     view.draft = { ...randomBowlingBallPalette(Math.random, current), design };
   } else {
@@ -409,36 +606,83 @@ $('colourdiverse').onclick = () => {
     view.draft = { ...diverse(view.seed++ + Math.floor(Math.random() * 1e6)) };
     if (keep) view.draft.look = keep;
   }
-  colourGroup(view.item);
+  colorGroup(view.item);
 };
-$('colourreset').onclick = () => { view.draft = {}; colourGroup(view.item); };
+$('colorreset').onclick = () => { view.draft = {}; colorGroup(view.item); };
 $('bowlingdesign').onchange = () => {
-  if (!['bowling-ball', 'bowling-pin'].includes(view.item?.palette?.kind)) return;
+  if (!['bowling-ball', 'bowling-pin', 'bouncy-ball'].includes(view.item?.palette?.kind)) return;
   view.draft.design = $('bowlingdesign').value;
-  colourGroup(view.item);
+  colorGroup(view.item);
 };
-$('colourcopy').onclick = async () => {
+$('colorcopy').onclick = async () => {
   let code;
   if (view.item.palette?.kind === 'dice') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createDieProp } from 'madness-engine/props/dice';\n\n"
       + "const die = createDieProp(GFX, '" + view.item.dieType + "', "
-      + JSON.stringify(view.colours, null, 2) + ");";
+      + JSON.stringify(view.colors, null, 2) + ");";
+  } else if (view.item.palette?.kind === 'bouncy-ball') {
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { createBouncyBall } from 'madness-engine/props/bouncy-ball';\n"
+      + "import { createBall, RUBBER } from 'madness-engine/physics';\n\n"
+      + "const bouncyBall = createBouncyBall(GFX, { colors: "
+      + JSON.stringify(view.colors, null, 2) + ", design: '" + (view.colors.design ?? 'swirl') + "' });\n"
+      + "const body = createBall({ r: bouncyBall.radius, ...RUBBER });";
   } else if (view.item.palette?.kind === 'bowling-ball') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingBall } from 'madness-engine/props/bowling-ball';\n\n"
       + "const bowlingBall = createBowlingBall(GFX, { colors: "
-      + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'marble') + "' });";
+      + JSON.stringify(view.colors, null, 2) + ", design: '" + (view.colors.design ?? 'marble') + "' });";
+  } else if (view.item.palette?.kind === 'morningstar') {
+    const factory = view.item.factory;
+    const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
+      + "const " + variable + " = " + factory + "(GFX, { metal: '"
+      + (options.metal ?? 'steel') + "', gripColor: '"
+      + (view.colors.gripColor ?? '#633b2c') + "' });";
+  } else if (view.item.palette?.kind === 'staff') {
+    const topper = options.topper ?? 'orb';
+    const planet = GLASS_PLANET_NAMES.includes(topper);
+    const wood = view.item.palette.metal
+      ? "metal: '" + (options.metal ?? 'steel') + "'"
+      : "species: '" + (options.species ?? 'walnut') + "', finish: '" + (options.finish ?? 'lacquered') + "'";
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + (planet ? "import { loadGlassPlanetMaps } from 'madness-engine/props/glass-planets';\n" : '')
+      + "import { createStaff } from 'madness-engine/weapons';\n\n"
+      + (planet ? "const planetMaps = { " + topper + ": await loadGlassPlanetMaps('" + topper + "') };\n" : '')
+      + "const staff = createStaff(GFX, { " + wood + ", topper: '" + topper + "'" + (planet ? ', planetMaps' : '')
+      + ", gripColor: '" + (view.colors.gripColor ?? view.item.palette.grip) + "', threadColor: '"
+      + (view.colors.threadColor ?? view.item.palette.thread) + "' });";
+  } else if (view.item.palette?.kind === 'granite-weapon') {
+    const factory = view.item.factory;
+    const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    code = "import * as GFX from 'madness-engine/gfx';\\n"
+      + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\\n\\n"
+      + "const " + variable + " = " + factory + "(GFX, { graniteColor: '"
+      + (view.colors.graniteColor ?? view.item.palette.granite ?? 'gray')
+      + "', gripColor: '" + (view.colors.gripColor ?? view.item.palette.grip ?? '#101010') + "' });";
+  } else if (view.item.palette?.kind === 'weapon') {
+    const factory = view.item.factory;
+    const variable = view.item.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    code = "import * as GFX from 'madness-engine/gfx';\n"
+      + "import { " + factory + " } from 'madness-engine/" + view.item.source + "';\n\n"
+      + "const " + variable + " = " + factory + "(GFX, { bladeMetal: '"
+      + (options.bladeMetal ?? 'steel') + "', hiltMetal: '" + (options.hiltMetal ?? 'steel')
+      + (view.item.palette.metalGrip ? "'" : "', gripColor: '" + (view.colors.gripColor ?? view.item.palette.grip ?? '#633b2c') + "'")
+      + (view.item.palette.thread
+        ? ", threadColor: '" + (view.colors.threadColor ?? view.item.palette.thread) + "'"
+        : '') + " });";
   } else if (view.item.palette?.kind === 'bowling-pin') {
     code = "import * as GFX from 'madness-engine/gfx';\n"
       + "import { createBowlingPin } from 'madness-engine/props/bowling-pin';\n\n"
       + "const bowlingPin = createBowlingPin(GFX, { colors: "
-      + JSON.stringify(view.colours, null, 2) + ", design: '" + (view.colours.design ?? 'classic') + "' });";
+      + JSON.stringify(view.colors, null, 2) + ", design: '" + (view.colors.design ?? 'classic') + "' });";
   } else {
     const name = view.item.name.replace(/[^a-z0-9]/gi, '');
-    code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colours, null, 2)});`;
+    code = `import ${name} from 'madness-engine/${view.item.source.replace(/\.js$/, '')}';\n\nconst ${name}Again = ${name}.variant(${JSON.stringify(view.colors, null, 2)});`;
   }
-  try { await navigator.clipboard.writeText(code); flash($('colourcopy'), 'Copied'); } catch { flash($('colourcopy'), 'Copy failed'); }
+  try { await navigator.clipboard.writeText(code); flash($('colorcopy'), 'Copied'); } catch { flash($('colorcopy'), 'Copy failed'); }
 };
 
 // ———————————————————————————————————————————————— marked areas
@@ -470,7 +714,7 @@ function describe(position) {
   const h = Math.round(frac(position[1], 1) * 100);
   const x = frac(position[0], 0), z = frac(position[2], 2);
   const side = x > 0.62 ? 'left side' : x < 0.38 ? 'right side' : 'middle';
-  const depth = z > 0.62 ? 'front' : z < 0.38 ? 'back' : 'centre';
+  const depth = z > 0.62 ? 'front' : z < 0.38 ? 'back' : 'center';
   return `${h}% up, ${side}, ${depth}`;
 }
 
@@ -517,26 +761,45 @@ function addMark(event) {
   applyFilter();
 }
 
+/** A click on an item that answers to one (a book: open it, turn its page) is handed the point it hit. */
+function touchItem(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  const at = new GFX.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+  camera.updateMatrixWorld();
+  raycaster.setFromCamera(at, camera);
+  const hit = raycaster.intersectObject(view.built.object, true).find((h) => h.object.visible);
+  if (hit) view.built.click(hit);
+}
+
 let downAt = null;
 renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', (e) => {
-  if (downAt && e.button === 0 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 4) addMark(e);
+  if (downAt && e.button === 0 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 4) {
+    if (marking) addMark(e);
+    else if (view.built?.click) touchItem(e);
+  }
   downAt = null;
 });
 
 // ———————————————————————————————————————————————— the loop
 
-let last = null;
-renderer.setAnimationLoop((now) => {
-  const dt = last === null ? 0 : Math.min(0.1, (now - last) / 1000);
-  last = now;
+/** How long the clips that repeat on their own take to come round, in seconds: what a GIF of one of them is, to loop cleanly. */
+const LOOPS = { walk: 0.698 * 2, run: 0.419 * 4 };
+const loopSeconds = (clip) => view.built?.loops?.[clip] ?? LOOPS[clip] ?? 1.6;
+
+/** Poses the thing for the clock as it stands. */
+function poseNow() {
+  if (!view.built?.pose) return;
+  const t = view.clock - view.clipStart;
+  // The one-shot clips loop, so there is always something to see.
+  // A thing that says how long its clips take (a bouncy ball's bounce) loops each on its own length.
+  const own = view.built.loops?.[view.clip];
+  view.built.pose({ clip: view.clip, t: own ? t % own : view.clip === 'idle' || view.clip === 'walk' || view.clip === 'run' ? t : t % 1.6, time: view.clock, seed: 1, speed: 1 });
+}
+
+/** Moves the camera and lights as they follow what is looked at, and draws. */
+function drawScene() {
   sizeCamera();
-  if (view.built?.pose && !view.paused) {
-    view.clock += dt * view.speed;
-    const t = view.clock - view.clipStart;
-    // The one-shot clips loop, so there is always something to see.
-    view.built.pose({ clip: view.clip, t: view.clip === 'idle' || view.clip === 'walk' || view.clip === 'run' ? t : t % 1.6, time: view.clock, seed: 1, speed: 1 });
-  }
   controls.update();
   key.position.copy(controls.target).addScaledVector(stage.keyFrom, 40);
   key.target.position.copy(controls.target);
@@ -547,6 +810,19 @@ renderer.setAnimationLoop((now) => {
     fill.target.updateMatrixWorld();
   }
   stage.render();
+}
+
+let last = null, capturing = false;
+renderer.setAnimationLoop((now) => {
+  const dt = last === null ? 0 : Math.min(0.1, (now - last) / 1000);
+  last = now;
+  // (A capture sets the clock and the camera itself, a frame at a time.)
+  if (capturing) return;
+  if (view.built?.pose && !view.paused) {
+    view.clock += dt * view.speed;
+    poseNow();
+  }
+  drawScene();
 });
 
 // ———————————————————————————————————————————————— the list
@@ -708,6 +984,103 @@ function contactSheet() {
 }
 const closeSheet = () => { $('sheet').style.display = 'none'; };
 
+// ———————————————————————————————————————————————— capture
+
+const fileStem = () => `${(view.item?.id ?? 'asset').replace(/[^\w.-]+/g, '-')}${view.built?.pose ? `-${view.clip}` : ''}`;
+const save = (blob, name) => {
+  const a = el('a', { href: URL.createObjectURL(blob), download: name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+
+/** The picture on screen, as a canvas `width` wide (the canvas's own size if not said), read in the task it was drawn in. */
+function grab(width = 0) {
+  stage.render();
+  const src = renderer.domElement;
+  const w = width || src.width, h = Math.max(2, Math.round((w * src.height) / src.width));
+  const c = el('canvas');
+  c.width = w;
+  c.height = h;
+  c.getContext('2d', { willReadFrequently: true }).drawImage(src, 0, 0, w, h);
+  return c;
+}
+
+/** Saves the view as it is as a PNG, at the size it is shown. */
+async function screenshot() {
+  if (!view.built || capturing) return null;
+  const blob = await new Promise((r) => grab().toBlob(r, 'image/png'));
+  save(blob, `${fileStem()}.png`);
+  $('capstatus').textContent = 'Saved';
+  setTimeout(() => { if ($('capstatus').textContent === 'Saved') $('capstatus').textContent = ''; }, 1500);
+  return blob;
+}
+
+/**
+ * Records an animated GIF, a frame at a time so that however slowly it is drawn it plays in step: of the animation
+ * (the camera still, the clock run on over `seconds`) or of a full turn round it (the clock running on too, unless
+ * paused). The camera, clock and controls are put back as they were.
+ */
+async function recordGif({ mode = $('capmode').value, width = Number($('capsize').value), fps = Number($('capfps').value), seconds = Number($('capsecs').value) } = {}) {
+  if (!view.built || capturing) return null;
+  const frames = Math.max(2, Math.min(300, Math.round(fps * seconds)));
+  const was = { clock: view.clock, pos: camera.position.clone(), target: controls.target.clone(), spin: controls.autoRotate, damping: controls.enableDamping, enabled: controls.enabled };
+  capturing = true;
+  controls.autoRotate = false;
+  controls.enableDamping = false;
+  controls.enabled = false;
+  $('gifbtn').disabled = $('shotbtn').disabled = true;
+  try {
+    const offset = was.pos.clone().sub(was.target);
+    let gif = null;
+    for (let i = 0; i < frames; i++) {
+      const u = i / frames;
+      if (!view.paused || mode === 'animation') view.clock = was.clock + u * seconds * (mode === 'animation' ? view.speed : 1);
+      if (mode === 'turntable') {
+        const a = u * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+        camera.position.set(was.target.x + offset.x * c + offset.z * s, was.pos.y, was.target.z - offset.x * s + offset.z * c);
+      }
+      poseNow();
+      drawScene();
+      const c = grab(width), px = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
+      gif ??= new GifEncoder(c.width, c.height);
+      gif.addFrame(px.data, 1000 / fps);
+      $('capstatus').textContent = `Recording ${i + 1}/${frames}`;
+      // Let the page breathe, so the status shows and the tab stays awake.
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    $('capstatus').textContent = 'Encoding…';
+    await new Promise((r) => setTimeout(r, 20));
+    const bytes = gif.finish();
+    const blob = new Blob([bytes], { type: 'image/gif' });
+    const name = `${fileStem()}${mode === 'turntable' ? '-turn' : ''}.gif`;
+    const old = $('capsave').href;
+    if (old?.startsWith('blob:')) URL.revokeObjectURL(old);
+    const url = URL.createObjectURL(blob);
+    $('capimg').src = url;
+    $('capsave').href = url;
+    $('capsave').download = name;
+    $('capinfo').textContent = `${gif.width}×${gif.height}, ${frames} frames, ${(bytes.length / 1024).toFixed(0)} KB`;
+    $('capresult').style.display = 'grid';
+    save(blob, name);
+    $('capstatus').textContent = 'Saved';
+    return blob;
+  } catch (err) {
+    $('capstatus').textContent = `Failed: ${err.message}`;
+    console.error(err);
+    return null;
+  } finally {
+    view.clock = was.clock;
+    camera.position.copy(was.pos);
+    controls.target.copy(was.target);
+    controls.autoRotate = was.spin;
+    controls.enableDamping = was.damping;
+    controls.enabled = was.enabled;
+    capturing = false;
+    $('gifbtn').disabled = $('shotbtn').disabled = false;
+    poseNow();
+  }
+}
+
 // ———————————————————————————————————————————————— wiring
 
 $('views').replaceChildren(...VIEWS.map(([name, az, elev], i) => el('button', { title: `${i + 1}`, onclick: () => frame(az, elev) }, name)));
@@ -718,9 +1091,14 @@ $('flagbtn').onclick = toggleFlag;
 $('markbtn').onclick = () => setMarking(!marking);
 $('pin').onclick = () => { const f = flags[view.item?.id]; if (f) { f.angle = angleOf(); f.context = contextOf(); saveFlags(); renderFlag(); } };
 $('note').oninput = () => { const f = flags[view.item?.id]; if (f) { f.note = $('note').value; saveFlags(); } };
+$('mistbox').onchange = () => view.built?.mist?.set($('mistbox').checked);
 $('turn').onclick = () => { controls.autoRotate = !controls.autoRotate; $('turn').classList.toggle('on', controls.autoRotate); };
 $('sheetbtn').onclick = contactSheet;
-$('gridbtn').onclick = () => { floor.visible = !floor.visible; $('gridbtn').classList.toggle('on', !floor.visible); };
+$('shotbtn').onclick = screenshot;
+$('gifbtn').onclick = () => recordGif();
+// A clip that repeats on its own is recorded for as long as it takes to come round; the others, for the viewer's loop.
+$('clip').addEventListener('change', () => { $('capsecs').value = loopSeconds($('clip').value).toFixed(1); });
+$('gridbtn').onclick = () => { floor.visible = !floor.visible; $('gridbtn').classList.toggle('on', floor.visible); };
 $('pause').onclick = () => { view.paused = !view.paused; $('pause').classList.toggle('on', view.paused); };
 $('speed').oninput = () => { view.speed = Number($('speed').value); };
 $('clip').onchange = () => { view.clip = $('clip').value; view.clipStart = view.clock; };
@@ -749,6 +1127,7 @@ $('dlflags').onclick = () => {
 addEventListener('keydown', (e) => {
   if (e.target.matches?.('input, textarea, select') && e.key !== 'Escape') return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (view.built?.key?.(e.key)) { e.preventDefault(); return; }
   const k = e.key.toLowerCase();
   if (k === 'escape') { closeSheet(); document.activeElement?.blur?.(); }
   else if (k === 'j' || k === 'arrowdown') { e.preventDefault(); step(1); }
@@ -756,14 +1135,17 @@ addEventListener('keydown', (e) => {
   else if (k === 'f') { e.preventDefault(); toggleFlag(); }
   else if (k === 't') $('turn').click();
   else if (k === 'm') setMarking(!marking);
+  else if (k === 'r') resetItem();
   else if (k === 'c') contactSheet();
+  else if (k === 'p') screenshot();
+  else if (k === 'v') recordGif();
   else if (k === 'g') $('gridbtn').click();
   else if (k === ' ') { e.preventDefault(); $('pause').click(); }
   else if (k === '/') { e.preventDefault(); $('search').focus(); }
   else if (/^[1-8]$/.test(k)) frame(VIEWS[k - 1][1], VIEWS[k - 1][2]);
 });
 
-window.assetViewer = { catalog, show, options, renderer, scene, camera, controls, view };
+window.assetViewer = { catalog, show, options, renderer, scene, camera, controls, view, screenshot, recordGif, pose: poseNow, draw: drawScene };
 applyFilter();
 const start = catalog.find((i) => i.id === decodeURIComponent(location.hash.slice(1))) ?? filtered[0];
 if (start) show(start);

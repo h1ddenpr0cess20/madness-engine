@@ -1,6 +1,5 @@
 /**
- * The scene API the characters are built with — handed to them as `GFX` by
- * `<three-d-stage>`, and importable directly wherever a rig is measured
+ * The scene API the characters are built with — passed to character definitions as `GFX`, and importable directly wherever a rig is measured
  * without a renderer (the tests).
  */
 

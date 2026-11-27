@@ -35,7 +35,7 @@ import { split } from './split.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Engine-authored library assets are kept when the game-built library is regenerated.
-const ENGINE_OWNED = ['props/bowling-ball.js'];
+const ENGINE_OWNED = ['props/bowling-ball.js', 'props/book.js', 'props/book-art.js', 'props/bookcase.js', 'props/wood-table.js', 'props/wood-chair.js', 'props/track-light.js', 'props/glass-entry.js'];
 const SRC = join(HERE, '..', '..', 'src');
 export const KINDS = ['characters', 'props', 'heroes', 'scenery', 'textures', 'music'];
 export const ORIGINS = join(HERE, 'origins.json');
@@ -241,13 +241,170 @@ function catalog(kind, name, places, about) {
 
 const ABOUT = {
   characters: 'The people, creatures and monsters. Most are sculpted definitions (the default export) for `createModel`; `humanoid`, `quadruped`, `person` and `wardrobe` are the bodies and clothes they are built from; `slime`, `egg` and `boulder` are built from their own geometry.',
-  props: 'What lies about to be picked up: sculpted, still, for `createStatic`, and the colourable roleplaying dice (`DICE`) in `props/dice`.',
+  props: 'What lies about to be picked up: sculpted, still, for `createStatic`, and the colorable roleplaying dice (`DICE`) in `props/dice`.',
   heroes: 'The balls the games are played as, each with what it is made of.',
   scenery: 'The world round the ball: the town\'s street furniture and vehicles (`bakeData` in models/legacy-bake), the dungeon\'s walls, torches and exit, and the light show that lights a venue (`lightshow`: createLightshow(GFX, venue)).',
   textures: 'Painted on canvases at startup. `painters` is the toolkit and the floors and walls; `venue` the rock clubs\' floors, walls, belts, grilles, tape, shutters, panels and glows; `town/` the town\'s; `lava` a material; `rooms/` what shiny things reflect (each `paintRoom`) and `skies/` what is round the scene (each `paintSky`).',
   moods: 'The look of every set: its light, its sky and what its chrome reflects (each with its painter), the film it is shot on (the grade on the picture, the grain and the vignette over it, and the interface on the same stock where the game does that), its weather, and its band, theme and tempo; and the set\'s own `look` and `palette`. `stage.setMood(mood)` dresses a stage in one; `MOODS` (`moods/index`) has them all.',
   music: 'Made on the spot with Web Audio. `band` is a whole band with its songs (`THEMES`), `theory` its scales, forms and effects; `score` a smaller orchestra with its own themes.',
 };
+
+/**
+ * Americanizes generated Markdown prose without changing inline code or fenced examples.
+ * Source comments remain untouched; only the human-readable catalog presentation is converted.
+ */
+export function americanizeMarkdown(text) {
+  const replacements = [
+    [/\bcolourable\b/gi, 'colorable'],
+    [/\bcolours\b/gi, 'colors'],
+    [/\bcolouring\b/gi, 'coloring'],
+    [/\bcoloured\b/gi, 'colored'],
+    [/\bcolourful\b/gi, 'colorful'],
+    [/\bcolour\b/gi, 'color'],
+    [/\bmodelling\b/gi, 'modeling'],
+    [/\bmodelled\b/gi, 'modeled'],
+    [/\bmillimetres\b/gi, 'millimeters'],
+    [/\bmillimetre\b/gi, 'millimeter'],
+    [/\bcentimetres\b/gi, 'centimeters'],
+    [/\bcentimetre\b/gi, 'centimeter'],
+    [/\bkilometres\b/gi, 'kilometers'],
+    [/\bkilometre\b/gi, 'kilometer'],
+    [/\bmetres\b/gi, 'meters'],
+    [/\bmetre\b/gi, 'meter'],
+    [/\blitres\b/gi, 'liters'],
+    [/\blitre\b/gi, 'liter'],
+    [/\bstylised\b/gi, 'stylized'],
+    [/\bbehaviour\b/gi, 'behavior'],
+    [/\bcatalogue\b/gi, 'catalog'],
+    [/\bcentres\b/gi, 'centers'],
+    [/\bcentre\b/gi, 'center'],
+    [/\bgreys\b/gi, 'grays'],
+    [/\bgreyed\b/gi, 'grayed'],
+    [/\bgreyer\b/gi, 'grayer'],
+    [/\bgreyest\b/gi, 'grayest'],
+    [/\bgreyish\b/gi, 'grayish'],
+    [/\bgrey\b/gi, 'gray'],
+    [/\bfibres\b/gi, 'fibers'],
+    [/\bfibre\b/gi, 'fiber'],
+    [/\blicences\b/gi, 'licenses'],
+    [/\blicence\b/gi, 'license'],
+    [/\borganised\b/gi, 'organized'],
+    [/\borganise\b/gi, 'organize'],
+    [/\boptimised\b/gi, 'optimized'],
+    [/\boptimise\b/gi, 'optimize'],
+    [/\brealised\b/gi, 'realized'],
+    [/\brealise\b/gi, 'realize'],
+    [/\brecognised\b/gi, 'recognized'],
+    [/\brecognise\b/gi, 'recognize'],
+    [/\bcustomised\b/gi, 'customized'],
+    [/\bcustomise\b/gi, 'customize'],
+    [/\bvisualised\b/gi, 'visualized'],
+    [/\bvisualise\b/gi, 'visualize'],
+    [/\bspecialised\b/gi, 'specialized'],
+    [/\bspecialise\b/gi, 'specialize'],
+    [/\bauthorised\b/gi, 'authorized'],
+    [/\bauthorise\b/gi, 'authorize'],
+    [/\binitialised\b/gi, 'initialized'],
+    [/\binitialise\b/gi, 'initialize'],
+    [/\bnormalised\b/gi, 'normalized'],
+    [/\bnormalise\b/gi, 'normalize'],
+    [/\bserialised\b/gi, 'serialized'],
+    [/\bserialise\b/gi, 'serialize'],
+    [/\bsummarised\b/gi, 'summarized'],
+    [/\bsummarise\b/gi, 'summarize'],
+    [/\butilised\b/gi, 'utilized'],
+    [/\butilise\b/gi, 'utilize'],
+    [/\btravellers\b/gi, 'travelers'],
+    [/\btraveller\b/gi, 'traveler'],
+    [/\btravelling\b/gi, 'traveling'],
+    [/\bcancelled\b/gi, 'canceled'],
+    [/\blabelled\b/gi, 'labeled'],
+    [/\bfavourites\b/gi, 'favorites'],
+    [/\bfavourite\b/gi, 'favorite'],
+    [/\bfavourable\b/gi, 'favorable'],
+    [/\bfavour\b/gi, 'favor'],
+    [/\btheatre\b/gi, 'theater'],
+    [/\bmoustaches\b/gi, 'mustaches'],
+    [/\bmoustache\b/gi, 'mustache'],
+    [/\btowards\b/gi, 'toward'],
+    [/\bstoreys\b/gi, 'stories'],
+    [/\bstorey\b/gi, 'story'],
+    [/\baluminium\b/gi, 'aluminum'],
+    [/\bmoulds\b/gi, 'molds'],
+    [/\bmoulded\b/gi, 'molded'],
+    [/\bmoulding\b/gi, 'molding'],
+    [/\bmould\b/gi, 'mold'],
+    [/\bchequered\b/gi, 'checkered'],
+    [/\bwhilst\b/gi, 'while'],
+    [/\bamongst\b/gi, 'among'],
+    [/\blearnt\b/gi, 'learned'],
+    [/\bleant\b/gi, 'leaned'],
+    [/\bspelt\b/gi, 'spelled'],
+    [/\bspilt\b/gi, 'spilled'],
+    [/\bspoilt\b/gi, 'spoiled'],
+    [/\bstencilled\b/gi, 'stenciled'],
+    [/\bstencilling\b/gi, 'stenciling'],
+    [/\bneighbours\b/gi, 'neighbors'],
+    [/\bneighbour\b/gi, 'neighbor'],
+    [/\bjewellery\b/gi, 'jewelry'],
+    [/\btyres\b/gi, 'tires'],
+    [/\btyre\b/gi, 'tire'],
+    [/\bkerb\b/gi, 'curb'],
+    [/\bcheques\b/gi, 'checks'],
+    [/\bcheque\b/gi, 'check'],
+    [/\bprogramme\b/gi, 'program'],
+    [/\bpyjamas\b/gi, 'pajamas'],
+    [/\boffence\b/gi, 'offense'],
+    [/\bdefence\b/gi, 'defense'],
+    [/\bploughed\b/gi, 'plowed'],
+    [/\bplough\b/gi, 'plow'],
+    [/\bmanoeuvres\b/gi, 'maneuvers'],
+    [/\bmanoeuvre\b/gi, 'maneuver'],
+    [/\bsulphur\b/gi, 'sulfur'],
+    [/\bpractising\b/gi, 'practicing'],
+    [/\bpractised\b/gi, 'practiced'],
+    [/\bpractise\b/gi, 'practice'],
+    [/\bageing\b/gi, 'aging'],
+    [/\bhonoured\b/gi, 'honored'],
+    [/\bhonouring\b/gi, 'honoring'],
+    [/\bhonours\b/gi, 'honors'],
+    [/\bhonour\b/gi, 'honor'],
+    [/\bhumour\b/gi, 'humor'],
+    [/\brumour\b/gi, 'rumor'],
+    [/\blabour\b/gi, 'labor'],
+    [/\barmour\b/gi, 'armor'],
+    [/\bflavour\b/gi, 'flavor'],
+    [/\bodour\b/gi, 'odor'],
+    [/\bvigour\b/gi, 'vigor'],
+    [/\bsaviour\b/gi, 'savior'],
+    [/\bharbour\b/gi, 'harbor'],
+    [/\bendeavour\b/gi, 'endeavor'],
+    [/\bsplendour\b/gi, 'splendor'],
+  ];
+  const apply = (prose) => replacements.reduce((value, [pattern, replacement]) => value.replace(pattern, (match) => (
+    match === match.toUpperCase() ? replacement.toUpperCase()
+      : match[0] === match[0].toUpperCase() ? replacement[0].toUpperCase() + replacement.slice(1)
+        : replacement
+  )), prose);
+  let fence = null;
+  let fenceLength = 0;
+  return text.split('\n').map((line) => {
+    const marker = /^\s*(\x60{3,}|~{3,})/.exec(line);
+    if (marker) {
+      const character = marker[1][0];
+      if (fence === null) {
+        fence = character;
+        fenceLength = marker[1].length;
+      } else if (character === fence && marker[1].length >= fenceLength) {
+        fence = null;
+        fenceLength = 0;
+      }
+      return line;
+    }
+    if (fence !== null) return line;
+    return line.split(/(\x60+[^\x60]*?\x60+)/g).map((part, index) => index % 2 ? part : apply(part)).join('');
+  }).join('\n');
+}
 
 /** Text for a markdown table cell: a backslash is escaped first, so the one the pipe gets is not undone. */
 function cell(text) {
@@ -288,7 +445,7 @@ function contents(places, moods) {
       const which = ranked.map((v) => `\`${posix.basename(v.path, '.js')}\` (${v.games.map(title).join(', ')})`).join('<br>');
       lines.push(`| \`${place.replace(/\.js$/, '')}\` | ${which} | ${cell(blurb([...versions.values()].find((v) => v.path === place).files[0]))} |`);
     }
-    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be coloured independently. |');
+    if (kind === 'props') lines.push('| `props/dice` | `DICE` (engine) | Eight standalone dice props: D4 (a numeral at each corner, read at the top vertex), numbered and pip D6, D8, D10, percentile D% (the same ten-sided shape as D10, numbered 00–90 with each numeral pointing toward its nearest tip), D12 and D20. Resin, number/pip ink and the D20\'s highlighted 20 can be colored independently. |');
     if (kind === 'props') lines.push('| `props/bowling-ball` | `createBowlingBall` (engine) | A high-resolution glossy resin bowling ball with three true recessed finger wells and five seamless surface designs (marble, spiral, flame, split and blotch). Colors and designs are changeable at runtime. |');
     lines.push('');
   }
@@ -376,7 +533,7 @@ export async function build(dirs) {
     writeFileSync(join(SRC, path), text);
   }
   writeFileSync(ORIGINS, `${JSON.stringify(origins, null, 2)}\n`);
-  writeFileSync(join(SRC, '..', 'docs', 'library.md'), contents(places, moods));
+  writeFileSync(join(SRC, '..', 'docs', 'library.md'), americanizeMarkdown(contents(places, moods)));
 
   for (const kind of KINDS) {
     const mine = [...places.entries()].filter(([p]) => p.startsWith(`${kind}/`));

@@ -3,8 +3,8 @@ import { mix } from '../models/skins.js';
 
 /**
  * A whetstone: a two-sided sharpening stone, the coarse brown grit under
- * the fine grey, its edges chamfered, its top worn into a shallow dish and
- * dark and wet down the middle with grey slurry where the blade has been,
+ * the fine gray, its edges chamfered, its top worn into a shallow dish and
+ * dark and wet down the middle with gray slurry where the blade has been,
  * a few beads of water standing on it; set in a walnut block with a tray
  * cut for it and rubber feet under. It gives back what the spikes lost.
  * Stands facing +z, about a third of a tile across; the game floats it and
@@ -20,7 +20,7 @@ const grit = (p) => {
   const coarse = p[1] < SPLIT;
   let c = coarse ? mix(COARSE_DARK, COARSE, 0.5 + 0.35 * cloud + 0.7 * (speck - 0.5)) : mix(FINE_DARK, FINE, 0.55 + 0.3 * cloud + 0.55 * (speck - 0.5));
   if (Math.abs(p[1] - SPLIT) < 0.0012) c = mix(c, rgb('#3a2a20'), 0.5);
-  // Wet down the middle of the top, the slurry grey in it.
+  // Wet down the middle of the top, the slurry gray in it.
   const top = p[1] - (SY + SH - 0.006);
   if (top > 0) {
     const wet = Math.max(0, 1 - Math.abs(p[2]) / (SD * 0.7)) * Math.max(0, 1 - Math.abs(p[0] + 0.008) / (SW * 0.85));

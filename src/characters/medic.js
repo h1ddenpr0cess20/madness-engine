@@ -38,7 +38,7 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    // The reflective bands: round the chest and round each upper arm, silver-grey on yellow.
+    // The reflective bands: round the chest and round each upper arm, silver-gray on yellow.
     s.paint((p) => Math.max(Math.abs(p[1] - 0.42) - 0.016, Math.abs(p[0]) - 0.13), '#e8e028', 0.002);
     s.paint((p) => Math.max(Math.abs(p[1] - 0.42) - 0.006, Math.abs(p[0]) - 0.13), '#c8ccd4', 0.001);
     for (const m of [1, -1]) {

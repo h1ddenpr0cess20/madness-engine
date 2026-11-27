@@ -1,9 +1,10 @@
 /**
  * WGSL for the WebGPU backend. The shaders are the files in `wgsl/`; this
- * puts them together. It is the same shading model as `glsl/`, term for term
- * (three.js r186's physically based model; MIT, © 2010-2025 three.js
- * authors). Keep the two in step: the WebGL and WebGPU paths are meant to be
+ * puts them together. It is the same shading model as `glsl/`, term for
+ * term. Keep the two in step: the WebGL and WebGPU paths are meant to be
  * pixel-for-pixel the same picture.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  *
  * WGSL has no preprocessor, so the `#if`s and `#include`s in the files are
  * resolved here (see preprocess.js) against the same defines glsl.js uses.
@@ -19,6 +20,7 @@
 
 import { preprocess } from './preprocess.js';
 
+import antitile from './wgsl/chunks/antitile.wgsl.js';
 import bindings from './wgsl/chunks/bindings.wgsl.js';
 import bump from './wgsl/chunks/bump.wgsl.js';
 import common from './wgsl/chunks/common.wgsl.js';
@@ -50,7 +52,7 @@ export const MAX_POINT_LIGHTS = 8;
 export const MAX_HEMI_LIGHTS = 4;
 
 const CHUNKS = {
-  bindings, bump, common, cube_uv, draw, frame, instancing, iridescence, output,
+  antitile, bindings, bump, common, cube_uv, draw, frame, instancing, iridescence, output,
   physical_lighting, pmrem_vertex, shadow_vertex, shadowmap, transmission,
 };
 
@@ -86,6 +88,15 @@ function standardDefines(key) {
     NUM_POINT_LIGHTS: key.numPoint,
     NUM_HEMI_LIGHTS: key.numHemi,
     NUM_DIR_LIGHT_SHADOWS: key.numDirShadows,
+    USE_ALPHATEST: key.alphaTest > 0,
+    USE_STRANDS: key.strands,
+    USE_ANTITILE: key.antiTile,
+    USE_DETAILMAP: key.detailMap,
+    USE_EMISSIVEMAP: key.emissiveMap,
+    USE_SUBSURFACE: key.subsurface,
+    ALPHA_TEST: key.alphaTest > 0 ? key.alphaTest.toFixed(4) : null,
+    EMISSIVE_SCATTER: key.emissiveScatter > 0 ? key.emissiveScatter.toFixed(3) : null,
+    EMISSIVE_CELLS: key.emissiveCells ? `vec2f(${key.emissiveCells[0].toFixed(1)}, ${key.emissiveCells[1].toFixed(1)})` : null,
     ...(key.envMap ? cubeUVDefines(key.env) : {}),
   };
 }
@@ -104,7 +115,7 @@ export function moduleSource(key, material) {
 
 /** The WGSL types a custom material's uniforms are declared with, in order. */
 export function customFields(material) {
-  return Object.entries(material.uniforms).map(([name, { value }]) => {
+  return Object.entries(material.uniforms).filter(([, { value }]) => !value?.isTexture).map(([name, { value }]) => {
     if (typeof value === 'number') return [name, 'f32'];
     if (value.isColor || value.isVector3) return [name, 'vec3f'];
     if (value.isVector2) return [name, 'vec2f'];

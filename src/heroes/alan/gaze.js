@@ -1,7 +1,7 @@
 /**
  * Gaze as two angles: `yaw` about the vertical, from +z toward +x, and `pitch`
  * up from the horizontal. Offsets are measured from "home" — straight at the
- * viewer — so every behaviour can be written without knowing where the camera
+ * viewer — so every behavior can be written without knowing where the camera
  * has been orbited to.
  */
 
@@ -31,7 +31,7 @@ export function clampOffset(o, limit) {
 /**
  * Where the pointer is, as a gaze offset. The ray through the pointer meets a
  * plane facing the camera a little in front of the eye (`reach` from its
- * centre), and the eye looks at that point — near enough that the pointer at
+ * center), and the eye looks at that point — near enough that the pointer at
  * the edge of the screen turns it well round, far enough that it never looks
  * cross-eyed at the glass.
  *

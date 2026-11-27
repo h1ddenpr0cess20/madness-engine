@@ -15,7 +15,7 @@ const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a
 const blend = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 /**
  * The fighting bull's black: a brown sheen down the spine and over the
- * hump of the neck, grey on the muzzle and round the eyes, duller under
+ * hump of the neck, gray on the muzzle and round the eyes, duller under
  * the belly, the curly poll a shade lighter.
  */
 const COAT = (p, n) => {
@@ -72,7 +72,7 @@ export default quadruped({
       }
       // The ring through the nose.
       s.torus([0, P.S1[1] - Hd.sr * 0.25, P.S1[2] + Hd.sr * 0.55], 0.018, 0.004, { color: '#d8b040', mat: 'gold', bone: 'head', k: 0.001, rot: [0.4, 0, 0] });
-      // The breeder's colours, pinned on the hump: green and white ribbons.
+      // The breeder's colors, pinned on the hump: green and white ribbons.
       for (const [c, dx] of [['#1a8a3a', -0.012], ['#f4f2ec', 0.012]]) s.flake([dx, 0.5, 0.12], [dx * 3, 0.44, 0.06], [0, 0.3, 1], 0.008, 0.01, 0.3, { color: c, mat: 'cloth', bone: 'front', k: 0.002 });
     });
   },

@@ -5,7 +5,7 @@ import { paintSky } from '../textures/skies/skyline.js';
  * Stop 10: New York. The last night of the tour, the big one: out of a
  * yellow cab into Times Square, the billboards stacked up into the sky and
  * the searchlights going; down Broadway between the velvet ropes, the
- * theatres lit, the paparazzi who have followed him round the world and
+ * theaters lit, the paparazzi who have followed him round the world and
  * the hoofers between shows; into the arena's concourse, the hot dogs, the
  * security, the passport left at the box office, a globe in the coat check;
  * through the doors and down the stands, the speaker stacks of the first

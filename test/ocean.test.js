@@ -6,7 +6,7 @@ import { programSources } from '../src/gfx/shaders/glsl.js';
 import { moduleSource } from '../src/gfx/shaders/wgsl.js';
 import { createOcean, waterGrid } from '../src/ocean.js';
 import { COUNT, createSea, SEAS, waveSet } from '../src/ocean/waves.js';
-import { mixSky, SKIES, skyColour, skyLight, sunDirection } from '../src/ocean/sky.js';
+import { mixSky, SKIES, skyColor, skyLight, sunDirection } from '../src/ocean/sky.js';
 
 const TAU = Math.PI * 2;
 const points = (n, spread = 300) => Array.from({ length: n }, (_, i) => [((i * 7919) % 1000) / 1000 * spread - spread / 2, ((i * 104729) % 1000) / 1000 * spread - spread / 2]);
@@ -84,7 +84,7 @@ test('the skies: the sun where it is said to be, and a mix between two skies tha
   for (const sky of Object.values(SKIES)) {
     const light = skyLight(sky);
     assert.ok(Math.abs(Math.hypot(...light.sun) - 1) < 1e-9);
-    assert.ok(skyColour(light, [0, 1, 0]).every((c) => c >= 0 && Number.isFinite(c)));
+    assert.ok(skyColor(light, [0, 1, 0]).every((c) => c >= 0 && Number.isFinite(c)));
   }
   assert.equal(mixSky(SKIES.dawn, SKIES.noon, 0).zenith, SKIES.dawn.zenith);
   assert.equal(mixSky(SKIES.dawn, SKIES.noon, 1).horizon, SKIES.noon.horizon);
@@ -172,7 +172,7 @@ test('on WebGPU a hand-written material\'s uniforms are bound whole, however man
   assert.equal(customWindow(48), 256);
   // The bind group is made with that window, and kept for the next material of the size.
   const made = [];
-  const backend = { device: { createBindGroup: (d) => (made.push(d), { d }) }, arena: {}, customLayout: {} };
+  const backend = { device: { createBindGroup: (d) => (made.push(d), { d }) }, arena: {}, customLayout: {}, dummy2D: { createView: () => ({}) }, linear: {} };
   const group = WebGPUBackend.prototype._customGroup.call(backend, customWindow(size));
   assert.equal(group.d.entries[1].resource.size, customWindow(size));
   assert.equal(WebGPUBackend.prototype._customGroup.call(backend, customWindow(size)), group);

@@ -104,7 +104,7 @@ const canvasTexture = (canvas) => {
  * @param options
  *   - `lens`: { distance, fov } (LENS)
  *   - `view`: where the camera is round the target (views/*; the arcade's by default)
- *   - `sky`: a painted canvas round everything, or a colour (`backdrop`)
+ *   - `sky`: a painted canvas round everything, or a color (`backdrop`)
  *   - `room`: a painted canvas the reflections come from, or null for none
  *   - `lights`: any of LIGHTS' parts to change; `fill: null` for no fill
  *   - `fixtures`: how many real lights a light show (scenery/lightshow) may set at once (0).
@@ -113,6 +113,8 @@ const canvasTexture = (canvas) => {
  *   - `pixelRatio`: the most device pixels a CSS pixel gets (2)
  *   - `ui`: elements shot on the same film as the picture where a film says so (film.js)
  *   - `label`: the game's name, for the console
+ *   - `depth`: the camera's depth range: { ratio, min, most } for the near plane (0.02 of the distance, between
+ *     0.005 and 0.3), { far, reach } for the far plane (400, and `reach` times the distance past it: 0)
  * @returns the stage: { GFX, renderer, scene, camera, view, target, key, keyFrom, hemi, fill,
  *   film, lantern, fixtureLights, shake, look(), render(), setSky(canvas), setRoom(canvas), setMood(mood) }
  */
@@ -130,7 +132,11 @@ export async function createStage(host, {
   ui = [],
   preference = preferredRenderer(),
   label = 'madness-engine',
+  depth = {},
 } = {}) {
+  // The depth range: the near plane a `ratio` of the way to what the camera looks at, kept between `min` and `most`; the
+  // far plane at `far`, or, for a camera that goes far out (a whole city from above), `reach` times its distance past that.
+  const range = { ratio: 0.02, min: 0.005, most: 0.3, far: 400, reach: 0, ...depth };
   const renderer = await createRenderer(preference, { label });
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, pixelRatio));
   renderer.shadowMap.enabled = shadows;
@@ -139,7 +145,7 @@ export async function createStage(host, {
   const film = createFilm(host, { canvas: () => renderer.domElement, ui });
 
   const scene = new GFX.Scene();
-  const camera = new GFX.PerspectiveCamera(lens.fov, 1, 0.3, 400);
+  const camera = new GFX.PerspectiveCamera(lens.fov, 1, Math.min(range.most, 0.3), range.far);
 
   if (renderer.isWebGPU && preference !== 'webgpu') {
     renderer.backend.onLost = () => {
@@ -185,7 +191,7 @@ export async function createStage(host, {
     scene.add(fill, fill.target);
   }
 
-  // Opaque all round: glass refracts whatever is behind it, and over nothing at all it would bend the renderer's stand-in grey.
+  // Opaque all round: glass refracts whatever is behind it, and over nothing at all it would bend the renderer's stand-in gray.
   const backdropMaterial = new GFX.MeshBasicMaterial({ name: 'backdrop', color: new GFX.Color(backdrop), side: GFX.BackSide, depthWrite: false });
   const dome = new GFX.Mesh(new GFX.SphereGeometry(300, 64, 32), backdropMaterial);
   dome.renderOrder = -1;
@@ -196,7 +202,7 @@ export async function createStage(host, {
   };
   scene.add(dome);
 
-  // The fixtures nearest the ball: a light show sets where they are, what colour and how bright.
+  // The fixtures nearest the ball: a light show sets where they are, what color and how bright.
   const fixtureLights = Array.from({ length: fixtures }, () => {
     const light = new GFX.PointLight(0xffffff, 0, 7, 1.1);
     scene.add(light);
@@ -214,10 +220,10 @@ export async function createStage(host, {
     target: new GFX.Vector3(),
     /** How hard the camera is being shaken, in tiles. The game sets it and lets it die away. */
     shake: 0,
-    /** Where the key light comes from (a unit vector towards it, `lights.key.from`): move it to move the sun. */
+    /** Where the key light comes from (a unit vector toward it, `lights.key.from`): move it to move the sun. */
     keyFrom: new GFX.Vector3().copy(rig.key.from),
 
-    /** Paints the sky round everything with `canvas` (or the backdrop colour if null). */
+    /** Paints the sky round everything with `canvas` (or the backdrop color if null). */
     setSky(canvas) {
       const map = canvasTexture(canvas);
       backdropMaterial.map = map;
@@ -313,7 +319,31 @@ export async function createStage(host, {
   fit();
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(host);
 
-  stage.render = () => renderer.render(scene, camera);
+  /**
+   * The near plane follows the camera in: a fiftieth of the way to what it
+   * looks at (`stage.focus`, or `stage.target`), between 5 mm and 30 cm, so
+   * a close look never cuts into a model and a far one keeps its depth
+   * (`depth` sets the ratio and the limits). A 24-bit depth buffer tells
+   * apart surfaces about d² / (near × 2²⁴) apart at a distance d: a near
+   * plane held at 30 cm while the camera backs off hundreds of tiles leaves
+   * surfaces laid a few centimeters apart (a road on the ground, a decal)
+   * flickering through each other, so a game that zooms far out lets it go
+   * out with the camera (`most: Infinity`). With `reach`, the far plane goes
+   * out too, so what the camera backs away from stays in the picture.
+   */
+  const fitNear = () => {
+    const focus = stage.focus ?? stage.target;
+    if (!focus) return;
+    const d = camera.position.distanceTo(focus);
+    const near = Math.min(range.most, Math.max(range.min, d * range.ratio));
+    const far = Math.max(range.far, d * range.reach + range.far);
+    if (Math.abs(near - camera.near) > camera.near * 0.05 || Math.abs(far - camera.far) > camera.far * 0.05) {
+      camera.near = near;
+      camera.far = far;
+      camera.updateProjectionMatrix();
+    }
+  };
+  stage.render = () => { fitNear(); renderer.render(scene, camera); };
 
   /**
    * The game's loop: `update(dt)` once a frame (dt in seconds, never more

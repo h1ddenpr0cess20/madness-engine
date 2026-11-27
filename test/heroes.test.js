@@ -6,12 +6,16 @@ import * as GFX from '../src/gfx/index.js';
 /** The main characters, by name, and what each gives. */
 const HEROES = {
   marble: ['createMarble', 'RADIUS'],
+  'vibey/index': ['createStar', 'createMetalStar', 'METALS'],
+  'slimey/index': ['createSlimeOrb', 'createMetalSlimeOrb', 'createMoltenSlimeOrb', 'createLavaSlimeOrb', 'METALS'],
+  'debater-egg/index': ['createEgg', 'createMetalEgg', 'createGlassEgg', 'createWoodEgg', 'createChocolateEgg', 'createEggBlot', 'EGG_APPEARANCES', 'EGG_VARIETIES', 'METALS', 'WOOD_SPECIES', 'WOOD_FINISHES', 'CHOCOLATES', 'ROLL_REACH'],
   die: ['createDieState', 'stepDie', 'topFace', 'dieModel', 'DIE_RADIUS'],
-  'yarn/ball': ['createBall', 'TILE_METRES'],
+  'yarn/ball': ['createBall', 'TILE_METERS'],
   hamster: ['createPlayer', 'createHamster', 'RADIUS', 'TINTS'],
-  mace: ['createMace', 'createPlayer', 'RADIUS'],
-  morningstar: [],
+  mace: ['createMace', 'createMetalMace', 'createPlayer', 'createMetalPlayer', 'RADIUS'],
+  morningstar: ['createMorningStar', 'createMetalMorningStar', 'METALS'],
   rock: ['createRock', 'createBoulder'],
+  'rock-granite': ['createGraniteRock', 'createGraniteBoulder', 'GRANITE_DETAIL', 'GRANITES', 'GRANITE_CHOICES'],
 };
 
 for (const [file, exports] of Object.entries(HEROES)) {
@@ -45,4 +49,465 @@ test('the town games share one prop kit, and it puts shapes into one geometry pe
   const { linearRGB } = await import('../src/color.js');
   assert.deepEqual(linearRGB('#000000'), [0, 0, 0]);
   assert.ok(Math.abs(linearRGB('#ffffff')[0] - 1) < 1e-9);
+});
+
+
+test('metal Morningstar keeps the original shape and snapping with the coin metal finishes', async () => {
+  const { createMorningStar, createMetalMorningStar, METALS } = await import('../src/heroes/morningstar.js');
+  const original = createMorningStar(GFX);
+  const metal = createMetalMorningStar(GFX, { metal: 'copper' });
+
+  assert.equal(metal.core.geometry.attributes.position.count, original.core.geometry.attributes.position.count);
+  assert.equal(metal.mesh.geometry.attributes.position.count, original.mesh.geometry.attributes.position.count);
+  assert.equal(metal.group.children.length, original.group.children.length);
+  assert.equal(metal.material.metalness, 1);
+  assert.equal(metal.spikeMaterial.metalness, 1);
+  assert.equal(metal.material.roughness, METALS.copper.roughness);
+  assert.equal(metal.spikeMaterial.roughness, METALS.copper.roughness);
+  assert.equal(metal.snap(7), true);
+  assert.equal(metal.snapped, 7);
+  metal.setMetal('gold');
+  assert.equal(metal.metal, 'gold');
+  assert.equal(metal.material.roughness, METALS.gold.roughness);
+  assert.equal(metal.spikeMaterial.roughness, METALS.gold.roughness);
+  assert.throws(() => metal.setMetal('unobtainium'), /no metal/);
+});
+
+test('the metal player shares the original mace scale, roll transform, and damage behavior', async () => {
+  const { createMace, createMetalMace, RADIUS } = await import('../src/heroes/mace.js');
+  const original = createMace(GFX, { radius: RADIUS });
+  const metal = createMetalMace(GFX, { radius: RADIUS, metal: 'silver' });
+  assert.deepEqual(metal.mesh.scale.toArray(), original.mesh.scale.toArray());
+  assert.equal(metal.metal, 'silver');
+  assert.equal(metal.hurtTo(0.5), true);
+  metal.update(1 / 60, { q: [0, 0, 0, 1], position: [2, 3, 4] });
+  assert.deepEqual(metal.group.position.toArray(), [2, 3, 4]);
+  metal.setMetal('chrome');
+  assert.equal(metal.metal, 'chrome');
+});
+
+
+test('metal Slimey keeps the orb geometry and controls while switching shared metal finishes', async () => {
+  const { createSlimeOrb, createMetalSlimeOrb, METALS } = await import('../src/heroes/slimey/index.js');
+  const originalStage = { setObject(object) { this.object = object; } };
+  const metalStage = { setObject(object) { this.object = object; } };
+  const original = createSlimeOrb({ stage: originalStage, GFX });
+  const metal = createMetalSlimeOrb({ stage: metalStage, GFX, metal: 'silver' });
+  const originalShell = originalStage.object.children.find((child) => child.name === 'shell');
+  const metalShell = metalStage.object.children.find((child) => child.name === 'shell');
+
+  assert.equal(metalShell.geometry.attributes.position.count, originalShell.geometry.attributes.position.count);
+  assert.equal(metal.metal, 'silver');
+  assert.equal(metalShell.material.metalness, 1);
+  assert.equal(metalShell.material.roughness, METALS.silver.roughness);
+  assert.equal(metalShell.material.transmission, 0);
+  const metalGlow = metalStage.object.children.find((child) => child.name === 'glow');
+  const metalCore = metalStage.object.children.find((child) => child.name === 'core');
+  const metalBubbles = metalStage.object.children.filter((child) => child.name.startsWith('bubble_'));
+  assert.equal(metalGlow.visible, false, 'the additive slime rim is hidden');
+  assert.equal(metalCore.material.emissiveIntensity, 0, 'the core does not emit non-metal light');
+  assert.ok(metalBubbles.length > 0);
+  for (const bubble of metalBubbles) {
+    assert.equal(bubble.material.metalness, 1);
+    assert.equal(bubble.material.transmission, 0);
+    assert.equal(bubble.material.opacity, 1);
+  }
+  metal.setMetal('copper');
+  assert.equal(metal.metal, 'copper');
+  assert.equal(metalShell.material.roughness, METALS.copper.roughness);
+  assert.equal(metalShell.material.color.r, new GFX.Color(METALS.copper.color).r);
+  assert.throws(() => metal.setMetal('unobtainium'), /no metal/);
+
+  metal.setState('speaking');
+  metal.setLevel(0.7);
+  metal.pulse(0.4);
+  assert.equal(metal.state, 'speaking');
+  assert.equal(typeof original.setState, 'function');
+  assert.equal(typeof metal.pulse, 'function');
+});
+
+
+test('molten Slimey keeps the orb geometry and controls in hot orange glass, with no mist, core or bubbles', async () => {
+  const { createSlimeOrb, createMoltenSlimeOrb } = await import('../src/heroes/slimey/index.js');
+  const originalStage = { setObject(object) { this.object = object; } };
+  const moltenStage = { setObject(object) { this.object = object; } };
+  createSlimeOrb({ stage: originalStage, GFX });
+  const molten = createMoltenSlimeOrb({ stage: moltenStage, GFX });
+  const shell = moltenStage.object.children.find((child) => child.name === 'shell');
+  const originalShell = originalStage.object.children.find((child) => child.name === 'shell');
+
+  assert.equal(shell.geometry.attributes.position.count, originalShell.geometry.attributes.position.count);
+  assert.equal(shell.material.metalness, 0, 'it is glass, not metal');
+  assert.ok(shell.material.transmission > 0.4, 'the shell stays transmissive');
+  const { r, g, b } = shell.material.emissive;
+  assert.ok(r > g && g > b, 'the glass glows orange-red, not green');
+  assert.equal(moltenStage.object.children.some((child) => child.name === 'molten_swirl'), false, 'no mist inside');
+  assert.equal(moltenStage.object.children.some((child) => child.name.startsWith('bubble_')), false, 'no bubbles');
+  assert.equal(moltenStage.object.children.some((child) => child.name === 'core'), false, 'no core');
+
+  molten.setState('speaking');
+  molten.setLevel(0.7);
+  molten.pulse(0.4);
+  assert.equal(molten.state, 'speaking');
+  shell.onBeforeRender();
+  assert.ok(shell.material.emissive.r > shell.material.emissive.b, 'it stays molten while it moves');
+});
+
+
+test('Slimey deformation keeps the duplicated longitude seam position and normal continuous', async () => {
+  const { createDeformer } = await import('../src/heroes/slimey/deform.js');
+  const geometry = new GFX.SphereGeometry(1, 24, 16);
+  const base = geometry.attributes.position.array.slice();
+  const lobes = [
+    { dir: new GFX.Vector3(1, 2, 3).normalize(), amp: 0.12, freq: 1.3, speed: 0.7, phase: 0.4 },
+    { dir: new GFX.Vector3(-2, 1, 0.5).normalize(), amp: 0.08, freq: 1.8, speed: 0.4, phase: 1.2 },
+  ];
+
+  createDeformer(GFX)(geometry, base, lobes, {
+    wobble: 1.4, phase: 2.1, scale: 1.03, ampScale: 1, freqScale: 2.35, phaseScale: 2.2,
+  });
+
+  const { uv, position, normal } = geometry.attributes;
+  const starts = new Map();
+  const ends = new Map();
+  for (let i = 0; i < uv.count; i++) {
+    const u = uv.getX(i), row = Math.round(uv.getY(i) * 1e6);
+    if (u <= 1e-6) starts.set(row, i);
+    else if (u >= 1 - 1e-6) ends.set(row, i);
+  }
+
+  assert.ok(starts.size > 0, 'sphere has duplicated wrap vertices');
+  for (const pole of [1, 0]) {
+    const indices = Array.from({ length: uv.count }, (_, i) => i)
+      .filter((i) => Math.abs(uv.getY(i) - pole) < 1e-6);
+    assert.ok(indices.length > 1, 'sphere pole has duplicated UV vertices');
+    for (const attr of [position, normal]) {
+      const first = [attr.getX(indices[0]), attr.getY(indices[0]), attr.getZ(indices[0])];
+      for (const index of indices.slice(1)) {
+        assert.ok(Math.abs(attr.getX(index) - first[0]) < 1e-7);
+        assert.ok(Math.abs(attr.getY(index) - first[1]) < 1e-7);
+        assert.ok(Math.abs(attr.getZ(index) - first[2]) < 1e-7);
+      }
+    }
+  }
+  for (const [row, a] of starts) {
+    const b = ends.get(row);
+    if (b === undefined) continue;
+    for (const attr of [position, normal]) {
+      assert.ok(Math.abs(attr.getX(a) - attr.getX(b)) < 1e-7);
+      assert.ok(Math.abs(attr.getY(a) - attr.getY(b)) < 1e-7);
+      assert.ok(Math.abs(attr.getZ(a) - attr.getZ(b)) < 1e-7);
+    }
+  }
+});
+
+
+test('metal and clear-glass Egg keep Marc geometry and behavior with optional white-yellow mist', async () => {
+  const { createEgg, createMetalEgg, createGlassEgg, METALS, ROLL_REACH } = await import('../src/heroes/debater-egg/index.js');
+  const original = createEgg({ GFX });
+  const metal = createMetalEgg({ GFX, metal: 'silver' });
+  const clear = createGlassEgg({ GFX });
+  const misty = createGlassEgg({ GFX, mist: true });
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+
+  const originalShell = shellOf(original);
+  const metalShell = shellOf(metal);
+  const glassShell = shellOf(clear);
+  assert.deepEqual(metalShell.geometry.attributes.position.array, originalShell.geometry.attributes.position.array);
+  assert.deepEqual(glassShell.geometry.attributes.position.array, originalShell.geometry.attributes.position.array);
+  assert.equal(metalShell.material.metalness, 1);
+  assert.equal(metalShell.material.roughness, METALS.silver.roughness);
+  assert.equal(metal.metal, 'silver');
+  assert.equal(metal.reach, ROLL_REACH);
+  metal.setMetal('copper');
+  assert.equal(metal.metal, 'copper');
+  assert.equal(metalShell.material.roughness, METALS.copper.roughness);
+  assert.throws(() => metal.setMetal('unobtainium'), /no metal/);
+
+  assert.equal(glassShell.material.transmission, 1);
+  assert.equal(glassShell.material.metalness, 0);
+  assert.equal(glassShell.material.roughness, 0.02);
+  assert.equal(clear.mist.visible, false);
+  clear.setMist(true);
+  assert.equal(clear.mist.visible, true);
+  clear.setMist(false);
+  assert.equal(clear.mist.visible, false);
+
+  assert.equal(misty.mist.visible, true);
+  assert.equal(misty.mist.material.uniforms.uDuo.value, 1);
+  const white = misty.mist.material.uniforms.uDuoB.value;
+  const center = misty.mist.material.uniforms.uDuoC.value;
+  const uniforms = misty.mist.material.uniforms;
+  assert.ok(white.x > 0.95 && white.y > 0.95 && white.z > 0.9);
+  assert.ok(Math.abs(center.x - white.x) < 1e-7 && Math.abs(center.y - white.y) < 1e-7 && Math.abs(center.z - white.z) < 1e-7,
+    'the mist color is white away from its radial center, with no yellow side band');
+  assert.equal(uniforms.uCore.value, 0.9, 'the yellow accent comes from the radial center glow');
+  assert.ok(uniforms.uHue.value > 0.3 && uniforms.uHue.value < 0.5, 'the radial core hue is warm yellow');
+  assert.equal(misty.mist.renderOrder, 1);
+  const inner = misty.mist.geometry.attributes.position;
+  const outer = glassShell.geometry.attributes.position;
+  const maxY = (attribute) => {
+    let max = -Infinity;
+    for (let i = 0; i < attribute.count; i++) max = Math.max(max, attribute.getY(i));
+    return max;
+  };
+  assert.ok(maxY(inner) / maxY(outer) > 0.98, 'mist fills the egg almost to the inner shell');
+});
+
+
+test('wooden Egg is the same egg in any wood and finish, with the grain turned to run tip to tip', async () => {
+  const { createEgg, createWoodEgg, WOOD_SPECIES, WOOD_FINISHES, ROLL_REACH } = await import('../src/heroes/debater-egg/index.js');
+  const original = createEgg({ GFX });
+  const wood = createWoodEgg({ GFX, species: 'oak', finish: 'raw' });
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+  const shell = shellOf(wood);
+  assert.deepEqual(shell.geometry.attributes.position.array, shellOf(original).geometry.attributes.position.array);
+  assert.equal(shell.material.metalness, 0);
+  assert.equal(wood.species, 'oak');
+  assert.equal(wood.finish, 'raw');
+  assert.equal(shell.material.clearcoat, 0);
+  assert.equal(wood.reach, ROLL_REACH);
+
+  // u now runs from one tip to the other (the sphere's v), so the grain, which runs along u, follows the egg's length.
+  const uv = shell.geometry.attributes.uv, y = shell.geometry.attributes.position;
+  let top = 0, bottom = 0;
+  for (let i = 0; i < uv.count; i++) {
+    if (y.getY(i) > y.getY(top)) top = i;
+    if (y.getY(i) < y.getY(bottom)) bottom = i;
+  }
+  assert.ok(Math.abs(uv.getX(top) - uv.getX(bottom)) > 0.98, 'the tips are the ends of u');
+
+  wood.setWood('maple');
+  assert.equal(wood.species, 'maple');
+  assert.equal(wood.finish, 'raw');
+  wood.setWood(undefined, 'lacquered');
+  assert.equal(wood.species, 'maple');
+  assert.equal(shell.material.clearcoat, 1);
+  for (const species of Object.keys(WOOD_SPECIES)) for (const finish of WOOD_FINISHES) wood.setWood(species, finish);
+  assert.throws(() => wood.setWood('unobtainium'), /no wood/);
+  assert.throws(() => wood.setWood('oak', 'varnished'), /no wood finish/);
+  assert.throws(() => createWoodEgg({ GFX, species: 'plastic' }), /no wood/);
+
+  const far = createWoodEgg({ GFX, reach: 0.42 });
+  assert.equal(far.reach, 0.42);
+});
+
+test('chocolate Egg is the same egg in milk, dark or white, glossy under a clearcoat', async () => {
+  const { createEgg, createChocolateEgg, CHOCOLATES } = await import('../src/heroes/debater-egg/index.js');
+  const original = createEgg({ GFX });
+  const choc = createChocolateEgg({ GFX });
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+  const shell = shellOf(choc);
+  assert.deepEqual(shell.geometry.attributes.position.array, shellOf(original).geometry.attributes.position.array);
+  assert.equal(choc.chocolate, 'milk');
+  assert.equal(shell.material.metalness, 0);
+  assert.ok(shell.material.clearcoat > 0.5);
+  for (const kind of Object.keys(CHOCOLATES)) {
+    choc.setChocolate(kind);
+    assert.equal(choc.chocolate, kind);
+  }
+  choc.setChocolate('dark');
+  assert.ok(shell.material.clearcoat > CHOCOLATES.white.gloss, 'dark is glossier than white');
+  assert.throws(() => choc.setChocolate('carob'), /no chocolate/);
+  assert.equal(choc.chocolate, 'dark', 'a refusal leaves it as it was');
+  assert.throws(() => createChocolateEgg({ GFX, chocolate: 'carob' }), /no chocolate/);
+});
+
+test('createEgg makes any appearance of the Egg from its options', async () => {
+  const { createEgg, EGG_APPEARANCES } = await import('../src/heroes/debater-egg/index.js');
+  assert.deepEqual([...EGG_APPEARANCES], ['original', 'metal', 'glass', 'wood', 'chocolate']);
+  const metal = createEgg({ GFX, appearance: 'metal', metal: 'gold' });
+  assert.equal(metal.metal, 'gold');
+  assert.equal(createEgg({ GFX, appearance: 'wood', species: 'teak' }).species, 'teak');
+  assert.equal(createEgg({ GFX, appearance: 'chocolate', chocolate: 'white' }).chocolate, 'white');
+  assert.equal(createEgg({ GFX, appearance: 'glass', mist: true }).mist.visible, true);
+  assert.throws(() => createEgg({ GFX, appearance: 'jelly' }), /unknown egg appearance/);
+});
+
+
+test('metal Egg has continuous UV-seam and pole normals for unbroken reflections', async () => {
+  const { createMetalEgg } = await import('../src/heroes/debater-egg/index.js');
+  const metal = createMetalEgg({ GFX, metal: 'chrome' });
+  const shell = metal.shell.geometry;
+  const { uv, position, normal } = shell.attributes;
+  const starts = new Map();
+  const ends = new Map();
+  for (let i = 0; i < uv.count; i++) {
+    const u = uv.getX(i), v = uv.getY(i), row = Math.round(v * 1e6);
+    if (u <= 1e-6) starts.set(row, i);
+    else if (u >= 1 - 1e-6) ends.set(row, i);
+  }
+  assert.ok(starts.size > 0);
+  for (const [row, a] of starts) {
+    const b = ends.get(row);
+    if (b === undefined) continue;
+    for (const attr of [position, normal]) {
+      assert.ok(Math.abs(attr.getX(a) - attr.getX(b)) < 1e-7, `row ${row} x matches`);
+      assert.ok(Math.abs(attr.getY(a) - attr.getY(b)) < 1e-7, `row ${row} y matches`);
+      assert.ok(Math.abs(attr.getZ(a) - attr.getZ(b)) < 1e-7, `row ${row} z matches`);
+    }
+  }
+  for (const pole of [0, 1]) {
+    const indices = Array.from({ length: uv.count }, (_, i) => i).filter((i) => Math.abs(uv.getY(i) - pole) < 1e-6);
+    assert.ok(indices.length > 1);
+    for (const attr of [position, normal]) {
+      const first = [attr.getX(indices[0]), attr.getY(indices[0]), attr.getZ(indices[0])];
+      for (const i of indices.slice(1)) {
+        assert.ok(Math.abs(attr.getX(i) - first[0]) < 1e-7);
+        assert.ok(Math.abs(attr.getY(i) - first[1]) < 1e-7);
+        assert.ok(Math.abs(attr.getZ(i) - first[2]) < 1e-7);
+      }
+    }
+  }
+});
+
+
+test('lava Slimey reuses the deforming orb while replacing every slime layer with a moving lava surface', async () => {
+  const { createSlimeOrb, createLavaSlimeOrb } = await import('../src/heroes/slimey/index.js');
+  const originalStage = { setObject(object) { this.object = object; } };
+  const lavaStage = { setObject(object) { this.object = object; } };
+  createSlimeOrb({ stage: originalStage, GFX });
+  const lava = createLavaSlimeOrb({ stage: lavaStage, GFX });
+
+  const originalShell = originalStage.object.children.find((child) => child.name === 'shell');
+  const lavaShell = lavaStage.object.children.find((child) => child.name === 'shell');
+  const core = lavaStage.object.children.find((child) => child.name === 'core');
+  const glow = lavaStage.object.children.find((child) => child.name === 'glow');
+  const bubbles = lavaStage.object.children.filter((child) => child.name.startsWith('bubble_'));
+
+  assert.equal(lava.appearance, 'lava');
+  assert.equal(lavaShell.geometry.attributes.position.count, originalShell.geometry.attributes.position.count);
+  assert.equal(lavaShell.material, lava.lavaMaterial);
+  assert.equal(lavaShell.material.name, 'lava-basalt');
+  assert.equal(lavaShell.material.mapping, 'local');
+  assert.equal(lavaShell.material.textures.width, 1024);
+  assert.equal(lavaShell.material.textures.height, 512);
+  assert.equal(lavaShell.material.hotMaterial.type, 'ShaderMaterial');
+  assert.equal(lavaShell.material.hotMaterial.uniforms.uTime.value, 0);
+  assert.equal(core.visible, false, 'no green slime core remains');
+  assert.equal(glow.visible, false, 'no slime rim glow remains');
+  assert.ok(bubbles.every((bubble) => !bubble.visible), 'no translucent slime bubbles remain');
+
+  lava.setState('speaking');
+  lava.setLevel(0.75);
+  lava.pulse(0.4);
+  assert.equal(lava.state, 'speaking');
+  assert.equal(typeof lava.setState, 'function');
+  assert.throws(() => createSlimeOrb({ stage: lavaStage, GFX, metal: 'steel', lava: true }), /both lava and metal/);
+});
+
+test('environmentFrom gives nothing without a renderer or a painted room, which is how it is under node', async () => {
+  const { environmentFrom, studioEnvironment } = await import('../src/props/metalglobe.js');
+  assert.equal(environmentFrom(GFX, null, {}), null);
+  assert.equal(environmentFrom(GFX, {}, null), null);
+  assert.equal(studioEnvironment(GFX, {}), null);
+});
+
+test('the Egg keeps its blot under it, and thins it as it lifts', async () => {
+  const { createEggBlot, createGlassEgg } = await import('../src/heroes/debater-egg/index.js');
+  const blot = createEggBlot(GFX);
+  assert.equal(blot.castShadow, false);
+  assert.equal(blot.receiveShadow, false);
+  assert.equal(blot.material.transparent, true);
+  assert.equal(blot.material.depthWrite, false);
+  // It lies flat, facing up.
+  const normal = blot.geometry.attributes.normal;
+  assert.ok(normal.getY(0) > 0.99);
+
+  const egg = createGlassEgg({ GFX, shadow: blot });
+  egg.group.position.set(0.3, 0, -0.2);
+  egg.shell.onBeforeRender();
+  // The Egg moves its group about itself: the blot follows it and keeps its opacity near the resting 0.34.
+  assert.ok(Math.abs(blot.position.x - egg.group.position.x) < 1e-9);
+  assert.ok(Math.abs(blot.position.z - egg.group.position.z) < 1e-9);
+  assert.ok(blot.material.opacity > 0.2 && blot.material.opacity <= 0.34);
+  assert.ok(blot.scale.x > 0.5 && blot.scale.x <= 1);
+});
+
+test('the original Egg comes speckled, plain white or plain brown, in the same shape', async () => {
+  const { createEgg, EGG_VARIETIES } = await import('../src/heroes/debater-egg/index.js');
+  assert.deepEqual(Object.keys(EGG_VARIETIES), ['speckled', 'white', 'brown']);
+  const shellOf = (made) => made.group.children[0].children[0].children.find((child) => child.name === 'shell');
+  const speckled = createEgg({ GFX });
+  assert.equal(speckled.variety, 'speckled');
+  for (const variety of ['white', 'brown']) {
+    const plain = createEgg({ GFX, variety });
+    assert.equal(plain.variety, variety);
+    assert.equal(shellOf(plain).material.map, null, 'plain, with no speckles');
+    assert.equal(shellOf(plain).material.bumpMap, null);
+    assert.deepEqual(shellOf(plain).geometry.attributes.position.array, shellOf(speckled).geometry.attributes.position.array);
+  }
+  const brown = shellOf(createEgg({ GFX, variety: 'brown' })).material.color;
+  const white = shellOf(createEgg({ GFX, variety: 'white' })).material.color;
+  assert.ok(white.r > brown.r && white.g > brown.g && white.b > brown.b, 'white is the lighter');
+  assert.ok(brown.r > brown.b, 'brown is warm');
+
+  const egg = createEgg({ GFX, variety: 'white' });
+  egg.setVariety('brown');
+  assert.equal(egg.variety, 'brown');
+  egg.setVariety('speckled');
+  assert.equal(egg.variety, 'speckled');
+  assert.throws(() => egg.setVariety('green'), /no egg variety/);
+  assert.equal(egg.variety, 'speckled', 'a refusal leaves it as it was');
+  assert.throws(() => createEgg({ GFX, variety: 'green' }), /no egg variety/);
+  assert.equal(createEgg({ GFX, appearance: 'metal' }).variety, undefined, 'only the original has one');
+});
+
+test('the tile kitchen is a marble counter with its top on y = 0 and a green tile wall behind it, with a brass rail', async () => {
+  const { createTileKitchen } = await import('../src/props/tile-kitchen.js');
+  const kitchen = createTileKitchen(GFX, { width: 40, depth: 20, height: 30, railHeight: 3 });
+  const box = new GFX.Box3().setFromObject(kitchen.counter);
+  assert.ok(Math.abs(box.max.y) < 1e-6, 'the counter top is the origin');
+  assert.ok(box.min.z >= -1e-6 && box.max.z > 19.9, 'it comes out from the wall');
+  const wall = new GFX.Box3().setFromObject(kitchen.wall);
+  assert.ok(Math.abs(wall.max.z) < 1e-6, 'the wall stands at z = 0');
+  assert.ok(wall.min.y > -1e-6 && wall.max.y > 29.9, 'rising from the counter');
+  assert.equal(kitchen.rail.position.y, 3);
+  assert.ok(kitchen.group.getObjectByName('wall-brass').children.filter((c) => c.name === 'wall-standoff').length >= 3);
+  // Without a canvas the materials are plain colors, not broken.
+  assert.equal(kitchen.counter.material.map, null);
+  assert.equal(kitchen.wall.material.map, null);
+});
+
+test('a planted Egg keeps its foot where it stands as it squashes, and none squashes into a ball', async () => {
+  const { createEgg } = await import('../src/heroes/debater-egg/index.js');
+  /** Where the shell's lowest point is in the body's frame, then in the Egg's: the body's own place and squash, and not a box round a tilted egg, whose corners dip lower than it does. */
+  const low = (made) => {
+    const y = made.shell.geometry.attributes.position;
+    let min = Infinity;
+    for (let i = 0; i < y.count; i++) min = Math.min(min, y.getY(i));
+    return min;
+  };
+  const foot = (made) => {
+    const body = made.group.getObjectByName('body');
+    return body.position.y + low(made) * body.scale.y;
+  };
+  /** The Egg moves with the time, so frames are given real time to move in. */
+  const drive = async (eggs, frames, hit) => {
+    for (const made of eggs) { made.setState('speaking'); made.setLevel(1); }
+    for (let i = 0; i < frames; i++) {
+      for (const made of eggs) { if (hit) made.pulse(1); made.shell.onBeforeRender(); }
+      await new Promise((resolve) => setTimeout(resolve, 12));
+    }
+  };
+  const bodyOf = (made) => made.group.getObjectByName('body');
+
+  const loose = createEgg({ GFX });
+  const planted = createEgg({ GFX, planted: true });
+  const rest = foot(planted);
+  await drive([loose, planted], 45, true);
+  assert.ok(foot(loose) > rest + 0.05, `unplanted, the foot lifts off (${foot(loose) - rest})`);
+  assert.ok(Math.abs(foot(planted) - rest) < 1e-6, `planted, the foot is where it was (${foot(planted) - rest})`);
+
+  // Whatever is thrown at it, the body is never flattened past the limit.
+  assert.ok(bodyOf(loose).scale.y >= 0.84 - 1e-9, `squashed to ${bodyOf(loose).scale.y}`);
+  assert.ok(bodyOf(loose).scale.x <= 1.08 + 1e-9);
+
+  // A gain of half squashes half as far.
+  const gentle = createEgg({ GFX, squashGain: 0.5 });
+  const full = createEgg({ GFX });
+  await drive([gentle, full], 20, false);
+  const flat = (made) => 1 - bodyOf(made).scale.y;
+  assert.ok(flat(full) > 0.02, 'it squashes at all');
+  assert.ok(flat(gentle) < flat(full) * 0.75, `a gentler squash (${flat(gentle)} against ${flat(full)})`);
 });

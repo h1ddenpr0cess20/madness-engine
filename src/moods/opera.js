@@ -29,7 +29,7 @@ const mood = {
   room: { colors: ['#ffd890', '#ff8a5a', '#ffc84a'], ceiling: '#3a1620' },
   film: null,
   weather: null,
-  music: { band: 'music/band.rocknroller', theme: 'theatre', tempo: 88 },
+  music: { band: 'music/band.rocknroller', theme: 'theater', tempo: 88 },
   palette: {
     tiles: ['#9a3040', '#842838', '#b08a4a', '#7a2a3a'],
     walls: ['#8a3040', '#722838', '#a67a44', '#642234'],
@@ -42,7 +42,7 @@ const mood = {
     vary: 0.05,
   },
   look: {
-    theme: 'theatre',
+    theme: 'theater',
     floor: 'carpet',
     wall: 'damask',
     lamp: 'bulb',

@@ -4,7 +4,7 @@
  * pushed about by a few lobes of waves, bubbles drifting through it, a
  * bloom round its rim — but with no glowing core in it, sat on the floor as
  * a dome rather than floating, with a pair of eyes looking out of it, and
- * each slime one colour from the orb's palette instead of drifting through
+ * each slime one color from the orb's palette instead of drifting through
  * all of them.
  *
  * `createSlime` gives { group, pose(state) }: `state.clip` is idle, walk,
@@ -80,7 +80,7 @@ function deform(attribute, base, list, { wobble, phase, ampScale, freqScale, pha
 }
 
 /**
- * A slime `size` tiles across (its radius about half that), coloured from
+ * A slime `size` tiles across (its radius about half that), colored from
  * the palette by `hue` (0–5, wrapping). `detail` picks the shell's grid:
  * 1 for close up, lower on the board.
  */
@@ -206,7 +206,7 @@ export function createSlime(GFX, { size = 0.85, hue = 0, detail = 1 } = {}) {
       eyes.scale.set(1, Math.min(1.1, sy / 0.72), 1);
       const blink = Math.sin(T * 0.7) > 0.985 ? 0.15 : 1;
       for (const e of eyes.children) e.scale.y = clip === 'ko' ? 0.15 : blink;
-      // Its colour: near its own, drifting a little.
+      // Its color: near its own, drifting a little.
       colorAt(own + Math.sin(T * 0.13) * 0.35, tint);
       shellMaterial.color.copy(tint);
       if (!glass) shellMaterial.emissive.copy(tint);

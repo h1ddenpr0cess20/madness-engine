@@ -1,9 +1,6 @@
-The renderer in this folder is written for this project, but the scene API,
-the order it does things in, and the shading maths (physically based materials,
-image-based lighting, shadows, transmission) follow three.js r186 closely, and
-some of it — the GGX / DFG approximations, the PMREM sampling, the PCF
-filtering, the geometry generators — is ported from it. That code is used under
-three.js's licence:
+This project does not depend on the three.js package. Portions of the
+custom renderer in this folder are adapted from three.js and are covered by
+the MIT license below:
 
 The MIT License
 

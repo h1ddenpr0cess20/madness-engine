@@ -67,7 +67,7 @@ export function panel(m, mat, f, u0, v0, u1, v1, off, col, o) {
 
 /**
  * How far from its wall each layer of a wall's dressing stands. Every layer is
- * a few millimetres past the one under it, so no two faces share a plane: faces
+ * a few millimeters past the one under it, so no two faces share a plane: faces
  * that do fight for the pixel, and flicker as the camera moves.
  */
 export const LAYER = Object.freeze({ glass: 0.006, glow: 0.011, frame: 0.016, shutter: 0.034 });
@@ -136,7 +136,7 @@ export function drawTimber() {
 
 /**
  * Half-timbering on a face: posts at `cols` along it, rails at the given
- * heights, and braces in the end panels of each storey, rising toward the
+ * heights, and braces in the end panels of each story, rising toward the
  * middle of the wall, the same on both sides. The beams stand a hair proud, and
  * they are cut to meet square, the posts and braces stopping at the rails and
  * the posts, because two beams that overlap with their faces in one plane flicker
@@ -153,7 +153,7 @@ function drawHalfTimber(m, f, { cols, rails, brace, thick, col, skip, capped }) 
   const hs = [...(rails ?? [0, f.h])];
   // A rail right at the eaves would poke through the roof: keep it just under.
   if (capped) hs[hs.length - 1] -= 0.045;
-  // A rail on the ground would sink into the stone base it stands on, and one at the top of a storey into the storey above, whose own rail would then lie in its plane: each is kept wholly within the wall.
+  // A rail on the ground would sink into the stone base it stands on, and one at the top of a story into the story above, whose own rail would then lie in its plane: each is kept wholly within the wall.
   for (let i = 0; i < hs.length; i++) hs[i] = Math.min(Math.max(hs[i], r), f.h - r);
   const off = 0.01;
   const beam = (a, b) => m.beam('trim', at(f, a[0], a[1], off), at(f, b[0], b[1], off), thick, col, { uvScale: 2 });
@@ -303,7 +303,7 @@ export function sign(m, f, u, v, col = '#c9a227') {
   m.beam('metal', at(f, u, v - 0.08, 0), at(f, u, v, 0.12), 0.012, iron);
   m.box('metal', ...bounds(f, u - 0.03, u + 0.03, v - 0.1, v + 0.02, 0, 0.012), iron, { skip: [] });
   for (const o of [0.1, 0.24]) m.beam('metal', at(f, u, v, o), at(f, u, v - 0.05, o), 0.006, iron);
-  // The board, its long side out from the wall; on each face a panel of another colour.
+  // The board, its long side out from the wall; on each face a panel of another color.
   const box = (o0, o1, v0, v1, half, c) => {
     const lo = at(f, u, v0, o0), hi = at(f, u, v1, o1);
     const s = [Math.abs(f.U[0]) * half, Math.abs(f.U[1]) * half, Math.abs(f.U[2]) * half];

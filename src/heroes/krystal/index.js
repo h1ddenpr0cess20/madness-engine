@@ -2,7 +2,7 @@ import { buildEnvironment, candlelight } from './environment.js';
 import { createBackdrop, createBall, createTable, FOOT, RADIUS } from './model.js';
 import { ENERGY_GAIN, MOODS } from './moods.js';
 import { approach } from './motion.js';
-import { paletteColour } from './vision.js';
+import { paletteColor } from './vision.js';
 
 /**
  * How far the view may be zoomed. In, to this many radii from the middle of
@@ -61,7 +61,7 @@ function approachHue(value, target, rate, dt) {
  * stars. She does not move. The visions inside her do — the conversational
  * state (`setState`) and the level of whoever is talking (`setLevel`, `pulse`)
  * set how fast the mist swirls, how hard it twists, how bright it burns and
- * which colours it runs to.
+ * which colors it runs to.
  */
 export function createKrystal({ stage, GFX, random = Math.random, sky = 4096 }) {
   const R = RADIUS;
@@ -128,7 +128,7 @@ export function createKrystal({ stage, GFX, random = Math.random, sky = 4096 }) 
     flow += dt * (m.speed + energy * ENERGY_GAIN.speed + flare * 1.2 + stir * 2.5);
     const glow = m.glow + energy * ENERGY_GAIN.glow + flare;
     const core = m.core + energy * ENERGY_GAIN.core + flare * 0.8;
-    // The palette breathes a little on its own, so even an idle ball is never one colour for long.
+    // The palette breathes a little on its own, so even an idle ball is never one color for long.
     const hue = m.hue + Math.sin(t * 0.11) * 0.06 + stir * 0.3;
 
     uniforms.uFlow.value = flow;
@@ -139,9 +139,11 @@ export function createKrystal({ stage, GFX, random = Math.random, sky = 4096 }) 
     uniforms.uHue.value = hue;
     vision.updateWorldMatrix?.(true, false);
     uniforms.uCenter.value.setFromMatrixPosition(vision.matrixWorld);
+    // Marched in the world: its sphere as big as the ball is drawn, however it has been scaled.
+    if (!uniforms.uLocal?.value) uniforms.uShape.value.setFromMatrixScale(vision.matrixWorld);
 
-    // What the visions throw on the brass and the cloth: the colour at the heart of them.
-    const [r, g, b] = paletteColour(hue + 0.5);
+    // What the visions throw on the brass and the cloth: the color at the heart of them.
+    const [r, g, b] = paletteColor(hue + 0.5);
     if (lamp) {
       lamp.color.setRGB(r, g, b);
       lamp.intensity = LAMP * (0.35 + glow * 0.6 + core * 0.5);
@@ -243,7 +245,7 @@ export function createKrystal({ stage, GFX, random = Math.random, sky = 4096 }) 
       stir = Math.min(1, stir + Math.max(0, weight));
     },
 
-    /** The cards have come up: the glass flares, and the colours wheel round. */
+    /** The cards have come up: the glass flares, and the colors wheel round. */
     reveal(weight = 1) {
       flare = Math.min(0.9, flare + 0.6 * weight);
       stir = Math.min(1, stir + 0.5 * weight);

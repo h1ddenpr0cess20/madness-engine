@@ -1,6 +1,6 @@
 /**
  * A photographer's softbox room, as an equirectangular canvas: pale above,
- * grey to a dark floor below the horizon, and two soft lights high up, one
+ * gray to a dark floor below the horizon, and two soft lights high up, one
  * white and one cool blue. What Vibey's and Slimey's glossy skins reflect:
  * a highlight with a shape to it, and nothing else in the way.
  */

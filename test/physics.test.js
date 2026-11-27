@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { BREAK_SPEED, closestOnTriangle, collideBalls, createBall, FALL_LIMIT, placeBall, rollSpin, stepBall, World } from '../src/physics.js';
+import { BREAK_SPEED, closestOnTriangle, collideBalls, createBall, FALL_LIMIT, placeBall, rollSpin, stepBall, World, Worlds } from '../src/physics.js';
 
 const STEP = 1 / 120;
 
@@ -126,4 +126,42 @@ test('at the edge of a box overhead, a ball is pushed down and away — or, wher
   // Straight out from the edge: aside, with nothing sent down at the floor.
   assert.ok(sliding.x < pushed.x);
   assert.equal(new World({ cols: 1, rows: 1 }).slideUnder, false);
+});
+
+/** A floor of `size` tiles square whose grid starts at (x0, z0). */
+function patch(x0, z0, size, h = 0) {
+  const w = new World({ cols: size, rows: size, x0, z0 });
+  for (let z = z0; z < z0 + size; z++) {
+    for (let x = x0; x < x0 + size; x++) {
+      w.addTriangle(x, h, z, x, h, z + 1, x + 1, h, z);
+      w.addTriangle(x + 1, h, z, x, h, z + 1, x + 1, h, z + 1);
+    }
+  }
+  return w.finish();
+}
+
+test('a world can start anywhere, even at negative tiles', () => {
+  const world = patch(-500, 2000, 10);
+  const ball = createBall({ x: -495, y: 2, z: 2005 });
+  run(ball, world, 2);
+  assert.ok(Math.abs(ball.y - ball.r) < 0.01 && ball.grounded, `rests at ${ball.y}`);
+  world.addCylinder({ x: -493, z: 2005, r: 0.3, y0: 0, y1: 3 });
+  const hits = world.boxesNear(-493.2, 2005, 0.5, []);
+  assert.equal(hits.length, 1);
+});
+
+test('a ball rolls from one piece of a world of pieces onto the next, and falls off where there are none', () => {
+  const worlds = new Worlds();
+  const a = worlds.add(patch(0, 0, 20)), b = worlds.add(patch(20, 0, 20));
+  const ball = createBall({ x: 10, y: 1, z: 10 });
+  run(ball, worlds, 1);
+  assert.ok(ball.grounded);
+  run(ball, worlds, 3, [1, 0]);
+  assert.ok(ball.x > 22 && ball.grounded && Math.abs(ball.y - ball.r) < 0.02, `crossed the seam to ${ball.x.toFixed(1)}, ${ball.y.toFixed(2)}`);
+  assert.ok(worlds.covers(30, 5) && !worlds.covers(45, 5));
+  worlds.remove(b);
+  placeBall(ball, 30, 1, 10);
+  run(ball, worlds, 1);
+  assert.ok(ball.y < -1, 'with its piece gone, the ground there is gone');
+  assert.ok(worlds.pieces.has(a));
 });

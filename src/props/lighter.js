@@ -18,7 +18,7 @@ const WHEEL = [0, 0.207, 0.0055];     // the spark wheel's middle (it turns roun
 const NOZZLE = [0, HOOD, -0.004];
 
 const RED = rgb('#d4202c'), DEEP = rgb('#8a0e18');
-/** Glossy red, a little deeper toward the bottom, the faint line of the mould down each side. */
+/** Glossy red, a little deeper toward the bottom, the faint line of the mold down each side. */
 const plastic = (p) => {
   let c = mix(DEEP, RED, Math.min(1, 0.55 + p[1] * 4));
   const seam = Math.abs(p[2]) < 0.0009 && Math.abs(p[0]) > RX * 0.8 ? 0.25 : 0;

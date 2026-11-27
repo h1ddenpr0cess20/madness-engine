@@ -5,7 +5,7 @@ import { mix } from '../models/skins.js';
  * A heap of gold: coins piled up in a mound, two stacks of them beside it,
  * more slid off onto the floor, each coin a proper coin — a raised rim, a
  * milled edge and a star struck in the middle of it — and three cut gems
- * in amongst them: a ruby, an emerald and a sapphire, faceted, the light
+ * in among them: a ruby, an emerald and a sapphire, faceted, the light
  * coming through them. Sits on the floor, about a third of a tile across.
  */
 

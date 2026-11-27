@@ -1,7 +1,7 @@
 import { fbm, noise, rgb } from './sdf.js';
 
 /**
- * Colours for sculpts: functions of a point and its normal, in linear RGB,
+ * Colors for sculpts: functions of a point and its normal, in linear RGB,
  * for the `color` of a shape or a paint.
  */
 
@@ -30,7 +30,7 @@ export function coat({ over, under = over, vary = 0.18, freq = 9, grain = 0.08, 
 }
 
 /**
- * Fur by colour: `coat`'s shading with strands — noise stretched along the
+ * Fur by color: `coat`'s shading with strands — noise stretched along the
  * way the fur lies (`flow`: 0 x, 1 y, 2 z) — light and dark by `strands`.
  */
 export function pelt({ strands = 0.35, sfreq = 160, flow = 2, stretch = 0.12, ...o }) {
@@ -66,7 +66,7 @@ export function bands(axis, period, a, b, width = 0.25, soft = 0.2) {
   };
 }
 
-/** A colour times light grain noise: for metal, bone, stone. */
+/** A color times light grain noise: for metal, bone, stone. */
 export function grainy(color, amount = 0.12, freq = 40, seed = 0) {
   const c = toRGB(color);
   return (p) => {
@@ -75,7 +75,7 @@ export function grainy(color, amount = 0.12, freq = 40, seed = 0) {
   };
 }
 
-/** `fn`'s colour, darker toward its bottom: dirt and shadow, `from` to `to` up y. */
+/** `fn`'s color, darker toward its bottom: dirt and shadow, `from` to `to` up y. */
 export function grime(fn, from, to, dark = 0.55) {
   return (p, n) => {
     const c = typeof fn === 'function' ? fn(p, n) : toRGB(fn);

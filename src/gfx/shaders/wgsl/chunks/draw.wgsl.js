@@ -31,5 +31,7 @@ struct Draw {
   rotation: f32,
   attenuationFinite: f32,
   envMapRotation: mat3x3f,
+  subsurfaceColor: vec3f,
+  detailScale: f32,
 };
 `;

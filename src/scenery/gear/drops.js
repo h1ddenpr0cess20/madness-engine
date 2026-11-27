@@ -41,7 +41,7 @@ function anvil(GFX, { w, d, height }) {
 
 // ———————————————————————————————————————————————— The Strip, and the scene
 
-/** A can of aerosol: a silver body, a band of colour, a dome and a cap with its nozzle. Giant. */
+/** A can of aerosol: a silver body, a band of color, a dome and a cap with its nozzle. Giant. */
 function can(body, band, cap, label) {
   return (GFX, { w, d, height }) => {
     const metal = mat(GFX, body, { metalness: 0.9, roughness: 0.28 });

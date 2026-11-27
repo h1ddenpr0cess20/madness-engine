@@ -35,7 +35,7 @@ export default person({
   extras(s) {
     bandana(s, { color: '#d81c2a' });
     beard(s, { color: '#2a1c12', long: 0.3 });
-    // The flight case on the right shoulder, clear of the head, the long way back to front: black, its aluminium
+    // The flight case on the right shoulder, clear of the head, the long way back to front: black, its aluminum
     // edges, the steel corners, the latch and the handle at the front.
     const [cx, cy, cz] = CASE, hx = 0.052, hy = 0.05, hz = 0.125;
     rigid(s, CASE, () => s.part('kit', () => {

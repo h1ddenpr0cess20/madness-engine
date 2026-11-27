@@ -1,6 +1,6 @@
 /**
  * From Rock 'n' Roller III, with Petroleum Springs's own added at the end
- * (lawn, paving slabs, shingles, tar paper, pool tiles, kerbs).
+ * (lawn, paving slabs, shingles, tar paper, pool tiles, curbs).
  *
  * Every texture, painted on a canvas at startup: the floors and walls of the
  * sets (concrete, planks, lino, carpet, diamond plate, grass, wet asphalt,
@@ -8,12 +8,12 @@
  * curtain, corrugated iron, damask, clapboard, stucco, a spaceship's hull,
  * castle stone, wallpaper, and the backs of scenery flats), and the bits and
  * pieces that go with them (grilles, gaffer tape, shutters, glows, beams). A floor texture is one tile across and a wall texture one
- * tile across and high, and each comes with a `bump` map. Colour mostly comes
+ * tile across and high, and each comes with a `bump` map. Color mostly comes
  * from the tile or wall under it, so the maps are near white. Under node (the
  * tests) there is no canvas, and everything is `{ map: null, bump: null }`.
  */
 
-import { asphalt, azulejo, belt, block, canvas, canvasWall, carpet, checker, clapboard, cliff, cobble, concrete, corrugated, curtain, damask, dirt, fence, flats, foam, fractal, grass, grate, grey, haussmann, hedge, hull, marble, mosaic, mud, pair, panels, pixels, planks, plate, plywood, random, sand, sandstone, scree, shoji, smoothstep, snow, stone, stucco, tatami, terracotta, texture, timber, wallpaper } from '../painters.js';
+import { grainFields, asphalt, azulejo, belt, block, canvas, canvasWall, carpet, checker, clapboard, cliff, cobble, concrete, corrugated, curtain, damask, designed, DETAIL, dirt, fence, flats, foam, fractal, grass, grate, gray, haussmann, hedge, hull, K, laidGrain, marble, mosaic, mud, pair, panels, pixels, planks, plate, plywood, random, sand, sandstone, scree, shoji, smoothstep, snow, stone, stucco, tatami, terracotta, texture, timber, wallpaper } from '../painters.js';
 import { WALLS as VENUE_WALLS } from '../venue.js';
 export { canvas, copyOf, mix, random, texture, tiled } from '../painters.js';
 
@@ -55,9 +55,9 @@ function lawn(GFX) {
     const stripe = v < 0.5 ? 1 : 0.86;
     const blade = n(u, v);
     const k = relief ? 0.3 + blade * 0.7 : (0.62 + blade * 0.3 + m(u, v) * 0.08) * stripe;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Paving slabs, four to the tile, each a shade of its own, with the odd chip off a corner. */
@@ -72,9 +72,9 @@ function slabs(GFX) {
     const bevel = smoothstep(0.022, 0.05, edge);
     const t = tones[Math.floor(u * 2) + Math.floor(v * 2) * 2];
     const k = relief ? (joint ? 0 : 0.45 + bevel * 0.35 + (grit(u, v) - 0.5) * 0.2) : joint ? 0.42 : t * (0.9 + n(u, v) * 0.1 + (grit(u, v) - 0.5) * 0.08) * (0.9 + bevel * 0.1);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Asphalt shingles, in courses, each tab its own shade, the gaps between them dark. Roofs, seen from above. */
@@ -90,9 +90,9 @@ function shingles(GFX) {
     const shadow = smoothstep(0.75, 1, fr);
     const t = tones[(r * 7 + c * 3) % 64];
     const k = relief ? (gap ? 0.1 : 0.3 + fr * 0.6) : gap ? 0.3 : t * (0.85 + n(u, v) * 0.2) * (1 - shadow * 0.45);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** A flat roof: gravel over tar paper, the seams of the felt showing, a vent or a drain now and then. */
@@ -102,9 +102,9 @@ function tarpaper(GFX) {
     const seam = Math.abs(((v * 3) % 1) - 0.5) > 0.485;
     const g = grit(u, v);
     const k = relief ? (seam ? 0.8 : 0.35 + g * 0.5) : (0.6 + n(u, v) * 0.18 + (g > 0.6 ? 0.14 : 0)) * (seam ? 0.75 : 1);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Spilt oil: black-brown and glassy, with the rainbow sheen of the film on it in swirls. */
@@ -112,14 +112,14 @@ function oilslick(GFX) {
   const n = fractal(661, 3, 4), m = fractal(663, 5, 3);
   const paint = (relief) => (size) => pixels(size, (u, v) => {
     const f = n(u, v) * 3 + m(u, v);
-    if (relief) return grey(Math.round(128 + (m(u, v) - 0.5) * 30));
+    if (relief) return gray(Math.round(128 + (m(u, v) - 0.5) * 30));
     const band = Math.max(0, 1 - Math.abs(((f * 4) % 1) - 0.5) * 3) * Math.max(0, m(u, v) - 0.35) * 2.2;
     const h = f * 9;
     const rainbow = [0, 2.1, 4.2].map((o) => 0.5 + 0.5 * Math.cos(h + o));
     const base = [46, 38, 36];
     return base.map((b, i) => Math.round(b + band * 150 * rainbow[i]));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Little square pool tiles with white grout, and a band of darker tile at the top. */
@@ -129,31 +129,31 @@ function pooltile(GFX) {
     const fu = (u * 8) % 1, fv = (v * 8) % 1;
     const grout = Math.min(fu, fv, 1 - fu, 1 - fv) < 0.07;
     const k = relief ? (grout ? 0.2 : 0.7) : grout ? 1 : 0.78 + n(u, v) * 0.12;
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
-/** The face of a kerb: poured concrete, a rounded lip along the top, scuffed black where the tyres rub. */
-function kerb(GFX) {
+/** The face of a curb: poured concrete, a rounded lip along the top, scuffed black where the tires rub. */
+function curb(GFX) {
   const n = fractal(651, 6, 4), grit = fractal(653, 40, 2);
   const paint = (relief) => (size) => pixels(size, (u, v) => {
     const lip = smoothstep(0.86, 0.96, 1 - v);
     const scuff = smoothstep(0.75, 0.95, v) * (0.5 + n(u * 3, v) * 0.5);
     const k = relief ? 0.5 + lip * 0.4 + (grit(u, v) - 0.5) * 0.3 : (0.82 + n(u, v) * 0.12 + (grit(u, v) - 0.5) * 0.1) * (1 + lip * 0.08) * (1 - scuff * 0.5);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 Object.assign(FLOORS, { lawn, slabs, shingles, tarpaper, pooltile, oilslick });
-Object.assign(WALLS, { kerb, pooltile });
+Object.assign(WALLS, { curb, pooltile });
 
 // ———————————————————————————————————————————————————————————— facades
 
 /**
- * A building's face, one tile across and one storey high (the canvas is
- * as tall as a storey is, so nothing stretches): its wall, and its windows
+ * A building's face, one tile across and one story high (the canvas is
+ * as tall as a story is, so nothing stretches): its wall, and its windows
  * and doors, which are painted dark — a lit window is a glow laid over it
  * at night (`buildings.js`). `WINDOW` says where in it the window is, so
  * the glow can be laid over it.
@@ -165,28 +165,35 @@ export const WINDOW = Object.freeze({
   shop: { u: [0.06, 0.94], v: [0.32, 0.92] },
 });
 
-function facadeCanvas(storey, draw) {
-  const W = 256, H = Math.round(256 * storey);
+/**
+ * A story's face, drawn in the 256-unit design (`draw` takes design units; a
+ * pixel loop in it takes `W * K` by `H * K` device pixels), at DETAIL, with the
+ * same fine grain as every other floor and wall.
+ */
+function facadeCanvas(story, draw) {
+  const W = 256, H = Math.round(256 * story);
+  const grains = grainFields(907);
   return (relief) => () => {
-    const [c, ctx] = canvas(W, H);
+    const [c, ctx] = designed(W, H);
     draw(ctx, W, H, relief);
-    return c;
+    return laidGrain(c, grains, relief ? 0.11 : 0.12, relief);
   };
 }
 
 /** Clapboard and a sash window with a sill and shutters (or, `door`, a panelled front door with a step and a lamp). */
 function houseFace(GFX, { door = false, plain = false } = {}) {
-  const storey = 1.6;
+  const story = 1.6;
   const grain = fractal(701, 3, 4);
   const draw = (ctx, W, H, relief) => {
-    const img = ctx.createImageData(W, H);
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const boards = 9, f = ((y / H) * boards) % 1;
+    const DW = W * K, DH = H * K;
+    const img = ctx.createImageData(DW, DH);
+    for (let y = 0; y < DH; y++) {
+      for (let x = 0; x < DW; x++) {
+        const boards = 9, f = ((y / DH) * boards) % 1;
         const lip = smoothstep(0.75, 1, f);
-        const g = grain((x / W) * 0.6, (y / H) * 6);
+        const g = grain((x / DW) * 0.6, (y / DH) * 6);
         const k = relief ? 0.25 + f * 0.7 : (0.84 + g * 0.16) * (1 - lip * 0.3) * (f < 0.05 ? 0.55 : 1);
-        const i = (y * W + x) * 4;
+        const i = (y * DW + x) * 4;
         img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.round(255 * Math.min(1, k));
         img.data[i + 3] = 255;
       }
@@ -221,12 +228,12 @@ function houseFace(GFX, { door = false, plain = false } = {}) {
     ctx.fillStyle = relief ? 'rgba(0,0,0,0)' : 'rgba(150,170,200,0.25)';
     ctx.beginPath(); ctx.moveTo(x0 + 8, y0 + 8); ctx.lineTo(x0 + 34, y0 + 8); ctx.lineTo(x0 + 8, y0 + 50); ctx.fill();
   };
-  return { map: texture(GFX, facadeCanvas(storey, draw)(false)()), bump: texture(GFX, facadeCanvas(storey, draw)(true)(), { srgb: false }) };
+  return { map: texture(GFX, facadeCanvas(story, draw)(false)()), bump: texture(GFX, facadeCanvas(story, draw)(true)(), { srgb: false }) };
 }
 
-/** An office storey: a band of glass between mullions, a spandrel panel under it. */
+/** An office story: a band of glass between mullions, a spandrel panel under it. */
 function officeFace(GFX) {
-  const storey = 0.9;
+  const story = 0.9;
   const draw = (ctx, W, H, relief) => {
     ctx.fillStyle = relief ? '#909090' : '#d4d6da'; ctx.fillRect(0, 0, W, H);
     const { u, v } = WINDOW.office;
@@ -239,12 +246,12 @@ function officeFace(GFX) {
     ctx.fillRect(0, 0, 8, H); ctx.fillRect(W - 8, 0, 8, H);
     ctx.fillStyle = relief ? '#c0c0c0' : '#9aa0a8'; ctx.fillRect(0, H * 0.9, W, H * 0.1);
   };
-  return { map: texture(GFX, facadeCanvas(storey, draw)(false)()), bump: texture(GFX, facadeCanvas(storey, draw)(true)(), { srgb: false }) };
+  return { map: texture(GFX, facadeCanvas(story, draw)(false)()), bump: texture(GFX, facadeCanvas(story, draw)(true)(), { srgb: false }) };
 }
 
 /** Brick, a tall window with a stone lintel and sill: the older downtown blocks. */
 function brickFace(GFX) {
-  const storey = 1.2;
+  const story = 1.2;
   const n = fractal(711, 8, 3);
   const draw = (ctx, W, H, relief) => {
     const rows = 14, bh = H / rows, bw = W / 3;
@@ -263,12 +270,12 @@ function brickFace(GFX) {
     ctx.fillStyle = relief ? '#202020' : '#1c2430'; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
     ctx.fillStyle = relief ? '#c0c0c0' : '#e8e2d6'; ctx.fillRect((x0 + x1) / 2 - 3, y0, 6, y1 - y0); ctx.fillRect(x0, y0 + (y1 - y0) * 0.4, x1 - x0, 6);
   };
-  return { map: texture(GFX, facadeCanvas(storey, draw)(false)()), bump: texture(GFX, facadeCanvas(storey, draw)(true)(), { srgb: false }) };
+  return { map: texture(GFX, facadeCanvas(story, draw)(false)()), bump: texture(GFX, facadeCanvas(story, draw)(true)(), { srgb: false }) };
 }
 
 /** A shop front: plate glass from knee height to the fascia, a black frame. */
 function shopFace(GFX) {
-  const storey = 2.4;
+  const story = 2.4;
   const draw = (ctx, W, H, relief) => {
     ctx.fillStyle = relief ? '#808080' : '#d8d4cc'; ctx.fillRect(0, 0, W, H);
     const { u, v } = WINDOW.shop;
@@ -278,35 +285,36 @@ function shopFace(GFX) {
     ctx.fillStyle = relief ? '#909090' : '#c8402e'; ctx.fillRect(0, H * 0.04, W, H * 0.22);
     ctx.fillStyle = relief ? '#c0c0c0' : '#8a8a8e'; ctx.fillRect(0, H * 0.94, W, H * 0.06);
   };
-  return { map: texture(GFX, facadeCanvas(storey, draw)(false)()), bump: texture(GFX, facadeCanvas(storey, draw)(true)(), { srgb: false }) };
+  return { map: texture(GFX, facadeCanvas(story, draw)(false)()), bump: texture(GFX, facadeCanvas(story, draw)(true)(), { srgb: false }) };
 }
 
 /** A parking garage's side: concrete bands with the open decks between. */
 function garageFace(GFX) {
-  const storey = 1.0;
+  const story = 1.0;
   const n = fractal(721, 6, 3);
   const draw = (ctx, W, H, relief) => {
-    const img = ctx.createImageData(W, H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const open = y > H * 0.08 && y < H * 0.62 && (x % 128) > 14;
-      const k = relief ? (open ? 0.1 : 0.6 + n(x / W, y / H) * 0.3) : open ? 0.08 : 0.78 + n(x / W, y / H) * 0.2;
-      const i = (y * W + x) * 4;
+    const DW = W * K, DH = H * K;
+    const img = ctx.createImageData(DW, DH);
+    for (let y = 0; y < DH; y++) for (let x = 0; x < DW; x++) {
+      const open = y / K > H * 0.08 && y / K < H * 0.62 && ((x / K) % 128) > 14;
+      const k = relief ? (open ? 0.1 : 0.6 + n(x / DW, y / DH) * 0.3) : open ? 0.08 : 0.78 + n(x / DW, y / DH) * 0.2;
+      const i = (y * DW + x) * 4;
       img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.round(255 * k);
       img.data[i + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);
   };
-  return { map: texture(GFX, facadeCanvas(storey, draw)(false)()), bump: texture(GFX, facadeCanvas(storey, draw)(true)(), { srgb: false }) };
+  return { map: texture(GFX, facadeCanvas(story, draw)(false)()), bump: texture(GFX, facadeCanvas(story, draw)(true)(), { srgb: false }) };
 }
 
 export const FACADES = {
-  house: { storey: 1.6, paint: (GFX) => houseFace(GFX) },
-  'house-door': { storey: 1.6, paint: (GFX) => houseFace(GFX, { door: true }) },
-  gable: { storey: 1.6, paint: (GFX) => houseFace(GFX, { plain: true }) },
-  office: { storey: 0.9, paint: officeFace },
-  brick: { storey: 1.2, paint: brickFace },
-  shop: { storey: 2.4, paint: shopFace },
-  garage: { storey: 1.0, paint: garageFace },
+  house: { story: 1.6, paint: (GFX) => houseFace(GFX) },
+  'house-door': { story: 1.6, paint: (GFX) => houseFace(GFX, { door: true }) },
+  gable: { story: 1.6, paint: (GFX) => houseFace(GFX, { plain: true }) },
+  office: { story: 0.9, paint: officeFace },
+  brick: { story: 1.2, paint: brickFace },
+  shop: { story: 2.4, paint: shopFace },
+  garage: { story: 1.0, paint: garageFace },
 };
 
 /** The facade texture called `name`, painted once. */
@@ -322,9 +330,9 @@ function tankshell(GFX) {
     const seam = Math.min(fu, 1 - fu) < 0.008 || Math.min(fv, 1 - fv) < 0.012;
     const run = smoothstep(0.55, 0.85, streak(u * 0.3, v * 0.05)) * smoothstep(0, 0.6, v);
     const k = relief ? (seam ? 0.85 : 0.5 + n(u, v) * 0.1) : (seam ? 0.7 : 0.9 + n(u, v) * 0.1) * (1 - run * 0.35);
-    return grey(Math.round(255 * Math.min(1, k)));
+    return gray(Math.round(255 * Math.min(1, k)));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 /** Chain-link fence: wire in diamonds, dark between, a little sag. */
@@ -334,9 +342,9 @@ function chainlink(GFX) {
     const wire = Math.min(a, 1 - a) < 0.08 || Math.min(b, 1 - b) < 0.08;
     const rail = v < 0.04;
     const k = relief ? (wire || rail ? 0.9 : 0.1) : wire || rail ? 0.85 : 0.08;
-    return grey(Math.round(255 * k));
+    return gray(Math.round(255 * k));
   });
-  return pair(GFX, 256, paint(false), paint(true));
+  return pair(GFX, DETAIL, paint(false), paint(true));
 }
 
 Object.assign(WALLS, { tankshell, chainlink });
@@ -363,7 +371,7 @@ export function grilleTexture(GFX) {
   return cached('grille', () => {
     const size = 256;
     const paint = (relief) => {
-      const [c, ctx] = canvas(size);
+      const [c, ctx] = designed(size);
       ctx.fillStyle = relief ? '#808080' : '#18181b';
       ctx.fillRect(0, 0, size, size);
       const mid = size / 2;
@@ -394,7 +402,7 @@ export function gaffTexture(GFX) {
     const size = 256;
     const rnd = random(61);
     const paint = (relief) => {
-      const [c, ctx] = canvas(size);
+      const [c, ctx] = designed(size);
       ctx.fillStyle = relief ? '#909090' : '#1c1c20';
       ctx.fillRect(0, 0, size, size);
       for (let k = 0; k < 400; k++) {
@@ -417,13 +425,13 @@ export function gaffTexture(GFX) {
   });
 }
 
-/** A roll-up shutter: ribbed steel, scuffed, with CLOSED SET stencilled across it and hazard stripes at the foot. */
+/** A roll-up shutter: ribbed steel, scuffed, with CLOSED SET stenciled across it and hazard stripes at the foot. */
 export function shutterTexture(GFX) {
   return cached('shutter', () => {
     const size = 256;
     const rnd = random(13);
     const paint = (relief) => {
-      const [c, ctx] = canvas(size);
+      const [c, ctx] = designed(size);
       ctx.fillStyle = relief ? '#808080' : '#8d939d';
       ctx.fillRect(0, 0, size, size);
       for (let y = 0; y < size; y += 16) {
@@ -466,7 +474,7 @@ export function panelTexture(GFX, look = 'flat') {
     const rnd = random(29);
     const base = { flat: '#34343a', drywall: '#c8c0b0', wood: '#8a6a48', curtain: '#5a1424', foam: '#2a2a30', steel: '#6a707a', canvas: '#c8b890', brick: '#9a5040', glass: '#b8d4e8', backdrop: '#3a5a98', stone: '#7a7068' }[look] ?? '#34343a';
     const paint = (relief) => {
-      const [c, ctx] = canvas(size);
+      const [c, ctx] = designed(size);
       ctx.fillStyle = relief ? '#909090' : base;
       ctx.fillRect(0, 0, size, size);
       for (let k = 0; k < 300; k++) {
@@ -515,7 +523,7 @@ export function panelTexture(GFX, look = 'flat') {
   });
 }
 
-/** A soft round glow, for halos. White in the middle, clear at the edge: tint it with the material's colour. */
+/** A soft round glow, for halos. White in the middle, clear at the edge: tint it with the material's color. */
 export function glowTexture(GFX) {
   return cached('glow', () => {
     const [c, ctx] = canvas(64);

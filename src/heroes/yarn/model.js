@@ -9,10 +9,10 @@ import { R_TARGET, STEP, YR, cellOf, windBall } from './winding.js';
 
 /** Sides round the tube. */
 const RADIAL = 8;
-/** Three plies, one full twist every three centimetres. */
+/** Three plies, one full twist every three centimeters. */
 const PLY = 3;
 const TWIST = 0.03;
-/** Ply phase per metre along the strand. */
+/** Ply phase per meter along the strand. */
 const PHASE = PLY / TWIST;
 /** How many ply phases one tile of the texture holds along the strand. */
 const TILE = 4;
@@ -25,7 +25,7 @@ const SHEEN = 0xffb4a2;
 
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
 
-/** A small, stable hash: the fibres in the plies. */
+/** A small, stable hash: the fibers in the plies. */
 function hash(x, y) {
   let a = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(y | 0, 0x165667b1);
   a = Math.imul(a ^ (a >>> 15), 0x2c1b3c6d);
@@ -36,7 +36,7 @@ function hash(x, y) {
 /**
  * The plies, as texels: one tile of strand, `TILE` twists long and once round.
  * Red is how much light a spot gets — the groove between plies is darker, and
- * the fibres in each ply are each a shade off — and green is its height, for
+ * the fibers in each ply are each a shade off — and green is its height, for
  * the bump. The phase runs diagonally, so the plies spiral round the strand.
  * Plain bytes, so it can be measured without a canvas.
  */
@@ -49,9 +49,9 @@ export function plyTexels(width = 512, height = 256) {
       const phase = v * PLY + u * TILE;
       const c = 2 * (phase - Math.floor(phase)) - 1;
       const bulge = Math.sqrt(Math.max(1 - c * c, 0));
-      // Eleven fibres to a ply, and six runs of them to a tile along the strand.
-      const fibre = hash(Math.floor(phase * 11), Math.floor(u * 6));
-      const shade = (0.66 + 0.34 * bulge) * (0.82 + 0.3 * fibre);
+      // Eleven fibers to a ply, and six runs of them to a tile along the strand.
+      const fiber = hash(Math.floor(phase * 11), Math.floor(u * 6));
+      const shade = (0.66 + 0.34 * bulge) * (0.82 + 0.3 * fiber);
       const i = (y * width + x) * 4;
       out[i] = out[i + 1] = out[i + 2] = Math.round(clamp(shade, 0, 1) * 255);
       out[i + 3] = 255;
@@ -60,7 +60,7 @@ export function plyTexels(width = 512, height = 256) {
   return out;
 }
 
-/** The ply heights: the round of each ply, with a little fibre roughness on top. */
+/** The ply heights: the round of each ply, with a little fiber roughness on top. */
 export function plyHeights(width = 512, height = 256) {
   const out = new Uint8ClampedArray(width * height * 4);
   for (let y = 0; y < height; y++) {
@@ -70,8 +70,8 @@ export function plyHeights(width = 512, height = 256) {
       const phase = v * PLY + u * TILE;
       const c = 2 * (phase - Math.floor(phase)) - 1;
       const bulge = Math.sqrt(Math.max(1 - c * c, 0));
-      const fibre = hash(Math.floor(phase * 11), Math.floor(u * 6));
-      const h = 0.85 * bulge + 0.15 * fibre;
+      const fiber = hash(Math.floor(phase * 11), Math.floor(u * 6));
+      const h = 0.85 * bulge + 0.15 * fiber;
       const i = (y * width + x) * 4;
       out[i] = out[i + 1] = out[i + 2] = Math.round(clamp(h, 0, 1) * 255);
       out[i + 3] = 255;
@@ -147,7 +147,7 @@ export const SEG_IDX = RADIAL * 6;
 
 /**
  * Builds the ball and the strand. `root` holds both; `ball` is the wound part,
- * which rolls; `pose(s)` puts her `s` metres along the route and returns the
+ * which rolls; `pose(s)` puts her `s` meters along the route and returns the
  * `s` it settled on (clamped to the route).
  */
 export function createYarn(GFX, { seed } = {}) {

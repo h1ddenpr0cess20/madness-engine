@@ -32,7 +32,7 @@ test('it stands on the floor, within its budget, and comes to a person\'s chest'
   assert.ok(high[2] - low[2] >= PODIUM_SIZE.depth - 0.02, 'deep enough for its plinth');
 });
 
-test('the reading surface rises towards the far (+z) edge, so it faces the speaker behind it', () => {
+test('the reading surface rises toward the far (+z) edge, so it faces the speaker behind it', () => {
   const m = baked(podium);
   // The highest vertices of the desk are at the audience side, the lowest of the desk at the speaker's.
   const top = [];

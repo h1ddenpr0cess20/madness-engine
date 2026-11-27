@@ -42,7 +42,7 @@ export function createTuber(GFX, { segments = SEGMENTS } = {}) {
   }
   nrm.needsUpdate = true;
   // The sphere's UVs mean nothing once the surface has moved this far, and the
-  // colour rides on the vertices instead.
+  // color rides on the vertices instead.
   geometry.deleteAttribute('uv');
   paintSkin(GFX, geometry);
 

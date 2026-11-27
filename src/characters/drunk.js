@@ -1,6 +1,6 @@
 import { bands } from '../models/skins.js';
 import { axisRot, cloth, person, shell, strap } from './person.js';
-import { moustache } from './wardrobe.js';
+import { mustache } from './wardrobe.js';
 
 /**
  * The Regular: a football scarf, a shirt out over his belly, a cardigan
@@ -41,7 +41,7 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    moustache(s, { color: '#6a4a2e', wide: 1.15, droop: 0.5 });
+    mustache(s, { color: '#6a4a2e', wide: 1.15, droop: 0.5 });
     s.sphere([0, 0.648, 0.118], 0.014, { color: '#d8504a', mat: 'skin', bone: 'head', k: 0.01 });
     // The scarf, red and white, wound round the neck and its end hanging down the front.
     const stripes = (p) => (Math.sin(p[1] * 95 + p[0] * 20) > 0 ? [0.6, 0.012, 0.022] : [0.88, 0.85, 0.8]);

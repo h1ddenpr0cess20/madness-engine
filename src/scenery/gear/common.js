@@ -26,11 +26,11 @@ export function row(GFX, { w, d }, one, per = 1) {
 }
 
 /** A rope or a chain up into the dark from the top of a drop, `len` long. */
-export function hangers(GFX, group, { w, d, height }, colour = '#2a2a30', r = 0.025) {
+export function hangers(GFX, group, { w, d, height }, color = '#2a2a30', r = 0.025) {
   const long = w >= d, L = long ? w : d;
   for (const e of L > 1.4 ? [-1, 1] : [0]) {
     const off = e * (L / 2 - 0.2);
-    const m = new GFX.Mesh(new GFX.CylinderGeometry(r, r, 8, 6), mat(GFX, colour, { metalness: 0.6 }));
+    const m = new GFX.Mesh(new GFX.CylinderGeometry(r, r, 8, 6), mat(GFX, color, { metalness: 0.6 }));
     m.position.set(long ? off : 0, height / 2 + 4, long ? 0 : off);
     group.add(m);
   }
@@ -57,16 +57,16 @@ export function heading(GFX, group, { w, d, lift }) {
  * its bow and stern run out past it (into the landings, below their edge,
  * when it docks), a gunwale round the top, and a deck of planks to roll on.
  */
-export function hull(GFX, group, spec, colour, { deck = '#8a6a42', depth = 0.7, rail = null } = {}) {
+export function hull(GFX, group, spec, color, { deck = '#8a6a42', depth = 0.7, rail = null } = {}) {
   const { holder, L, S } = heading(GFX, group, spec);
   const { thickness } = spec;
-  const paint = new GFX.MeshPhysicalMaterial({ color: new GFX.Color(colour), roughness: 0.3, clearcoat: 0.6 });
+  const paint = new GFX.MeshPhysicalMaterial({ color: new GFX.Color(color), roughness: 0.3, clearcoat: 0.6 });
   const top = thickness / 2;
   const body = new GFX.Mesh(new GFX.SphereGeometry(1, 28, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), paint);
   body.scale.set(L * 0.62, depth, S * 0.5);
   body.position.y = top - 0.02;
   holder.add(shadow(body));
-  const gunwale = new GFX.Mesh(new GFX.TorusGeometry(1, 0.05, 6, 40), mat(GFX, rail ?? colour, { roughness: 0.4 }));
+  const gunwale = new GFX.Mesh(new GFX.TorusGeometry(1, 0.05, 6, 40), mat(GFX, rail ?? color, { roughness: 0.4 }));
   gunwale.rotation.x = Math.PI / 2;
   gunwale.scale.set(L * 0.6, S * 0.48, 1);
   gunwale.position.y = top;

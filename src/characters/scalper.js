@@ -39,7 +39,7 @@ export default person({
     // The trench coat: its lapels open on a dark jumper, the collar turned up round the neck.
     suitFront(s, { shirt: '#2a2a30', tie: null, lapel: coat, low: 0.4 });
     shell(s, (p) => Math.max(Math.abs(p[1] - 0.548) - 0.022, p[2] - 0.035 + Math.max(0, p[1] - 0.55) * 0), { color: coat, mat: 'cloth', part: 'outer', thick: 0.006, lift: 0.004, over: ['top', 'head'], bones: { chest: (p) => p[1] - 0.555, neck: (p) => 0.555 - p[1] }, k: 0.003 });
-    // The tickets: a fan of coloured slips out of the top of the fist, held out to you.
+    // The tickets: a fan of colored slips out of the top of the fist, held out to you.
     const G = pose.grip('R'), cols = ['#ff2d95', '#2de2ff', '#ffd23a', '#3ae88a', '#ff7a1a'];
     pose.hold(s, 'handR', () => s.part('kit', () => {
       cols.forEach((c, i) => {

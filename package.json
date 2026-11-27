@@ -8,11 +8,14 @@
     "node": ">=22.12"
   },
   "exports": {
+    "./weapons": "./src/weapons/index.js",
+    "./people": "./src/people/index.js",
     "./gfx": "./src/gfx/index.js",
     "./characters": "./src/characters/index.js",
     "./props": "./src/props/index.js",
     "./props/dice": "./src/dice.js",
     "./buildings": "./src/buildings/index.js",
+    "./vehicles": "./src/vehicles/index.js",
     "./moods": "./src/moods/index.js",
     "./*.js": "./src/*.js",
     "./*": "./src/*.js"

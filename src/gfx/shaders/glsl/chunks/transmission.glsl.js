@@ -1,6 +1,11 @@
 export default `// Transmission: the scene behind, refracted through the volume and blurred by roughness.
 #ifdef USE_TRANSMISSION
   uniform vec2 transmissionSamplerSize;
+  // Where the rays may leave the glass, [u0, v0, u1, v1] of the map, where only that much was drawn (renderer.js
+  // _transmissionRect); all zero where the whole of it was.
+  uniform vec4 transmissionBounds;
+  // And there, the blurriest mip level it was drawn wide enough for.
+  uniform float transmissionMaxLod;
   uniform sampler2D transmissionSamplerMap;
 
   float w0( float a ) { return ( 1.0 / 6.0 ) * ( a * ( a * ( - a + 3.0 ) - 3.0 ) + 1.0 ); }
@@ -55,6 +60,7 @@ export default `// Transmission: the scene behind, refracted through the volume 
 
   vec4 getTransmissionSample( const in vec2 fragCoord, const in float roughness, const in float ior ) {
     float lod = log2( transmissionSamplerSize.x ) * applyIorToRoughness( roughness, ior );
+    if ( transmissionBounds.z > transmissionBounds.x ) lod = min( lod, transmissionMaxLod );
     return textureBicubic( transmissionSamplerMap, fragCoord.xy, lod );
   }
 
@@ -80,6 +86,9 @@ export default `// Transmission: the scene behind, refracted through the volume 
     vec2 refractionCoords = ndcPos.xy / ndcPos.w;
     refractionCoords += 1.0;
     refractionCoords /= 2.0;
+    // A ray from the very edge of a silhouette (its position reckoned past the surface) can land far off: where the
+    // map was drawn only around the glass, it reads the nearest of what was drawn.
+    if ( transmissionBounds.z > transmissionBounds.x ) refractionCoords = clamp( refractionCoords, transmissionBounds.xy, transmissionBounds.zw );
     transmittedLight = getTransmissionSample( refractionCoords, roughness, ior );
     transmittance = diffuseColor * volumeAttenuation( length( transmissionRay ), attenuationColor, attenuationDistance );
     vec3 attenuatedColor = transmittance * transmittedLight.rgb;

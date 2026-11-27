@@ -1,4 +1,4 @@
-export default `// MeshStandardMaterial and MeshPhysicalMaterial: three.js r186's physically based model.
+export default `// MeshStandardMaterial and MeshPhysicalMaterial: the physically based model (adapted from three.js; see LICENSE).
 
 #include <frame>
 #include <draw>
@@ -109,8 +109,20 @@ fn vs(in: VertexInput) -> Varyings {
 #ifdef USE_TRANSMISSION
 #include <transmission>
 #endif
+#ifdef USE_ANTITILE
+#include <antitile>
+#endif
 #ifdef USE_BUMPMAP
 #include <bump>
+#endif
+#ifdef USE_SUBSURFACE
+// Light carried under the surface past where it falls: each color wrapped round the form as far as
+// it travels (skin's red furthest), over the smooth shape, not the pores'.
+fn subsurfaceScatter(L: vec3f, lightColor: vec3f, N: vec3f, albedo: vec3f) -> vec3f {
+  let nl = dot(N, L);
+  let wrapped = clamp((vec3f(nl) + u_draw.subsurfaceColor) / (vec3f(1.0) + u_draw.subsurfaceColor), vec3f(0.0), vec3f(1.0));
+  return lightColor * albedo * RECIPROCAL_PI * (wrapped - vec3f(clamp(nl, 0.0, 1.0)));
+}
 #endif
 
 #ifdef USE_ENVMAP
@@ -138,17 +150,79 @@ fn getDistanceAttenuation(lightDistance: f32, cutoffDistance: f32, decayExponent
 }
 #endif
 
+#ifdef USE_STRANDS
+// Hair's two highlights (Kajiya and Kay's model, as Scheuermann shifts it): light glancing off each
+// strand's surface, white and tight, toward the root; and light that went into the strand and back out,
+// colored by it and broader, toward the tip. Both run across the strands, not along them, as hair's do.
+fn strandSpecular(L: vec3f, lightColor: vec3f, N: vec3f, V: vec3f, T: vec3f, jitter: f32, tint: vec3f) -> vec3f {
+  let H = normalize(L + V);
+  let T1 = normalize(T + N * (0.1 + jitter));
+  let T2 = normalize(T - N * (0.12 - jitter));
+  let d1 = dot(T1, H);
+  let d2 = dot(T2, H);
+  let s1 = pow(sqrt(max(0.0, 1.0 - d1 * d1)), 260.0);
+  let s2 = pow(sqrt(max(0.0, 1.0 - d2 * d2)), 90.0);
+  let lit = smoothstep(-0.15, 0.35, dot(N, L));
+  return lightColor * lit * (0.035 * s1 + 0.18 * s2 * tint);
+}
+#endif
+
 @fragment
 fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) vec4f {
   var diffuseColor = vec4f(u_draw.diffuse, u_draw.opacity);
-  let totalEmissiveRadiance = u_draw.emissive;
+  var totalEmissiveRadiance = u_draw.emissive;
+  #ifdef USE_EMISSIVEMAP
+  totalEmissiveRadiance *= textureSample(t_emissive, s_emissive, in.mapUv).rgb;
+  #endif
+  #ifdef EMISSIVE_SCATTER
   #ifdef USE_MAP
+  {
+    // Each repeat of the map (a window) by its own chance; the vertex color (a building's tint) shuffles them.
+    #ifdef EMISSIVE_CELLS
+    var seed = dot(floor(in.mapUv * EMISSIVE_CELLS), vec2f(12.9898, 78.233));
+    #else
+    var seed = dot(floor(in.mapUv), vec2f(12.9898, 78.233));
+    #endif
+    #if defined(USE_COLOR) || defined(USE_INSTANCING)
+    seed += dot(in.color.rgb, vec3f(39.3, 11.1, 23.7)) * 17.0;
+    #endif
+    let on = fract(sin(seed) * 43758.5453);
+    let bright = fract(sin(seed * 1.7 + 3.1) * 24634.6345);
+    totalEmissiveRadiance *= step(on, EMISSIVE_SCATTER) * (0.6 + 0.8 * bright);
+  }
+  #endif
+  #endif
+  #ifdef USE_MAP
+  #ifdef USE_ANTITILE
+  diffuseColor *= untiled(t_map, s_map, in.mapUv, dpdx(in.mapUv), dpdy(in.mapUv));
+  // And the whole drifts a little lighter and darker over tens of tiles, as a real surface weathers.
+  diffuseColor = vec4f(diffuseColor.rgb * (0.86 + 0.28 * antiTileNoise(in.mapUv * 0.045 + 17.0)), diffuseColor.a);
+  #else
   diffuseColor *= textureSample(t_map, s_map, in.mapUv);
+  #endif
   #endif
   #if defined(USE_COLOR) || defined(USE_INSTANCING)
   diffuseColor *= in.color;
   #endif
-  let roughnessFactor = u_draw.roughness;
+  #ifdef USE_ALPHATEST
+  #ifdef USE_MAP
+  // A mip averages thin texels away; scaled back up by how far down the chain this lookup is, a
+  // strand keeps the coverage it had up close.
+  let texel = in.mapUv * vec2f(textureDimensions(t_map, 0));
+  let tdx = dpdx(texel);
+  let tdy = dpdy(texel);
+  let mipLevel = max(0.0, 0.5 * log2(max(dot(tdx, tdx), dot(tdy, tdy))));
+  diffuseColor.a = min(1.0, diffuseColor.a * (1.0 + mipLevel * 0.25));
+  #endif
+  if (diffuseColor.a < ALPHA_TEST) {
+    discard;
+  }
+  #endif
+  var roughnessFactor = u_draw.roughness;
+  #ifdef USE_DETAILMAP
+  // The detail map's g: rougher or glossier than the material, 0.5 as it is.
+  roughnessFactor *= textureSample(t_detail, s_detail, in.mapUv).y * 2.0;
+  #endif
   let metalnessFactor = u_draw.metalness;
 
   let faceDirection = select(-1.0, 1.0, frontFacing);
@@ -164,9 +238,26 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #endif
   let nonPerturbedNormal = normal;
   #ifdef USE_BUMPMAP
-  normal = perturbNormalArb(-in.viewPosition, normal, dHdxy_fwd(in.bumpMapUv), faceDirection);
+  #ifdef USE_MAP
+  normal = perturbNormalArb(-in.viewPosition, normal, dHdxy_fwd(in.bumpMapUv, in.mapUv), faceDirection);
+  #else
+  normal = perturbNormalArb(-in.viewPosition, normal, dHdxy_fwd(in.bumpMapUv, in.bumpMapUv), faceDirection);
+  #endif
   #endif
   let clearcoatNormal = nonPerturbedNormal;
+  #ifdef USE_STRANDS
+  // Which way the strand runs here (the texture's v), from how the place and the UV change across the pixel.
+  let sq0 = dpdx(-in.viewPosition);
+  let sq1 = dFdy3(-in.viewPosition);
+  let sst0 = dpdx(in.mapUv);
+  let sst1 = dFdy2(in.mapUv);
+  var strand = cross(sq1, normal) * sst0.y + cross(normal, sq0) * sst1.y;
+  strand *= inverseSqrt(max(dot(strand, strand), 1e-20));
+  // Each strand's highlight a little off its neighbors', by its own shade in the texture.
+  let strandJitter = (textureSample(t_map, s_map, in.mapUv).g - 0.9) * 0.5;
+  // The second highlight has been through the strand: it is the hair's own color, as bright as the hair is.
+  let strandTint = diffuseColor.rgb;
+  #endif
 
   var material: PhysicalMaterial;
   material.diffuseColor = diffuseColor.rgb;
@@ -249,6 +340,12 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
     var lightColor = u_frame.pointLightColor[i].xyz;
     lightColor *= getDistanceAttenuation(lightDistance, u_frame.pointLightPosition[i].w, u_frame.pointLightColor[i].w);
     RE_Direct_Physical(lightDirection, lightColor, geometryNormal, geometryViewDir, geometryClearcoatNormal, material);
+    #ifdef USE_SUBSURFACE
+    directDiffuse += subsurfaceScatter(lightDirection, lightColor, nonPerturbedNormal, material.diffuseContribution);
+    #endif
+    #ifdef USE_STRANDS
+    directSpecular += strandSpecular(lightDirection, lightColor, geometryNormal, geometryViewDir, strand, strandJitter, strandTint);
+    #endif
   }
   #endif
 
@@ -262,6 +359,12 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
     if (i == 0) { lightColor *= shadow; }
     #endif
     RE_Direct_Physical(u_frame.dirLightDirection[i].xyz, lightColor, geometryNormal, geometryViewDir, geometryClearcoatNormal, material);
+    #ifdef USE_SUBSURFACE
+    directDiffuse += subsurfaceScatter(u_frame.dirLightDirection[i].xyz, lightColor, nonPerturbedNormal, material.diffuseContribution);
+    #endif
+    #ifdef USE_STRANDS
+    directSpecular += strandSpecular(u_frame.dirLightDirection[i].xyz, lightColor, geometryNormal, geometryViewDir, strand, strandJitter, strandTint);
+    #endif
   }
   #endif
 
@@ -324,6 +427,8 @@ fn fs(in: Varyings, @builtin(front_facing) frontFacing: bool) -> @location(0) ve
   #ifdef USE_TRANSMISSION
   diffuseColor.a *= material.transmissionAlpha;
   #endif
+  // Fog: into the haze with distance (nothing where the scene has none).
+  outgoingLight = mix(outgoingLight, u_frame.fogColor, 1.0 - exp(-u_frame.fogDensity * length(in.viewPosition)));
   return linearToOutputTexel(vec4f(outgoingLight, diffuseColor.a));
 }
 `;

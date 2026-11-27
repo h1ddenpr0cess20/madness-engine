@@ -4,7 +4,7 @@ import { rgb } from '../models/sdf.js';
 /**
  * (From Blubber.)
  *
- * A hand up out of a grave: a grey-green forearm in a ragged cuff, the
+ * A hand up out of a grave: a gray-green forearm in a ragged cuff, the
  * hand wide open, grasping at the air and clutching shut. The game pushes
  * it up out of the earth and draws it back down. Its wrist is at y = 0.3;
  * the forearm runs down from there to y = 0.

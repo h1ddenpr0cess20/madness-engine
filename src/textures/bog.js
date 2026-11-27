@@ -134,7 +134,7 @@ fn plates(p: vec2f, t: f32) -> vec2f {
   return vec4f(col * material.uBright, 1.0);
 }`;
 
-/** The bog's material; keep `uniforms.uTime.value` going to keep it brewing. Colours are linear RGB. */
+/** The bog's material; keep `uniforms.uTime.value` going to keep it brewing. Colors are linear RGB. */
 export function createBogMaterial(GFX, { scum = [0.02, 0.05, 0.02], brew = [0.25, 0.9, 0.12], froth = [0.7, 1.0, 0.45] } = {}) {
   return new GFX.ShaderMaterial({
     name: 'bog',

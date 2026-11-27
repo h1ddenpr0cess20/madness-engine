@@ -14,7 +14,7 @@ struct Frame {
   viewportHeight: f32,
   fragYFlip: f32,
   shadowNormalBias: f32,
-  _pad: f32,
+  transmissionMaxLod: f32,
   dirLightDirection: array<vec4f, MAX_DIR_LIGHTS>,
   dirLightColor: array<vec4f, MAX_DIR_LIGHTS>,
   pointLightPosition: array<vec4f, MAX_POINT_LIGHTS>,
@@ -22,5 +22,9 @@ struct Frame {
   hemiLightDirection: array<vec4f, MAX_HEMI_LIGHTS>,
   hemiLightSkyColor: array<vec4f, MAX_HEMI_LIGHTS>,
   hemiLightGroundColor: array<vec4f, MAX_HEMI_LIGHTS>,
+  fogColor: vec3f,
+  fogDensity: f32,
+  // Where the rays may leave the glass, [u0, v0, u1, v1] of the transmission map; all zero where all of it was drawn.
+  transmissionBounds: vec4f,
 };
 `;

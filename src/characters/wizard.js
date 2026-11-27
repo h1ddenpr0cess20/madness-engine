@@ -4,7 +4,7 @@ import { beard, sunHat } from './wardrobe.js';
 
 /**
  * The Wizard: a pointed hat that has seen weather, a beard to the belt,
- * a robe the colour of a bruise with stars on it, a staff with a glowing
+ * a robe the color of a bruise with stars on it, a staff with a glowing
  * stone in the top, and a look of ancient disappointment. Power metal. Has
  * been up in a tower for seven hundred years writing a concept album about
  * a dragon, and has come down to read it to you. All of it. About 1.15

@@ -245,9 +245,14 @@ export function createAlan({ stage, GFX, random = Math.random, events = globalTh
     if (stage._scene?.environmentRotation) stage._scene.environmentRotation.y = backdrop.rotation.y;
   }
 
+  // Held still (`still`, as in a hand), it keeps the pose it has: no gaze, no tumble, no float.
+  let still = false, posed = false;
   glass.onBeforeRender = () => {
     timer.update();
-    frame(Math.min(timer.getDelta(), 0.05));
+    const dt = Math.min(timer.getDelta(), 0.05);
+    if (still && posed) return;
+    frame(dt);
+    posed = true;
   };
 
   stage.setObject(alan);
@@ -274,6 +279,9 @@ export function createAlan({ stage, GFX, random = Math.random, events = globalTh
 
   return {
     get state() { return state; },
+    /** Whether it is held still: true keeps it as it is (looking ahead, not moving), false lets it look about again. */
+    get still() { return still; },
+    set still(on) { still = Boolean(on); },
     get mode() { return attention.mode; },
 
     setState(next) {

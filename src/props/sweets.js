@@ -8,7 +8,7 @@ import { mix } from '../models/skins.js';
  * hand's width across, and the treats twice that. Each sits on y = 0.
  *
  * `sweet` is a twist-wrapped bonbon, its wrapper tinted per sweet (the
- * game hands each its colour); `candycorn` the three-banded kernel;
+ * game hands each its color); `candycorn` the three-banded kernel;
  * `lollipop` a swirled disc on a stick; `caramelapple` an apple dipped in
  * caramel on a stick; `peppermint` a red-and-white swirl; `gumdrop` a
  * sugared dome; `candycane` the striped crook.
@@ -129,7 +129,7 @@ export const gumdrop = {
   bones: one,
   materials: { gum: { roughness: 0.6, sheen: 1, sheenColor: '#ffffff', sheenRoughness: 0.3, transmission: 0, clearcoat: 0.2, tinted: true } },
   sculpt(s) {
-    // Sugared: speckled white over the colour.
+    // Sugared: speckled white over the color.
     const sugar = (p) => (noise(p[0] * 300, p[1] * 300, p[2] * 300) > 0.7 ? [1.2, 1.2, 1.2] : [0.85, 0.85, 0.85]);
     s.limb([0, 0.03, 0], [0, 0.07, 0], 0.055, 0.035, { color: sugar, mat: 'gum', k: 0 });
     s.box([0, -0.05, 0], [0.1, 0.05, 0.1], 0, { op: 'sub', k: 0.012 });

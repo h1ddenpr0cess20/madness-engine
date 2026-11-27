@@ -2,8 +2,9 @@
  * The split-sum DFG table the physical materials read their environment
  * specular and multiple-scattering compensation from: 16×16 texels of
  * (scale, bias) as half floats, indexed by (roughness, N·V). Precomputed
- * with 4096 GGX samples per texel — the table three.js r186 ships
- * (MIT, © 2010-2025 three.js authors), so the highlights land the same.
+ * with 4096 GGX samples per texel.
+ *
+ * Adapted from three.js (MIT, © 2010-2026 three.js authors; see LICENSE).
  */
 export const DFG_SIZE = 16;
 

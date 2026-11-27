@@ -2,7 +2,7 @@ import { noise, rgb, rotation } from '../models/sdf.js';
 import { coat, mix } from '../models/skins.js';
 
 /**
- * What the four heroes have in common: a stylised body about 0.8 tiles
+ * What the four heroes have in common: a stylized body about 0.8 tiles
  * tall and three and a half heads high, its skeleton, its face, and how it
  * moves. Each hero (hero.js, warrior.js, mage.js, healer.js) dresses it
  * and arms it.
@@ -61,7 +61,7 @@ export function skinTone(hex = '#e9b48f') {
 }
 
 /**
- * The body, painted in its clothes: `look` gives the colours (functions or
+ * The body, painted in its clothes: `look` gives the colors (functions or
  * hex) of `skin`, `torso`, `sleeve` (upper arm), `cuff` (forearm), `hand`,
  * `legs`, `boot`; and `mats` the materials of the same (default 'cloth',
  * 'skin' for skin). `b` is the breadth.
@@ -133,9 +133,9 @@ function outside(p, c, R, r) {
 }
 
 /**
- * A head: skull and cheeks, a nose, ears, big eyes (white, a coloured iris,
+ * A head: skull and cheeks, a nose, ears, big eyes (white, a colored iris,
  * a black pupil and a catch-light) under lids, a mouth, brows. `brow` is
- * the brows' colour; `ears` false hides them (under a hood or a helmet);
+ * the brows' color; `ears` false hides them (under a hood or a helmet);
  * `mood` 1 sets the brows in a frown and the mouth firm. The head and the
  * neck are a mesh of their own, finer than the body's, so the face is
  * crisp, and the neck goes into the collar on a clean line.
@@ -227,7 +227,7 @@ export function head(s, { skin, brow = '#3a2a20', ears = true, eyeColor = '#3a5a
 }
 
 /**
- * Hair's colour (a function or hex) in strands: lighter and darker streaks
+ * Hair's color (a function or hex) in strands: lighter and darker streaks
  * running down from the crown `at`, fine ones over broad ones.
  */
 function strands(color, at) {

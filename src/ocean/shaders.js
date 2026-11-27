@@ -31,7 +31,7 @@
  *                                  each: wave number, way (x, z), phase at the camera
  *   uNoiseC                        vec2: the foam's streaks' offset, in cells mod 256
  *   uCloudShift, uWind             vec2: the clouds' drift; the way the wind blows
- *   uSun, uSunColor                vec3: towards the sun; its light
+ *   uSun, uSunColor                vec3: toward the sun; its light
  *   uZenith, uHorizon, uCloud      vec3: the sky
  *   uSkyShape                      vec3: cloud cover, stars, unused
  *   uDeep, uBody, uGlow, uFoam     vec3: the water
@@ -137,8 +137,8 @@ float clouds(vec3 d, int octaves) {
   float cover = uSkyShape.x;
   return smoothstep(1.0 - cover - 0.1, 1.0 - cover + 0.35, fbm(p, octaves)) * smoothstep(0.0, 0.15, d.y);
 }
-// The sky looking along d, as skyColour() in ocean/sky.js.
-vec3 skyColour(vec3 d, float cl) {
+// The sky looking along d, as skyColor() in ocean/sky.js.
+vec3 skyColor(vec3 d, float cl) {
   float h = max(d.y, 0.0);
   float mu = max(dot(d, uSun), 0.0);
   vec3 col = mix(uHorizon, uZenith, sqrt(h)) + uSunColor * (0.18 * pow(mu, 6.0) + 0.5 * pow(mu, 64.0));
@@ -146,7 +146,7 @@ vec3 skyColour(vec3 d, float cl) {
 }
 // The haze at the horizon, round the way d looks.
 vec3 haze(vec3 d) {
-  return skyColour(normalize(vec3(d.x, 0.0, d.z) + vec3(1e-4, 0.0, 0.0)), 0.0);
+  return skyColor(normalize(vec3(d.x, 0.0, d.z) + vec3(1e-4, 0.0, 0.0)), 0.0);
 }
 // Exposure, the highlights rolled off above 0.8, and sRGB for the canvas (linear for what glass refracts).
 vec3 film(vec3 c) {
@@ -210,7 +210,7 @@ void main() {
   vec3 rs = vec3(r.x, abs(r.y), r.z);
   float F = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
   // A wave steep enough to reflect downwards sees the sea, not the sky (ripples aside: they would ring it).
-  vec3 sky = mix(uDeep + uBody * (uZenith * 0.3 + uHorizon * 0.2), skyColour(rs, clouds(rs, 3)), smoothstep(-0.25, 0.0, reflect(-v, n0).y));
+  vec3 sky = mix(uDeep + uBody * (uZenith * 0.3 + uHorizon * 0.2), skyColor(rs, clouds(rs, 3)), smoothstep(-0.25, 0.0, reflect(-v, n0).y));
 
   // Under the surface: deep water, lighter where the light gets in, and
   // glowing through the thin crests, brightest looking into the sun.
@@ -268,7 +268,7 @@ void main() {
   vec3 col = haze(d);
   if (d.y > 0.0) {
     float cl = clouds(d, 4);
-    col = skyColour(d, cl);
+    col = skyColor(d, cl);
     float mu = dot(d, uSun);
     col += uSunColor * 24.0 * smoothstep(0.99965, 0.9999, mu) * (1.0 - 0.92 * cl);
     vec3 g = floor(d * 280.0);
@@ -349,8 +349,8 @@ fn clouds(d: vec3f, octaves: i32) -> f32 {
   let cover = material.uSkyShape.x;
   return smoothstep(1.0 - cover - 0.1, 1.0 - cover + 0.35, fbm(p, octaves)) * smoothstep(0.0, 0.15, d.y);
 }
-// The sky looking along d, as skyColour() in ocean/sky.js.
-fn skyColour(d: vec3f, cl: f32) -> vec3f {
+// The sky looking along d, as skyColor() in ocean/sky.js.
+fn skyColor(d: vec3f, cl: f32) -> vec3f {
   let h = max(d.y, 0.0);
   let mu = max(dot(d, material.uSun), 0.0);
   let col = mix(material.uHorizon, material.uZenith, sqrt(h)) + material.uSunColor * (0.18 * pow(mu, 6.0) + 0.5 * pow(mu, 64.0));
@@ -358,7 +358,7 @@ fn skyColour(d: vec3f, cl: f32) -> vec3f {
 }
 // The haze at the horizon, round the way d looks.
 fn haze(d: vec3f) -> vec3f {
-  return skyColour(normalize(vec3f(d.x, 0.0, d.z) + vec3f(1e-4, 0.0, 0.0)), 0.0);
+  return skyColor(normalize(vec3f(d.x, 0.0, d.z) + vec3f(1e-4, 0.0, 0.0)), 0.0);
 }
 // Exposure, the highlights rolled off above 0.8, and sRGB for the canvas (linear for what glass refracts).
 fn film(c0: vec3f) -> vec3f {
@@ -420,7 +420,7 @@ struct Varyings { @builtin(position) position: vec4f, @location(0) world: vec3f,
   let rs = vec3f(r.x, abs(r.y), r.z);
   let F = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
   // A wave steep enough to reflect downwards sees the sea, not the sky (ripples aside: they would ring it).
-  let sky = mix(material.uDeep + material.uBody * (material.uZenith * 0.3 + material.uHorizon * 0.2), skyColour(rs, clouds(rs, 3)), smoothstep(-0.25, 0.0, reflect(-v, n0).y));
+  let sky = mix(material.uDeep + material.uBody * (material.uZenith * 0.3 + material.uHorizon * 0.2), skyColor(rs, clouds(rs, 3)), smoothstep(-0.25, 0.0, reflect(-v, n0).y));
 
   // Under the surface: deep water, lighter where the light gets in, and
   // glowing through the thin crests, brightest looking into the sun.
@@ -479,7 +479,7 @@ struct Varyings { @builtin(position) position: vec4f, @location(0) world: vec3f 
   var col = haze(d);
   if (d.y > 0.0) {
     let cl = clouds(d, 4);
-    col = skyColour(d, cl);
+    col = skyColor(d, cl);
     let mu = dot(d, material.uSun);
     col += material.uSunColor * 24.0 * smoothstep(0.99965, 0.9999, mu) * (1.0 - 0.92 * cl);
     let g = floor(d * 280.0);

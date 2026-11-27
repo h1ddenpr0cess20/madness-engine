@@ -3,8 +3,8 @@ import { rgb, shingles } from '../models/sdf.js';
 import { quadruped } from './quadruped.js';
 
 /**
- * The Saltwater Croc: up out of the harbour and onto the rocks, long and
- * low and armoured, olive-tan above with dark blotches and cream
+ * The Saltwater Croc: up out of the harbor and onto the rocks, long and
+ * low and armored, olive-tan above with dark blotches and cream
  * underneath, rows of scutes down the back and a double crest down the
  * tail, the eyes and the nostrils up on top, and the long narrow snout
  * coming to a point, its teeth interlocking — the bottom ones showing
@@ -15,7 +15,7 @@ import { quadruped } from './quadruped.js';
 const add = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
 const lerp = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 
-/** Scaly hide: the colour of `base`, every scale's edge dark. */
+/** Scaly hide: the color of `base`, every scale's edge dark. */
 export function scaly(base, size = 0.013) {
   const cell = { height: 0, id: 0, edge: 0 };
   return (p, n) => {
@@ -27,10 +27,10 @@ export function scaly(base, size = 0.013) {
 }
 
 /**
- * A crocodilian's head and armour, for the croc and the gator: `snout`
+ * A crocodilian's head and armor, for the croc and the gator: `snout`
  * [width at the eyes, width at the tip], `teeth` 'interlock' (the croc's,
  * top and bottom showing) or 'over' (the gator's, the top ones down
- * outside the bottom jaw), the hide `H` and the colour of the eye.
+ * outside the bottom jaw), the hide `H` and the color of the eye.
  */
 export function crocodilian(s, P, { H, snout = [0.042, 0.016], teeth = 'interlock', eye = '#c8a020', flat = 0.4 }) {
   const top = { ...H, bone: 'head' };
@@ -70,7 +70,7 @@ export function crocodilian(s, P, { H, snout = [0.042, 0.016], teeth = 'interloc
   for (const m of [1, -1]) s.ellipsoid(add(P.H, [m * 0.027, 0.039, 0.008]), [0.011, 0.004, 0.011], { ...top, k: 0.004 });
 }
 
-/** The armour: rows of scutes down the back, and the double crest down the tail. */
+/** The armor: rows of scutes down the back, and the double crest down the tail. */
 export function scutes(s, P, H, { rows = 4, len = 0.2 } = {}) {
   s.part('kit', () => {
     for (let i = 0; i < 11; i++) {

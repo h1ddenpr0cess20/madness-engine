@@ -2,8 +2,8 @@
  * (From Blubber.)
  *
  * Every surface's texture, painted on a canvas at startup, as Dungeon
- * Roller's stone is: a colour map near white (the tile's colour comes from
- * the vertex colours under it) and a bump map that raises what stands out.
+ * Roller's stone is: a color map near white (the tile's color comes from
+ * the vertex colors under it) and a bump map that raises what stands out.
  * Each is painted from a seed, so it comes out the same every time, and the
  * ones laid across whole floors (`world`) wrap at their edges so no seam
  * shows. Under node (the tests) there is no canvas and nothing is painted.
@@ -19,6 +19,8 @@ export function seeded(seed) {
     return (s - 1) / 2147483646;
   };
 }
+
+import { DETAIL, grainFields, laidGrain } from './painters.js';
 
 export function canvas(w, h = w) {
   const c = document.createElement('canvas');
@@ -359,9 +361,15 @@ export function surface(GFX, name, size = name === 'grass' || name === 'snow' ||
   if (typeof document === 'undefined' || !PAINTERS[name]) return { map: null, bump: null };
   const key = `${name}@${size}`;
   if (!painted.has(key)) {
-    const [mc, map] = canvas(size);
-    const [bc, bump] = canvas(size);
+    // Painted in the design's own `size`, drawn at DETAIL pixels, with the same fine grain as the rest.
+    const [mc, map] = canvas(DETAIL);
+    const [bc, bump] = canvas(DETAIL);
+    map.setTransform(DETAIL / size, 0, 0, DETAIL / size, 0, 0);
+    bump.setTransform(DETAIL / size, 0, 0, DETAIL / size, 0, 0);
     PAINTERS[name](map, bump, size, seeded(name.length * 7919 + size));
+    const grains = grainFields(911 + name.length);
+    laidGrain(mc, grains, 0.12, false);
+    laidGrain(bc, grains, 0.11, true);
     const texture = (c, srgb) => {
       const t = new GFX.CanvasTexture(c);
       if (srgb) t.colorSpace = GFX.SRGBColorSpace;

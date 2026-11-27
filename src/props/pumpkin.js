@@ -30,19 +30,19 @@ export function rind(radius, base = BRIGHT, deep = DEEP, pale = PALE) {
   };
 }
 
-const stalkColour = (p) => mix(STALK_DARK, STALK, 0.5 + 0.5 * Math.sin(Math.atan2(p[0], p[2]) * 6 + p[1] * 30));
+const stalkColor = (p) => mix(STALK_DARK, STALK, 0.5 + 0.5 * Math.sin(Math.atan2(p[0], p[2]) * 6 + p[1] * 30));
 
 /**
  * Adds a pumpkin `r` round and `h` tall, its base at `at`, to the sculpt
  * `s`. `flat` presses its base flat (not for one rolling on its side).
  */
-export function sculptPumpkin(s, { r = 0.22, h = 0.3, k = 0.05, colour = rind(r), ribs = RIBS, stalk = true, mat = 'rind', at = [0, 0, 0], flat = true, turn = 0 } = {}) {
+export function sculptPumpkin(s, { r = 0.22, h = 0.3, k = 0.05, color = rind(r), ribs = RIBS, stalk = true, mat = 'rind', at = [0, 0, 0], flat = true, turn = 0 } = {}) {
   const [ox, oy, oz] = at;
   const cy = oy + h / 2;
   for (let i = 0; i < ribs; i++) {
     const a = (i / ribs) * Math.PI * 2 + turn;
     const off = r * 0.42;
-    s.ellipsoid([ox + Math.sin(a) * off, cy, oz + Math.cos(a) * off], [r * 0.62, h / 2, r * 0.62], { color: colour, mat, k, rot: [0, a, 0] });
+    s.ellipsoid([ox + Math.sin(a) * off, cy, oz + Math.cos(a) * off], [r * 0.62, h / 2, r * 0.62], { color: color, mat, k, rot: [0, a, 0] });
   }
   // The crown sunk round the stalk, and the base pressed flat.
   s.sphere([ox, oy + h + r * 0.18, oz], r * 0.32, { op: 'sub', k: r * 0.25 });
@@ -53,8 +53,8 @@ export function sculptPumpkin(s, { r = 0.22, h = 0.3, k = 0.05, colour = rind(r)
       const c = Math.cos(turn), sn = Math.sin(turn);
       const p = (x, y, z) => [ox + x * c + z * sn, y, oz - x * sn + z * c];
       const q = r / 0.22;
-      s.chain([p(0, top - 0.02 * q, 0), p(0.008 * q, top + 0.04 * q, 0.004 * q), p(0.026 * q, top + 0.075 * q, 0.012 * q), p(0.05 * q, top + 0.088 * q, 0.02 * q)], [r * 0.13, r * 0.11, r * 0.095, r * 0.08], { color: stalkColour, mat: 'stalk', k: 0.01 * q });
-      s.sphere(p(0, top - 0.01 * q, 0), r * 0.16, { color: stalkColour, mat: 'stalk', k: 0.02 * q });
+      s.chain([p(0, top - 0.02 * q, 0), p(0.008 * q, top + 0.04 * q, 0.004 * q), p(0.026 * q, top + 0.075 * q, 0.012 * q), p(0.05 * q, top + 0.088 * q, 0.02 * q)], [r * 0.13, r * 0.11, r * 0.095, r * 0.08], { color: stalkColor, mat: 'stalk', k: 0.01 * q });
+      s.sphere(p(0, top - 0.01 * q, 0), r * 0.16, { color: stalkColor, mat: 'stalk', k: 0.02 * q });
     });
   }
 }

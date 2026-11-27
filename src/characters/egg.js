@@ -55,7 +55,7 @@ const inside = ([x, y], poly) => {
 };
 
 /**
- * Marc's speckled shell skin (skin.js), as a colour map and a bump map, with
+ * Marc's speckled shell skin (skin.js), as a color map and a bump map, with
  * the cracks drawn on: dark, branching, running out from the hole.
  */
 function shellSkin(GFX, outline, random, { width = 1024, height = 512 } = {}) {
@@ -65,9 +65,9 @@ function shellSkin(GFX, outline, random, { width = 1024, height = 512 } = {}) {
     el.width = width; el.height = height;
     return { el, ctx: el.getContext('2d') };
   };
-  const colour = canvas(), bump = canvas();
-  if (!colour.ctx || !bump.ctx) return { map: null, bumpMap: null };
-  const g = colour.ctx, b = bump.ctx;
+  const color = canvas(), bump = canvas();
+  if (!color.ctx || !bump.ctx) return { map: null, bumpMap: null };
+  const g = color.ctx, b = bump.ctx;
   g.fillStyle = '#efe0c8'; g.fillRect(0, 0, width, height);
   b.fillStyle = '#808080'; b.fillRect(0, 0, width, height);
   // Grime toward the bottom, where it has sat a long while.
@@ -105,7 +105,7 @@ function shellSkin(GFX, outline, random, { width = 1024, height = 512 } = {}) {
     const a = Math.atan2((v - 0.47) * 1.2, u - 0.25);
     crack(u * width, v * height, a, 10 + Math.floor(random() * 14), 2.6);
   });
-  const map = new GFX.CanvasTexture(colour.el);
+  const map = new GFX.CanvasTexture(color.el);
   map.colorSpace = GFX.SRGBColorSpace;
   map.anisotropy = 4;
   return { map, bumpMap: new GFX.CanvasTexture(bump.el) };

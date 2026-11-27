@@ -3,9 +3,9 @@ import { paintSky } from '../textures/skies/skyline.js';
 
 /**
  * Stop 9: Sydney. The far side of the world, and the show is at the Opera
- * House. Off the top of the Harbour Bridge's arch, where the climbers go,
+ * House. Off the top of the Harbor Bridge's arch, where the climbers go,
  * down the stairs inside it; across Circular Quay, the wharf crane dropping
- * crates on the beat and the harbour ferries the only way over the water,
+ * crates on the beat and the harbor ferries the only way over the water,
  * a snow globe through the glass of the Opera House's foyer; down to the
  * Rocks, the beer garden where the barbecues flare on the beat; along
  * Bondi, the rip pulling everything out toward the edge, the surfers and

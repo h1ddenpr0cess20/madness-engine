@@ -20,7 +20,7 @@ test('the engine-owned bowling ball is preserved by extraction and listed in the
   const library = readFileSync(join(here, '../docs/library.md'), 'utf8');
   assert.match(extraction, /ENGINE_OWNED/);
   assert.ok(library.includes('props/bowling-ball'));
-  assert.ok(extraction.includes("ENGINE_OWNED = ['props/bowling-ball.js']"));
+  assert.ok(extraction.includes("ENGINE_OWNED = ['props/bowling-ball.js', 'props/book.js', 'props/book-art.js', 'props/bookcase.js', 'props/wood-table.js', 'props/wood-chair.js', 'props/track-light.js', 'props/glass-entry.js']"));
 });
 
 test('the library is laid out by what things are, and no game has a folder of its own', () => {
@@ -74,7 +74,7 @@ const bakes = (name, def) => {
   }
 };
 
-test('the catalogues list every sculpted character and prop by name, and they bake', async () => {
+test('the catalogs list every sculpted character and prop by name, and they bake', async () => {
   const { CHARACTERS } = await import('../src/characters/index.js');
   const { PROPS } = await import('../src/props/index.js');
   assert.ok(Object.keys(CHARACTERS).length > 150);

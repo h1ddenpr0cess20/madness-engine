@@ -2,7 +2,7 @@ import { cloth, person, strap } from './person.js';
 import { headband, longHair } from './metalwear.js';
 
 /**
- * The Candle Kid: a tie-dye T-shirt in a colour that does not exist, a
+ * The Candle Kid: a tie-dye T-shirt in a color that does not exist, a
  * peace-sign necklace, a headband, hair to the shoulders, bare feet in the
  * dust, and a candle held up in both hands in the dark, tenderly, with
  * an expression of deep peace. It is a vigil. There are two hundred of

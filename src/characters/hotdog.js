@@ -1,5 +1,5 @@
 import { cloth, hold, person } from './person.js';
-import { moustache } from './wardrobe.js';
+import { mustache } from './wardrobe.js';
 
 /**
  * The Hot Dog Vendor: from the cart on the corner of Seventh Avenue, big,
@@ -43,7 +43,7 @@ export default person({
     },
   },
   extras(s, J, { pose }) {
-    moustache(s, { color: '#2a1a10', wide: 1.2 });
+    mustache(s, { color: '#2a1a10', wide: 1.2 });
     s.part('kit', () => {
       // The paper hat: a white band, a red stripe round it.
       s.cylinder([0, 0.775, -0.004], 0.106, 0.035, { color: '#fbfaf8', mat: 'paper', bone: 'head', k: 0.008, round: 0.01 });
