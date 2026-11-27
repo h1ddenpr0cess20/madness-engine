@@ -70,7 +70,9 @@ const base = person({
       // only 0.26 long, so the pelvis has to stay low or the feet cannot
       // reach the deck.
       const hipMove = k.bone('hips').move;
-      hipMove[0] = 0; hipMove[1] = 0.0; hipMove[2] = 0;
+      // Shift the pelvis back toward the heel edge so his weight sits over
+      // the board instead of hanging past the toe edge.
+      hipMove[0] = -0.05; hipMove[1] = 0.0; hipMove[2] = 0;
       hold(k, 'hips', 0.1, Math.PI / 2, 0);
       hold(k, 'chest', 0.22, 0, 0);
       hold(k, 'spine', 0.08, 0, 0);
