@@ -72,15 +72,19 @@ const base = person({
       const hipMove = k.bone('hips').move;
       // Shift the pelvis back toward the heel edge so his weight sits over
       // the board instead of hanging past the toe edge.
-      hipMove[0] = -0.05; hipMove[1] = 0.0; hipMove[2] = 0;
-      hold(k, 'hips', 0.1, Math.PI / 2, 0);
-      hold(k, 'chest', 0.22, 0, 0);
-      hold(k, 'spine', 0.08, 0, 0);
-      k.turn('head', -0.12, 0, 0);
-      hold(k, 'armL', -0.82, 0.08, 0.48);
-      hold(k, 'foreL', -0.68, 0, 0.08);
-      hold(k, 'armR', -0.7, -0.08, -0.48);
-      hold(k, 'foreR', -0.78, 0, -0.08);
+      hipMove[0] = -0.03; hipMove[1] = 0.0; hipMove[2] = 0;
+      // Hips and feet sideways across the board, but the shoulders open a
+      // little toward the nose and the head turned to look over the front
+      // shoulder, down the board, where he is going. Upright, soft knees,
+      // arms loose and low at his sides for balance.
+      hold(k, 'hips', 0.04, Math.PI / 2, 0);
+      hold(k, 'spine', 0.04, -0.15, 0);
+      hold(k, 'chest', 0.06, -0.2, 0);
+      k.turn('head', -0.05, -0.85, 0);
+      hold(k, 'armL', -0.15, 0.05, 0.42);
+      hold(k, 'foreL', -0.35, 0, 0.05);
+      hold(k, 'armR', -0.25, -0.05, -0.38);
+      hold(k, 'foreR', -0.4, 0, -0.05);
 
       if (ollie) {
         // The shared jump clip provides the rider's vertical arc. Pop the
@@ -100,8 +104,8 @@ const base = person({
         hold(k, 'footR', -0.16, 0, 0);
         // Foot targets are attached to the deck pivot, so both soles follow
         // the board through pop, flight and touchdown.
-        step?.(k, 'L', 'deck', [0, DECK_Y + 0.01, -0.075]);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.075]);
+        step?.(k, 'L', 'deck', [0, DECK_Y + 0.01, -0.105]);
+        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.105]);
       } else if (pushing) {
         // The front (right) foot stays planted over the front truck and the
         // board glides on it. The back (left) foot does the pushing, every
@@ -112,7 +116,7 @@ const base = person({
         const cadence = clip === 'run' ? 1.6 : 1.0;
         const phase = ((T * cadence * Math.max(0.5, Math.abs(rate))) % 1 + 1) % 1;
         const strength = clip === 'run' ? 1.3 : 1;
-        const onDeck = [0, DECK_Y + 0.01, -0.075];
+        const onDeck = [0, DECK_Y + 0.01, -0.105];
         const plant = [0.085, 0.006, 0.06];
         const away = [0.085, 0.006, -0.2];
         const lerp = (p, q, u) => p.map((v, i) => v + (q[i] - v) * u);
@@ -145,18 +149,18 @@ const base = person({
         hold(k, 'thighL', -0.5 - 0.3 * (1 - down), 0, 0);
         hold(k, 'shinL', 0.8 + 0.5 * (1 - down), 0, 0);
         hold(k, 'footL', -0.14, 0, 0);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.075]);
+        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.105]);
         step?.(k, 'L', 'root', target);
       } else {
         // Idle/ride: balanced sideways glide with both feet on the deck.
-        hold(k, 'thighL', -0.86, 0, 0);
-        hold(k, 'shinL', 1.34, 0, 0);
-        hold(k, 'thighR', -0.78, 0, 0);
-        hold(k, 'shinR', 1.28, 0, 0);
+        hold(k, 'thighL', -0.5, 0, 0);
+        hold(k, 'shinL', 0.85, 0, 0);
+        hold(k, 'thighR', -0.45, 0, 0);
+        hold(k, 'shinR', 0.8, 0, 0);
         hold(k, 'footL', -0.16, 0, 0);
         hold(k, 'footR', -0.16, 0, 0);
-        step?.(k, 'L', 'deck', [0, DECK_Y + 0.01, -0.075]);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.075]);
+        step?.(k, 'L', 'deck', [0, DECK_Y + 0.01, -0.105]);
+        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.105]);
       }
 
       // The four wheels use the vehicle convention: angle = distance/radius.
