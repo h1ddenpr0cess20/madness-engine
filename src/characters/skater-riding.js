@@ -1,5 +1,6 @@
 import { cloth, hold, person } from './person.js';
 import { beanie } from './metalwear.js';
+import { joints } from './humanoid.js';
 
 /**
  * The Skater, riding: a beanie, a plain dark tee, blue jeans and a full
@@ -15,6 +16,33 @@ const smoothstep = (a, b, x) => {
   const u = clamp01((x - a) / (b - a));
   return u * u * (3 - 2 * u);
 };
+
+const J0 = joints(1.0);
+
+/**
+ * Turn foot `S` at the ankle until its sole is level with the surface it is
+ * standing on (`tilt`, the pitch of that surface), so the toe does not dig
+ * into the deck while the heel floats above it.
+ */
+function flatten(k, S, to, tilt = 0) {
+  const a = J0[`ankle${S}`];
+  const heel = to([a[0], 0.006, a[2] - 0.03]);
+  const toe = to([a[0], 0.006, a[2] + 0.09]);
+  const r = k.bone(`foot${S}`).rot;
+  const slope = () => {
+    k.compute();
+    const h = k.point(`foot${S}`, heel), t = k.point(`foot${S}`, toe);
+    return Math.atan2(t[1] - h[1], Math.hypot(t[0] - h[0], t[2] - h[2])) - tilt;
+  };
+  for (let i = 0; i < 6; i++) {
+    const e = slope();
+    if (Math.abs(e) < 0.005) break;
+    const was = r[0];
+    r[0] = was + 0.02;
+    const d = (slope() - e) / 0.02;
+    r[0] = was - (Math.abs(d) > 1e-4 ? e / d : 0);
+  }
+}
 
 const WHEELS = [
   { x: -0.052, z: -0.12, bone: 'wheelBL' },
@@ -69,6 +97,16 @@ const base = person({
       // Set the hips outright (the walk and run clips bob them): the legs are
       // only 0.26 long, so the pelvis has to stay low or the feet cannot
       // reach the deck.
+      const to = (p) => (base.warp ? base.warp.to(p) : p);
+      // Place the ball of the foot, level the sole, and place it again, so
+      // the whole sole rests on the surface rather than just one point.
+      const plant = (S, bone, p, tilt = 0) => {
+        if (!step) return;
+        for (let i = 0; i < 3; i++) {
+          step(k, S, bone, p);
+          flatten(k, S, to, tilt);
+        }
+      };
       const hipMove = k.bone('hips').move;
       // Shift the pelvis back toward the heel edge so his weight sits over
       // the board instead of hanging past the toe edge.
@@ -104,8 +142,8 @@ const base = person({
         hold(k, 'footR', -0.16, 0, 0);
         // Foot targets are attached to the deck pivot, so both soles follow
         // the board through pop, flight and touchdown.
-        step?.(k, 'L', 'deck', [0, DECK_Y + 0.018, -0.09]);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.018, 0.09]);
+        plant('L', 'deck', [0, DECK_Y + 0.022 + 0.03 * pop, -0.09]);
+        plant('R', 'deck', [0, DECK_Y + 0.022 + 0.01 * pop, 0.09]);
       } else if (pushing) {
         // The front (right) foot stays planted over the front truck and the
         // board glides on it. The back (left) foot does the pushing, every
@@ -116,9 +154,9 @@ const base = person({
         const cadence = clip === 'run' ? 1.6 : 1.0;
         const phase = ((T * cadence * Math.max(0.5, Math.abs(rate))) % 1 + 1) % 1;
         const strength = clip === 'run' ? 1.3 : 1;
-        const onDeck = [0, DECK_Y + 0.018, -0.09];
-        const plant = [0.1, 0.006, 0.04];
-        const away = [0.1, 0.006, -0.2];
+        const onDeck = [0, DECK_Y + 0.022, -0.09];
+        const plantAt = [0.17, 0.006, 0.04];
+        const away = [0.17, 0.006, -0.2];
         const lerp = (p, q, u) => p.map((v, i) => v + (q[i] - v) * u);
         // Moving between the deck and the ground, the foot lifts clear of the
         // board first and only then moves sideways past its edge.
@@ -128,16 +166,18 @@ const base = person({
           t[0] = from[0] + (to[0] - from[0]) * side;
           t[1] = Math.max(t[1], DECK_Y + 0.06 * Math.sin(Math.PI * Math.min(1, u * 1.15)));
           if (u > 0.8) t[1] = lerp(from, to, u)[1] + (t[1] - lerp(from, to, u)[1]) * (1 - smoothstep(0.8, 1, u));
+          // Over the board, never lower than its top.
+          if (Math.abs(t[0]) < 0.11) t[1] = Math.max(t[1], DECK_Y + 0.022);
           return t;
         };
         let target;
         let down = 0;
         if (phase < 0.18) {
           const u = smoothstep(0, 0.18, phase);
-          target = hop(onDeck, plant, u);
+          target = hop(onDeck, plantAt, u);
           down = u;
         } else if (phase < 0.62) {
-          target = lerp(plant, away, smoothstep(0.18, 0.62, phase));
+          target = lerp(plantAt, away, smoothstep(0.18, 0.62, phase));
           down = 1;
         } else if (phase < 0.84) {
           const u = smoothstep(0.62, 0.84, phase);
@@ -154,8 +194,8 @@ const base = person({
         hold(k, 'thighL', -0.5 - 0.3 * (1 - down), 0, 0);
         hold(k, 'shinL', 0.8 + 0.5 * (1 - down), 0, 0);
         hold(k, 'footL', -0.14, 0, 0);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.018, 0.09]);
-        step?.(k, 'L', 'root', target);
+        plant('R', 'deck', [0, DECK_Y + 0.022, 0.09]);
+        plant('L', 'root', target);
       } else {
         // Idle/ride: balanced sideways glide with both feet on the deck.
         hold(k, 'thighL', -0.5, 0, 0);
@@ -164,8 +204,8 @@ const base = person({
         hold(k, 'shinR', 0.8, 0, 0);
         hold(k, 'footL', -0.16, 0, 0);
         hold(k, 'footR', -0.16, 0, 0);
-        step?.(k, 'L', 'deck', [0, DECK_Y + 0.018, -0.09]);
-        step?.(k, 'R', 'deck', [0, DECK_Y + 0.018, 0.09]);
+        plant('L', 'deck', [0, DECK_Y + 0.022, -0.09]);
+        plant('R', 'deck', [0, DECK_Y + 0.022, 0.09]);
       }
 
       // The four wheels use the vehicle convention: angle = distance/radius.
