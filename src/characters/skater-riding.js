@@ -1,0 +1,279 @@
+import { cloth, hold, person } from './person.js';
+import { beanie } from './metalwear.js';
+import { joints } from './humanoid.js';
+
+/**
+ * The Skater, riding: a beanie, a plain dark tee, blue jeans and a full
+ * beard. His feet are planted nose-to-tail on a low skateboard; all four
+ * wheels turn on their own axles as the board rolls.
+ */
+const HAIR = cloth('#382a22', '#211710');
+const DECK_Y = 0.058;
+const WHEEL_RADIUS = 0.022;
+const WHEEL_WIDTH = 0.016;
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const smoothstep = (a, b, x) => {
+  const u = clamp01((x - a) / (b - a));
+  return u * u * (3 - 2 * u);
+};
+
+const J0 = joints(1.0);
+
+/**
+ * Turn foot `S` at the ankle until its sole is level with the surface it is
+ * standing on (`tilt`, the pitch of that surface), so the toe does not dig
+ * into the deck while the heel floats above it.
+ */
+function flatten(k, S, to, tilt = 0) {
+  const a = J0[`ankle${S}`];
+  const heel = to([a[0], 0.006, a[2] - 0.03]);
+  const toe = to([a[0], 0.006, a[2] + 0.09]);
+  const r = k.bone(`foot${S}`).rot;
+  const slope = () => {
+    k.compute();
+    const h = k.point(`foot${S}`, heel), t = k.point(`foot${S}`, toe);
+    return Math.atan2(t[1] - h[1], Math.hypot(t[0] - h[0], t[2] - h[2])) - tilt;
+  };
+  for (let i = 0; i < 6; i++) {
+    const e = slope();
+    if (Math.abs(e) < 0.005) break;
+    const was = r[0];
+    r[0] = was + 0.02;
+    const d = (slope() - e) / 0.02;
+    r[0] = was - (Math.abs(d) > 1e-4 ? e / d : 0);
+  }
+}
+
+const WHEELS = [
+  { x: -0.052, z: -0.12, bone: 'wheelBL' },
+  { x: 0.052, z: -0.12, bone: 'wheelBR' },
+  { x: -0.052, z: 0.12, bone: 'wheelFL' },
+  { x: 0.052, z: 0.12, bone: 'wheelFR' },
+];
+
+const base = person({
+  name: 'skater-riding',
+  scale: 1.42,
+  budget: 56000,
+  cells: {
+    'rigid:wheelBL': 0.002,
+    'rigid:wheelBR': 0.002,
+    'rigid:wheelFL': 0.002,
+    'rigid:wheelFR': 0.002,
+  },
+  b: 1.0,
+  shape: { legs: 1.0, girth: 1.02, head: 1.0 },
+  skin: '#d8a888',
+  look: {
+    torso: cloth('#343b43', '#20252b'),
+    sleeve: cloth('#343b43', '#20252b'),
+    cuff: '#d8a888',
+    legs: cloth('#3a506d', '#24364c'),
+    boot: '#24262b',
+    sole: '#d8d8d2',
+  },
+  mats: { torso: 'cloth', sleeve: 'cloth', cuff: 'skin', legs: 'denim', boot: 'leather' },
+  face: { eyeColor: '#3a2a20', brow: '#302219', mood: 0, blush: 0.25, jaw: 1.04 },
+  hair: {
+    color: HAIR,
+    cap: [0.108, 0.098, 0.108],
+    locks: [
+      [[0.09, 0.7, 0.0], [0.11, 0.62, -0.04], 0.03],
+      [[-0.09, 0.7, 0.0], [-0.11, 0.62, -0.04], 0.03],
+    ],
+  },
+  style: {
+    attack: 'smite',
+    after(k, { clip, t, time, seed, speed, step }) {
+      if (clip === 'ko' || clip === 'hit' || clip === 'attack') return;
+      const T = time + seed;
+      const rate = Number.isFinite(speed) ? speed : 1;
+      const pushing = clip === 'walk' || clip === 'run';
+      const ollie = clip === 'jump' || clip === 'leap';
+      const moving = pushing || ollie || clip === 'ride';
+
+      // Side-on stance: the board runs along +z. Keep the torso low and
+      // the arms out for balance, not pumping like a pedestrian.
+      // Set the hips outright (the walk and run clips bob them): the legs are
+      // only 0.26 long, so the pelvis has to stay low or the feet cannot
+      // reach the deck.
+      const to = (p) => (base.warp ? base.warp.to(p) : p);
+      // Place the ball of the foot, level the sole, and place it again, so
+      // the whole sole rests on the surface rather than just one point.
+      const plant = (S, bone, p, tilt = 0) => {
+        if (!step) return;
+        for (let i = 0; i < 3; i++) {
+          step(k, S, bone, p);
+          flatten(k, S, to, tilt);
+        }
+      };
+      const hipMove = k.bone('hips').move;
+      // Shift the pelvis back toward the heel edge so his weight sits over
+      // the board instead of hanging past the toe edge.
+      hipMove[0] = -0.03; hipMove[1] = 0.0; hipMove[2] = 0;
+      // Hips and feet sideways across the board, but the shoulders open a
+      // little toward the nose and the head turned to look over the front
+      // shoulder, down the board, where he is going. Upright, soft knees,
+      // arms loose and low at his sides for balance.
+      hold(k, 'hips', 0.04, Math.PI / 2, 0);
+      hold(k, 'spine', 0.04, -0.15, 0);
+      hold(k, 'chest', 0.06, -0.2, 0);
+      k.turn('head', -0.05, -0.85, 0);
+      hold(k, 'armL', -0.15, 0.05, 0.42);
+      hold(k, 'foreL', -0.35, 0, 0.05);
+      hold(k, 'armR', -0.25, -0.05, -0.38);
+      hold(k, 'foreR', -0.4, 0, -0.05);
+
+      if (ollie) {
+        // The shared jump clip provides the rider's vertical arc. Pop the
+        // tail, bring the deck up with him, then level it for the landing.
+        const u = Math.max(0, Math.min(1, t));
+        const crouch = 1 - smoothstep(0.12, 0.34, u);
+        const pop = smoothstep(0.28, 0.39, u) * (1 - smoothstep(0.46, 0.59, u));
+        const air = smoothstep(0.35, 0.52, u) * (1 - smoothstep(0.8, 0.98, u));
+        const land = smoothstep(0.82, 0.98, u);
+        k.move('deck', 0, 0.018 * pop + 0.035 * air, 0);
+        k.turn('deck', -0.52 * pop + 0.04 * land, 0, 0);
+        hold(k, 'thighL', -0.82 - 0.28 * crouch - 0.08 * air, 0, 0);
+        hold(k, 'shinL', 1.3 + 0.55 * crouch + 0.1 * air, 0, 0);
+        hold(k, 'thighR', -0.76 - 0.3 * crouch - 0.1 * air, 0, 0);
+        hold(k, 'shinR', 1.24 + 0.58 * crouch + 0.12 * air, 0, 0);
+        hold(k, 'footL', -0.16, 0, 0);
+        hold(k, 'footR', -0.16, 0, 0);
+        // Foot targets are attached to the deck pivot, so both soles follow
+        // the board through pop, flight and touchdown.
+        plant('L', 'deck', [0, DECK_Y + 0.022 + 0.03 * pop, -0.09]);
+        plant('R', 'deck', [0, DECK_Y + 0.022 + 0.01 * pop, 0.09]);
+      } else if (pushing) {
+        // The front (right) foot stays planted over the front truck and the
+        // board glides on it. The back (left) foot does the pushing, every
+        // stroke: it steps off the tail to the toe side of the board, plants
+        // on the pavement level with the front foot, drives back past the
+        // tail, then lifts back onto the deck and rides for a beat. Run is the
+        // same action with a quicker, harder stroke.
+        const cadence = clip === 'run' ? 1.6 : 1.0;
+        const phase = ((T * cadence * Math.max(0.5, Math.abs(rate))) % 1 + 1) % 1;
+        const strength = clip === 'run' ? 1.3 : 1;
+        const onDeck = [0, DECK_Y + 0.022, -0.09];
+        const plantAt = [0.17, 0.006, 0.04];
+        const away = [0.17, 0.006, -0.2];
+        const lerp = (p, q, u) => p.map((v, i) => v + (q[i] - v) * u);
+        // Moving between the deck and the ground, the foot lifts clear of the
+        // board first and only then moves sideways past its edge.
+        const hop = (from, to, u) => {
+          const side = smoothstep(0.25, 0.75, u);
+          const t = lerp(from, to, u);
+          t[0] = from[0] + (to[0] - from[0]) * side;
+          t[1] = Math.max(t[1], DECK_Y + 0.06 * Math.sin(Math.PI * Math.min(1, u * 1.15)));
+          if (u > 0.8) t[1] = lerp(from, to, u)[1] + (t[1] - lerp(from, to, u)[1]) * (1 - smoothstep(0.8, 1, u));
+          // Over the board, never lower than its top.
+          if (Math.abs(t[0]) < 0.11) t[1] = Math.max(t[1], DECK_Y + 0.022);
+          return t;
+        };
+        let target;
+        let down = 0;
+        if (phase < 0.18) {
+          const u = smoothstep(0, 0.18, phase);
+          target = hop(onDeck, plantAt, u);
+          down = u;
+        } else if (phase < 0.62) {
+          target = lerp(plantAt, away, smoothstep(0.18, 0.62, phase));
+          down = 1;
+        } else if (phase < 0.84) {
+          const u = smoothstep(0.62, 0.84, phase);
+          target = hop(away, onDeck, u);
+          down = 1 - u;
+        } else {
+          target = onDeck;
+        }
+        // Sink into the front knee while the back foot is down so it can reach the pavement.
+        hipMove[1] = -0.04 * down * strength;
+        hold(k, 'thighR', -0.86 - 0.12 * down, 0, 0);
+        hold(k, 'shinR', 1.34 + 0.2 * down, 0, 0);
+        hold(k, 'footR', -0.16, 0, 0);
+        hold(k, 'thighL', -0.5 - 0.3 * (1 - down), 0, 0);
+        hold(k, 'shinL', 0.8 + 0.5 * (1 - down), 0, 0);
+        hold(k, 'footL', -0.14, 0, 0);
+        plant('R', 'deck', [0, DECK_Y + 0.022, 0.09]);
+        plant('L', 'root', target);
+      } else {
+        // Idle/ride: balanced sideways glide with both feet on the deck.
+        hold(k, 'thighL', -0.5, 0, 0);
+        hold(k, 'shinL', 0.85, 0, 0);
+        hold(k, 'thighR', -0.45, 0, 0);
+        hold(k, 'shinR', 0.8, 0, 0);
+        hold(k, 'footL', -0.16, 0, 0);
+        hold(k, 'footR', -0.16, 0, 0);
+        plant('L', 'deck', [0, DECK_Y + 0.022, -0.09]);
+        plant('R', 'deck', [0, DECK_Y + 0.022, 0.09]);
+      }
+
+      // The four wheels use the vehicle convention: angle = distance/radius.
+      const distance = moving ? time * 0.18 * rate : 0;
+      const spin = distance / WHEEL_RADIUS;
+      for (const { bone } of WHEELS) k.turn(bone, spin, 0, 0);
+    },
+  },
+  extras(s) {
+    beanie(s, { color: '#242428', fold: '#17171a' });
+
+    // A full, close-cropped beard: the upper edge follows the cheeks and
+    // leaves the eyes and nose clear; the moustache joins over the lip.
+    s.part('hair', () => {
+      const beard = (p) => {
+        const q = (Math.hypot(p[0] / 0.078, (p[1] - 0.609) / 0.055, (p[2] - 0.076) / 0.04) - 1) * 0.04;
+        const cheekLine = p[1] - (0.624 + Math.abs(p[0]) * 0.23);
+        return Math.max(q, cheekLine);
+      };
+      s.shape(beard, [[-0.09, 0.55, 0.03], [0.09, 0.66, 0.13]], { color: HAIR, mat: 'hair', bone: 'head', k: 0.006 });
+      for (const m of [1, -1]) {
+        s.ellipsoid([m * 0.014, 0.628, 0.108], [0.021, 0.008, 0.008], { color: HAIR, mat: 'hair', bone: 'head', k: 0.003 });
+        s.ellipsoid([m * 0.079, 0.646, 0.025], [0.014, 0.035, 0.014], { color: HAIR, mat: 'hair', bone: 'head', k: 0.004 });
+      }
+    });
+
+    // The deck is a shallow, slightly kicked maple board with black grip tape.
+    s.part('rigid:board', () => {
+      const deck = (p) => {
+        const u = Math.abs(p[2]);
+        const kick = Math.max(0, u - 0.115);
+        const halfWidth = 0.048 - Math.max(0, u - 0.12) * 0.12;
+        const outlineX = Math.abs(p[0]) - halfWidth;
+        const outlineZ = u - 0.18;
+        const outline = Math.hypot(Math.max(outlineX, 0), Math.max(outlineZ, 0)) + Math.min(Math.max(outlineX, outlineZ), 0);
+        const top = DECK_Y + kick * 0.55;
+        return Math.max(outline, Math.abs(p[1] - top) - 0.006);
+      };
+      s.shape(deck, [[-0.055, 0.04, -0.19], [0.055, 0.08, 0.19]], { color: '#d7a64b', mat: 'plastic', bone: 'deck', k: 0.003 });
+      s.box([0, DECK_Y + 0.008, 0], [0.039, 0.0018, 0.142], 0.018, { color: '#17191d', mat: 'rubber', bone: 'deck', k: 0.002 });
+      // A small graphic peeks out from the underside at the tail.
+      s.box([0, DECK_Y - 0.008, -0.135], [0.025, 0.0012, 0.018], 0.006, { color: '#d84434', mat: 'plastic', bone: 'deck', k: 0.0015 });
+    });
+
+    // Two trucks, each spanning the board, with the four wheels on separate
+    // axle bones so their spin cannot drag the deck or rider with them.
+    s.part('rigid:trucks', () => {
+      for (const z of [-0.12, 0.12]) {
+        s.box([0, 0.047, z], [0.028, 0.005, 0.022], 0.004, { color: '#9aa0aa', mat: 'metal', bone: 'deck', k: 0.0015 });
+        s.limb([-0.053, 0.034, z], [0.053, 0.034, z], 0.0045, 0.0045, { color: '#9aa0aa', mat: 'metal', bone: 'deck', k: 0.001 });
+      }
+    });
+    for (const { x, z, bone } of WHEELS) {
+      const c = [x, 0.022, z];
+      s.part(`rigid:${bone}`, () => {
+        const W = { bone, k: 0.0015 };
+        s.cylinder(c, WHEEL_RADIUS * 0.84, WHEEL_WIDTH, { ...W, color: '#e8e4dc', mat: 'rubber', round: 0.004, rot: [0, 0, Math.PI / 2] });
+        s.torus(c, WHEEL_RADIUS * 0.78, WHEEL_RADIUS * 0.22, { ...W, color: '#292a2e', mat: 'rubber', rot: [0, 0, Math.PI / 2] });
+        s.cylinder(c, 0.006, WHEEL_WIDTH + 0.002, { ...W, color: '#9aa0aa', mat: 'metal', round: 0.002, rot: [0, 0, Math.PI / 2] });
+      });
+    }
+  },
+});
+
+// Wheel pivots sit exactly at their hubs. Their x axes are the skateboard
+// axles, matching the cyclist and vehicle wheel convention.
+const at = (p) => (base.warp ? base.warp.to(p) : p);
+base.bones.push(['deck', 'root', at([0, DECK_Y, 0])]);
+for (const { x, z, bone } of WHEELS) base.bones.push([bone, 'deck', at([x, 0.022, z])]);
+
+export default base;
