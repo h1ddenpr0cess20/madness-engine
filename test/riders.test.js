@@ -64,7 +64,7 @@ test('all bicycle variants have a saddle on a seatpost and a stem holding up the
     const frame = s.shapes.filter((shape) => shape.part === 'rigid:frame');
     // A steerer runs from the head tube up to the bars: a tall, narrow member near the front.
     const stem = frame.some((shape) =>
-      shape.box[1][1] - shape.box[0][1] > 0.08 && shape.box[1][1] > 0.44
+      shape.box[1][1] - shape.box[0][1] > 0.08 && shape.box[1][1] > (name === 'bmxrider' ? 0.32 : 0.44)
       && Math.abs(shape.box[1][0] - shape.box[0][0]) < 0.05 && shape.box[0][2] > 0.1
     );
     assert.ok(stem, `${name}: steerer and stem rise to the bars`);

@@ -101,41 +101,50 @@ const base = person({
         step?.(k, 'L', 'deck', [0, DECK_Y + 0.01, -0.075]);
         step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.075]);
       } else if (pushing) {
-        // One foot remains on the deck and glides. The other reaches forward,
-        // plants on the ground, drives back along the pavement, then recovers
-        // to the deck. Run is the same action with a quicker, harder stroke.
-        const cadence = clip === 'run' ? 1.65 : 1.0;
+        // The front (right) foot stays planted over the front truck and the
+        // board glides on it. The back (left) foot does the pushing, every
+        // stroke: it steps off the tail to the toe side of the board, plants
+        // on the pavement level with the front foot, drives back past the
+        // tail, then lifts back onto the deck and rides for a beat. Run is the
+        // same action with a quicker, harder stroke.
+        const cadence = clip === 'run' ? 1.6 : 1.0;
         const phase = ((T * cadence * Math.max(0.5, Math.abs(rate))) % 1 + 1) % 1;
-        const pushSide = phase < 0.5 ? 'L' : 'R';
-        const stanceSide = pushSide === 'L' ? 'R' : 'L';
-        const stroke = phase < 0.5 ? phase * 2 : (phase - 0.5) * 2;
-        const deckZ = { L: -0.075, R: 0.075 };
-        const reach = smoothstep(0, 0.18, stroke);
-        const drive = smoothstep(0.18, 0.72, stroke);
-        const recover = smoothstep(0.72, 1, stroke);
-        let pushZ;
-        let pushY;
-        if (stroke < 0.18) {
-          pushZ = 0.19;
-          pushY = 0.008 + 0.032 * (1 - reach);
-        } else if (stroke < 0.72) {
-          pushZ = 0.19 - 0.37 * drive;
-          pushY = 0.006;
-        } else {
-          pushZ = -0.18 + (deckZ[pushSide] + 0.18) * recover;
-          pushY = 0.006 + (DECK_Y + 0.01 - 0.006) * recover + 0.012 * Math.sin(Math.PI * recover);
-        }
         const strength = clip === 'run' ? 1.3 : 1;
-        // Sink into the stance leg so the pushing foot reaches the pavement.
-        hipMove[1] = -0.035 + Math.sin(stroke * Math.PI) * 0.008 * strength;
-        hold(k, 'thigh' + stanceSide, -0.86, 0, 0);
-        hold(k, 'shin' + stanceSide, 1.34, 0, 0);
-        hold(k, 'foot' + stanceSide, -0.16, 0, 0);
-        hold(k, 'thigh' + pushSide, -0.25 - 0.3 * drive, 0, 0);
-        hold(k, 'shin' + pushSide, 0.68 + 0.55 * drive, 0, 0);
-        hold(k, 'foot' + pushSide, -0.12 - 0.16 * recover, 0, 0);
-        step?.(k, stanceSide, 'deck', [0, DECK_Y + 0.01, deckZ[stanceSide]]);
-        step?.(k, pushSide, 'root', [0, pushY, pushZ]);
+        const onDeck = [0, DECK_Y + 0.01, -0.075];
+        const plant = [0.085, 0.006, 0.06];
+        const away = [0.085, 0.006, -0.2];
+        const lerp = (p, q, u) => p.map((v, i) => v + (q[i] - v) * u);
+        let target;
+        let down = 0;
+        if (phase < 0.18) {
+          // Off the tail and forward, lifted clear of the deck's edge.
+          const u = smoothstep(0, 0.18, phase);
+          target = lerp(onDeck, plant, u);
+          target[1] += 0.03 * Math.sin(Math.PI * u);
+          down = u;
+        } else if (phase < 0.62) {
+          // Foot on the ground, driving back.
+          target = lerp(plant, away, smoothstep(0.18, 0.62, phase));
+          down = 1;
+        } else if (phase < 0.84) {
+          // Swing back up onto the tail.
+          const u = smoothstep(0.62, 0.84, phase);
+          target = lerp(away, onDeck, u);
+          target[1] += 0.035 * Math.sin(Math.PI * u);
+          down = 1 - u;
+        } else {
+          target = onDeck;
+        }
+        // Sink into the front knee while the back foot is down so it can reach the pavement.
+        hipMove[1] = -0.04 * down * strength;
+        hold(k, 'thighR', -0.86 - 0.12 * down, 0, 0);
+        hold(k, 'shinR', 1.34 + 0.2 * down, 0, 0);
+        hold(k, 'footR', -0.16, 0, 0);
+        hold(k, 'thighL', -0.5 - 0.3 * (1 - down), 0, 0);
+        hold(k, 'shinL', 0.8 + 0.5 * (1 - down), 0, 0);
+        hold(k, 'footL', -0.14, 0, 0);
+        step?.(k, 'R', 'deck', [0, DECK_Y + 0.01, 0.075]);
+        step?.(k, 'L', 'root', target);
       } else {
         // Idle/ride: balanced sideways glide with both feet on the deck.
         hold(k, 'thighL', -0.86, 0, 0);

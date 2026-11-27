@@ -16,15 +16,16 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
   // The seat tube meets the top tube at `seat`; the saddle sits right on it,
   // under the pelvis, like the Cyclist's. The BMX seat is low and small so a
   // standing rider clears it.
-  const seat = [0, bmx ? 0.27 : 0.4, bmx ? -0.1 : -0.07];
-  const head = [0, bmx ? 0.37 : 0.38, bmx ? 0.15 : 0.17];
+  const seat = [0, bmx ? 0.25 : 0.4, bmx ? -0.09 : -0.07];
+  // A BMX top tube runs almost level, just above the tyres, to a short head tube.
+  const head = [0, bmx ? 0.28 : 0.38, bmx ? 0.155 : 0.17];
   // `bar` is the stem clamp at the top of the steerer; the grips are `handle` out from it.
-  const bar = [0, bmx ? 0.45 : 0.47, bmx ? 0.165 : 0.15];
+  const bar = [0, bmx ? 0.33 : 0.47, bmx ? 0.16 : 0.15];
   const handle = bmx ? 0.12 : 0.085;
   // Where each hand closes on its grip.
-  const grip = bmx ? [handle + 0.018, bar[1] + 0.05, bar[2] - 0.005] : [handle + 0.016, bar[1], bar[2] - 0.022];
+  const grip = bmx ? [handle + 0.012, bar[1] + 0.052, bar[2] - 0.008] : [handle + 0.016, bar[1], bar[2] - 0.022];
   const FRAME = { color: frame, mat: 'metal', bone: 'root' };
-  const wheelCells = { 'rigid:wheelF': 0.0026, 'rigid:wheelB': 0.0026 };
+  const wheelCells = { 'rigid:wheelF': 0.0026, 'rigid:wheelB': 0.0026, 'rigid:crank': 0.0026, 'rigid:pedalL': 0.0024, 'rigid:pedalR': 0.0024 };
 
   const base = person({
     name,
@@ -149,7 +150,7 @@ export function bikeRider({ name, bmx = false, skin, shirt, sleeves = shirt, tro
       // wider bars and two separate fork blades; the city bikes retain the
       // longer diamond frame from the Cyclist.
       s.part('rigid:frame', () => {
-        const lowerHead = [head[0], head[1] - 0.035, head[2]];
+        const lowerHead = [head[0], head[1] - (bmx ? 0.045 : 0.035), head[2] + (bmx ? 0.008 : 0)];
         const tubes = bmx
           ? [[CRANK, lowerHead], [CRANK, seat], [seat, head], [CRANK, BACK], [seat, BACK], [head, lowerHead]]
           : [[CRANK, head], [CRANK, seat], [seat, head], [CRANK, BACK], [seat, BACK], [head, lowerHead]];
